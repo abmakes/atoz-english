@@ -47,12 +47,12 @@ export async function GET() {
 }
 ```
 
-### 3. Form Data Parsing (`api-utils.ts`)
+### 3. Form Data Parsing (`formDataUtils.ts`)
 
 Use the `parseFormData` utility to handle complex form data structures:
 
 ```typescript
-import { parseFormData } from '@/lib/api-utils';
+import { parseFormData } from '@/lib/formDataUtils';
 import { quizInputSchema } from '@/lib/schemas';
 
 const formDataResult = await parseFormData(formData, quizInputSchema);

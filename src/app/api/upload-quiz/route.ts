@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
 import { parse } from 'csv-parse/sync';
 import { prisma, withDatabaseRetry, updateLastAccessTime } from '@/lib/prisma';
-import { errorResponse, handleApiError, parseFormData, successResponse } from '@/lib/api-utils';
+import { errorResponse, handleApiError, successResponse } from '@/lib/api-utils';
+import { parseFormData } from '@/lib/formDataUtils';
 import { csvRowSchema, csvUploadSchema, CsvRowInput } from '@/lib/schemas';
 
 // Define the placeholder image path
