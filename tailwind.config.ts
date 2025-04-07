@@ -1,11 +1,14 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 const config: Config = {
     darkMode: ["class"],
     content: [
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    './pages/**/*.{ts,tsx}', // Keep if you might use pages router later (optional)
+    './src/components/**/*.{ts,tsx}', // Components path
+    './src/ui/**/*.{ts,tsx}',        // UI components path
+    './src/app/**/*.{ts,tsx}',      // App path
+    './src/**/*.{ts,tsx}',           // General src path
   ],
   theme: {
   	extend: {
@@ -80,6 +83,6 @@ const config: Config = {
   		}
   	}
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 };
 export default config;
