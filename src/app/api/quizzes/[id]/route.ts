@@ -69,6 +69,8 @@ export async function GET(
       return errorResponse('Quiz not found', { id: params.id }, 404);
     }
 
+    // console.log("Raw Quiz Data from Prisma:", JSON.stringify(quiz, null, 2));
+
     return successResponse(quiz);
   } catch (error) {
     return handleApiError(error, `GET /api/quizzes/${params.id}`);

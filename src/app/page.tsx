@@ -1,5 +1,5 @@
 import { Button } from "../components/ui/button"
-
+import Link from "next/link"
 export default function Home() {
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-[#E8F8FF]">
@@ -71,9 +71,11 @@ export default function Home() {
         <h1 className="text-6xl font-bold mb-12 text-blue-900 font-[family-name:var(--font-grandstander)]">
           AtoZ English
         </h1>
-        <Button size="lg" className="bg-blue-500 hover:bg-blue-600 text-white text-xl px-8 py-6 rounded-full">
-          Play Now
-        </Button>
+        <Link href="/games">
+          <Button size="lg" className="bg-blue-500 hover:bg-blue-600 text-white text-xl px-8 py-6 rounded-full">
+            Play Now
+          </Button>
+        </Link>
       </div>
     </main>
   )

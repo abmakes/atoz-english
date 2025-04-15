@@ -1,7 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 ### 🧪 Testing & Reliability
 - **Always create Jest unit tests for new features** (functions, classes, routes, etc).

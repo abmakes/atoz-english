@@ -106,3 +106,11 @@
 .grandstander {
   font-family: var(--font-grandstander), cursive;
 } 
+
+@font-face {
+  font-family: 'Grandstander';
+  src: url('/fonts/GrandstanderVF.ttf') format('truetype' );
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}

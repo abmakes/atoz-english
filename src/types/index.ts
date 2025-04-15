@@ -17,12 +17,13 @@ export interface Player {
 }
 
 export interface QuestionData {
-  id?: string
-  question: string
-  answers: string[]
-  correctAnswer: string
-  imageUrl?: string
-  type?: QuestionType;
+  id: string;
+  question: string;
+  imageUrl?: string;
+  answers: string[];
+  correctAnswer: string;
+  type: QuestionType;
+  quizId?: string;
 }
 
 export interface Quiz {

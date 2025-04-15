@@ -1,0 +1,778 @@
+/* Base variables and structure - applied via .themeWrapper */
+.themeWrapper {
+  --primary-bg: #e0f2fe;              /* Tailwind: blue-100 */
+  --secondary-bg: #bfdbfe;            /* Tailwind: blue-200 */
+  --panel-bg: rgba(255, 255, 255, 0.8);
+  --panel-border: transparent;
+  --text-color: #374151;              /* Tailwind: gray-700 */
+  --text-light: #6b7280;             /* Tailwind: gray-500 */
+  --heading-color: #4b5563;           /* Tailwind: gray-600 */
+  --primary-accent: #3b82f6;          /* Tailwind: blue-500 */
+  --primary-accent-hover: #2563eb;    /* Tailwind: blue-600 */
+  --secondary-accent: #10b981;        /* Tailwind: green-500 */
+  --secondary-accent-hover: #059669;  /* Tailwind: green-600 */
+  --danger-color: #ef4444;            /* Tailwind: red-500 */
+  --danger-color-hover: #dc2626;      /* Tailwind: red-700 */
+  --input-bg: #ffffff;
+  --input-border: #d1d5db;            /* Tailwind: gray-300 */
+  --input-text: var(--text-color);
+  --button-text-light: #ffffff;
+  --button-text-dark: var(--text-color);
+  --box-bg: #f9fafb;                  /* Tailwind: gray-50 */
+  --box-border: #e5e7eb;              /* Tailwind: gray-200 */
+  --active-button-bg: var(--primary-accent);
+  --active-button-text: var(--button-text-light);
+  --inactive-button-bg: #ffffff;
+  --inactive-button-text: var(--text-color);
+  --inactive-button-border: var(--input-border);
+  --inactive-button-hover-bg: #f3f4f6; /* Tailwind: gray-100 */
+  --checkbox-accent: var(--primary-accent);
+
+  --border-radius-sm: 0.25rem;
+  --border-radius-md: 0.5rem;
+  --border-radius-lg: 0.75rem;
+  --border-radius-xl: 1rem;
+  --border-radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+}
+
+/* Theme Specific Overrides */
+.themeBasic {
+  /* Uses defaults from .themeWrapper */
+}
+
+.themeDark {
+  --primary-bg: #1f2937;             /* gray-800 */
+  --secondary-bg: #111827;            /* gray-900 */
+  --panel-bg: rgba(55, 65, 81, 0.85); /* gray-700 with alpha */
+  --panel-border: #4b5563;           /* gray-600 */
+  --text-color: #d1d5db;             /* gray-300 */
+  --text-light: #9ca3af;            /* gray-400 */
+  --heading-color: #f3f4f6;           /* gray-100 */
+  --primary-accent: #60a5fa;          /* blue-400 */
+  --primary-accent-hover: #3b82f6;    /* blue-500 */
+  --secondary-accent: #34d399;        /* emerald-400 */
+  --secondary-accent-hover: #10b981;  /* emerald-500 */
+  --danger-color: #f87171;            /* red-400 */
+  --danger-color-hover: #ef4444;      /* red-500 */
+  --input-bg: #374151;                /* gray-700 */
+  --input-border: #4b5563;            /* gray-600 */
+  --input-text: var(--text-color);
+  --button-text-light: #111827;      /* Use dark text on light buttons */
+  --button-text-dark: var(--text-color);
+  --box-bg: #374151;                  /* gray-700 */
+  --box-border: #4b5563;              /* gray-600 */
+  --active-button-bg: var(--primary-accent);
+  --active-button-text: var(--button-text-light);
+  --inactive-button-bg: #4b5563;      /* gray-600 */
+  --inactive-button-text: var(--text-color);
+  --inactive-button-border: #556170;  /* Slightly lighter gray */
+  --inactive-button-hover-bg: #556170;/* gray-500 */
+  --checkbox-accent: var(--primary-accent);
+}
+
+.themeForest {
+  --primary-bg: #d4e9d7;             /* Light green */
+  --secondary-bg: #a3c9a8;            /* Medium green */
+  --panel-bg: rgba(240, 255, 240, 0.85); /* Honeydew with alpha */
+  --panel-border: #8fbc8f;           /* Dark Sea Green */
+  --text-color: #2f4f4f;             /* Dark Slate Gray */
+  --text-light: #556b2f;            /* Dark Olive Green */
+  --heading-color: #006400;           /* Dark Green */
+  --primary-accent: #556b2f;          /* Dark Olive Green */
+  --primary-accent-hover: #6b8e23;    /* Olive Drab */
+  --secondary-accent: #8fbc8f;        /* Dark Sea Green */
+  --secondary-accent-hover: #3cb371;  /* Medium Sea Green */
+  --danger-color: #cd5c5c;            /* Indian Red */
+  --danger-color-hover: #b22222;      /* Firebrick */
+  --input-bg: #f5fff5;                /* Mint Cream */
+  --input-border: #a3c9a8;
+  --input-text: var(--text-color);
+  --button-text-light: #ffffff;
+  --button-text-dark: var(--text-color);
+  --box-bg: #e8f5e9;                  /* Light green tint */
+  --box-border: #c8e6c9;              /* Lighter green tint */
+  --active-button-bg: var(--primary-accent);
+  --active-button-text: var(--button-text-light);
+  --inactive-button-bg: #ffffff;
+  --inactive-button-text: var(--text-color);
+  --inactive-button-border: var(--input-border);
+  --inactive-button-hover-bg: #f0fff0; /* Honeydew */
+  --checkbox-accent: var(--primary-accent);
+}
+
+/* --- Reusable Classes --- */
+
+/* Layout & Base */
+.panelWrapper {
+  min-height: 100vh;
+  padding: 2rem;
+  position: relative;
+  font-family: var(--font-sans);
+  background: linear-gradient(to bottom right, var(--primary-bg), var(--secondary-bg));
+}
+.panel {
+  max-width: 56rem; /* Tailwind: max-w-4xl */
+  margin-left: auto;
+  margin-right: auto;
+  background-color: var(--panel-bg);
+  backdrop-filter: blur(4px);
+  border-radius: var(--border-radius-xl);
+  padding: 2rem;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--panel-border);
+  position: relative; /* For z-index stacking if needed */
+  z-index: 10;
+}
+.backgroundOverlay { /* For clouds or other background elements */
+  position: absolute;
+  inset: 0;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 0;
+}
+.sectionSpacing { margin-bottom: 2rem; }
+.textCenter { text-align: center; }
+
+/* Typography */
+.textDefault { color: var(--text-color); font-size: var(--font-size-base); }
+.textLight { color: var(--text-light); }
+.textHeading1 { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: var(--heading-color); } /* For main 'Play' */
+.textHeading2 { font-size: var(--font-size-xl); font-weight: var(--font-weight-semibold); color: var(--heading-color); margin-bottom: 1rem; }
+.textHeading3 { font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); color: var(--heading-color); margin-bottom: 0.5rem; }
+.textLabel { color: var(--text-color); font-weight: var(--font-weight-medium); }
+.textInputLabel { color: var(--text-color); text-transform: capitalize; }
+.textDescription { font-size: var(--font-size-sm); color: var(--text-light); margin-bottom: 0.5rem; }
+
+/* Buttons */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, transform 0.2s, box-shadow 0.2s;
+  font-weight: var(--font-weight-medium);
+}
+.buttonPlay {
+  composes: button;
+  background-color: var(--primary-accent);
+  color: var(--button-text-light);
+  border-radius: var(--border-radius-full);
+  padding: 0.75rem 4rem; /* Tailwind px-16 py-3 */
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  box-shadow: var(--shadow-lg);
+}
+.buttonPlay:hover {
+  background-color: var(--primary-accent-hover);
+  transform: scale(1.05);
+}
+.buttonAddTeam {
+  composes: button;
+  background-color: var(--secondary-accent);
+  color: var(--button-text-light);
+  border-radius: var(--border-radius-md);
+  padding: 0.25rem 0.75rem; /* Tailwind px-3 py-1 */
+}
+.buttonAddTeam:hover {
+  background-color: var(--secondary-accent-hover);
+}
+.buttonRemoveTeam {
+  composes: button;
+  color: var(--danger-color);
+  background: none;
+  font-size: 1.25rem; /* Ensure large enough click target */
+  line-height: 1;
+  padding: 0 0.25rem; /* Minimal padding */
+}
+.buttonRemoveTeam:hover {
+  color: var(--danger-color-hover);
+}
+.buttonIcon {
+  composes: button;
+  position: absolute;
+  top: 1.5rem; /* Tailwind top-6 */
+  right: 1.5rem; /* Tailwind right-6 */
+  background-color: var(--input-bg); /* Match input/select bg */
+  padding: 0.5rem; /* Tailwind p-2 */
+  border-radius: var(--border-radius-full);
+  box-shadow: var(--shadow);
+  color: var(--text-color); /* Use default text color */
+}
+.buttonIcon svg {
+  width: 1.5rem; /* Tailwind width-24 */
+  height: 1.5rem; /* Tailwind height-24 */
+  fill: currentColor;
+}
+.buttonIcon:hover {
+  background-color: var(--inactive-button-hover-bg); /* Use inactive hover */
+}
+.buttonChoice {
+  composes: button;
+  background-color: var(--inactive-button-bg);
+  color: var(--inactive-button-text);
+  border: 1px solid var(--inactive-button-border);
+  border-radius: var(--border-radius-full);
+  padding: 0.25rem 1rem; /* Tailwind px-4 py-1 */
+  font-size: var(--font-size-sm);
+}
+.buttonChoice:hover {
+  background-color: var(--inactive-button-hover-bg);
+}
+.buttonChoiceActive {
+  /* Note: Higher specificity might be needed if base .button styles interfere */
+  background-color: var(--active-button-bg);
+  color: var(--active-button-text);
+  border-color: transparent; /* Remove border when active */
+}
+
+/* Forms & Inputs */
+.inputField {
+  flex-grow: 1;
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--border-radius-md);
+  padding: 0.25rem 0.5rem; /* Tailwind p-1 */
+  color: var(--input-text);
+  font-size: var(--font-size-base);
+}
+.inputField::placeholder {
+  color: var(--text-light);
+  opacity: 0.7;
+}
+.selectField {
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--border-radius-md);
+  padding: 0.5rem; /* Tailwind p-2 */
+  box-shadow: var(--shadow-sm);
+  color: var(--input-text);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+}
+.checkbox {
+  width: 1.25rem; /* Tailwind h-5 w-5 */
+  height: 1.25rem;
+  border-radius: var(--border-radius-sm);
+  color: var(--checkbox-accent); /* Accent color */
+  border-color: var(--input-border); /* Border color when unchecked */
+  cursor: pointer;
+}
+.checkbox:focus {
+  /* Basic focus ring, can be customized */
+  outline: 2px solid var(--primary-accent);
+  outline-offset: 1px;
+}
+.label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem; /* Tailwind space-x-1 */
+  cursor: pointer;
+}
+.labelInline {
+   display: inline-flex;
+   align-items: center;
+   gap: 0.5rem; /* Tailwind space-x-2 */
+   cursor: pointer;
+}
+.labelBlock {
+   display: block; /* Or flex if needed */
+   margin-bottom: 0.5rem;
+}
+
+
+/* Containers & Lists */
+.optionsGrid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr)); /* Mobile default */
+  gap: 1.5rem; /* Tailwind gap-6 */
+}
+@media (min-width: 768px) { /* Tailwind md: breakpoint */
+  .optionsGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.optionBox {
+  border: 1px solid var(--box-border);
+  background-color: var(--box-bg);
+  border-radius: var(--border-radius-lg);
+  padding: 1rem;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+.optionBoxIcon {
+  margin-bottom: 0.5rem;
+  font-size: 1.5rem; /* Example size */
+}
+.buttonGroup {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem; /* Tailwind space-x-2 */
+}
+.checkboxGroup {
+   display: flex;
+   flex-direction: column;
+   gap: 0.5rem; /* Tailwind space-y-2 */
+   padding-left: 1rem; /* Indent checkboxes */
+}
+
+.teamList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; /* Tailwind space-y-2 */
+  margin-bottom: 0.75rem;
+}
+.teamListItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--box-bg);
+  padding: 0.5rem;
+  border-radius: var(--border-radius-md);
+}
+.teamListIndex {
+  color: var(--text-light);
+  margin-right: 0.5rem;
+  font-weight: var(--font-weight-medium);
+}
+.teamListInput {
+  composes: inputField; /* Reuse input style */
+  margin-right: 0.5rem;
+}
+
+.addTeamContainer {
+  display: flex;
+  align-items: center;
+}
+
+.settingsContainer {
+   display: flex;
+   gap: 1.5rem; /* Tailwind space-x-6 */
+   align-items: center;
+   flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+
+.selectionContainer {
+   display: flex;
+   align-items: center;
+   gap: 1rem; /* Tailwind space-x-4 */
+   flex-wrap: wrap;
+}
+
+/* --- Player Score Styles --- */
+.playerScoreWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center items horizontally */
+  padding: 0.5rem 1rem; /* Tailwind p-2 px-4 */
+  border-radius: var(--border-radius-lg);
+  background-color: var(--box-bg); /* Use box background */
+  border: 1px solid var(--box-border);
+  box-shadow: var(--shadow-sm);
+  width: 120px; /* Fixed width example, adjust as needed */
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  user-select: none; /* Prevent text selection on click */
+}
+.playerName {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-light);
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.playerScoreValue {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-color);
+}
+
+/* Active State */
+.playerScoreActive {
+  background-color: var(--primary-accent);
+  border-color: var(--primary-accent-hover);
+  box-shadow: var(--shadow-md);
+}
+.playerScoreActive .playerName,
+.playerScoreActive .playerScoreValue {
+  color: var(--button-text-light); /* Use light text on accent bg */
+}
+
+/* Inactive State Hover */
+.playerScoreWrapper:not(.playerScoreActive):hover {
+   background-color: var(--inactive-button-hover-bg);
+   border-color: darken(var(--box-border), 5%); /* Slightly darker border */
+}
+
+
+/* --- Nav Menu Styles --- */
+.navMenuWrapper {
+  display: flex;
+  align-items: center;
+}
+.navMenuHorizontal {
+  flex-direction: row;
+  gap: 0.5rem; /* Tailwind space-x-2 */
+}
+.navMenuVertical {
+  flex-direction: column;
+  gap: 0.5rem; /* Tailwind space-y-2 */
+  align-items: stretch; /* Stretch items if needed vertically */
+  background-color: var(--input-bg); /* Give vertical menus a background */
+  border-radius: var(--border-radius-lg);
+  padding: 0.5rem;
+  box-shadow: var(--shadow-lg);
+}
+
+.navMenuItem {
+  composes: button; /* Inherit base button styles */
+  background-color: var(--input-bg); /* Similar to icon button bg */
+  color: var(--text-color);
+  border-radius: var(--border-radius-full);
+  padding: 0.5rem; /* Tailwind p-2 */
+  box-shadow: var(--shadow);
+  display: flex; /* Ensure icon and label align */
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center; /* Center icon horizontally in round button */
+  width: 2.5rem; /* Fixed size for horizontal icons */
+  height: 2.5rem;
+}
+.navMenuItem:hover {
+  background-color: var(--inactive-button-hover-bg);
+}
+.navMenuItem svg {
+  width: 1.25rem; /* Tailwind w-5 h-5 (approx) */
+  height: 1.25rem;
+  fill: currentColor;
+}
+
+/* Styles for Vertical Expanded Menu Items */
+.navMenuItemVertical {
+  composes: navMenuItem; /* Inherit base item styles */
+  border-radius: var(--border-radius-md); /* Less rounded for vertical */
+  justify-content: flex-start; /* Align content left */
+  padding: 0.5rem 1rem; /* More padding horizontally */
+  width: 100%; /* Take full width */
+  height: auto;
+  box-shadow: none; /* Remove individual shadow in vertical menu */
+  background-color: transparent; /* Let vertical wrapper handle bg */
+}
+.navMenuItemVertical:hover {
+   background-color: var(--inactive-button-hover-bg);
+}
+
+.navMenuItemLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+/* --- Dropdown Menu Styles (Basic Structure) --- */
+.dropdownMenu {
+  position: absolute;
+  top: 4rem; /* Adjust as needed based on NavMenu height */
+  right: 1rem; /* Adjust as needed */
+  z-index: 20; /* Ensure above other elements */
+  /* Styling will be applied by NavMenuVertical */
+}
+
+.settingsPanel {
+  composes: navMenuVertical; /* Base layout on vertical nav */
+  /* Add specific overrides if needed, like max-width, positioning context */
+  position: absolute; /* Assuming it pops up */
+  top: 4rem; /* Example positioning, adjust as needed */
+  right: 1.5rem; /* Example positioning */
+  z-index: 20;
+  width: 250px; /* Example width */
+  background-color: var(--input-bg); /* Use input/panel background */
+  border: 1px solid var(--box-border);
+  padding: 1rem;
+}
+
+.settingsPanelTitle {
+  composes: textHeading3; /* Use H3 style */
+  margin-bottom: 1rem;
+  text-align: center;
+  color: var(--heading-color);
+}
+
+.settingsSliderContainer {
+  margin-bottom: 1rem;
+}
+
+.settingsSliderLabel {
+  composes: textLabel;
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: var(--font-size-sm);
+}
+
+.settingsSlider {
+  width: 100%;
+  cursor: pointer;
+  accent-color: var(--primary-accent); /* Style the slider thumb/track */
+  /* Add more browser-specific slider styling if needed */
+}
+
+.settingsToggleContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+/* Simple toggle switch styling */
+.toggleSwitch {
+  position: relative;
+  display: inline-block;
+  width: 40px; /* Width of the switch */
+  height: 20px; /* Height of the switch */
+}
+
+.toggleSwitch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggleSlider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--input-border); /* Grey background when off */
+  transition: .4s;
+  border-radius: var(--border-radius-full);
+}
+
+.toggleSlider:before {
+  position: absolute;
+  content: "";
+  height: 14px; /* Height of the knob */
+  width: 14px; /* Width of the knob */
+  left: 3px;   /* Position from left */
+  bottom: 3px; /* Position from bottom */
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .toggleSlider {
+  background-color: var(--primary-accent); /* Accent color when on */
+}
+
+input:checked + .toggleSlider:before {
+  transform: translateX(20px); /* Move knob to the right (width - knob_width - 2*padding) */
+}
+
+.mainMenuDropdown {
+  composes: navMenuVertical; /* Base layout on vertical nav */
+  /* Specific positioning relative to the Menu button */
+  position: absolute;
+  top: 4rem; /* Example positioning */
+  /* Position near the middle icon - might need adjustment based on NavMenu layout */
+  /* If NavMenu icons are fixed width (e.g., 2.5rem + 0.5rem gap), the middle icon starts around right: 1.5rem + 2.5rem + 0.5rem = 4.5rem */
+  right: 4.5rem; /* Example positioning - adjust as needed */
+  z-index: 20;
+  width: 200px; /* Example width */
+  background-color: var(--input-bg);
+  border: 1px solid var(--box-border);
+  padding: 0.5rem; /* Slightly less padding than settings? */
+}
+
+/* Use the same vertical menu item style */
+.mainMenuDropdownItem {
+  composes: navMenuItemVertical; /* Reuse the vertical item style */
+}
+
+.mainMenuDropdownItem svg {
+   width: 1rem; /* Slightly smaller icons? Adjust if needed */
+   height: 1rem;
+   margin-right: 0.5rem; /* Ensure space between icon and text */
+}
+
+.mainMenuDropdownItem .navMenuItemLabel {
+  /* Inherits from .navMenuItemLabel */
+  flex-grow: 1; /* Allow text to take remaining space */
+}
+
+/* --- Game Over Screen Styles --- */
+.gameOverScreen {
+  position: fixed; /* Cover the whole screen */
+  inset: 0;
+  z-index: 50; /* High z-index to cover everything */
+  display: flex; /* Using flex might be useful for centering panel, but maybe not needed if panel is absolute */
+  flex-direction: column; /* Or just use absolute positioning for overlays */
+  align-items: center;
+  justify-content: center;
+  overflow: hidden; /* Prevent scrollbars */
+  font-family: var(--font-sans);
+}
+
+.gameOverBackground {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Ensure GIF covers the area */
+  z-index: 0; /* Background layer */
+  /* Optional: Add a semi-transparent overlay */
+  /* background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)); */
+}
+.gameOverBackground img,
+.gameOverBackground video, /* If using video */
+.gameOverBackground div { /* If using a styled div */
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+
+.gameOverPlayerScoresOverlay {
+  position: absolute;
+  top: 1rem; /* Adjust as needed */
+  left: 1rem; /* Adjust as needed */
+  z-index: 10; /* Above background */
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; /* Space between player scores */
+}
+
+.gameOverNavMenuOverlay {
+  position: absolute;
+  top: 1.5rem; /* Match buttonIcon positioning */
+  right: 1.5rem;
+  z-index: 10; /* Above background */
+}
+
+.gameOverPanel {
+  position: relative; /* Position relative to the flex container */
+  z-index: 10; /* Above background */
+  background-color: var(--panel-bg);
+  backdrop-filter: blur(4px);
+  border-radius: var(--border-radius-xl);
+  padding: 2rem 3rem;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--panel-border);
+  text-align: center;
+  max-width: 90%; /* Prevent panel from being too wide */
+  width: 500px; /* Example fixed width */
+}
+
+.gameOverTitle {
+  composes: textHeading1; /* Large heading style */
+  font-size: 2.5rem; /* Make it bigger */
+  margin-bottom: 1.5rem;
+  color: var(--heading-color); /* Or primary accent? */
+  position: relative; /* For crown positioning */
+  display: inline-block; /* Allow crown positioning */
+}
+
+.gameOverCrown {
+  position: absolute;
+  top: -1.5rem; /* Adjust position relative to title */
+  right: -2.5rem; /* Adjust position relative to title */
+  width: 50px; /* Adjust size */
+  height: auto;
+  transform: rotate(15deg); /* Slight tilt */
+}
+
+
+.gameOverButtons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.gameOverButton {
+  composes: button; /* Base button styles */
+  background-color: var(--primary-accent);
+  color: var(--button-text-light);
+  border-radius: var(--border-radius-full);
+  padding: 0.5rem 2rem;
+  font-size: var(--font-size-lg);
+  box-shadow: var(--shadow-md);
+}
+.gameOverButton:hover {
+  background-color: var(--primary-accent-hover);
+  transform: scale(1.03);
+}
+/* Optional: Style for secondary exit button */
+.gameOverButtonSecondary {
+   composes: gameOverButton;
+   background-color: var(--inactive-button-bg);
+   color: var(--inactive-button-text);
+   border: 1px solid var(--inactive-button-border);
+}
+.gameOverButtonSecondary:hover {
+    background-color: var(--inactive-button-hover-bg);
+    transform: scale(1.03);
+}
+
+/* --- Gameplay View Styles --- */
+.gameplayViewContainer {
+  position: relative; /* Needed for absolute positioning of overlays and canvas */
+  min-height: 100vh; /* Ensure it takes full viewport height */
+  width: 100%;
+  overflow: hidden; /* Prevent potential scrollbars from overlays */
+  /* Background color can be set here if needed, or rely on the canvas */
+  /* background-color: var(--secondary-bg); */
+}
+
+.pixiCanvasContainer {
+  position: absolute;
+  inset: 0; /* Make it cover the entire gameplay view container */
+  z-index: 0; /* Ensure it's behind the overlays */
+  /* Styles for the canvas element itself (if needed) */
+  /* canvas { display: block; width: 100%; height: 100%; } */
+}
+
+/* Adjust overlay positioning slightly if needed now that canvas exists */
+.gameplayPlayerScoresOverlay { /* Maybe rename from gameOver prefix? */
+  composes: gameOverPlayerScoresOverlay; /* Inherit positioning */
+  z-index: 10; /* Ensure above canvas */
+}
+
+.gameplayNavMenuOverlay { /* Maybe rename from gameOver prefix? */
+  composes: gameOverNavMenuOverlay; /* Inherit positioning */
+  z-index: 10; /* Ensure above canvas */
+}
+
+
+/* Adjust dropdown positioning relative to gameplay nav menu */
+.settingsPanelGameplay { /* Rename for context */
+   composes: settingsPanel; /* Inherit base panel styles */
+   /* Position relative to the gameplayNavMenuOverlay */
+   top: 4rem; /* Below the nav menu buttons */
+   right: 1.5rem; /* Align with right edge of nav */
+}
+
+.mainMenuDropdownGameplay { /* Rename for context */
+    composes: mainMenuDropdown; /* Inherit base panel styles */
+    /* Position relative to the gameplayNavMenuOverlay */
+    top: 4rem; /* Below the nav menu buttons */
+    /* Align near the middle nav menu button */
+    right: 4.5rem; /* Adjust as needed based on final NavMenu layout */
+} 

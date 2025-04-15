@@ -4,7 +4,6 @@ import { prisma, withDatabaseRetry, warmupDatabase, isDatabaseIdle } from '@/lib
 import { put } from '@vercel/blob'
 import { updateQuiz } from '@/lib/db'
 import { QuestionType } from '@/types/question_types'
-import { QuestionData as QuestionDataType } from '@/types'
 
 // Define Zod Schema for a Question (used in POST/PUT)
 const QuestionSchema = z.object({
@@ -14,7 +13,6 @@ const QuestionSchema = z.object({
     correctAnswer: z.string().min(1, "Correct answer cannot be empty"),
     imageUrl: z.string().optional(), // URL after potential upload
     imageFile: z.any().optional(), // Changed from z.instanceof(File)
-    tagsString: z.string().optional(), // Comma-separated tags from FormData
     type: z.nativeEnum(QuestionType).default(QuestionType.MULTIPLE_CHOICE),
 })
 
@@ -45,11 +43,16 @@ type ParsedQuizData = z.infer<typeof QuizCreateSchema>
 // Add route segment config if needed for dynamic operations like reading request body
 export const dynamic = 'force-dynamic'
 
-// Interface to handle legacy question data structure during the transition
-// Use the QuestionData type from types/index.ts with additional fields
-interface QuestionData extends QuestionDataType {
-  tags?: string[]; // Optional for tag handling
-}
+// Define a type for the payload expected by the legacy updateQuiz function's questions array
+// Explicitly define fields, making id optional and excluding tags/quizId
+type QuestionPayloadForUpdate = {
+  id?: string; // Optional ID for updates
+  question: string;
+  imageUrl?: string;
+  answers: string[];
+  correctAnswer: string;
+  type: QuestionType;
+};
 
 export async function GET() {
   console.log('GET /api/quizzes')
@@ -68,18 +71,23 @@ export async function GET() {
               correctAnswer: true,
               imageUrl: true,
               type: true,
-              tags: {
-                select: {
-                  id: true,
-                  name: true
-                }
-              }
             }
           }
         }
       }), 'Fetching quizzes')
 
-    return NextResponse.json({ data: quizzes })
+    // No transformation needed if GET output matches desired structure (no tags)
+    // Add placeholder mapping if necessary
+    const quizzesForApi = quizzes.map(quiz => ({
+        ...quiz,
+        imageUrl: quiz.imageUrl ?? PLACEHOLDER_IMAGE,
+        questions: quiz.questions.map(q => ({
+            ...q,
+            imageUrl: q.imageUrl ?? PLACEHOLDER_IMAGE
+        }))
+    }))
+
+    return NextResponse.json({ data: quizzesForApi })
   } catch (error) {
     console.error('Failed to fetch quizzes:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -120,7 +128,6 @@ export async function POST(request: Request) {
         questionData.correctAnswer = formData.get(`questions[${i}][correctAnswer]`) as string
         questionData.imageFile = formData.get(`questions[${i}][image]`) as File || undefined
         questionData.imageUrl = formData.get(`questions[${i}][imageUrl]`) as string || undefined
-        questionData.tagsString = formData.get(`questions[${i}][tagsString]`) as string || undefined
         
         // Convert string to enum value safely
         const typeFromForm = formData.get(`questions[${i}][type]`) as string;
@@ -182,23 +189,13 @@ export async function POST(request: Request) {
             }
         }
 
-        // Prepare tags for connectOrCreate
-        const tagsToConnectOrCreate = (q.tagsString ?? '')
-            .split(',')
-            .map((tag: string) => tag.trim())
-            .filter((tag: string) => tag.length > 0)
-            .map((tagName: string) => ({
-                where: { name: tagName },
-                create: { name: tagName },
-            }))
-
+        // Ensure tags are NOT prepared for Prisma create
         return {
             question: q.question,
             answers: q.answers,
             correctAnswer: q.correctAnswer,
             imageUrl: finalQuestionImageUrl,
-            type: q.type, // Already validated by Zod
-            tags: tagsToConnectOrCreate.length > 0 ? { connectOrCreate: tagsToConnectOrCreate } : undefined,
+            type: q.type,
         }
     }))
 
@@ -214,13 +211,29 @@ export async function POST(request: Request) {
         },
         include: {
             questions: {
-                include: { tags: true }
+                select: {
+                    id: true,
+                    question: true,
+                    answers: true,
+                    correctAnswer: true,
+                    imageUrl: true,
+                    type: true
+                }
             }
         },
       }), 'Creating quiz')
 
     console.log('Created quiz:', createdQuiz.id)
-    return NextResponse.json({ data: createdQuiz }, { status: 201 })
+     // Add placeholder mapping if necessary
+    const createdQuizForApi = {
+        ...createdQuiz,
+        imageUrl: createdQuiz.imageUrl ?? PLACEHOLDER_IMAGE,
+        questions: createdQuiz.questions.map(q => ({
+            ...q,
+            imageUrl: q.imageUrl ?? PLACEHOLDER_IMAGE
+        }))
+    }
+    return NextResponse.json({ data: createdQuizForApi }, { status: 201 })
 
   } catch (error) {
     console.error('Failed to create quiz:', error)
@@ -272,8 +285,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
             questionData.correctAnswer = formData.get(`questions[${i}][correctAnswer]`) as string
             questionData.imageFile = formData.get(`questions[${i}][image]`) as File || undefined
             questionData.imageUrl = formData.get(`questions[${i}][imageUrl]`) as string || undefined
-            questionData.tagsString = formData.get(`questions[${i}][tagsString]`) as string || undefined
-            
+            // Ensure tagsString is NOT parsed here
+
             // Convert string to enum value safely
             const typeFromForm = formData.get(`questions[${i}][type]`) as string;
             questionData.type = typeFromForm in QuestionType 
@@ -335,29 +348,47 @@ export async function PUT(request: Request, { params }: { params: { id: string }
              return { ...q, imageUrl: questionImageUrl }
         }))
 
-        // --- Use Prisma update API instead of custom updateQuiz ---
-        // For this phase of refactoring, we'll fall back to the legacy updateQuiz function
-        // Later we can move to the advanced transaction-based approach.
-        
-        // Map our processed questions to the expected format for updateQuiz
-        const questionDataForUpdate: QuestionData[] = processedQuestions.map((q: ParsedQuestionData) => ({
-          id: q.id,
+        // --- Map to format for legacy updateQuiz --- 
+        // Use the correctly defined QuestionPayloadForUpdate type
+        const questionDataForUpdate: QuestionPayloadForUpdate[] = processedQuestions.map((q: ParsedQuestionData) => ({
+          id: q.id, // This is now correctly typed as optional
           question: q.question,
           answers: q.answers,
           correctAnswer: q.correctAnswer,
-          imageUrl: q.imageUrl,
+          imageUrl: q.imageUrl, // Already handled placeholder above
           type: q.type,
-          tags: q.tagsString ? q.tagsString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) : undefined
         }));
-        
-        // Use the legacy updateQuiz function for now
+
+        // --- Use the legacy updateQuiz function --- 
         const updatedQuiz = await updateQuiz(quizId, {
-          title, 
-          imageUrl: finalQuizImageUrl,
+          title,
+          imageUrl: finalQuizImageUrl ?? undefined,
           questions: questionDataForUpdate
         });
 
-        return NextResponse.json({ data: updatedQuiz });
+        // --- Handle potential null result from updateQuiz --- 
+        if (!updatedQuiz) {
+            return NextResponse.json({ error: `Quiz with ID ${quizId} not found or update failed.` }, { status: 404 });
+        }
+
+        // --- Transform result --- 
+        // Now safe to access updatedQuiz properties
+        const updatedQuizForApi = {
+            ...updatedQuiz,
+            imageUrl: updatedQuiz.imageUrl ?? PLACEHOLDER_IMAGE,
+            // Assuming updatedQuiz.questions exists and might have different structure
+            questions: (updatedQuiz.questions || []).map((q) => ({
+                id: q.id,
+                question: q.question,
+                answers: q.answers,
+                correctAnswer: q.correctAnswer,
+                imageUrl: q.imageUrl ?? PLACEHOLDER_IMAGE,
+                type: q.type
+                // Ensure no tags included
+            }))
+        }
+
+        return NextResponse.json({ data: updatedQuizForApi });
 
     } catch (error) {
         console.error(`Failed to update quiz ${quizId}:`, error)

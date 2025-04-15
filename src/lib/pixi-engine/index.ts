@@ -1,8 +1,7 @@
-// Core classes
-export { PixiApplication, type PixiApplicationOptions } from './core/PixiApplication';
-
-// Utility classes
-export { ResponsiveCanvas, type ResponsiveCanvasOptions } from './utils/ResponsiveCanvas';
+// Barrel file for pixi-engine
+export * from './core/PixiEngine';
+export * from './core/PixiApplication';
+export * from './utils/ResponsiveCanvas';
 
 // Re-export commonly used PixiJS classes
 export {

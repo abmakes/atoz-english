@@ -1,5 +1,11 @@
 import { Assets, Container, Graphics, Sprite, Texture, Ticker } from 'pixi.js';
 import { PixiApplication, PixiApplicationOptions } from './PixiApplication';
+import { initDevtools } from '@pixi/devtools';
+
+interface ISize {
+  width: number;
+  height: number;
+}
 
 export interface PixiEngineOptions extends PixiApplicationOptions {
   debug?: boolean;
@@ -52,6 +58,7 @@ export class PixiEngine {
     
     // Initialize the PixiApplication with the options
     this.app = new PixiApplication(this.options);
+    initDevtools({  app: this.app.getApp() })
   }
 
   /**
@@ -375,5 +382,20 @@ export class PixiEngine {
     
     // Reset initialized flag
     this.initialized = false;
+  }
+
+  /**
+   * Get the screen size of the PixiApplication
+   * @returns The screen size as an object with width and height
+   */
+  public getScreenSize(): ISize {
+    // Ensure the app and its screen are available, provide defaults otherwise
+    const defaultSize = { width: this.options.width ?? 800, height: this.options.height ?? 600 };
+    if (!this.app) {
+      console.warn("PixiEngine.getScreenSize: PixiApplication not initialized yet.");
+      return defaultSize;
+    }
+    // Delegate to the PixiApplication's getter
+    return this.app.getScreenSize() ?? defaultSize;
   }
 } 

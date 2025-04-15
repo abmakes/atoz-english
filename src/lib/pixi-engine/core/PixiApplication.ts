@@ -1,4 +1,6 @@
+import * as PIXI from 'pixi.js';
 import { Application, ApplicationOptions, Container, Graphics, Text } from 'pixi.js';
+// import { EventEmitter } from 'eventemitter3';
 
 export interface PixiApplicationOptions extends Partial<ApplicationOptions> {
   parent?: HTMLElement;
@@ -57,6 +59,22 @@ export class PixiApplication {
   
   /** Array to store the last 10 FPS values for smoothing */
   private fpsValues: number[] = Array(10).fill(60);
+
+  /**
+   * Get the screen size
+   * @returns The screen size
+   */
+  public getScreenSize(): { width: number; height: number } {
+      return this.app.screen;
+    }
+  
+  /**
+   * Get the canvas element from the internal app instance
+   * @returns The canvas element
+   */
+  public getView(): HTMLCanvasElement | undefined {
+    return this.app?.canvas;
+  }
 
   /**
    * Constructor for the PixiApplication class
@@ -418,4 +436,11 @@ export class PixiApplication {
     // Reset initialized flag
     this.initialized = false;
   }
+
+  // Add the getter for the ticker
+  public getTicker(): PIXI.Ticker | undefined {
+    return this.app?.ticker;
+  }
+
+
 } 

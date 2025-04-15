@@ -1,0 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+### ✅ Task Completion
+- **Mark completed tasks in `project_docs\09_TASKS.md`** immediately after finishing them.
+- Add new sub-tasks or TODOs discovered during development to `project_docs\09_TASKS.md` under a “Discovered During Work” section.
