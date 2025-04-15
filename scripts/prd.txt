@@ -1,0 +1,148 @@
+<context>
+# Overview
+AtoZ PixiJS Game Platform is an interactive educational web application built with Next.js, TypeScript, and PixiJS v8. It provides engaging quiz-based games designed for rich animations and visual elements. The platform aims to make learning fun and effective through gamification, targeting educational institutions, teachers, and students seeking an interactive learning experience. **A key upcoming priority is a significant refactoring of the PixiJS engine core to enhance modularity, reusability, and support for diverse game types and features as outlined in `project_docs/07_PRE_PDR.md`.** Key focus areas include clean architecture, centralized engine logic, and seamless PixiJS integration. (Ref: `project_docs/00_OVERVIEW.md`, `project_docs/07_PRE_PDR.md`)
+
+# Core Features
+1.  **Multiple-Choice Quiz Games:** (Initial Implementation)
+    *   Interactive quizzes with animated elements and visual feedback using PixiJS. (Ref: `project_docs/05_PIXI_INTEGRATION.md`)
+    *   Timer-based gameplay for challenge and excitement.
+    *   Score tracking across multiple teams/players. (Ref: `project_docs/06_CORE_INTERACTIONS.md`)
+    *   **Post-Refactor:** Will leverage the new `RuleEngine`, `ScoringManager`, `TimerManager`, and `ControlsManager` for more flexibility.
+2.  **Game Management & Engine Core:** (**Focus of Next Phase - Refactoring**)
+    *   Centralized game state management (`GameStateManager`).
+    *   Flexible scoring/lives logic (`ScoringManager`).
+    *   Robust timer control (`TimerManager`).
+    *   Pluggable power-up system (`PowerUpManager`).
+    *   Unified asset loading (`AssetLoader`).
+    *   Event-driven communication (`EventBus`).
+    *   Configurable rules (`RuleEngine`) and controls (`ControlsManager`).
+    *   Standardized `BaseGame` interface for all game types. (Ref: `project_docs/07_PRE_PDR.md`)
+3.  **Responsive UI:**
+    *   Designed to work across different device sizes.
+    *   Smooth animations powered by PixiJS.
+    *   Intuitive controls, adaptable via `ControlsManager`.
+4.  **State Management (React Layer):**
+    *   Centralized application state (outside Pixi) potentially using Zustand. Interaction with Pixi Engine via events/API. (Ref: `project_docs/04_STATE_MANAGEMENT.md`)
+
+# User Experience
+-   **Teacher Persona:** Educators creating/administering quizzes, configuring game rules/modes post-refactor.
+-   **Student Persona:** Learners interacting with various game types.
+-   **Key Flows:** Quiz selection → Team/Control Setup → Gameplay (driven by `BaseGame` implementation and engine managers) → Results display. (Ref: `project_docs/06_CORE_INTERACTIONS.md`)
+-   **Focus:** Clear UI, immediate feedback, smooth transitions, adaptable controls.
+</context>
+<PRD>
+# Technical Architecture
+1.  **Frontend Framework & Core Libraries:**
+    *   Next.js (v14+), TypeScript, Tailwind CSS.
+    *   PixiJS (v8).
+    *   (Potentially Zustand for React-level state).
+    *   EventEmitter3 (or similar for `EventBus`).
+2.  **Components Structure & Architecture:** (Ref: `project_docs/01_DIRECTORY_STURCTURE.md`)
+    *   `/app`, `/components`, `/prisma`, `/server` (as previously defined).
+    *   `/lib/pixi-engine/`: **(Refactored Core - Ref: `project_docs/07_PRE_PDR.md`)**
+        *   `core/`:
+            *   `PixiEngine.ts`: Main orchestrator, holds manager instances.
+            *   `GameStateManager.ts`: Phases, active team.
+            *   `EventBus.ts`: Centralized event emitter.
+            *   `RuleEngine.ts`: Event-driven rule processing, phase/score/timer modifications.
+            *   `ControlsManager.ts`: Input mapping (keyboard, gamepad, touch), normalization, `PLAYER_ACTION` events.
+            *   `StorageManager.ts`: Abstracted data persistence (localStorage/API).
+        *   `config/`:
+            *   `GameConfig.ts`: Comprehensive game setup interface (teams, mode, rules, controls, assets, powerups).
+        *   `game/`:
+            *   `BaseGame.ts`: Standard interface/abstract class for all specific game implementations.
+            *   `ScoringManager.ts`: Manages score/lives based on config and `RuleEngine` requests.
+            *   `TimerManager.ts`: Provides timer instances, controlled by engine/`RuleEngine`.
+            *   `PowerUpManager.ts`: Manages power-up state (activation, duration), notifying system via events.
+        *   `assets/`:
+            *   `AssetLoader.ts`: Handles common, game-specific, and control UI asset loading/access.
+        *   `ui/`: Generic engine-level PIXI UI components.
+        *   `utils/`: Utility functions.
+        *   `index.ts`: Module exports.
+    *   `/lib/games/`: Specific game implementations (e.g., `MultipleChoiceGame.ts`) implementing `BaseGame`.
+3.  **Data Models:** (Ref: `project_docs/03_DATABASE_SCHEMA.md`)
+    *   Prisma schema defining models for `Quiz`, `Question`, `Answer`, `Media`, `Team`, `Player`, `Score`.
+    *   Quiz data includes questions, multiple-choice answers (with correct flag), associated media (images, potentially animations/sound).
+    *   Team/Player scoring system tracked per quiz session.
+4.  **API Integration:** (Ref: `project_docs/02_API_ENDPOINTS.md`)
+    *   tRPC for fetching quiz data, potentially saving scores/settings via `StorageManager`.
+5.  **PixiJS Integration:** (Ref: `project_docs/05_PIXI_INTEGRATION.md`, `project_docs/07_PRE_PDR.md`)
+    *   `PixiWrapper` (React component) initializes `PixiEngine` with `GameConfig`.
+    *   `PixiEngine` instantiates and manages all core managers (`GameStateManager`, `ScoringManager`, etc.) and the current `BaseGame` instance.
+    *   Communication is primarily event-driven via `EventBus`. `RuleEngine` interprets game events and triggers actions in other managers.
+    *   Specific games (`BaseGame` implementations) handle rendering and react to engine events and manager states.
+
+# Development Roadmap (**Revised Priority based on `project_docs/07_PRE_PDR.md`**)
+## Phase 1: Initial Foundation (Largely Complete)
+   - Next.js setup, Prisma, tRPC basics.
+   - Initial PixiJS integration (`PixiEngine` v1, `PixiWrapper`).
+   - Basic `MultipleChoiceGame` implementation (pre-refactor).
+   - Basic asset loading.
+## **Phase 2: Engine Core Refactoring (Highest Priority - Current Focus)**
+   - **Implement Core Managers:** Create and implement `EventBus`, `GameStateManager`, `ScoringManager` (score mode), `TimerManager`, `PowerUpManager` (state tracking only), `AssetLoader` (refactored), `ControlsManager` (keyboard focus), `RuleEngine` (basic event handling), `StorageManager` (localStorage). (Ref: `project_docs/07_PRE_PDR.md` Section 5, Steps 1-11)
+   - **Define Interfaces:** Solidify `GameConfig` and `BaseGame` interfaces.
+   - **Refactor `MultipleChoiceGame`:** Adapt it to implement `BaseGame`, remove extracted logic, integrate with new managers via events and `RuleEngine`. Handle input via `ControlsManager`. (Ref: `project_docs/07_PRE_PDR.md` Section 5, Step 12)
+   - **Update `PixiEngine`:** Instantiate and orchestrate all new managers. Manage `BaseGame` lifecycle. (Ref: `project_docs/07_PRE_PDR.md` Section 5, Step 13)
+   - **Update UI Layer:** Pass comprehensive `GameConfig` (including basic rules/controls) from React components (`GameplayView`/`GameContainer`) to `PixiEngine`. (Ref: `project_docs/07_PRE_PDR.md` Section 5, Step 14)
+   - **Testing:** Test the refactored `MultipleChoiceGame` within the new engine structure. (Ref: `project_docs/07_PRE_PDR.md` Section 5, Step 15)
+## Phase 3: Enhanced Gameplay & Features (Post-Refactor)
+   - **Implement `RuleEngine` Features:** Add JSON-based rule configuration (win conditions, scoring modifiers), custom phase support.
+   - **Implement `ControlsManager` Features:** Add gamepad/touch support, shared controls, single-player adaptation.
+   - **Implement Lives Mode:** Add lives logic to `ScoringManager` and corresponding rules.
+   - **Implement Power-Up Effects:** Add `onPowerUpActivated/Deactivated` logic to relevant `BaseGame` implementations.
+   - **Refine Visual Feedback & Animations** within games, leveraging engine events.
+   - **Develop Team Setup UI** and integrate with `GameConfig`.
+   - **Develop `ScoreScene` / Results Display** using data from `ScoringManager`.
+   - Implement core game loop UI (Quiz selection -> Setup -> Play -> Score).
+## Phase 4: Content, Polish & Expansion
+   - Develop UI for quiz selection/management.
+   - Implement dynamic media loading based on quiz data via `AssetLoader`.
+   - Add sound effects/music management (potentially new `AudioManager`).
+   - Refine responsive design.
+   - Performance optimizations.
+   - **Develop New Game Types:** Implement new classes extending `BaseGame` (e.g., `SwimmerGame`, Physics-based games). (Ref: `project_docs/07_PRE_PDR.md` Section 7)
+   
+
+
+## Phase 5: Advanced Features & Deployment
+   - (Optional) User authentication, score persistence via `StorageManager` (API backend).
+   - Accessibility improvements.
+   - Comprehensive testing (unit, integration, e2e).
+   - Deployment setup.
+
+# Logical Dependency Chain (**Updated**)
+1.  **Foundation:** Project Setup -> Initial Pixi Integration (`PixiEngine` v1) -> Basic `MultipleChoiceGame` v1.
+2.  **Engine Refactoring:** Implement Core Managers (`EventBus`, `GameState`, `Scoring`, `Timer`, `Controls`, `Rules`, `Assets`, `PowerUp`, `Storage`) -> Define `BaseGame`/`GameConfig` -> Refactor `MultipleChoiceGame` v2 -> Update `PixiEngine` v2 & UI Layer Integration.
+3.  **Core Gameplay Features (Post-Refactor):** Rule Engine Config -> Advanced Controls -> Lives Mode -> Power-Up Effects -> Team Setup UI -> Results Display.
+4.  **Expansion & Polish:** New Game Types -> Sound -> Advanced Animations -> Performance Tuning -> Testing -> Deployment.
+
+# Risks and Mitigations (**Updated**)
+1.  **Refactoring Complexity:**
+    *   Risk: High interaction complexity between managers, especially via `RuleEngine` and `EventBus`. Potential for subtle bugs.
+    *   Mitigation: Strict adherence to interfaces, comprehensive event definitions, thorough testing of manager interactions, incremental implementation. (Ref: `project_docs/07_PRE_PDR.md` Section 6)
+2.  **Rule Engine Design:**
+    *   Risk: Creating a rule system (JSON/code) that is both flexible and maintainable.
+    *   Mitigation: Start with a simple, well-defined JSON structure for Phase 3, iterate based on needs.
+3.  **Input Abstraction (`ControlsManager`):**
+    *   Risk: Correctly mapping and normalizing diverse input sources (gamepad, touch).
+    *   Mitigation: Implement input sources incrementally (keyboard first), use libraries if necessary, extensive testing across devices/inputs.
+4.  **State Synchronization (React <-> Pixi):**
+    *   Risk: Keeping external UI state (React/Zustand) consistent with internal engine state.
+    *   Mitigation: Primarily use engine events (`EventBus`) to update React UI. Minimize direct state setting from React into the engine managers.
+5.  Performance (Post-Refactor):
+    *   Risk: Event handling overhead, rule evaluations impacting frame rate.
+    *   Mitigation: Optimize critical event handlers, efficient rule condition checks, performance profiling.
+6.  **Scope Creep (During Refactor):**
+    *   Risk: Trying to implement too many advanced features (complex rules, power-up effects) during the core refactoring phase.
+    *   Mitigation: Strictly follow the phased approach in the roadmap. Focus Phase 2 *only* on building the manager structure and refactoring the existing game. Defer new gameplay features to Phase 3.
+
+# Appendix
+-   **Primary Planning Doc:** `project_docs/07_PRE_PDR.md` (Details the Engine Refactoring)
+-   Other Project Documentation: `/project_docs` directory
+-   PixiJS v8 Documentation: https://pixijs.download/release/docs/index.html
+-   Zustand Documentation: [Link to Zustand Docs]
+-   tRPC Documentation: [Link to tRPC Docs]
+-   Next.js Documentation: [Link to Next.js Docs]
+-   Educational Game Design Principles
+-   Animation Performance Best Practices
+</PRD> 
