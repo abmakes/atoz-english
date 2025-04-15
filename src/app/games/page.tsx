@@ -25,9 +25,7 @@ async function getQuizzes(): Promise<QuizListItem[]> {
     // Use the full URL for server-side fetch if necessary, or environment variable
     // Assuming the API route is accessible at this path relative to the server
     // In production, use process.env.NEXT_PUBLIC_API_URL or similar
-    const apiUrl = process.env.NEXT_PUBLIC_VERCEL_URL
-        ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/api/quizzes`
-        : 'http://localhost:3000/api/quizzes';
+    const apiUrl = `https://atoz-english.vercel.app/api/quizzes`
 
     try {
         const res = await fetch(apiUrl, {
