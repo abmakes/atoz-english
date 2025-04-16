@@ -140,9 +140,9 @@ AtoZ PixiJS Game Platform is an interactive educational web application built wi
 -   **Primary Planning Doc:** `project_docs/07_PRE_PDR.md` (Details the Engine Refactoring)
 -   Other Project Documentation: `/project_docs` directory
 -   PixiJS v8 Documentation: https://pixijs.download/release/docs/index.html
--   Zustand Documentation: [Link to Zustand Docs]
--   tRPC Documentation: [Link to tRPC Docs]
--   Next.js Documentation: [Link to Next.js Docs]
+-   Zustand Documentation: https://zustand.docs.pmnd.rs/guides/nextjs
+-   tRPC Documentation: https://trpc.io/docs/ 
+-   Next.js Documentation: https://nextjs.org/docs/14/getting-started 
 -   Educational Game Design Principles
 -   Animation Performance Best Practices
 </PRD> 

@@ -1,0 +1,24 @@
+---
+description: update a file in pixi-engine tha imports another file
+globs: 
+alwaysApply: false
+---
+ - **File Placement:**
+  - All code related to the PixiJS game engine **MUST** reside within the `src/lib/pixi-engine/` directory.
+  - Do **NOT** create or place engine files in a top-level `lib/pixi-engine/` directory.
+
+- **Core Modules:**
+  - Files related to the core engine orchestration, fundamental managers (like EventBus, StorageManager, GameStateManager, RuleEngine, ControlsManager), and base configurations belong in `src/lib/pixi-engine/core/`.
+  - Example: `src/lib/pixi-engine/core/EventBus.ts`
+
+- **Game-Specific Modules:**
+  - Files related to specific game mechanics managers (like ScoringManager, TimerManager, PowerUpManager) and the `BaseGame` interface belong in `src/lib/pixi-engine/game/`.
+  - Example: `src/lib/pixi-engine/game/ScoringManager.ts`
+
+- **Other Engine Subdirectories:**
+  - Use `src/lib/pixi-engine/config/` for `GameConfig.ts`.
+  - Use `src/lib/pixi-engine/assets/` for `AssetLoader.ts`.
+  - Use `src/lib/pixi-engine/ui/` for shared Pixi UI components.
+  - Use `src/lib/pixi-engine/utils/` for engine utilities.
+
+- **Reference:** The correct structure is defined in `scripts/prd.txt` under the "Components Structure & Architecture" section.

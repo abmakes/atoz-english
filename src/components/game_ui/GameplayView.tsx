@@ -1,19 +1,29 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import PlayerScore from './PlayerScore';
 import NavMenu, { NavMenuItemProps } from './NavMenu';
 import GameSettingsPanel from './GameSettingsPanel';
 import MainMenuDropdown from './MainMenuDropdown';
 import styles from '@/styles/themes/themes.module.css';
-import { FullGameConfig, PlayerScoreData, TeamData, GameOverPayload, ScoreUpdatePayload } from '@/types/gameTypes';
-import { MultipleChoiceGame, GameEventType } from '@/lib/pixi-games/multiple-choice/MultipleChoiceGame';
+import { PlayerScoreData, GameOverPayload } from '@/types/gameTypes';
+import { GAME_STATE_EVENTS, SCORING_EVENTS, ScoringScoreUpdatedPayload } from '@/lib/pixi-engine/core/EventTypes';
+import { PixiEngine, PixiEngineManagers } from '@/lib/pixi-engine/core/PixiEngine';
+import { GameConfig } from '@/lib/pixi-engine/config/GameConfig';
+import { BaseGame } from '@/lib/pixi-engine/game/BaseGame';
+
+// Update state structure to include teamId
+interface PlayerScoreState extends PlayerScoreData {
+  teamId: string | number;
+}
 
 interface GameplayViewProps {
-  config: FullGameConfig;
+  config: GameConfig;
   themeClassName: string;
   onGameOver: (payload: GameOverPayload) => void;
   onExit: () => void;
+  pixiMountPointRef: React.RefObject<HTMLDivElement>;
+  gameFactory: (config: GameConfig, managers: PixiEngineManagers) => BaseGame;
 }
 
 // Example SVGs for NavMenu (replace with actual imports)
@@ -26,54 +36,124 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   themeClassName,
   onGameOver,
   onExit,
+  pixiMountPointRef,
+  gameFactory,
 }) => {
-  const [playerScores, setPlayerScores] = useState<PlayerScoreData[]>(() =>
-    config.teams.map((team: TeamData) => ({ playerName: team.name, score: 0 }))
+  // Initialize state with teamId
+  const [playerScores, setPlayerScores] = useState<PlayerScoreState[]>(() =>
+    config.teams.map((team) => ({
+      teamId: team.id,
+      playerName: team.name,
+      score: team.startingResources?.score ?? 0,
+    }))
   );
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainMenuOpen, setIsMainMenuOpen] = useState(false);
 
-  const pixiMountPoint = useRef<HTMLDivElement>(null);
-  const gameInstance = useRef<MultipleChoiceGame | null>(null);
+  // --- Refs for internal engine/managers ---
+  const engineInstanceRef = useRef<PixiEngine | null>(null);
+  const managersRef = useRef<PixiEngineManagers | null>(null);
 
-  // --- PixiJS Event Handlers ---
-  const handlePixiGameOver = useCallback((payload: GameOverPayload) => {
-      console.log("React received GAME_OVER event:", payload);
-      onGameOver(payload);
-  }, [onGameOver]);
+  // --- PixiJS Event Handlers (using managersRef) ---
+  const handlePixiGameOver = useCallback(() => {
+      console.log("React received GAME_ENDED event");
+      const currentManagers = managersRef.current; // Access via ref
+      // Use ScoringManager to get final data including teamId and displayName
+      const finalScoreData = currentManagers?.scoringManager?.getAllTeamData() ?? [];
 
-  const handlePixiScoreUpdate = useCallback((payload: ScoreUpdatePayload) => {
-      console.log("React received SCORE_UPDATED event:", payload);
-      setPlayerScores(payload.scores);
-  }, []);
+      const formattedScores: PlayerScoreData[] = finalScoreData.map(t => ({
+          playerName: t.displayName ?? String(t.teamId), // Use displayName as playerName for UI
+          score: t.score
+      }));
 
-  // Effect to initialize and clean up PixiJS game
-  useEffect(() => {
-    let currentInstance: MultipleChoiceGame | null = null;
-    if (pixiMountPoint.current) {
-      console.log("Mount point available, initializing Pixi game...");
-      if (config.gameSlug === 'multiple-choice') {
-          currentInstance = new MultipleChoiceGame(pixiMountPoint.current, config);
-          gameInstance.current = currentInstance;
-
-          currentInstance.on(GameEventType.GAME_OVER, handlePixiGameOver);
-          currentInstance.on(GameEventType.SCORE_UPDATED, handlePixiScoreUpdate);
-
-          currentInstance.init().catch(error => {
-              console.error("Failed to init MultipleChoiceGame instance:", error);
-          });
-      } else {
-          console.error(`Unsupported game slug: ${config.gameSlug}`);
+      // Calculate winner from formatted scores
+      let winner: PlayerScoreData | undefined;
+      if (formattedScores.length > 0) {
+          winner = formattedScores.reduce((prev: PlayerScoreData, current: PlayerScoreData) => (prev.score > current.score) ? prev : current);
+          if (winner) { 
+            const maxScore = winner.score;
+            const winners = formattedScores.filter((s: PlayerScoreData) => s.score === maxScore); 
+            if (winners.length > 1) {
+                winner = undefined; // It's a tie
+            }
+          }
       }
-    } else {
-        console.error("Pixi mount point not found!");
-    }
-    return () => {
-      console.log("GameplayView Unmounting - Destroying Pixi game instance...");
-      if (currentInstance) { currentInstance.destroy(); }
-      if (gameInstance.current === currentInstance) { gameInstance.current = null; }
-    };
-  }, [config, handlePixiGameOver, handlePixiScoreUpdate]);
+      // Pass playerName from the winner object to GameOverPayload
+      const payload: GameOverPayload = { scores: formattedScores, winner: winner?.playerName };
+      onGameOver(payload);
+  }, [onGameOver]); // Removed playerScores dependency as it's derived now
+
+  // --- Update score handler type --- 
+
+  const handlePixiScoreUpdate = useCallback((payload: ScoringScoreUpdatedPayload) => {
+      console.log("React received SCORE_UPDATED event:", payload);
+      // Update player score based on teamId
+      setPlayerScores(prevScores =>
+          prevScores.map(p =>
+              p.teamId === payload.teamId
+                  ? { ...p, score: payload.currentScore }
+                  : p
+          )
+      );
+  }, []); // No dependency on managers needed here
+  // -------------------------------
+
+  // --- Engine Initialization Effect --- 
+  useEffect(() => {
+      let engine: PixiEngine | null = null; // Temporary variable for cleanup scope
+      
+      if (config && gameFactory && pixiMountPointRef.current && !engineInstanceRef.current) {
+          console.log("GameplayView: Initializing PixiEngine...");
+          engine = new PixiEngine({ targetElement: pixiMountPointRef.current });
+          engineInstanceRef.current = engine;
+
+          engine.init(config, gameFactory)
+              .then(() => {
+                  console.log("GameplayView: PixiEngine initialized successfully.");
+                  const currentManagers = engine?.getManagers(); // Use local engine var
+                  managersRef.current = currentManagers ?? null;
+
+                  // Attach listeners ONLY after managers are confirmed
+                  if (currentManagers) {
+                       console.log("GameplayView: Attaching event listeners post-init...");
+                      currentManagers.eventBus.on(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
+                      currentManagers.eventBus.on(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
+                  } else {
+                      console.error("GameplayView: Managers are null after engine init!");
+                  }
+              })
+              .catch(error => {
+                  console.error("GameplayView: Failed to initialize PixiEngine:", error);
+                  // Handle initialization error (e.g., show message, call onExit?)
+                  engineInstanceRef.current = null; // Clear ref on error
+                  managersRef.current = null;
+              });
+      }
+
+      // --- Cleanup function ---
+      return () => {
+          console.log("GameplayView: Cleanup effect running...");
+          const engineToDestroy = engineInstanceRef.current; // Use ref for cleanup
+          if (engineToDestroy) {
+              console.log("GameplayView: Destroying PixiEngine instance.");
+              const currentManagers = managersRef.current;
+              // Detach listeners before destroying
+              if (currentManagers) {
+                  console.log("GameplayView: Detaching listeners during cleanup...");
+                  currentManagers.eventBus.off(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
+                  currentManagers.eventBus.off(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
+              }
+              engineToDestroy.destroy();
+              engineInstanceRef.current = null;
+              managersRef.current = null;
+          } else {
+              console.log("GameplayView Cleanup: No engine instance found to destroy.");
+          }
+      };
+      // Dependencies: config and factory trigger re-init if they change.
+      // Ref changes don't trigger effects, but we check .current inside.
+  }, [config, gameFactory, pixiMountPointRef, handlePixiGameOver, handlePixiScoreUpdate]); // Added callbacks to dependency array
+  // ------------------------------------------------------
 
   // --- Dropdown Handlers ---
   const toggleSettings = useCallback(() => setIsSettingsOpen(prev => !prev), []);
@@ -105,9 +185,10 @@ const GameplayView: React.FC<GameplayViewProps> = ({
     <div className={`${styles.gameplayViewContainer} ${themeClassName}`}>
         {/* Overlays */}
         <div className={styles.gameplayPlayerScoresOverlay}>
-            {playerScores.map((player: PlayerScoreData) => (
+            {/* Use teamId as the key */} 
+            {playerScores.map((player: PlayerScoreState) => (
             <PlayerScore
-                key={player.playerName}
+                key={player.teamId} 
                 playerName={player.playerName}
                 score={player.score}
                 isActive={false}
@@ -132,7 +213,8 @@ const GameplayView: React.FC<GameplayViewProps> = ({
               />
         </div>
 
-      <div ref={pixiMountPoint} className={styles.pixiCanvasContainer}></div>
+      {/* Render the mount point div for PixiJS canvas */}
+      <div ref={pixiMountPointRef} className={styles.pixiCanvasContainer}></div>
 
     </div>
   );

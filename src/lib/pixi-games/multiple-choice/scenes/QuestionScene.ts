@@ -1,6 +1,9 @@
 import * as PIXI from 'pixi.js';
 import { GifSprite } from 'pixi.js/gif';
-import { PixiEngine } from '@/lib/pixi-engine/core/PixiEngine';
+// Remove direct PixiEngine import
+// import { PixiEngine } from '@/lib/pixi-engine/core/PixiEngine';
+// Import managers/types needed
+import { EventBus } from '@/lib/pixi-engine/core/EventBus'; // Example manager
 
 // Define a type for potential animated resources from Assets.get()
 type AnimatedResource = { 
@@ -12,13 +15,22 @@ export class QuestionScene extends PIXI.Container {
     private questionText: PIXI.Text;
     private questionMedia: PIXI.Sprite | GifSprite | null = null;
     private answerOptionsContainer: PIXI.Container;
-    private engineRef: PixiEngine;
+    // Remove engineRef property
+    // private engineRef: PixiEngine;
+    // Add references to managers passed in constructor if needed
+    private eventBus: EventBus; // Example
 
-    constructor(engine: PixiEngine) {
+    // Update constructor signature
+    constructor(eventBus: EventBus /* Add other managers as needed */) {
         super();
-        this.engineRef = engine;
+        this.eventBus = eventBus;
 
-        const initialScreenWidth = this.engineRef.getApp().getScreenSize().width ?? 800;
+        // Ensure the scene itself is interactive
+        this.interactive = true;
+        this.interactiveChildren = true; // Allow events to reach children
+
+        // Use placeholder or default screen size for initial text wrap
+        const initialScreenWidth = 800; // Placeholder
         const textStyle = new PIXI.TextStyle({
             fontFamily: 'Grandstander',
             fontSize: 36,
@@ -33,17 +45,25 @@ export class QuestionScene extends PIXI.Container {
         this.addChild(this.questionText);
 
         this.answerOptionsContainer = new PIXI.Container();
+        // Ensure the options container is interactive
+        this.answerOptionsContainer.interactive = true;
+        this.answerOptionsContainer.interactiveChildren = true; // Allow events to reach buttons
         this.addChild(this.answerOptionsContainer);
 
-        this._positionElements();
+        // Initial position with placeholder dimensions
+        this._positionElements(initialScreenWidth, 600); // Pass placeholder dimensions
     }
 
-    public updateQuestion(text: string, engine: PixiEngine, imageUrl?: string ): void {
-        this.engineRef = engine;
+    // Update method signature - remove engine param
+    // Accept pre-loaded texture/resource or just URL?
+    // For now, keep URL and internal PIXI.Assets.get, but acknowledge refactoring needed
+    public updateQuestion(text: string, imageUrl?: string ): void {
+        // Remove engineRef assignment
+        // this.engineRef = engine;
 
         console.log("--- updateQuestion START - Current media:", this.questionMedia ? "Exists" : "null");
 
-        // --- Cleanup existing media ---
+        // --- Cleanup existing media (remains the same) ---
         if (this.questionMedia) {
             console.log("Destroying previous questionMedia...");
             const mediaToDestroy = this.questionMedia;
@@ -62,28 +82,27 @@ export class QuestionScene extends PIXI.Container {
         // -----------------------------
 
         this.questionText.text = text;
-        this.questionText.style.wordWrapWidth = (this.engineRef.getApp().getScreenSize().width ?? 800) * 0.8;
+        // Use placeholder or calculate based on container size later
+        const currentScreenWidth = 800; // Placeholder
+        this.questionText.style.wordWrapWidth = currentScreenWidth * 0.8;
 
-        // Initial positioning call (might happen before new media is added)
-        /* Comment out positioning log
-        console.log("Calling _positionElements (before new media creation)");
-        */
-        this._positionElements();
+        // Position without media first
+        this._positionElements(currentScreenWidth, 600); // Pass placeholders
 
         if (imageUrl) {
             console.log(`Processing imageUrl: ${imageUrl}`);
             try {
-                // --- Retrieve asset from cache ---
+                // TODO (Subtask 3): This asset retrieval should ideally happen
+                // before calling updateQuestion, passing the Texture/resource.
                 const loadedResource = PIXI.Assets.get(imageUrl);
-                // ---------------------------------
 
                 if (!loadedResource) {
-                    console.warn(`Asset not found in cache: ${imageUrl}. FINAL CALL to _positionElements.`);
-                    this._positionElements(); // Position one last time with no media
+                    console.warn(`Asset not found in cache: ${imageUrl}.`);
+                    this._positionElements(currentScreenWidth, 600); // Position one last time
                     return;
                 }
 
-                // --- Revised Animation Check ---
+                // --- Animation Check (remains the same for now) ---
                 let isPotentiallyAnimated = false;
                 if (typeof loadedResource === 'object' && loadedResource !== null) {
                     // Check for known animation properties
@@ -106,38 +125,19 @@ export class QuestionScene extends PIXI.Container {
                 // -----------------------------
 
                 if (isPotentiallyAnimated) {
-                    // Always try the fallback which handles extraction
-                    /* Comment out animated fallback log
-                    console.log("Attempting createAnimatedFallback for potentially animated resource...");
-                    */
                     this.createAnimatedFallback(loadedResource);
-                    console.log(`createAnimatedFallback finished. Current media: ${this.questionMedia ? 'Exists' : 'null'}`);
-                 
                 } else if (loadedResource instanceof PIXI.Texture) {
-                     // Only create static Sprite if NOT potentially animated AND it IS a Texture
-                     /* Comment out static sprite log
-                     console.log("Creating static Sprite (resource is Texture and not flagged as animated)...");
-                     */
-                     // No direct .valid check needed with Assets loader
-                     this.questionMedia = new PIXI.Sprite(loadedResource);
-                     this.questionMedia.anchor.set(0.5);
-                     this.addChild(this.questionMedia);
-                     /* Comment out sprite creation log
-                     console.log(`Static sprite created. Current media: ${this.questionMedia ? 'Exists' : 'null'}`);
-                     */
+                    this.questionMedia = new PIXI.Sprite(loadedResource);
+                    this.questionMedia.anchor.set(0.5);
+                    this.addChild(this.questionMedia);
                 } else {
-                     // This case should be less likely now, but handles unexpected types
-                    console.log(`Unhandled resource type loaded for ${imageUrl}:`, loadedResource);
-                    console.warn("Resource was not a Texture or identified as Animated. No media displayed.");
-                    console.log("Calling _positionElements (after unhandled resource type)");
-                    this._positionElements(); // Position elements without media
+                    console.warn(`Unhandled resource type for ${imageUrl}.`);
+                    this._positionElements(currentScreenWidth, 600);
                     return;
-                 }
+                }
 
-                // Position elements AFTER new media is added and set
-
-                console.log("Calling _positionElements (after new media created/added)");
-                this._positionElements();
+                // Position elements AFTER new media is potentially added
+                this._positionElements(currentScreenWidth, 600);
 
             } catch (error) {
                  console.error(`Error processing image ${imageUrl}:`, error);
@@ -149,59 +149,44 @@ export class QuestionScene extends PIXI.Container {
                     this.questionMedia = null;
                  }
                  console.log("Calling _positionElements (after error)");
-                 this._positionElements();
+                 this._positionElements(currentScreenWidth, 600);
              }
         } else {
              console.log("No imageUrl provided. Calling _positionElements.");
-             this._positionElements(); // Position elements when there's no image
+             this._positionElements(currentScreenWidth, 600); // Position elements when there's no image
         }
-
         console.log("--- updateQuestion END - Current media:", this.questionMedia ? "Exists" : "null");
     }
 
-    private _positionElements(): void {
-        const screenWidth = this.engineRef.getApp().getScreenSize().width ?? 800;
-        const screenHeight = this.engineRef.getApp().getScreenSize().height ?? 600;
+    // Update method signature to accept dimensions
+    private _positionElements(screenWidth: number, screenHeight: number): void {
+        // Use passed dimensions instead of engineRef
         const padding = 20;
 
         // Position question text
         this.questionText.x = screenWidth / 2;
-        this.questionText.y = screenHeight - screenHeight * 0.4;
-
-        // let bottomOfPreviousElement = this.questionText.y + this.questionText.height / 2;
+        // Adjust y positioning based on screen height
+        this.questionText.y = screenHeight * 0.15; // Position near top
 
         // Position media (if any)
         if (this.questionMedia) {
-            /* Comment out media positioning logs
-            console.log("Positioning question media:", 
-                "type:", this.questionMedia instanceof GifSprite ? "GIF" : "Image",
-                "initial size:", this.questionMedia.width, "x", this.questionMedia.height);
-            */
-                
             const maxMediaWidth = screenWidth * 0.8;
-            const maxMediaHeight = screenHeight * 0.6;
-            
-            // Get dimensions safely
-            let mediaWidth = 0;
-            let mediaHeight = 0;
-            
-            if (this.questionMedia instanceof PIXI.Sprite) {
-                // Regular sprite with texture
-                if (this.questionMedia.texture) {
-                    mediaWidth = this.questionMedia.texture.width;
-                    mediaHeight = this.questionMedia.texture.height;
-                } else {
-                    mediaWidth = 100; // Fallback size
-                    mediaHeight = 100;
-                }
-            } else {
-                // Must be a GifSprite
-                const gifMedia = this.questionMedia as GifSprite;
-                mediaWidth = gifMedia.width || 200;  // Fallback if undefined
-                mediaHeight = gifMedia.height || 200;
+            // Adjust max height calculation based on new text position
+            const availableHeight = screenHeight * 0.5; // Space between text and answers
+            const maxMediaHeight = availableHeight - 2 * padding;
+
+            let mediaWidth = 100; // Default/fallback
+            let mediaHeight = 100;
+
+            if (this.questionMedia instanceof PIXI.Sprite && this.questionMedia.texture) {
+                mediaWidth = this.questionMedia.texture.width;
+                mediaHeight = this.questionMedia.texture.height;
+            } else if (this.questionMedia instanceof GifSprite) {
+                mediaWidth = this.questionMedia.width || 100;
+                mediaHeight = this.questionMedia.height || 100;
             }
 
-            // Calculate scale to fit in available space
+            // Calculate scale
             let scale = 1;
             if (mediaWidth > maxMediaWidth) {
                 scale = maxMediaWidth / mediaWidth;
@@ -209,23 +194,17 @@ export class QuestionScene extends PIXI.Container {
             if (mediaHeight * scale > maxMediaHeight) {
                 scale = maxMediaHeight / mediaHeight;
             }
-            
             this.questionMedia.scale.set(scale);
 
-            // Position media below question text
+            // Position media below text
             this.questionMedia.x = screenWidth / 2;
-            this.questionMedia.y = padding + (this.questionMedia.height * scale / 2);
-            
-            /* Comment out final positioning log
-            console.log("Media positioned at:", this.questionMedia.x, this.questionMedia.y, 
-                "with scale:", scale, 
-                "resulting size:", this.questionMedia.width * scale, "x", this.questionMedia.height * scale);
-            */
+            this.questionMedia.y = this.questionText.y + this.questionText.height / 2 + padding + (this.questionMedia.height * scale / 2);
         }
 
-        // Position answer options container
-        this.answerOptionsContainer.x = 0;
-        this.answerOptionsContainer.y = screenHeight - screenHeight * 0.4 + this.questionText.height;
+        // Position answer options container below media (or text if no media)
+        const mediaBottom = this.questionMedia ? this.questionMedia.y + this.questionMedia.height * (this.questionMedia.scale.y || 1) / 2 : this.questionText.y + this.questionText.height / 2;
+        this.answerOptionsContainer.x = screenWidth / 2; // Center the container origin
+        this.answerOptionsContainer.y = mediaBottom + padding * 2; // Position below media/text with padding
     }
 
     public getAnswerOptionContainer(): PIXI.Container {

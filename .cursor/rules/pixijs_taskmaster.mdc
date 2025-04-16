@@ -1,0 +1,21 @@
+- **Reference Latest PixiJS v8 Documentation:**
+    - Always consult the official PixiJS v8 documentation for the most current API usage, best practices, and class structures: [https://pixijs.download/release/docs/index.html](https://pixijs.download/release/docs/index.html)
+    - Pay attention to core classes like `Application`, `Assets`, `Container`, `Sprite`, `Graphics`, `Text`, `Ticker`, and the `events` system.
+
+- **Taskmaster Context:**
+    - When working on a Taskmaster task involving PixiJS (`tasks.json` or task markdown files):
+        - Verify that the proposed implementation aligns with the patterns and APIs described in the v8 documentation.
+        - Ensure code related to the engine refactor ([`07_PRE_PDR.md`](mdc:project_docs/07_PRE_PDR.md)) uses documented v8 features correctly (e.g., event handling, asset loading, ticker usage).
+
+- **Project-Specific Abstractions:**
+    - Apply v8 best practices to the project's custom PixiJS abstractions:
+        - [`PixiEngine`](mdc:src/lib/pixi-engine/core/PixiEngine.ts) (if exists): Ensure its core methods (setup, ticker, stage access) use v8 patterns.
+        - `SceneManager` (conceptual): Ensure scene loading/transitions are compatible with v8 lifecycle.
+        - [`BaseGame`](mdc:src/lib/pixi-engine/game/BaseGame.ts) implementations: Ensure rendering, updates, and event handling within games use appropriate v8 APIs.
+        - Core Managers ([`GameStateManager`](mdc:src/lib/pixi-engine/core/GameStateManager.ts), [`AssetLoader`](mdc:src/lib/pixi-engine/assets/AssetLoader.ts), etc.): Ensure their interactions with PixiJS objects follow v8 guidelines.
+
+- **Key Areas from Docs to Verify:**
+    - **Asset Loading:** Use the `Assets` class for loading textures, fonts, sounds, etc. ([PixiJS Assets Docs](https://pixijs.download/release/docs/assets.html)).
+    - **Event Handling:** Use the `EventSystem` and `FederatedEvent` objects for user interactions ([PixiJS Events Docs](https://pixijs.download/release/docs/events.html)).
+    - **Application Lifecycle:** Understand the `Application` setup and the `Ticker` for updates ([PixiJS App Docs](https://pixijs.download/release/docs/app.html), [PixiJS Ticker Docs](https://pixijs.download/release/docs/ticker.Ticker.html)).
+    - **Rendering Objects:** Correctly use `Sprite`, `Graphics`, `Text`, `Container`, etc., for drawing ([PixiJS Sprite Docs](https://pixijs.download/release/docs/sprite.Sprite.html)). 

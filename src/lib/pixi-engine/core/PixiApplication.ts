@@ -3,7 +3,8 @@ import { Application, ApplicationOptions, Container, Graphics, Text } from 'pixi
 // import { EventEmitter } from 'eventemitter3';
 
 export interface PixiApplicationOptions extends Partial<ApplicationOptions> {
-  parent?: HTMLElement;
+  parent?: HTMLElement | null | undefined;
+  targetElement?: HTMLElement | null | undefined;
   width?: number;
   height?: number;
   backgroundColor?: string;
@@ -24,8 +25,11 @@ export class PixiApplication {
   /** The underlying PixiJS Application instance */
   private app: Application;
   
-  /** The parent container to attach the canvas to */
-  private parent: HTMLElement | null = null;
+  /** The target element to attach the canvas to */
+  private targetElement: HTMLElement | null;
+  
+  /** The parent container to attach the canvas to (legacy/alternative) */
+  private parent: HTMLElement | null;
   
   /** The main stage container for all game objects */
   private mainStage: Container;
@@ -60,6 +64,8 @@ export class PixiApplication {
   /** Array to store the last 10 FPS values for smoothing */
   private fpsValues: number[] = Array(10).fill(60);
 
+  private resizeObserver: ResizeObserver | null = null;
+
   /**
    * Get the screen size
    * @returns The screen size
@@ -81,19 +87,33 @@ export class PixiApplication {
    * @param options - Configuration options for the application
    */
   constructor(options: PixiApplicationOptions = {}) {
-    this.options = {
-      width: options.width || 800,
-      height: options.height || 600,
-      backgroundColor: options.backgroundColor || '#1099bb',
-      resolution: options.resolution || window.devicePixelRatio || 1,
-      autoResize: options.autoResize !== undefined ? options.autoResize : true,
-      autoStart: options.autoStart !== undefined ? options.autoStart : true,
-      targetFPS: options.targetFPS || 60,
-      debug: options.debug || false,
-      ...options
+    // Define defaults separately
+    const defaults = {
+      width: 800,
+      height: 600,
+      backgroundColor: '#1099bb',
+      resolution: window.devicePixelRatio || 1,
+      autoResize: true,
+      autoStart: true,
+      targetFPS: 60,
+      debug: false,
+      targetElement: null,
+      parent: null,
     };
-    
-    this.parent = options.parent || null;
+
+    // Combine defaults with provided options
+    // Ensure targetElement and parent are handled correctly (null vs undefined)
+    const combinedOptions = { ...defaults, ...options };
+    this.options = combinedOptions; // Assign combined options first
+
+    // Determine and assign final targetElement and parent
+    this.targetElement = combinedOptions.targetElement ?? null;
+    this.parent = this.targetElement ? null : (combinedOptions.parent ?? null);
+    // Update the options object AFTER determining the final values
+    // This ensures consistency and avoids the type error
+    this.options.targetElement = this.targetElement;
+    this.options.parent = this.parent;
+
     this.app = new Application();
     this.mainStage = new Container();
     this.debugContainer = new Container();
@@ -112,14 +132,18 @@ export class PixiApplication {
     try {
       console.log('Initializing PixiJS application with options:', this.options);
       
+      // Determine resize target
+      const resizeTarget = this.targetElement || this.parent || window;
+
       // Initialize the application with options
       await this.app.init({
         background: this.options.backgroundColor,
         resolution: this.options.resolution,
         antialias: true,
         autoDensity: true,
-        // If parent is set, use it for resizing, otherwise use window
-        ...(this.parent ? {} : { resizeTo: window }),
+        resizeTo: resizeTarget === window ? window : undefined,
+        width: this.options.width,
+        height: this.options.height,
       });
       
       console.log('PixiJS application initialized successfully');
@@ -128,6 +152,19 @@ export class PixiApplication {
       this.app.stage.addChild(this.mainStage);
       console.log('Main stage added to application stage');
       
+      // ---> Make the main stage interactive <--- 
+      this.app.stage.interactive = true;
+      // ---> And allow children to receive events <--- 
+      this.app.stage.interactiveChildren = true;
+      console.log('Main stage set to interactive');
+      
+      // --- REMOVE stage debug listener <---
+      /*
+      this.app.stage.on('pointerdown', () => {
+          console.log('>>> Application STAGE received pointerdown');
+      });
+      */
+
       // Setup debug container if debug mode is enabled
       if (this.options.debug) {
         console.log('Debug mode enabled, setting up debug container');
@@ -147,33 +184,50 @@ export class PixiApplication {
         this.app.stage.addChild(this.debugContainer);
       }
 
-      // Add the canvas to the DOM if parent is provided
-      if (this.parent) {
-        console.log('Adding canvas to parent element');
-        
-        // Force a specific style for the canvas to make sure it's visible
-        const canvas = this.app.canvas;
-        canvas.style.display = 'block';
-        canvas.style.position = 'absolute';
-        canvas.style.top = '0';
-        canvas.style.left = '0';
+      // --- Mark as initialized BEFORE initial resize --- 
+      this.initialized = true; 
+      // -------------------------------------------------
 
-        this.parent.appendChild(this.app.canvas);
-        
-        // Set initial size
-        this.resize(this.options.width!, this.options.height!);
-        
-        // Set up auto-resize if enabled
-        if (this.options.autoResize) {
-          console.log('Auto-resize enabled, adding resize listeners');
-          window.addEventListener('resize', this.handleResize);
-          
-          // Store initial window dimensions
-          this.windowDimensions = {
-            width: window.innerWidth,
-            height: window.innerHeight
-          };
-        }
+      // Add the canvas to the DOM if targetElement or parent is provided
+      const mountPoint = this.targetElement || this.parent;
+      if (mountPoint) {
+          if (mountPoint instanceof HTMLCanvasElement) {
+              console.warn('PixiApplication: Target element is already a canvas. Skipping canvas creation/append.');
+          } else {
+                console.log('Adding canvas to target/parent element:', mountPoint);
+                
+                // Force a specific style for the canvas to make sure it's visible
+                const canvas = this.app.canvas;
+                canvas.style.display = 'block';
+                canvas.style.position = 'absolute';
+                canvas.style.top = '0';
+                canvas.style.left = '0';
+                canvas.style.width = '100%'; 
+                canvas.style.height = '100%';
+
+                mountPoint.appendChild(this.app.canvas);
+                
+                // Initial resize to fit container or options - NOW safe to call
+                const bounds = mountPoint.getBoundingClientRect();
+                this.resize(bounds.width || this.options.width!, bounds.height || this.options.height!); 
+                
+                // Set up auto-resize if enabled and not resizing to window
+                if (this.options.autoResize && resizeTarget !== window) {
+                    console.log('Auto-resize enabled for element, adding ResizeObserver');
+                    // Use ResizeObserver for element-based resizing
+                    this.resizeObserver = new ResizeObserver(entries => {
+                        for (const entry of entries) {
+                            const { width, height } = entry.contentRect;
+                            this.resize(width, height);
+                        }
+                    });
+                    this.resizeObserver.observe(mountPoint);
+                    // Store observer to disconnect on destroy - Done above
+                } else if (this.options.autoResize && resizeTarget === window) {
+                     console.log('Auto-resize enabled for window, adding window resize listener');
+                     window.addEventListener('resize', this.handleWindowResize);
+                }
+          }
       } else {
         // If no parent, at least add to document body
         console.log('No parent provided, adding canvas to document body');
@@ -199,7 +253,6 @@ export class PixiApplication {
         }
       }
 
-      this.initialized = true;
       console.log('PixiApplication initialization complete');
     } catch (error) {
       console.error('Error initializing PixiJS application:', error);
@@ -417,24 +470,45 @@ export class PixiApplication {
    * Clean up resources when the application is no longer needed
    */
   public destroy(): void {
-    if (!this.initialized) return;
-    
-    // Stop the ticker
-    this.stop();
-    
-    // Remove event listeners
+    console.log('Destroying PixiApplication...');
+    if (!this.initialized) return; // Avoid double destroy errors
+    this.initialized = false;
+
+    // Determine how resizing was handled
+    const resizeTarget = this.targetElement || this.parent || window;
+
+    // Remove listeners based on resize target
     if (this.options.autoResize) {
-      window.removeEventListener('resize', this.handleResize);
+        if (resizeTarget === window) {
+            // Remove window listener ONLY if we added it
+             window.removeEventListener('resize', this.handleWindowResize);
+        } else if (resizeTarget instanceof HTMLElement && this.resizeObserver) {
+             // Disconnect stored ResizeObserver
+             this.resizeObserver.unobserve(resizeTarget);
+             this.resizeObserver.disconnect();
+             this.resizeObserver = null; // Clear reference
+             console.log('Disconnected ResizeObserver.');
+        }
     }
-    
+
+    // Stop the ticker
+    this.stop(); // Use stop() which removes the update listener
+
     // Clear resize callbacks
     this.resizeCallbacks = [];
-    
+
     // Destroy the PixiJS application
+    // Pass true to remove the canvas from the DOM
     this.app.destroy(true);
-    
-    // Reset initialized flag
-    this.initialized = false;
+
+    // Nullify references (optional, but good practice)
+    this.debugGraphics = null;
+    this.debugText = null;
+    this.targetElement = null;
+    this.parent = null;
+    this.resizeObserver = null;
+    // @ts-expect-error Allow null assignment after destroy
+    this.app = null;
   }
 
   // Add the getter for the ticker
@@ -442,5 +516,24 @@ export class PixiApplication {
     return this.app?.ticker;
   }
 
+  private handleWindowResize = (): void => {
+    if (this.resizePending) return;
+    
+    this.resizePending = true;
+    
+    const newWidth = window.innerWidth;
+    const newHeight = window.innerHeight;
+    
+    if (newWidth === this.windowDimensions.width && newHeight === this.windowDimensions.height) {
+        this.resizePending = false;
+        return;
+    }
 
+    // Update dimensions and trigger resize after a short delay
+    this.windowDimensions = { width: newWidth, height: newHeight };
+    requestAnimationFrame(() => {
+        this.resize(newWidth, newHeight);
+        this.resizePending = false;
+    });
+  }
 } 

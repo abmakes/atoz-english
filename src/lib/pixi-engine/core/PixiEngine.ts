@@ -1,401 +1,479 @@
-import { Assets, Container, Graphics, Sprite, Texture, Ticker } from 'pixi.js';
+import { Ticker, Assets } from 'pixi.js';
 import { PixiApplication, PixiApplicationOptions } from './PixiApplication';
 import { initDevtools } from '@pixi/devtools';
+import { EventBus } from './EventBus';
+import { GameStateManager } from './GameStateManager';
+import { RuleEngine } from './RuleEngine';
+import { ControlsManager } from './ControlsManager';
+import { StorageManager } from './StorageManager';
+import { ScoringManager } from '../game/ScoringManager';
+import { TimerManager } from '../game/TimerManager';
+import { PowerUpManager } from '../game/PowerUpManager';
+import { BaseGame } from '../game/BaseGame';
+import { GameConfig } from '../config/GameConfig';
+
+// Type definition for the managers object passed to BaseGame
+export interface PixiEngineManagers {
+  eventBus: EventBus;
+  gameStateManager: GameStateManager;
+  ruleEngine: RuleEngine;
+  controlsManager: ControlsManager;
+  storageManager: StorageManager;
+  scoringManager: ScoringManager;
+  timerManager: TimerManager;
+  powerUpManager: PowerUpManager;
+}
+
+// Type definition for the game factory function
+export type GameFactory = (config: GameConfig, managers: PixiEngineManagers) => BaseGame;
 
 interface ISize {
   width: number;
   height: number;
 }
 
-export interface PixiEngineOptions extends PixiApplicationOptions {
+// Use PixiApplicationOptions for basic app setup, GameConfig comes later
+export type PixiEngineOptions = PixiApplicationOptions & {
   debug?: boolean;
-  loadAssetsOnInit?: boolean;
-  assetManifest?: { 
-    bundles: { name: string; assets: Record<string, string> }[] 
+    targetElement?: HTMLDivElement | null; // Optional target element
   };
-}
-
-export type EngineUpdateCallback = (deltaTime: number) => void;
 
 /**
- * PixiEngine - Manages the overall game engine including asset loading,
- * scenes, and update loops.
+ * PixiEngine - Orchestrates the Pixi.js application, managers, and the active game.
  */
 export class PixiEngine {
-  /** The main PixiApplication instance */
   private app: PixiApplication;
-  
-  /** Container for the current scene */
-  private currentScene: Container | null = null;
-  
-  /** Options for the engine */
   private options: PixiEngineOptions;
-  
-  /** Whether the engine has been initialized */
   private initialized = false;
-  
-  /** List of update callbacks to be executed each frame */
-  private updateCallbacks: EngineUpdateCallback[] = [];
-  
-  /** Asset loading status */
-  private assetLoadingStatus = {
-    loaded: false,
-    progress: 0,
-    errors: [] as string[]
-  };
+  private config: GameConfig | null = null;
+  private currentGame: BaseGame | null = null;
+
+  // Managers
+  private eventBus: EventBus;
+  private gameStateManager: GameStateManager;
+  private ruleEngine!: RuleEngine; // Definite assignment assertion
+  private controlsManager: ControlsManager;
+  private storageManager: StorageManager;
+  private scoringManager: ScoringManager;
+  private timerManager: TimerManager;
+  private powerUpManager!: PowerUpManager; // Definite assignment assertion
 
   /**
    * Constructor for the PixiEngine class
-   * @param options - Configuration options for the engine
+   * @param options - Basic configuration options for the Pixi application window
    */
   constructor(options: PixiEngineOptions = {}) {
-    this.options = {
-      debug: options.debug || false,
-      loadAssetsOnInit: options.loadAssetsOnInit !== undefined ? options.loadAssetsOnInit : true,
-      assetManifest: options.assetManifest || { bundles: [] },
-      ...options
-    };
-    
-    // Initialize the PixiApplication with the options
-    this.app = new PixiApplication(this.options);
-    initDevtools({  app: this.app.getApp() })
+    this.options = options;
+    this.app = new PixiApplication({...this.options, targetElement: options.targetElement });
+
+    // Initialize core managers that don't depend on GameConfig yet
+    this.eventBus = new EventBus();
+    this.storageManager = new StorageManager(); // Assumes StorageManager doesn't need config at init
+
+    // Initialize managers that ONLY need eventBus and/or storageManager
+    this.gameStateManager = new GameStateManager(this.eventBus);
+    this.timerManager = new TimerManager(this.eventBus, this.storageManager);
+    this.controlsManager = new ControlsManager(); // Init called later with config
+    this.scoringManager = new ScoringManager(this.eventBus, this.storageManager); // Now takes storageManager
+
+    // Managers requiring GameConfig (powerUpManager, ruleEngine) are initialized in init()
+
+    if (options.debug) {
+       initDevtools({ app: this.app.getApp() });
+    }
   }
 
   /**
-   * Initialize the engine
-   * @returns A promise that resolves when initialization is complete
+   * Initialize the engine with a specific game configuration and game implementation.
+   * @param config - The GameConfig for the specific game instance.
+   * @param gameFactory - A function that returns an instance of the specific BaseGame implementation.
+   * @returns A promise that resolves when initialization is complete.
    */
-  public async init(): Promise<void> {
+  public async init(config: GameConfig, gameFactory: GameFactory): Promise<void> {
     if (this.initialized) {
-      console.warn('PixiEngine already initialized');
+      console.warn('PixiEngine already initialized. Call destroy() first if you want to re-initialize.');
       return;
     }
     
-    console.log('Initializing PixiEngine...');
+    console.log('Initializing PixiEngine with game config:', config.gameMode.name);
+    this.config = config;
     
     try {
       // Initialize the PixiApplication
       await this.app.init();
       
-      // Set up update callback to propagate to registered callbacks
-      this.app.getApp().ticker.add(this.handleUpdate);
-      
-      // Load assets if specified
-      if (this.options.loadAssetsOnInit && this.options.assetManifest) {
-        console.log('Auto-loading assets on init');
-        await this.loadAssets();
+      // Initialize/Configure managers that depend on GameConfig
+      console.log('Initializing GameConfig-dependent managers...');
+
+      // ControlsManager init
+      if (this.config.controls) {
+        this.controlsManager.init(this.config.controls, this.eventBus);
+        this.controlsManager.enable(); // Enable controls after init
+      } else {
+        console.warn("PixiEngine: No controls configuration found in GameConfig.");
       }
-      
-      if (this.options.debug) {
-        console.log('Debug mode enabled, creating test sprite');
-        await this.createTestSprite();
+
+      // ScoringManager init
+      this.scoringManager.init(this.config.teams, this.config.gameMode);
+
+      // PowerUpManager init
+      this.powerUpManager = new PowerUpManager(this.eventBus, this.config); // Use this.config
+
+      // RuleEngine init (needs other managers)
+      this.ruleEngine = new RuleEngine(this.eventBus, this.config, { // Use this.config
+          timerManager: this.timerManager,
+          gameStateManager: this.gameStateManager,
+          scoringManager: this.scoringManager,
+          powerUpManager: this.powerUpManager // Pass the initialized powerUpManager
+      });
+
+      // --- Asset Initialization (Static) ---
+      console.log('Initializing PixiJS Assets...');
+      if (this.config.assets) {
+         const manifest = { bundles: this.config.assets.bundles };
+         await Assets.init({
+            basePath: this.config.assets.basePath,
+            manifest: manifest
+         });
+         console.log('PixiJS Assets initialized.');
+         if (this.config.assets.bundles && this.config.assets.bundles.length > 0) {
+             console.log('Loading all defined asset bundles:', this.config.assets.bundles.map(b => b.name));
+             await Promise.all(this.config.assets.bundles.map(bundle =>
+                 Assets.loadBundle(bundle.name)
+             ));
+             console.log('All defined asset bundles loaded.');
+         } else {
+            console.log('No asset bundles defined in config.');
+         }
+      } else {
+          console.warn("PixiEngine: No assets configuration found in GameConfig. Assets not initialized.");
       }
-      
+      // --- End Asset Initialization ---
+
+      // --- Mark engine as initialized BEFORE creating game instance ---
       this.initialized = true;
+      // -------------------------------------------------------------
+
+      // Instantiate the specific game using the factory
+      console.log('Creating game instance...');
+      this.currentGame = gameFactory(this.config, this.getManagers());
+      if (!this.currentGame || !(this.currentGame instanceof BaseGame)) {
+          throw new Error("Game factory did not return a valid BaseGame instance.");
+      }
+      this.app.getStage().addChild(this.currentGame.view);
+
+      // Initialize the game
+      console.log('Initializing game...');
+      await this.currentGame.init();
+
+      // Set up update loop
+      this.app.getApp().ticker.add(this.handleUpdate);
+
+      // Set up resize handling
+      this.app.onResize(this.handleResize);
+      // Initial resize call
+      this.handleResize(this.app.getScreenSize().width, this.app.getScreenSize().height);
+
+      // TODO: Define 'engineInitialized' event in EventBus
+      // this.eventBus.emit('engineInitialized', this);
       console.log('PixiEngine initialized successfully');
     } catch (error) {
       console.error('Error initializing PixiEngine:', error);
-      throw error;
+      // TODO: Define 'engineError' event in EventBus
+      // this.eventBus.emit('engineError', { type: 'initialization', error });
+      await this.destroy(); // Attempt cleanup on failed init
+      throw error; // Rethrow the error after cleanup attempt
     }
   }
 
+  /** Gathers all manager instances into an object. */
+  private getAllManagers(): PixiEngineManagers {
+       // Ensure managers initialized in init() are available
+       if (!this.powerUpManager || !this.ruleEngine) {
+           throw new Error("Cannot get all managers before PowerUpManager and RuleEngine are initialized in PixiEngine.init()");
+       }
+      return {
+          eventBus: this.eventBus,
+          gameStateManager: this.gameStateManager,
+          ruleEngine: this.ruleEngine,
+          controlsManager: this.controlsManager,
+          storageManager: this.storageManager,
+          scoringManager: this.scoringManager,
+          timerManager: this.timerManager,
+          powerUpManager: this.powerUpManager,
+      };
+  }
+
   /**
-   * Load all assets from the asset manifest
-   * @returns A promise that resolves when all assets are loaded
+   * Gets all initialized manager instances.
+   * Throws an error if called before the engine is fully initialized.
+   * @returns {PixiEngineManagers} An object containing all manager instances.
    */
-  public async loadAssets(): Promise<void> {
-    if (!this.options.assetManifest || this.options.assetManifest.bundles.length === 0) {
-      console.warn('No assets to load');
-      this.assetLoadingStatus.loaded = true;
-      this.assetLoadingStatus.progress = 100;
+  public getManagers(): PixiEngineManagers {
+      if (!this.initialized || !this.powerUpManager || !this.ruleEngine) {
+          throw new Error("PixiEngine.getManagers() called before engine was fully initialized.");
+      }
+      // Use the private method to construct the object
+      return this.getAllManagers();
+  }
+
+  /**
+   * Handles the ticker update and calls the update method with the correct parameter.
+   */
+  private handleUpdate = (ticker: Ticker): void => {
+    // Pixi Ticker v8 uses Ticker.deltaMS
+    const deltaTimeMs = ticker.deltaMS;
+    // Convert to seconds if needed by downstream update methods, or pass ms directly
+    // const deltaTimeSeconds = deltaTimeMs / 1000;
+    this.update(deltaTimeMs); // Passing milliseconds
+  };
+
+  /**
+   * Main update loop, called each frame. Drives manager and game updates.
+   * @param deltaTimeMs - Time elapsed since the last frame (in milliseconds).
+   */
+  private update = (deltaTimeMs: number): void => { // Changed parameter name to reflect ms
+    if (!this.initialized || !this.currentGame) {
       return;
     }
     
     try {
-      console.log('Starting asset loading...');
-      
-      // Reset asset loading status
-      this.assetLoadingStatus = {
-        loaded: false,
-        progress: 0,
-        errors: []
-      };
-      
-      // Add the bundles from the manifest
-      for (const bundle of this.options.assetManifest.bundles) {
-        console.log(`Adding bundle: ${bundle.name}`);
-        Assets.addBundle(bundle.name, bundle.assets);
-      }
-      
-      // Create a list of all bundle names
-      const bundleNames = this.options.assetManifest.bundles.map(bundle => bundle.name);
-      
-      // Set up progress callback
-      Assets.loadBundle(bundleNames, (progress) => {
-        this.assetLoadingStatus.progress = Math.round(progress * 100);
-        if (this.options.debug) {
-          console.log(`Asset loading progress: ${this.assetLoadingStatus.progress}%`);
-        }
-      }).then((loadedAssets) => {
-        console.log('All assets loaded successfully:', Object.keys(loadedAssets));
-        this.assetLoadingStatus.loaded = true;
-      }).catch((error) => {
-        console.error('Error loading assets:', error);
-        this.assetLoadingStatus.errors.push(error.toString());
-      });
+        // TODO: Define 'enginePreUpdate' event in EventBus
+        // this.eventBus.emit('enginePreUpdate', deltaTimeMs);
+
+        // Update managers that need per-frame updates
+        // this.timerManager.update(deltaTimeMs); // Removed - TimerManager updates internally
+        // this.controlsManager.update(deltaTimeMs); // ControlsManager might not need a delta time update
+        // this.gameStateManager.update(deltaTimeMs); // If needed
+        this.powerUpManager.update(deltaTimeMs); // Pass milliseconds
+
+        // Update the current game
+        this.currentGame.update(deltaTimeMs); // Pass milliseconds
+
+        // Explicit render call (often not needed with autoStart=true)
+        // this.app.getApp().renderer.render(this.app.getStage());
+
+        // TODO: Define 'enginePostUpdate' event in EventBus
+        // this.eventBus.emit('enginePostUpdate', deltaTimeMs);
     } catch (error) {
-      console.error('Error in loadAssets:', error);
-      this.assetLoadingStatus.errors.push(`Error in loadAssets: ${error}`);
-      throw error;
+        console.error("Error during engine update:", error);
+        // TODO: Define 'engineError' event in EventBus
+        // this.eventBus.emit('engineError', { type: 'update', error });
     }
-  }
+  };
 
   /**
-   * Create a test sprite to verify that the engine is working
-   * Only called in debug mode
+   * Handles resize events from the PixiApplication.
+   * @param width - The new width.
+   * @param height - The new height.
    */
-  private async createTestSprite(): Promise<void> {
+   private handleResize = (width: number, height: number): void => {
+       if (!this.initialized) return;
+       console.log(`PixiEngine: Resizing to ${width}x${height}`);
+       // TODO: Define 'engineResize' event in EventBus
+       // this.eventBus.emit('engineResize', { width, height });
+
+       // Notify the current game
+       this.currentGame?.onResize(width, height);
+
+       // Notify managers if they need to know about resize
+       // TODO: Implement onResize(width, height) in ControlsManager if needed
+       // this.controlsManager?.onResize(width, height);
+   };
+
+  /**
+   * Clean up resources when the engine is no longer needed.
+   */
+  public async destroy(): Promise<void> {
+    if (!this.initialized && !this.app) {
+        console.warn("PixiEngine already destroyed or never initialized.");
+        return;
+    }
+    console.log("Destroying PixiEngine...");
+    this.initialized = false;
+
     try {
-      console.log('Creating test graphics...');
-      
-      // Create a graphics object
-      const graphics = new Graphics();
-      
-      // Draw a simple shape
-      graphics
-        .rect(0, 0, 100, 100)
-        .fill({ color: 0xff0000 })
-        .circle(150, 150, 50)
-        .fill({ color: 0x00ff00 })
-        .roundRect(200, 50, 100, 100, 15)
-        .fill({ color: 0x0000ff });
-      
-      // Add to the stage
-      this.app.getStage().addChild(graphics);
-      
-      // Try to load a bunny texture
-      console.log('Loading test bunny texture...');
-      try {
-        // Try to load the bunny texture
-        const bunnyTexture = await Assets.load<Texture>('https://pixijs.com/assets/bunny.png');
-        
-        if (bunnyTexture) {
-          console.log('Bunny texture loaded successfully, creating sprite');
-          
-          // Create a new Sprite using the bunny texture
-          const bunny = new Sprite(bunnyTexture);
-          
-          // Center the sprite's anchor point
-          bunny.anchor.set(0.5);
-          
-          // Move the sprite to the center of the screen
-          bunny.x = this.app.getApp().screen.width / 2;
-          bunny.y = this.app.getApp().screen.height / 2;
-          
-          // Set a bright color tint for visibility
-          bunny.tint = 0xff0000;
-          
-          // Scale up for visibility
-          bunny.scale.set(3);
-          
-          // Add to the stage
-          this.app.getStage().addChild(bunny);
-          
-          // Set up a simple animation for the bunny
-          const animate = (ticker: Ticker): void => {
-            // Get delta time from ticker
-            const delta = ticker.deltaTime;
-            
-            // Rotate the bunny
-            bunny.rotation += 0.1 * delta;
-            
-            // Make the bunny "breathe" by scaling
-            const time = this.app.getApp().ticker.lastTime / 1000;
-            const scale = 2.5 + Math.sin(time * 2) * 0.5;
-            bunny.scale.set(scale);
-          };
-          
-          // Add the animation to the ticker
-          this.app.getApp().ticker.add(animate);
-          
-          console.log('Test bunny added to stage');
-        } else {
-          console.warn('Failed to load bunny texture, it is null or undefined');
+        // TODO: Define 'engineDestroyStart' event in EventBus
+        // this.eventBus.emit('engineDestroyStart');
+
+        // Remove ticker listener first
+        if (this.app?.getApp()?.ticker) {
+            this.app.getApp().ticker.remove(this.handleUpdate);
         }
-      } catch (textureError) {
-        console.error('Error loading test bunny texture:', textureError);
-      }
+         // Remove resize listener - Handled by app.destroy()
+        // this.app?.offResize(this.handleResize);
+
+        // Destroy the current game
+        if (this.currentGame) {
+            console.log("Destroying current game...");
+            this.app?.getStage()?.removeChild(this.currentGame.view);
+            this.currentGame.destroy(); // Assumes BaseGame has destroy()
+            this.currentGame = null;
+        }
+
+        // Destroy managers (in reverse dependency order if possible)
+        console.log("Destroying managers...");
+        // Call destroy on managers that have it
+        this.ruleEngine?.destroy(); // Destroy RuleEngine
+        this.powerUpManager?.destroy(); // Destroy PowerUpManager
+        this.scoringManager?.destroy(); // Destroy ScoringManager
+        this.controlsManager?.destroy(); // Destroy ControlsManager
+        // No destroy for TimerManager, AssetLoader, StorageManager, EventBus
+        // this.timerManager?.destroy(); // Removed
+        // this.gameStateManager?.destroy(); // Destroy GameStateManager
+        // this.assetLoader?.destroy(); // Removed
+        // this.storageManager?.destroy(); // Removed
+        // this.eventBus?.destroy(); // Removed
+        // TODO: Implement destroy() in GameStateManager if needed
+        // TODO: Consider calling storageManager.clear() if appropriate
+
+
+        // Destroy the PixiApplication
+        if (this.app) {
+             console.log("Destroying PixiApplication...");
+             await this.app.destroy();
+             // @ts-expect-error - Allow setting app to null after destroy
+             this.app = null;
+        }
+
+        this.config = null;
+
+        // Clear manager references
+        // @ts-expect-error Allow null assignments
+        this.eventBus = null;
+        // @ts-expect-error Allow null assignments
+        this.gameStateManager = null;
+        // @ts-expect-error Allow null assignments
+        this.ruleEngine = null;
+        // @ts-expect-error Allow null assignments
+        this.controlsManager = null;
+        // @ts-expect-error Allow null assignments
+        this.storageManager = null;
+        // AssetLoader was static
+        // @ts-expect-error Allow null assignments
+        this.scoringManager = null;
+        // @ts-expect-error Allow null assignments
+        this.timerManager = null;
+        // @ts-expect-error Allow null assignments
+        this.powerUpManager = null;
+
+
+        console.log("PixiEngine destroyed successfully.");
     } catch (error) {
-      console.error('Error creating test sprite:', error);
+        console.error("Error during PixiEngine destruction:", error);
+        // TODO: Define 'engineError' event in EventBus
+        // this.eventBus?.emit('engineError', { type: 'destruction', error });
+        // Ensure app reference is cleared even on error
+        // @ts-expect-error - Allow setting app to null after destroy
+        this.app = null;
     }
   }
 
   /**
-   * Handles the ticker update and calls the update method with the correct parameter
-   */
-  private handleUpdate = (ticker: Ticker): void => {
-    // Extract delta time from ticker
-    const deltaTime = ticker.deltaTime;
-    this.update(deltaTime);
-  };
-
-  /**
-   * Main update loop, called each frame
-   * @param deltaTime - Time elapsed since the last frame
-   */
-  private update = (deltaTime: number): void => {
-    // Call all registered update callbacks
-    for (const callback of this.updateCallbacks) {
-      callback(deltaTime);
-    }
-  };
-
-  /**
-   * Register an update callback
-   * @param callback - The function to call each frame
-   * @returns A function that removes the callback when called
-   */
-  public onUpdate(callback: EngineUpdateCallback): () => void {
-    this.updateCallbacks.push(callback);
-    
-    // Return a function that removes the callback
-    return () => {
-      const index = this.updateCallbacks.indexOf(callback);
-      if (index !== -1) {
-        this.updateCallbacks.splice(index, 1);
-      }
-    };
-  }
-
-  /**
-   * Get the PixiApplication instance
-   * @returns The PixiApplication instance
+   * Get the main PixiApplication instance.
    */
   public getApp(): PixiApplication {
+    if (!this.app) throw new Error("PixiApplication is not available.");
     return this.app;
   }
 
   /**
-   * Get the current scene
-   * @returns The current scene container or null if none is set
+   * Get the EventBus instance.
    */
-  public getScene(): Container | null {
-    return this.currentScene;
+  public getEventBus(): EventBus {
+    if (!this.eventBus) throw new Error("EventBus is not available.");
+    return this.eventBus;
   }
 
   /**
-   * Set the current scene
-   * @param scene - The new scene container
+   * Get the GameStateManager instance.
    */
-  public setScene(scene: Container): void {
-    // Remove the current scene if one exists
-    if (this.currentScene) {
-      this.app.getStage().removeChild(this.currentScene);
-    }
-    
-    // Set and add the new scene
-    this.currentScene = scene;
-    this.app.getStage().addChild(scene);
+  public getGameStateManager(): GameStateManager {
+    if (!this.gameStateManager) throw new Error("GameStateManager is not available.");
+    return this.gameStateManager;
   }
 
   /**
-   * Get the current asset loading status
-   * @returns The current asset loading status
+   * Get the RuleEngine instance.
    */
-  public getAssetLoadingStatus(): { loaded: boolean; progress: number; errors: string[] } {
-    return { ...this.assetLoadingStatus };
+  public getRuleEngine(): RuleEngine {
+      if (!this.ruleEngine) throw new Error("RuleEngine is not available.");
+      return this.ruleEngine;
   }
 
   /**
-   * Check if a specific asset is loaded
-   * @param assetPath - The path of the asset to check
-   * @returns True if the asset is loaded, false otherwise
+   * Get the ControlsManager instance.
    */
-  public isAssetLoaded(assetPath: string): boolean {
-    try {
-      return Assets.cache.has(assetPath);
-    } catch (error) {
-      console.error('Error checking if asset is loaded:', error);
-      return false;
-    }
+  public getControlsManager(): ControlsManager {
+      if (!this.controlsManager) throw new Error("ControlsManager is not available.");
+      return this.controlsManager;
+  }
+
+   /**
+    * Get the StorageManager instance.
+    */
+   public getStorageManager(): StorageManager {
+       if (!this.storageManager) throw new Error("StorageManager is not available.");
+       return this.storageManager;
+   }
+
+  /**
+   * Get the ScoringManager instance.
+   */
+  public getScoringManager(): ScoringManager {
+      if (!this.scoringManager) throw new Error("ScoringManager is not available.");
+      return this.scoringManager;
   }
 
   /**
-   * Get a loaded texture
-   * @param assetPath - The path or name of the texture
-   * @returns The texture or null if not found
+   * Get the TimerManager instance.
    */
-  public getTexture(assetPath: string): Texture | null {
-    try {
-      return Assets.get(assetPath);
-    } catch (error) {
-      console.error(`Error getting texture ${assetPath}:`, error);
-      return null;
-    }
+  public getTimerManager(): TimerManager {
+      if (!this.timerManager) throw new Error("TimerManager is not available.");
+      return this.timerManager;
   }
 
   /**
-   * Get a pre-created sprite from a loaded texture
-   * @param assetPath - The path or name of the texture
-   * @returns A new sprite with the texture or null if not found
+   * Get the PowerUpManager instance.
    */
-  public getSprite(assetPath: string): Sprite | null {
-    const texture = this.getTexture(assetPath);
-    if (!texture) {
-      console.warn(`Texture not found for path: ${assetPath}`);
-      return null;
-    }
-    
-    return new Sprite(texture);
-  }
-  
-  /**
-   * Load a specific texture
-   * @param path - The path to the texture
-   * @param name - Optional name to reference the texture
-   * @returns A promise that resolves to the loaded texture
-   */
-  public async loadTexture(path: string, name?: string): Promise<Texture> {
-    try {
-      if (name) {
-        // Create a simple bundle with name as alias for path
-        Assets.add({ alias: name, src: path });
-        return await Assets.load<Texture>(name);
-      } else {
-        return await Assets.load<Texture>(path);
-      }
-    } catch (error) {
-      console.error(`Error loading texture from ${path}:`, error);
-      throw error;
-    }
+  public getPowerUpManager(): PowerUpManager {
+      if (!this.powerUpManager) throw new Error("PowerUpManager is not available.");
+      return this.powerUpManager;
   }
 
   /**
-   * Clean up resources when the engine is no longer needed
+   * Get the current BaseGame instance.
    */
-  public destroy(): void {
-    // Clear update callbacks
-    this.updateCallbacks = [];
-    
-    // Destroy the PixiApplication
-    this.app.destroy();
-    
-    // Reset initialized flag
-    this.initialized = false;
+  public getCurrentGame(): BaseGame | null {
+    return this.currentGame;
+  }
+
+  /**
+   * Get the current GameConfig.
+   */
+  public getGameConfig(): Readonly<GameConfig> | null {
+      return this.config ? Object.freeze(this.config) : null;
+  }
+
+  /**
+   * Check if the engine is initialized.
+   */
+  public isInitialized(): boolean {
+    return this.initialized;
   }
 
   /**
    * Get the screen size of the PixiApplication
-   * @returns The screen size as an object with width and height
    */
   public getScreenSize(): ISize {
-    // Ensure the app and its screen are available, provide defaults otherwise
-    const defaultSize = { width: this.options.width ?? 800, height: this.options.height ?? 600 };
     if (!this.app) {
       console.warn("PixiEngine.getScreenSize: PixiApplication not initialized yet.");
-      return defaultSize;
+      // Return default or configured size
+      return { width: this.options.width ?? 800, height: this.options.height ?? 600 };
     }
-    // Delegate to the PixiApplication's getter
-    return this.app.getScreenSize() ?? defaultSize;
+    return this.app.getScreenSize();
   }
-} 
+}
+
+// Keep export {} if needed for module context, otherwise remove
+// export {};

@@ -43,7 +43,9 @@ export interface PlayerScoreData {
 }
 
 export interface ScoreUpdatePayload {
-  scores: PlayerScoreData[];
+  teamId: string;
+  currentScore: number;
+  livesRemaining: number;
 }
 
 export interface GameOverPayload {
