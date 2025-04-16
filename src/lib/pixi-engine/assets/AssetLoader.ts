@@ -1,4 +1,5 @@
-import { Assets, type ProgressCallback, Texture, Spritesheet } from 'pixi.js';
+import { Assets, type ProgressCallback, Texture, Spritesheet, Sprite, AnimatedSprite } from 'pixi.js';
+import { GifSprite } from 'pixi.js/gif'; // Import GifSprite if you might get it directly
 
 /**
  * Static class providing centralized management for loading and retrieving game assets using PixiJS v8 Assets.
@@ -115,6 +116,99 @@ export class AssetLoader {
             throw new Error(`Asset with key "${key}" is not a Spritesheet instance.`);
         }
         return asset;
+    }
+
+    /**
+     * Retrieves a loaded asset and returns an appropriate DisplayObject (Sprite, AnimatedSprite, GifSprite).
+     * Handles basic image textures, animated spritesheet data, and potentially GifSprites.
+     * @param {string} key - The key (alias) of the asset to retrieve.
+     * @returns {PIXI.DisplayObject | null} A display object instance, or null if the asset is not found or cannot be represented.
+     */
+    public static getDisplayObject(key: string): Sprite | AnimatedSprite | GifSprite | null {
+        if (!this.manifestLoaded) {
+            console.warn('AssetLoader.getDisplayObject used before initialization. Asset might not be available yet.');
+        }
+
+        try {
+            const resource = Assets.get(key); // Use the generic get first
+
+            if (!resource) {
+                console.warn(`AssetLoader.getDisplayObject: Asset with key "${key}" not found in PIXI.Assets cache.`);
+                return null;
+            }
+
+            // --- Add Detailed Logging ---
+            console.log(`[AssetLoader.getDisplayObject] Resource retrieved for key: "${key}"`);
+            if (resource) {
+                console.log(`  > Type: ${resource.constructor.name}`);
+                console.log(`  > Instance of Texture: ${resource instanceof Texture}`);
+                console.log(`  > Instance of GifSprite: ${resource instanceof GifSprite}`);
+                // Log structure if it's an object
+                if (typeof resource === 'object' && resource !== null) {
+                    console.log(`  > Properties: ${Object.keys(resource).join(', ')}`);
+                    if ('textures' in resource) console.log(`  > Has 'textures' property: ${Array.isArray(resource.textures) ? resource.textures.length : typeof resource.textures}`);
+                    if ('frames' in resource) console.log(`  > Has 'frames' property: ${Array.isArray(resource.frames) ? resource.frames.length : typeof resource.frames}`);
+                }
+            } else {
+                 console.log(`  > Resource is null or undefined.`);
+            }
+             // --- End Detailed Logging ---
+
+            // 1. Check for GifSprite (if pixi.js/gif is used and Assets returns it directly)
+            if (resource instanceof GifSprite) {
+                console.log(`AssetLoader.getDisplayObject: Returning GifSprite for key "${key}".`);
+                // Ensure it plays if needed (optional here, could be done in scene)
+                // if (!resource.playing) resource.play();
+                return resource;
+            }
+
+            // 2. Check for AnimatedSprite data (textures array or frames array)
+            if (typeof resource === 'object' && resource !== null) {
+                let textures: Texture[] = [];
+                if ('textures' in resource && Array.isArray(resource.textures)) {
+                    textures = resource.textures.filter((t: unknown): t is Texture => t instanceof Texture);
+                } else if ('frames' in resource && Array.isArray(resource.frames)) {
+                    textures = resource.frames
+                        .map((f: { texture?: Texture }) => f?.texture)
+                        .filter((t: Texture | undefined): t is Texture => t instanceof Texture);
+                }
+
+                if (textures.length > 0) {
+                    console.log(`AssetLoader.getDisplayObject: Creating AnimatedSprite for key "${key}".`);
+                    const animSprite = new AnimatedSprite(textures);
+                    animSprite.animationSpeed = textures.length > 20 ? 0.2 : 0.1; // Example speed logic
+                    animSprite.loop = true;
+                    // Play can be started here or in the scene
+                    // animSprite.play(); 
+                    return animSprite;
+                }
+            }
+
+            // 3. Check for simple Texture -> Sprite
+            if (resource instanceof Texture) {
+                console.log(`AssetLoader.getDisplayObject: Creating Sprite for key "${key}".`);
+                return new Sprite(resource);
+            }
+            
+            // 4. Handle other potential types (like Spritesheet - might return first frame?)
+            if (resource instanceof Spritesheet) {
+                 console.warn(`AssetLoader.getDisplayObject: Resource for key "${key}" is a Spritesheet. Returning Sprite of first texture.`);
+                 // Attempt to get the first texture from the spritesheet
+                 const textures = Object.values(resource.textures);
+                 if (textures.length > 0) {
+                     return new Sprite(textures[0]);
+                 }
+            }
+            
+
+            // If none of the above match, log a warning and return null
+            console.warn(`AssetLoader.getDisplayObject: Unhandled resource type for key "${key}". Type: ${typeof resource}`);
+            return null;
+
+        } catch (error) {
+            console.error(`AssetLoader.getDisplayObject: Error retrieving asset for key "${key}":`, error);
+            return null;
+        }
     }
 
     /**

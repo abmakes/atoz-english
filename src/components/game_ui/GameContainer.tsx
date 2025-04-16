@@ -12,10 +12,14 @@ import {
     ScoreModeConfig,
     PowerupConfig,
     DEFAULT_GAME_CONFIG,
+    RuleDefinition,
+    RuleConfig,
+    ControlsConfig,
 } from '@/lib/pixi-engine/config/GameConfig';
 import { PixiEngineManagers } from '@/lib/pixi-engine/core/PixiEngine';
 import { MultipleChoiceGame } from '@/lib/pixi-games/multiple-choice/MultipleChoiceGame';
 import type { NavMenuItemProps } from './NavMenu';
+import { GAME_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
 
 const GameplayView = dynamic(() => import('./GameplayView'), {
     ssr: false,
@@ -61,14 +65,66 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
           spawnMechanic: {},
       };
 
+      // --- Define Scoring Rule (using RuleDefinition) ---
+      const scoringRule: RuleDefinition = {
+          id: 'score-correct-answer',
+          description: 'Award points for correct multiple choice answer',
+          triggerEvent: GAME_EVENTS.ANSWER_SELECTED, // Use imported constant
+          conditions: [
+              {
+                  type: 'compareState', // Correct type
+                  property: 'isCorrect', // Correct property from payload
+                  operator: 'eq', // Correct operator
+                  value: true // Correct value to compare against
+              }
+          ],
+          actions: [
+              {
+                  type: 'modifyScore', // Correct action type
+                  params: {
+                      points: 10,
+                      target: 'payload.teamId' // Target team from event payload
+                  }
+              }
+          ]
+      };
+      
+      // --- Define Rule Config Object ---
+      const ruleConfig: RuleConfig = {
+          rules: [scoringRule]
+      };
+
+      // --- Define Controls Config (using ControlsConfig) ---
+      const controlConfig: ControlsConfig = {
+          actionMap: { // Use action names consistent with DEFAULT_CONTROLS_CONFIG
+              UP: { keyboard: 'ArrowUp' },
+              DOWN: { keyboard: 'ArrowDown' },
+              LEFT: { keyboard: 'ArrowLeft' },
+              RIGHT: { keyboard: 'ArrowRight' },
+              ACTION_A: { keyboard: 'Space' }, // Map Space to ACTION_A
+              ACTION_B: { keyboard: 'Enter' }, // Map Enter to ACTION_B
+          },
+          playerMappings: [ // Need at least one player mapping usually
+                { playerId: 'player1', deviceType: 'keyboard' } 
+          ],
+          gamepadDeadzone: DEFAULT_GAME_CONFIG.controls.gamepadDeadzone,
+      };
+      
+      // --- Define Basic Assets (Example - Adapt/Make Dynamic Later) ---
+      const assetConfig = DEFAULT_GAME_CONFIG.assets; // Use default for now
+
+      // --- Assemble Full Config ---
       const fullEngineConfig: GameConfig = {
-          ...DEFAULT_GAME_CONFIG,
+          ...DEFAULT_GAME_CONFIG, // Start with defaults
           quizId: quizId,
           gameSlug: gameSlug,
           teams: setupConfig.teams,
           gameMode: gameMode,
           powerups: powerupConfig,
           intensityTimeLimit: setupConfig.intensityTimeLimit,
+          rules: ruleConfig, // Assign the RuleConfig object
+          controls: controlConfig, // Assign the ControlsConfig object
+          assets: assetConfig, 
       };
 
       console.log('Prepared full engine config:', fullEngineConfig);

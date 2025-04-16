@@ -180,16 +180,27 @@ export class RuleEngine {
     }
 
     /** Evaluates a single condition */
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     private evaluateSingleCondition(condition: ConditionDefinition, context: RuleContext): boolean {
         try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const eventPayload = context.eventPayload as any; // Use 'any' for flexibility accessing properties
+
             switch (condition.type) {
                 case 'compareState':
-                    // TODO: Implement state comparison using GameStateManager
+                    // Check if property exists in eventPayload FIRST
+                    // This allows rules to react directly to event data
+                    if (eventPayload && Object.prototype.hasOwnProperty.call(eventPayload, condition.property)) {
+                        const actualValue = eventPayload[condition.property];
+                        const conditionMet = this.compareValues(actualValue, condition.operator, condition.value);
+                        console.log(`RuleEngine: compareState (event) '${condition.property}' (${actualValue}) ${condition.operator} ${condition.value} -> ${conditionMet}`);
+                        return conditionMet;
+                    }
+                    
+                    // TODO: If not in event payload, fallback to checking GameStateManager?
                     // Example: Get value from gameStateManager based on condition.property
-                    // const actualValue = this.gameStateManager?.getStateValue(condition.property);
-                    console.warn(`RuleEngine: Condition type 'compareState' not implemented for property '${condition.property}'.`);
-                    return false; // Placeholder
+                    // const gameStateValue = this.gameStateManager?.getStateValue(condition.property);
+                    console.warn(`RuleEngine: Condition 'compareState' - Property '${condition.property}' not found in event payload OR GameStateManager check not implemented.`);
+                    return false; // Placeholder - return false if property not found or state check not implemented
 
                 case 'timerCheck':
                     // Example: Check timer status or remaining time
@@ -239,13 +250,35 @@ export class RuleEngine {
                     return false;
             }
         } catch (error) {
-            console.error(`RuleEngine: Error evaluating condition type '${condition.type}':`, error);
+            console.error(`RuleEngine: Error evaluating condition type '${condition.type}' for property '${condition.property}':`, error);
             return false;
         }
     }
 
-    // TODO: Add comparison helper function for different operators (eq, ne, gt, lt, gte, lte, contains)
-    // private compareValues(actual: unknown, operator: ConditionDefinition['operator'], expected: unknown): boolean { ... }
+    // --- Comparison Helper --- 
+    // Added helper function for various comparison operators
+    private compareValues(actual: unknown, operator: ConditionDefinition['operator'], expected: unknown): boolean {
+        switch (operator) {
+            case 'eq': return actual === expected;
+            case 'ne': return actual !== expected;
+            // Ensure type safety for numerical comparisons
+            case 'gt': return typeof actual === 'number' && typeof expected === 'number' && actual > expected;
+            case 'lt': return typeof actual === 'number' && typeof expected === 'number' && actual < expected;
+            case 'gte': return typeof actual === 'number' && typeof expected === 'number' && actual >= expected;
+            case 'lte': return typeof actual === 'number' && typeof expected === 'number' && actual <= expected;
+            // Basic implementation for 'contains' - could be expanded for arrays/objects
+            case 'contains': 
+                if (typeof actual === 'string' && typeof expected === 'string') {
+                    return actual.includes(expected);
+                }
+                // Add array contains logic if needed
+                // if (Array.isArray(actual) && actual.includes(expected)) { ... }
+                return false; // Default if types don't match or logic not implemented
+            default:
+                console.warn(`RuleEngine: Unknown comparison operator: ${operator}`);
+                return false;
+        }
+    }
 
     /**
      * Executes the actions of a rule.

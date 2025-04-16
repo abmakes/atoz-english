@@ -11,6 +11,7 @@ import { TimerManager } from '../game/TimerManager';
 import { PowerUpManager } from '../game/PowerUpManager';
 import { BaseGame } from '../game/BaseGame';
 import { GameConfig } from '../config/GameConfig';
+import { AssetLoader } from '../assets/AssetLoader';
 
 // Type definition for the managers object passed to BaseGame
 export interface PixiEngineManagers {
@@ -22,6 +23,7 @@ export interface PixiEngineManagers {
   scoringManager: ScoringManager;
   timerManager: TimerManager;
   powerUpManager: PowerUpManager;
+  assetLoader: AssetLoader;
 }
 
 // Type definition for the game factory function
@@ -201,6 +203,7 @@ export class PixiEngine {
           scoringManager: this.scoringManager,
           timerManager: this.timerManager,
           powerUpManager: this.powerUpManager,
+          assetLoader: AssetLoader,
       };
   }
 
@@ -321,7 +324,6 @@ export class PixiEngine {
         // No destroy for TimerManager, AssetLoader, StorageManager, EventBus
         // this.timerManager?.destroy(); // Removed
         // this.gameStateManager?.destroy(); // Destroy GameStateManager
-        // this.assetLoader?.destroy(); // Removed
         // this.storageManager?.destroy(); // Removed
         // this.eventBus?.destroy(); // Removed
         // TODO: Implement destroy() in GameStateManager if needed
@@ -349,7 +351,6 @@ export class PixiEngine {
         this.controlsManager = null;
         // @ts-expect-error Allow null assignments
         this.storageManager = null;
-        // AssetLoader was static
         // @ts-expect-error Allow null assignments
         this.scoringManager = null;
         // @ts-expect-error Allow null assignments

@@ -3,9 +3,10 @@ import { EventBus } from '../core/EventBus';
 import { StorageManager } from '../core/StorageManager';
 import { ScoringManager } from './ScoringManager';
 import { TimerManager } from './TimerManager';
+// Import AssetLoader
+import { AssetLoader } from '../assets/AssetLoader';
 // Import other managers as needed (Controls, Assets, GameState, Rules, PowerUps)
 // import { ControlsManager } from '../core/ControlsManager';
-// import { AssetLoader } from '../assets/AssetLoader';
 // import { GameStateManager } from '../core/GameStateManager';
 // import { RuleEngine } from '../core/RuleEngine';
 // import { PowerUpManager } from './PowerUpManager';
@@ -27,9 +28,9 @@ export abstract class BaseGame {
   protected readonly storageManager: StorageManager;
   protected readonly scoringManager: ScoringManager;
   protected readonly timerManager: TimerManager;
-  // Add other managers as needed
+  // Add AssetLoader property
+  protected readonly assetLoader: AssetLoader;
   // protected readonly controlsManager: ControlsManager;
-  // protected readonly assetLoader: AssetLoader;
   // protected readonly gameStateManager: GameStateManager;
   // protected readonly ruleEngine: RuleEngine;
   // protected readonly powerUpManager: PowerUpManager;
@@ -49,14 +50,18 @@ export abstract class BaseGame {
       storageManager: StorageManager;
       scoringManager: ScoringManager;
       timerManager: TimerManager;
+      // Add AssetLoader to the managers type
+      assetLoader: AssetLoader;
       // Add other managers here
     }
   ) {
-    this.config = Object.freeze(config); // Make config immutable
+    this.config = Object.freeze(config);
     this.eventBus = managers.eventBus;
     this.storageManager = managers.storageManager;
     this.scoringManager = managers.scoringManager;
     this.timerManager = managers.timerManager;
+    // Assign AssetLoader
+    this.assetLoader = managers.assetLoader;
     // Assign other managers
 
     this.view = new Container();

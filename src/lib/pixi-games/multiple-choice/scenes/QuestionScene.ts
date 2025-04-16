@@ -1,3 +1,6 @@
+
+/// REMOVE IN FUTURE IF V2 IS SUCCESSFUL
+
 import * as PIXI from 'pixi.js';
 import { GifSprite } from 'pixi.js/gif';
 // Remove direct PixiEngine import
