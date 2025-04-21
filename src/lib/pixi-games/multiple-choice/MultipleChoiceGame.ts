@@ -4,9 +4,9 @@ import { PixiEngineManagers } from '@/lib/pixi-engine/core/PixiEngine';
 import { GameConfig } from '@/lib/pixi-engine/config/GameConfig';
 import { GAME_STATE_EVENTS, TIMER_EVENTS, TimerEventPayload, GAME_EVENTS, AnswerSelectedPayload } from '@/lib/pixi-engine/core/EventTypes';
 import { TimerType } from '@/lib/pixi-engine/game/TimerManager';
-import { QuestionScene } from './scenes/QuestionScene';
+import { QuestionScene } from './scenes/QuestionSceneV2';
 import { Button } from '@pixi/ui';
-import { FullGameConfig as MultipleChoiceGameConfig /*, PlayerScoreData, GameOverPayload */ } from '@/types/gameTypes';
+import { GameSetupData as MultipleChoiceGameConfig /*, PlayerScoreData, GameOverPayload */ } from '@/types/gameTypes';
 import { QuestionData } from '@/types';
 import { GifAsset } from 'pixi.js/gif';
 
@@ -39,7 +39,7 @@ export class MultipleChoiceGame extends BaseGame {
     private activeTeamIndex: number = 0;
     private readonly QUESTION_TIMER_ID = 'multipleChoiceQuestionTimer';
     private timerDisplay?: PIXI.Text;
-
+    
     constructor(config: GameConfig, managers: PixiEngineManagers) {
         super(config, managers);
 
@@ -95,7 +95,7 @@ export class MultipleChoiceGame extends BaseGame {
         // Create scene, passing necessary managers
         if (!this.questionScene) {
             // Pass the eventBus (and other managers if needed) from the game to the scene
-            this.questionScene = new QuestionScene(this.eventBus);
+            this.questionScene = new QuestionScene(this.pixiApp, this.eventBus, this.assetLoader);
             // Add the scene instance itself (which is a Container) to the game's view
             this.view.addChild(this.questionScene);
             console.log("QuestionScene created and added to the game view.");
@@ -247,10 +247,11 @@ export class MultipleChoiceGame extends BaseGame {
         });
 
         const optionsContainer = this.questionScene.getAnswerOptionContainer();
-        const screenWidth = 800;
+        const screenWidth = this.pixiApp.getScreenSize().width;
+        const screenHeight = this.pixiApp.getScreenSize().height;
         const buttonWidth = screenWidth * 0.4 - 20;
-        const buttonHeight = 80;
-        const gap = 20;
+        const buttonHeight = 90;
+        const gap = 10;
         const columns = 2;
         const totalWidth = columns * buttonWidth + (columns - 1) * gap;
         
@@ -310,8 +311,8 @@ export class MultipleChoiceGame extends BaseGame {
             this.answerButtons.push(button);
         });
 
-        optionsContainer.x = (screenWidth / 2) - (columns * buttonWidth + (columns - 1) * gap) / 2;
-        optionsContainer.y = 300;
+        optionsContainer.x = (screenWidth / 2) - buttonWidth / 2;
+        optionsContainer.y = screenHeight - optionsContainer.height - 15;
 
         const specificConfig = this.config as unknown as MultipleChoiceGameConfig;
         const questionDuration = specificConfig.intensityTimeLimit * 1000;

@@ -1,1 +1,34 @@
- 
+---
+description: 
+globs: 
+alwaysApply: false
+---
+- **Prefer Explicit Properties over Index Signatures:**
+    - When defining interfaces or types that represent a known set of properties (like the `EngineEvents` map we worked on), prefer explicitly defining each property and its type.
+    - Avoid using broad index signatures (e.g., `[key: string]: someType;`) unless you are truly dealing with an unknown, arbitrary set of keys.
+    - **Reasoning:** Explicit properties provide much better type safety, autocompletion, and refactoring support. Index signatures can hide errors and make the intended shape of the data less clear.
+    - Example:
+      ```typescript
+      // ❌ DON'T (Less safe, less clear)
+      interface StringMap { 
+        [key: string]: string; 
+      }
+      const map: StringMap = { prop1: 'value1' };
+      console.log(map.prop2); // No compile-time error, but likely undefined
+
+      // ✅ DO (Safer, clearer intention)
+      interface ExplicitProps {
+        prop1: string;
+        prop2?: string; // Optional property
+      }
+      const obj: ExplicitProps = { prop1: 'value1' };
+      // console.log(obj.prop3); // Compile-time error if typo
+      ```
+
+- **Use Interfaces for Public APIs, Type Aliases for Simpler Shapes:**
+    - Use `interface` when defining the shape of objects that will be implemented by classes or used as public contracts.
+    - Use `type` aliases for simpler shapes, unions, intersections, or when defining function signatures.
+
+- **Keep Interfaces Focused:**
+    - Design interfaces that represent a single responsibility or concept (Interface Segregation Principle).
+    - Avoid creating massive interfaces with unrelated properties. 

@@ -14,6 +14,12 @@ interface QuestionData {
   type?: QuestionType
 }
 
+/**
+ * Handles DELETE requests to remove a specific quiz and its associated questions.
+ * @param request - The NextRequest object (unused).
+ * @param params - Object containing the dynamic route parameter `id` (quiz ID).
+ * @returns A success or error response.
+ */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -49,6 +55,12 @@ export async function DELETE(
   }
 }
 
+/**
+ * Handles GET requests to fetch a specific quiz by its ID, including its questions and tags.
+ * @param request - The Request object (unused).
+ * @param params - Object containing the dynamic route parameter `id` (quiz ID).
+ * @returns A success response with the quiz data or an error response if not found.
+ */
 export async function GET(
   request: Request, 
   { params }: { params: { id: string } }
@@ -79,6 +91,14 @@ export async function GET(
   }
 }
 
+/**
+ * Handles PUT requests to update a specific quiz and its questions.
+ * Expects multipart/form-data with quiz title, questions JSON,
+ * and optional image files for the quiz and individual questions.
+ * @param request - The Request object containing form data.
+ * @param params - Object containing the dynamic route parameter `id` (quiz ID).
+ * @returns A success response with the updated quiz data or an error response.
+ */
 export async function PUT(
   request: Request, 
   { params }: { params: { id: string } }
@@ -161,6 +181,12 @@ export async function PUT(
   }
 }
 
+/**
+ * Handles the upload of the main quiz image file if provided in the form data.
+ * @param formData - The FormData object from the request.
+ * @param quizId - The ID of the quiz being updated.
+ * @returns The URL of the uploaded image or the existing URL if no new file was provided.
+ */
 async function handleQuizImageUpload(formData: FormData, quizId: string): Promise<string> {
   const quizImageFile = formData.get('quizImage') as File | null;
   const currentImageUrl = formData.get('quizImageUrl') as string;
@@ -175,6 +201,13 @@ async function handleQuizImageUpload(formData: FormData, quizId: string): Promis
   return currentImageUrl;
 }
 
+/**
+ * Handles the upload of image files for individual questions if provided in the form data.
+ * Matches files like `questions[0][image]`, `questions[1][image]`, etc.
+ * @param questions - The array of question data parsed from the form data.
+ * @param formData - The FormData object from the request.
+ * @returns The updated array of question data with uploaded image URLs.
+ */
 async function handleQuestionImageUploads(questions: QuestionData[], formData: FormData): Promise<QuestionData[]> {
   return await Promise.all(questions.map(async (q, index) => {
     const imageFile = formData.get(`questions[${index}][image]`) as File | null;

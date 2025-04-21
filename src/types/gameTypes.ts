@@ -25,7 +25,7 @@ export interface PowerupsData {
     comeback: boolean;
 }
 
-export interface FullGameConfig {
+export interface GameSetupData {
   quizId: string;
   gameSlug: string;
   teams: TeamData[];

@@ -28,20 +28,25 @@ describe('ScoringManager', () => {
     mockEventBusInstance = new MockedEventBus() as jest.Mocked<EventBus>;
     mockStorageManagerInstance = new MockedStorageManager() as jest.Mocked<StorageManager>;
 
-    // Implement mock StorageManager behavior
-    mockStorageManagerInstance.get = jest.fn((key: string): unknown | null => {
-      return mockStorage[key] ?? null;
-    });
+    // Implement mock StorageManager behavior correctly
+    // Use jest.fn<<T>(key: string) => T | null> for correct typing if possible,
+    // or cast the implementation if needed.
+    mockStorageManagerInstance.get = jest.fn((key: string) => {
+        // Basic mock implementation - assumes stored value type or returns null
+        const value = mockStorage[key];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return value !== undefined ? (value as any) : null; // Cast needed if type T isn't known here
+    }) as jest.MockedFunction<<T>(key: string) => T | null>; // Assert the mock function type
+
     mockStorageManagerInstance.set = jest.fn((key: string, value: unknown) => {
       mockStorage[key] = value;
     });
     mockStorageManagerInstance.remove = jest.fn((key: string) => {
         delete mockStorage[key];
     });
-    // Mock isStorageAvailable to be true for tests
     mockStorageManagerInstance.isStorageAvailable = jest.fn(() => true);
 
-    // Instantiate ScoringManager with mock dependencies
+    // Instantiate ScoringManager
     scoringManager = new ScoringManager(mockEventBusInstance, mockStorageManagerInstance);
   });
 
@@ -169,23 +174,16 @@ describe('ScoringManager', () => {
     mockEventBusInstance.emit.mockClear();
     mockStorageManagerInstance.set.mockClear();
 
-    scoringManager.resetAll();
+    scoringManager.resetAllScores();
 
-    expect(scoringManager.getAllScores().size).toBe(0);
-    expect(scoringManager.getAllLives().size).toBe(0);
-    expect(mockStorageManagerInstance.set).toHaveBeenCalledWith('scoring/scores', {});
-    expect(mockStorageManagerInstance.set).toHaveBeenCalledWith('scoring/lives', {});
-    // Should emit both score and lives updates
-    expect(mockEventBusInstance.emit).toHaveBeenCalledWith(
-        SCORING_EVENTS.SCORE_UPDATED,
-        expect.any(Object)
-    );
-    expect(mockEventBusInstance.emit).toHaveBeenCalledWith(
-        SCORING_EVENTS.LIFE_LOST,
-        expect.any(Object)
-    );
+    expect(scoringManager.getScore('teamE')).toBe(0);
+    expect(scoringManager.getScore('teamF')).toBe(0);
+    expect(scoringManager.getLives('teamE')).toBe(0);
+    expect(scoringManager.getLives('teamF')).toBe(0);
 
-    // Payload checks might need adjustment based on actual events emitted by resetAll
+    expect(mockStorageManagerInstance.set).toHaveBeenCalledWith('scoring/scores', expect.objectContaining({ teamE: 0, teamF: 0 }));
+    expect(mockStorageManagerInstance.set).toHaveBeenCalledWith('scoring/lives', expect.objectContaining({ teamE: 0, teamF: 0 }));
+    expect(mockEventBusInstance.emit).toHaveBeenCalledWith(SCORING_EVENTS.SCORE_UPDATED, expect.any(Object));
   });
 
   // --- Lives Tests ---
@@ -280,14 +278,27 @@ describe('ScoringManager', () => {
     expect(mockEventBusInstance.emit).toHaveBeenCalled();
   });
 
-  it('should correctly report game over for a specific team', () => {
+  it('should correctly determine game over state', () => {
     scoringManager.setLives('teamLife5', 1);
-    scoringManager.setLives('teamLife6', 3);
+    scoringManager.setLives('teamLife6', 1);
 
-    expect(scoringManager.isGameOver('teamLife5')).toBe(false);
+    // Test case 1: No teams eliminated
+    expect(scoringManager.isGameOver()).toBe(false); // Default (requireAllEliminated=false)
+    expect(scoringManager.isGameOver(true)).toBe(false); // requireAllEliminated=true
+
+    // Test case 2: One team eliminated
     scoringManager.removeLives('teamLife5', 1);
-    expect(scoringManager.isGameOver('teamLife5')).toBe(true);
-    expect(scoringManager.isGameOver('teamLife6')).toBe(false);
+    expect(scoringManager.getLives('teamLife5')).toBe(0);
+    // Call without arguments (defaults to requireAllEliminated = false)
+    expect(scoringManager.isGameOver()).toBe(true);
+    // Call with requireAllEliminated = true
+    expect(scoringManager.isGameOver(true)).toBe(false);
+
+    // Test case 3: All teams eliminated
+    scoringManager.removeLives('teamLife6', 1);
+    expect(scoringManager.getLives('teamLife6')).toBe(0);
+    expect(scoringManager.isGameOver()).toBe(true);
+    expect(scoringManager.isGameOver(true)).toBe(true);
   });
 
   it('should correctly report game over if any team has zero lives', () => {

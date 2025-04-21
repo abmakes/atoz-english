@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import GameSetupPanel from './GameSetupPanel';
 import GameOverScreen from './GameOverScreen';
 import styles from '@/styles/themes/themes.module.css';
-import { FullGameConfig, PlayerScoreData, GameOverPayload } from '@/types/gameTypes';
+import { GameSetupData, PlayerScoreData, GameOverPayload } from '@/types/gameTypes';
 import {
     GameConfig,
     ScoreModeConfig,
@@ -30,15 +30,30 @@ const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height
 
 type GameView = 'setup' | 'playing' | 'gameover';
 
+/**
+ * Props for the GameContainer component.
+ */
 interface GameContainerProps {
+  /** The unique identifier for the quiz to be played. */
   quizId: string;
+  /** The URL slug for the game type (e.g., 'multiple-choice'). */
   gameSlug: string;
 }
 
+/**
+ * Factory function to create a specific game instance.
+ * @param config - The game configuration object.
+ * @param managers - The core PixiEngine managers.
+ * @returns An instance of the game controller (e.g., MultipleChoiceGame).
+ */
 const gameFactory = (config: GameConfig, managers: PixiEngineManagers): MultipleChoiceGame => {
     return new MultipleChoiceGame(config, managers);
 };
 
+/**
+ * Main container component responsible for managing the game lifecycle,
+ * switching between setup, gameplay, and game over views.
+ */
 const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
   const router = useRouter();
   const [currentView, setCurrentView] = useState<GameView>('setup');
@@ -49,7 +64,12 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
 
   const pixiMountPointRef = useRef<HTMLDivElement>(null);
 
-  const handleStartGame = useCallback((setupConfig: Omit<FullGameConfig, 'quizId' | 'gameSlug'>) => {
+  /**
+   * Callback triggered when the user confirms settings and starts the game.
+   * Assembles the full GameConfig and transitions the view to 'playing'.
+   * @param setupConfig - Configuration options selected in the setup panel.
+   */
+  const handleStartGame = useCallback((setupData: Omit<GameSetupData, 'quizId' | 'gameSlug'>) => {
       if (!quizId) {
           console.error("Cannot start game: No Quiz ID available! Navigating back.");
           router.push('/games');
@@ -118,10 +138,10 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
           ...DEFAULT_GAME_CONFIG, // Start with defaults
           quizId: quizId,
           gameSlug: gameSlug,
-          teams: setupConfig.teams,
+          teams: setupData.teams,
           gameMode: gameMode,
           powerups: powerupConfig,
-          intensityTimeLimit: setupConfig.intensityTimeLimit,
+          intensityTimeLimit: setupData.intensityTimeLimit,
           rules: ruleConfig, // Assign the RuleConfig object
           controls: controlConfig, // Assign the ControlsConfig object
           assets: assetConfig, 
@@ -130,7 +150,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
       console.log('Prepared full engine config:', fullEngineConfig);
       setGameConfig(fullEngineConfig);
 
-      switch (setupConfig.theme) {
+      switch (setupData.theme) {
           case 'dark': setThemeClassName(styles.themeDark); break;
           case 'forest': setThemeClassName(styles.themeForest); break;
           case 'basic': default: setThemeClassName(styles.themeBasic); break;
@@ -138,6 +158,11 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
       setCurrentView('playing');
   }, [quizId, gameSlug, router]);
 
+  /**
+   * Callback triggered when the PixiEngine emits a game over event.
+   * Sets the final scores and winner, then transitions the view to 'gameover'.
+   * @param payload - Data containing final scores and winner information.
+   */
   const handleGameOver = useCallback((payload: GameOverPayload) => {
     console.log("GameContainer: Received GAME_OVER event. Payload:", payload);
     setFinalScores(payload.scores);
@@ -145,6 +170,10 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
     setCurrentView('gameover');
   }, []);
 
+  /**
+   * Callback triggered when the user chooses to play again from the game over screen.
+   * Resets state and navigates back to the game selection or setup.
+   */
   const handlePlayAgain = useCallback(() => {
     setGameConfig(null);
     setFinalScores([]);
@@ -153,6 +182,9 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
     setThemeClassName(styles.themeBasic);
   }, [router]);
 
+  /**
+   * Callback triggered when the user chooses to exit the game (from game over or during play).
+   */
   const handleExit = useCallback(() => {
     console.log("GameContainer: Exiting game.");
     handlePlayAgain();

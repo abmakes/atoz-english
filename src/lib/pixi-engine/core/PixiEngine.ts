@@ -13,56 +13,98 @@ import { BaseGame } from '../game/BaseGame';
 import { GameConfig } from '../config/GameConfig';
 import { AssetLoader } from '../assets/AssetLoader';
 
-// Type definition for the managers object passed to BaseGame
+/**
+ * Defines the structure for the object containing all core engine managers.
+ * This object is passed to the BaseGame instance upon creation.
+ */
 export interface PixiEngineManagers {
+  /** Central event bus for inter-component communication. */
   eventBus: EventBus;
+  /** Manages the overall state of the game (e.g., loading, playing, paused, ended). */
   gameStateManager: GameStateManager;
+  /** Processes game events against defined rules to trigger actions. */
   ruleEngine: RuleEngine;
+  /** Handles user input mapping and processing. */
   controlsManager: ControlsManager;
+  /** Provides an interface for persistent storage (e.g., localStorage). */
   storageManager: StorageManager;
+  /** Manages player/team scores and lives. */
   scoringManager: ScoringManager;
+  /** Manages game timers (e.g., countdowns, elapsed time). */
   timerManager: TimerManager;
+  /** Manages the logic and state of power-ups. */
   powerUpManager: PowerUpManager;
-  assetLoader: AssetLoader;
+  /** Static class responsible for loading and managing game assets. */
+  assetLoader: typeof AssetLoader;
+  /** The core PixiApplication instance managing the canvas and rendering. */
+  pixiApp: PixiApplication;
 }
 
-// Type definition for the game factory function
+/**
+ * Type definition for the factory function used to create a specific game instance.
+ * @param config - The configuration object for the game.
+ * @param managers - An object containing all the initialized engine managers.
+ * @returns An instance of a class extending BaseGame.
+ */
 export type GameFactory = (config: GameConfig, managers: PixiEngineManagers) => BaseGame;
 
+/**
+ * Simple interface defining width and height properties.
+ */
 interface ISize {
   width: number;
   height: number;
 }
 
-// Use PixiApplicationOptions for basic app setup, GameConfig comes later
+/**
+ * Configuration options for initializing the PixiEngine.
+ * Extends PixiApplicationOptions for base canvas/renderer settings.
+ */
 export type PixiEngineOptions = PixiApplicationOptions & {
+  /** Enable Pixi Devtools integration. Defaults to false. */
   debug?: boolean;
+  /** Optional target DOM element to mount the Pixi canvas into. */
     targetElement?: HTMLDivElement | null; // Optional target element
   };
 
 /**
- * PixiEngine - Orchestrates the Pixi.js application, managers, and the active game.
+ * Orchestrates the Pixi.js application, core managers, and the active game instance.
+ * Provides lifecycle management (init, destroy) and access to managers.
  */
 export class PixiEngine {
+  /** The underlying PixiApplication instance. */
   private app: PixiApplication;
+  /** Initial configuration options provided to the constructor. */
   private options: PixiEngineOptions;
+  /** Flag indicating if the engine has been successfully initialized. */
   private initialized = false;
+  /** The active game configuration object, set during init. */
   private config: GameConfig | null = null;
+  /** The currently active game instance (extends BaseGame). */
   private currentGame: BaseGame | null = null;
 
   // Managers
+  /** The central event bus instance. */
   private eventBus: EventBus;
+  /** The game state manager instance. */
   private gameStateManager: GameStateManager;
+  /** The rule engine instance (initialized in init). */
   private ruleEngine!: RuleEngine; // Definite assignment assertion
+  /** The controls manager instance. */
   private controlsManager: ControlsManager;
+  /** The storage manager instance. */
   private storageManager: StorageManager;
+  /** The scoring manager instance. */
   private scoringManager: ScoringManager;
+  /** The timer manager instance. */
   private timerManager: TimerManager;
+  /** The power-up manager instance (initialized in init). */
   private powerUpManager!: PowerUpManager; // Definite assignment assertion
 
   /**
-   * Constructor for the PixiEngine class
-   * @param options - Basic configuration options for the Pixi application window
+   * Creates an instance of PixiEngine.
+   * Initializes the core PixiApplication and base managers that don't require GameConfig.
+   * @param {PixiEngineOptions} [options={}] - Configuration options for the engine and Pixi app.
    */
   constructor(options: PixiEngineOptions = {}) {
     this.options = options;
@@ -86,10 +128,12 @@ export class PixiEngine {
   }
 
   /**
-   * Initialize the engine with a specific game configuration and game implementation.
-   * @param config - The GameConfig for the specific game instance.
-   * @param gameFactory - A function that returns an instance of the specific BaseGame implementation.
-   * @returns A promise that resolves when initialization is complete.
+   * Initializes the engine with a specific game configuration and game implementation.
+   * Sets up managers dependent on GameConfig, loads assets, creates the game instance,
+   * and starts the update loop.
+   * @param {GameConfig} config - The configuration for the specific game instance.
+   * @param {GameFactory} gameFactory - A function that returns an instance of the specific BaseGame implementation.
+   * @returns {Promise<void>} A promise that resolves when initialization is complete or rejects on error.
    */
   public async init(config: GameConfig, gameFactory: GameFactory): Promise<void> {
     if (this.initialized) {
@@ -188,7 +232,13 @@ export class PixiEngine {
     }
   }
 
-  /** Gathers all manager instances into an object. */
+  /**
+   * Gathers all manager instances into an object.
+   * Internal helper method.
+   * @private
+   * @returns {PixiEngineManagers} An object containing all manager instances.
+   * @throws {Error} If called before PowerUpManager and RuleEngine are initialized.
+   */
   private getAllManagers(): PixiEngineManagers {
        // Ensure managers initialized in init() are available
        if (!this.powerUpManager || !this.ruleEngine) {
@@ -204,13 +254,16 @@ export class PixiEngine {
           timerManager: this.timerManager,
           powerUpManager: this.powerUpManager,
           assetLoader: AssetLoader,
+          pixiApp: this.app
       };
   }
 
   /**
    * Gets all initialized manager instances.
    * Throws an error if called before the engine is fully initialized.
+   * @public
    * @returns {PixiEngineManagers} An object containing all manager instances.
+   * @throws {Error} If called before the engine is fully initialized.
    */
   public getManagers(): PixiEngineManagers {
       if (!this.initialized || !this.powerUpManager || !this.ruleEngine) {
@@ -221,7 +274,10 @@ export class PixiEngine {
   }
 
   /**
-   * Handles the ticker update and calls the update method with the correct parameter.
+   * Handles the ticker update event from PixiApplication.
+   * Calculates delta time and calls the main update method.
+   * @private
+   * @param {Ticker} ticker - The Pixi Ticker instance providing delta time.
    */
   private handleUpdate = (ticker: Ticker): void => {
     // Pixi Ticker v8 uses Ticker.deltaMS
@@ -232,8 +288,10 @@ export class PixiEngine {
   };
 
   /**
-   * Main update loop, called each frame. Drives manager and game updates.
-   * @param deltaTimeMs - Time elapsed since the last frame (in milliseconds).
+   * Main update loop, called each frame by the ticker handler.
+   * Drives manager and game updates.
+   * @private
+   * @param {number} deltaTimeMs - Time elapsed since the last frame (in milliseconds).
    */
   private update = (deltaTimeMs: number): void => { // Changed parameter name to reflect ms
     if (!this.initialized || !this.currentGame) {
@@ -265,27 +323,32 @@ export class PixiEngine {
     }
   };
 
-  /**
-   * Handles resize events from the PixiApplication.
-   * @param width - The new width.
-   * @param height - The new height.
-   */
-   private handleResize = (width: number, height: number): void => {
-       if (!this.initialized) return;
-       console.log(`PixiEngine: Resizing to ${width}x${height}`);
-       // TODO: Define 'engineResize' event in EventBus
-       // this.eventBus.emit('engineResize', { width, height });
+   /**
+    * Handles the resize event from PixiApplication.
+    * Notifies the current game instance of the resize.
+    * @private
+    * @param {number} width - The new width of the application.
+    * @param {number} height - The new height of the application.
+    */
+    private handleResize = (width: number, height: number): void => {
+     if (!this.initialized) return;
+     console.log(`PixiEngine: Resizing to ${width}x${height}`);
+     // TODO: Define 'engineResize' event in EventBus
+     // this.eventBus.emit('engineResize', { width, height });
 
-       // Notify the current game
-       this.currentGame?.onResize(width, height);
+     // Notify the current game
+     this.currentGame?.onResize(width, height);
 
-       // Notify managers if they need to know about resize
-       // TODO: Implement onResize(width, height) in ControlsManager if needed
-       // this.controlsManager?.onResize(width, height);
+     // Notify managers if they need to know about resize
+     // TODO: Implement onResize(width, height) in ControlsManager if needed
+     // this.controlsManager?.onResize(width, height);
    };
 
   /**
-   * Clean up resources when the engine is no longer needed.
+   * Cleans up resources, stops the ticker, destroys the Pixi application and current game.
+   * Resets the engine state to uninitialized.
+   * @public
+   * @returns {Promise<void>} A promise that resolves when destruction is complete.
    */
   public async destroy(): Promise<void> {
     if (!this.initialized && !this.app) {
@@ -371,7 +434,9 @@ export class PixiEngine {
   }
 
   /**
-   * Get the main PixiApplication instance.
+   * Gets the underlying PixiApplication instance.
+   * @public
+   * @returns {PixiApplication} The PixiApplication instance.
    */
   public getApp(): PixiApplication {
     if (!this.app) throw new Error("PixiApplication is not available.");
@@ -379,7 +444,9 @@ export class PixiEngine {
   }
 
   /**
-   * Get the EventBus instance.
+   * Gets the EventBus instance.
+   * @public
+   * @returns {EventBus} The EventBus instance.
    */
   public getEventBus(): EventBus {
     if (!this.eventBus) throw new Error("EventBus is not available.");
@@ -387,7 +454,9 @@ export class PixiEngine {
   }
 
   /**
-   * Get the GameStateManager instance.
+   * Gets the GameStateManager instance.
+   * @public
+   * @returns {GameStateManager} The GameStateManager instance.
    */
   public getGameStateManager(): GameStateManager {
     if (!this.gameStateManager) throw new Error("GameStateManager is not available.");

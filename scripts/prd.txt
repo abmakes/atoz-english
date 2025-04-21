@@ -2,6 +2,9 @@
 # Overview
 AtoZ PixiJS Game Platform is an interactive educational web application built with Next.js, TypeScript, and PixiJS v8. It provides engaging quiz-based games designed for rich animations and visual elements. The platform aims to make learning fun and effective through gamification, targeting educational institutions, teachers, and students seeking an interactive learning experience. **A key upcoming priority is a significant refactoring of the PixiJS engine core to enhance modularity, reusability, and support for diverse game types and features as outlined in `project_docs/07_PRE_PDR.md`.** Key focus areas include clean architecture, centralized engine logic, and seamless PixiJS integration. (Ref: `project_docs/00_OVERVIEW.md`, `project_docs/07_PRE_PDR.md`)
 
+# VISION (Post-Refactor)
+Our vision is a teacher-centric platform making quiz creation and delivery engaging. We'll start with interactive multiplayer multiple-choice games, evolving to include diverse, sprite-based mechanics with simple controls. A key feature will be AI-powered quiz generation, enabling teachers to quickly create content by providing topics and levels. Teachers can also manually craft and manage quizzes via an intuitive interface. The platform will feature authentication for teacher accounts and support basic visual theming for game customization. Our goal is an efficient, visually appealing tool for educators to create and deploy interactive learning experiences in the classroom.
+
 # Core Features
 1.  **Multiple-Choice Quiz Games:** (Initial Implementation)
     *   Interactive quizzes with animated elements and visual feedback using PixiJS. (Ref: `project_docs/05_PIXI_INTEGRATION.md`)
@@ -69,7 +72,7 @@ AtoZ PixiJS Game Platform is an interactive educational web application built wi
 5.  **PixiJS Integration:** (Ref: `project_docs/05_PIXI_INTEGRATION.md`, `project_docs/07_PRE_PDR.md`)
     *   `PixiWrapper` (React component) initializes `PixiEngine` with `GameConfig`.
     *   `PixiEngine` instantiates and manages all core managers (`GameStateManager`, `ScoringManager`, etc.) and the current `BaseGame` instance.
-    *   Communication is primarily event-driven via `EventBus`. `RuleEngine` interprets game events and triggers actions in other managers.
+    *   Communication is primarily event-driven via `EventBus`. `RuleEngine` interprets game events (and eventually config) and triggers actions in other managers.
     *   Specific games (`BaseGame` implementations) handle rendering and react to engine events and manager states.
 
 # Development Roadmap (**Revised Priority based on `project_docs/07_PRE_PDR.md`**)
@@ -77,55 +80,96 @@ AtoZ PixiJS Game Platform is an interactive educational web application built wi
    - Next.js setup, Prisma, tRPC basics.
    - Initial PixiJS integration (`PixiEngine` v1, `PixiWrapper`).
    - Basic `MultipleChoiceGame` implementation (pre-refactor).
-   - Basic asset loading.
-## **Phase 2: Engine Core Refactoring (Highest Priority - Current Focus)**
-   - **Implement Core Managers:** Create and implement `EventBus`, `GameStateManager`, `ScoringManager` (score mode), `TimerManager`, `PowerUpManager` (state tracking only), `AssetLoader` (refactored), `ControlsManager` (keyboard focus), `RuleEngine` (basic event handling), `StorageManager` (localStorage). (Ref: `project_docs/07_PRE_PDR.md` Section 5, Steps 1-11)
-   - **Define Interfaces:** Solidify `GameConfig` and `BaseGame` interfaces.
-   - **Refactor `MultipleChoiceGame`:** Adapt it to implement `BaseGame`, remove extracted logic, integrate with new managers via events and `RuleEngine`. Handle input via `ControlsManager`. (Ref: `project_docs/07_PRE_PDR.md` Section 5, Step 12)
-   - **Update `PixiEngine`:** Instantiate and orchestrate all new managers. Manage `BaseGame` lifecycle. (Ref: `project_docs/07_PRE_PDR.md` Section 5, Step 13)
-   - **Update UI Layer:** Pass comprehensive `GameConfig` (including basic rules/controls) from React components (`GameplayView`/`GameContainer`) to `PixiEngine`. (Ref: `project_docs/07_PRE_PDR.md` Section 5, Step 14)
-   - **Testing:** Test the refactored `MultipleChoiceGame` within the new engine structure. (Ref: `project_docs/07_PRE_PDR.md` Section 5, Step 15)
-## Phase 3: Enhanced Gameplay & Features (Post-Refactor)
-   - **Implement `RuleEngine` Features:** Add JSON-based rule configuration (win conditions, scoring modifiers), custom phase support.
-   - **Implement `ControlsManager` Features:** Add gamepad/touch support, shared controls, single-player adaptation.
-   - **Implement Lives Mode:** Add lives logic to `ScoringManager` and corresponding rules.
-   - **Implement Power-Up Effects:** Add `onPowerUpActivated/Deactivated` logic to relevant `BaseGame` implementations.
-   - **Refine Visual Feedback & Animations** within games, leveraging engine events.
-   - **Develop Team Setup UI** and integrate with `GameConfig`.
-   - **Develop `ScoreScene` / Results Display** using data from `ScoringManager`.
-   - Implement core game loop UI (Quiz selection -> Setup -> Play -> Score).
-## Phase 4: Content, Polish & Expansion
-   - Develop UI for quiz selection/management.
-   - Implement dynamic media loading based on quiz data via `AssetLoader`.
-   - Add sound effects/music management (potentially new `AudioManager`).
-   - Refine responsive design.
-   - Performance optimizations.
-   - **Develop New Game Types:** Implement new classes extending `BaseGame` (e.g., `SwimmerGame`, Physics-based games). (Ref: `project_docs/07_PRE_PDR.md` Section 7)
-   
+   - Basic asset loading. (**Status: Complete**)
+## **Phase 2: Engine Core Refactoring (Completed)**
+   - **Description:** Foundational restructuring of the PixiJS engine core to improve modularity, reusability, and prepare for diverse features. Established core managers (`EventBus`, `GameStateManager`, `ScoringManager` base, `TimerManager` base, `PowerUpManager` base, `AssetLoader` base, `ControlsManager` base, `RuleEngine` base, `StorageManager`), defined core interfaces (`GameConfig`, `BaseGame`), and refactored `MultipleChoiceGame` to use this structure. (**Status: Completed**)
+## **Phase 3: Core Engine Enhancements (Next Up)**
+   - **Goal:** Implement the specific engine features required for dynamic, sprite-based games and robust interaction, including the unified control scheme, basic audio, sprite handling, and improved rule processing. Build upon the Phase 2 structure.
+   - **Game Vision Integration:**
+       *   **Controls:** Implement the unified `ControlsManager` logic: Capture keyboard ('A'/'L'), mouse clicks/touch taps on specific PixiJS UI elements, emitting standardized `PLAYER_ACTION` events. Primarily 2 distinct actions mapped to 'A'/'L' and on-screen buttons.
+       *   **Visuals:** Support animated game sprites, potential dynamic backgrounds, shift towards more sprite-based rendering. Ensure simple dynamics focusing on educational content.
+   - **Key Activities:**
+       *   **RuleEngine Basics:** Implement the fundamental event->condition->action processing loop within `RuleEngine` for basic logic (e.g., scoring adjustments triggered by events).
+       *   **AudioManager (Basic):** Implement basic `AudioManager` (e.g., using Howler.js), integrate into `PixiEngine`, add `registerSound`/`play`/`stop`. Load/play default sounds (`/public/audio/default/correct.mp3`, etc.) triggered via `RuleEngine` or game logic.
+       *   **BaseGame Interface Solidification:** Ensure `MultipleChoiceGame` strictly adheres to `BaseGame`, uses `RuleEngine` for scoring, and `AudioManager` for basic feedback.
+       *   **ControlsManager Refinement:** Implement the unified input handling (keyboard, mouse/touch on PixiJS UI) emitting `PLAYER_ACTION`.
+       *   **PixiJS UI Button:** Create a reusable PixiJS `Button` component rendered within the canvas, integrating with `ControlsManager` for click/tap events.
+       *   **AssetLoader Enhancements:** Refine `AssetLoader` for visual assets, including spritesheet support. Establish default asset path structure (`/public/images/default/`).
+       *   **Animation & Utilities:** Implement basic tweening/animation helpers (lerp, easing) for sprite animation. Add common math utilities if needed.
+       *   **Integration:** Update `BaseGame` and engine parts to use the refined `ControlsManager`, `PixiJS UI Button`, enhanced `AssetLoader`, and `Animation Utilities`. Ensure `MultipleChoiceGame` leverages these where applicable (especially controls).
+## **Phase 4: AI-Powered Quiz Generation (Efficiency)**
+   - **Goal:** Streamline the quiz creation process for teachers using AI.
+   - **Key Activities:**
+       *   **AI Service Integration:** Set up integration with Gemini API (or chosen provider).
+       *   **Quiz Form AI Inputs:** Add UI fields to the Quiz Creation form for teachers to input AI generation parameters (topic, level, examples, etc.).
+       *   **AI Generation API:** Create a backend endpoint that takes these parameters, calls the AI service, parses the response, and structures it as quiz questions/answers.
+       *   **Form Population:** Update the Quiz Creation form to be populated with the AI-generated content, allowing teacher review and editing before saving.
+## **Phase 5: Focused Optimization & Connection Handling**
+   - **Goal:** Improve usability for the core game types (`MultipleChoiceGame` and the "Swimmer Game" - *assuming Swimmer is developed*) in resource-constrained environments by optimizing their load times/asset sizes, enabling basic offline play *for these specific games*, and providing user choice for optimized loading.
+   - **Key Activities:**
+       *   **Targeted Asset Optimization:** Focus analysis and optimization (WebP, PNG/JPG, spritesheet packing, audio compression) primarily on the assets used by `MultipleChoiceGame` and the "Swimmer Game". Create lower-fidelity versions for "Optimized Mode".
+       *   **Targeted Load Speed Optimization:** Focus lazy loading, code splitting, and initialization optimization on the loading paths relevant to `MultipleChoiceGame` and "Swimmer Game".
+       *   **Targeted Offline Caching:** Implement Service Worker caching prioritizing `MultipleChoiceGame` and "Swimmer Game" assets and data for offline play.
+       *   **"Optimized Mode" Implementation:** Add an "Optimized Mode" checkbox to `GameSetupPanel`. Modify `AudioManager` and `AssetLoader` to load lower-fidelity assets or skip non-essentials when this mode is enabled for the targeted games.
+## **Phase 6: Game Expansion & Full Theming (Variety & Engagement)**
+   - **Goal:** Leverage the improved engine and quiz data to introduce new game mechanics and fully implement theme support within PixiJS, driven by a consolidated configuration.
+   - **Theme Implementation Strategy:** Use `src/lib/themes.ts` to map `themeId` to CSS class, asset paths, and optional PixiJS config. Assets stored in `/public/audio/[themeId]/`, `/public/images/[themeId]`.
+   - **Key Activities:**
+       *   **New Game Implementations:** Develop 1-2 new game types (e.g., "Apple Catcher").
+       *   **Game Type Selection:** Update frontend/backend.
+       *   **Theme Configuration (`src/lib/themes.ts`):** Implement central `THEMES` mapping object.
+       *   **Theme ID Propagation:** Pass `themeId` from setup to engine.
+       *   **Theme-Aware Managers:** Update `AudioManager` and `AssetLoader` to use `themeId` to load assets from correct paths defined in `themes.ts`.
+       *   **Themed Game Logic:** Update games to use themed managers and static config from `themes.ts`.
+       *   **React Theming:** Ensure React components use the CSS class from `themes.ts`.
+       *   **Basic Power-Up:** Implement one simple power-up.
+## **Phase 7: Single Player Survival Mode & Leaderboards (Replayability & Competition)**
+   - **Goal:** Introduce a replayable single-player experience and social competition.
+   - **Key Activities:**
+       *   **Survival Mode Logic:** Adapt game types for single-player survival mode.
+       *   **Score Persistence:** Backend/DB for high scores (user, quiz/game type, mode).
+       *   **Leaderboard API:** Endpoints for submitting/retrieving scores.
+       *   **Leaderboard UI:** Basic React components for display.
+       *   **Student Role:** Define `Student` role; survival/leaderboards are student-focused.
+## **Phase 8: Student Management & Assignments (Classroom Integration)**
+   - **Goal:** Enable core teacher-student interactions and basic classroom management workflows.
+   - **Key Activities:**
+       *   **Teacher-Student Linking:** UI/backend for managing student rosters.
+       *   **Quiz Assignment:** Allow teachers to assign quizzes to students.
+       *   **Student Task View:** Dashboard for students to see assignments.
+       *   **Assignment Tracking:** Basic completion tracking.
+       *   **Quiz Visibility:** Implement `Public`/`Private` status controls for quizzes.
+## **Phase 9: Leveling System & Student Progression (Advanced Gamification)**
+   - **Goal:** Add long-term engagement through detailed progression, points, and unlocks.
+   - **Key Activities:**
+       *   **Points System Design:** Define logic for "Level Points" and "Effort Points".
+       *   **Database Tracking:** Storage for student points and levels.
+       *   **Progression Logic:** Rules for leveling up, potentially unlocking harder quizzes.
+       *   **Unlock System (Basic):** Effort Points unlock cosmetics or minor advantages.
+       *   **UI Display:** Update dashboards to show levels, points, achievements.
+       *   **Achievements (Basic):** Track/display simple achievements.
 
-
-## Phase 5: Advanced Features & Deployment
-   - (Optional) User authentication, score persistence via `StorageManager` (API backend).
-   - Accessibility improvements.
-   - Comprehensive testing (unit, integration, e2e).
-   - Deployment setup.
-
-# Logical Dependency Chain (**Updated**)
-1.  **Foundation:** Project Setup -> Initial Pixi Integration (`PixiEngine` v1) -> Basic `MultipleChoiceGame` v1.
-2.  **Engine Refactoring:** Implement Core Managers (`EventBus`, `GameState`, `Scoring`, `Timer`, `Controls`, `Rules`, `Assets`, `PowerUp`, `Storage`) -> Define `BaseGame`/`GameConfig` -> Refactor `MultipleChoiceGame` v2 -> Update `PixiEngine` v2 & UI Layer Integration.
-3.  **Core Gameplay Features (Post-Refactor):** Rule Engine Config -> Advanced Controls -> Lives Mode -> Power-Up Effects -> Team Setup UI -> Results Display.
-4.  **Expansion & Polish:** New Game Types -> Sound -> Advanced Animations -> Performance Tuning -> Testing -> Deployment.
+# Logical Dependency Chain (**Updated for New Phases**)
+1.  **Foundation:** Project Setup -> Initial Pixi Integration (`PixiEngine` v1) -> Basic `MultipleChoiceGame` v1. (**Completed**)
+2.  **Engine Refactoring:** Implement Core Managers (`EventBus`, `GameState`, `Scoring`, `Timer`, `Controls`, `Rules`, `Assets`, `PowerUp`, `Storage`) -> Define `BaseGame`/`GameConfig` -> Refactor `MultipleChoiceGame` v2 -> Update `PixiEngine` v2 & UI Layer Integration. (**Completed**)
+3.  **Core Engine Enhancements:** New Phase 3 (RuleEngine Basics, AudioManager Basics, Controls Refinement, PixiJS UI Button, AssetLoader Spritesheet, Animation Utils, Integration).
+4.  **Teacher Efficiency:** Renumbered Phase 4 (AI Quiz Generation).
+5.  **Core Game Usability:** Renumbered Phase 5 (Targeted Optimization & Offline Mode).
+6.  **Variety & Engagement:** Renumbered Phase 6 (New Games, Full Theming, Basic Power-up).
+7.  **Replayability & Competition:** Renumbered Phase 7 (Survival Mode, Leaderboards, Student Role).
+8.  **Classroom Integration:** Renumbered Phase 8 (Student Management, Assignments, Quiz Visibility).
+9.  **Advanced Gamification:** Renumbered Phase 9 (Leveling, Points, Unlocks, Achievements).
 
 # Risks and Mitigations (**Updated**)
 1.  **Refactoring Complexity:**
     *   Risk: High interaction complexity between managers, especially via `RuleEngine` and `EventBus`. Potential for subtle bugs.
-    *   Mitigation: Strict adherence to interfaces, comprehensive event definitions, thorough testing of manager interactions, incremental implementation. (Ref: `project_docs/07_PRE_PDR.md` Section 6)
+    *   Mitigation: Strict adherence to interfaces, comprehensive event definitions, thorough testing of manager interactions, incremental implementation. (**Context:** This risk was primarily associated with the now-completed Phase 2 refactor).
 2.  **Rule Engine Design:**
     *   Risk: Creating a rule system (JSON/code) that is both flexible and maintainable.
-    *   Mitigation: Start with a simple, well-defined JSON structure for Phase 3, iterate based on needs.
+    *   Mitigation: Start with simple event-driven rules (Phase 1a), potentially evolving to a JSON/configurable system later if needed.
 3.  **Input Abstraction (`ControlsManager`):**
     *   Risk: Correctly mapping and normalizing diverse input sources (gamepad, touch).
-    *   Mitigation: Implement input sources incrementally (keyboard first), use libraries if necessary, extensive testing across devices/inputs.
+    *   Mitigation: Implement sources incrementally (keyboard, mouse/touch on UI elements first in Phase 1b), use libraries if necessary, test across devices.
 4.  **State Synchronization (React <-> Pixi):**
     *   Risk: Keeping external UI state (React/Zustand) consistent with internal engine state.
     *   Mitigation: Primarily use engine events (`EventBus`) to update React UI. Minimize direct state setting from React into the engine managers.
@@ -134,7 +178,13 @@ AtoZ PixiJS Game Platform is an interactive educational web application built wi
     *   Mitigation: Optimize critical event handlers, efficient rule condition checks, performance profiling.
 6.  **Scope Creep (During Refactor):**
     *   Risk: Trying to implement too many advanced features (complex rules, power-up effects) during the core refactoring phase.
-    *   Mitigation: Strictly follow the phased approach in the roadmap. Focus Phase 2 *only* on building the manager structure and refactoring the existing game. Defer new gameplay features to Phase 3.
+    *   Mitigation: Strictly follow the phased approach in the roadmap. Focus Phase 2 *only* on building the manager structure and refactoring the existing game. Defer new gameplay features to Phase 3. (**Context:** Mitigation applied during the completed refactor).
+
+# Future Risks (Related to New Phases):
+7.  **AI Integration:** Reliability, cost, and quality control of AI-generated quiz content (Phase 3).
+8.  **Optimization Effectiveness:** Ensuring targeted optimizations significantly improve performance and perceived load times on constrained devices (Phase 3b).
+9.  **Theming Complexity:** Managing asset pipelines and ensuring consistent application of themes across different game types (Phase 4).
+10. **Scalability:** Handling increased load from leaderboards, student management, and progression systems (Phase 5, 6, 7).
 
 # Appendix
 -   **Primary Planning Doc:** `project_docs/07_PRE_PDR.md` (Details the Engine Refactoring)

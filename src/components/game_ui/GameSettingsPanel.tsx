@@ -3,14 +3,24 @@
 import React, { useState } from 'react';
 import styles from '@/styles/themes/themes.module.css';
 
+/**
+ * Props for the GameSettingsPanel component.
+ */
 interface GameSettingsPanelProps {
+  /** Whether the settings panel is currently visible. */
   isOpen: boolean;
+  /** Callback function to close the settings panel. */
   onClose: () => void;
+  /** Optional additional CSS class names. */
   className?: string;
   // Add props for initial settings values and callbacks if managed outside
   // e.g., initialMusicVolume: number; onMusicVolumeChange: (volume: number) => void;
 }
 
+/**
+ * A panel component for adjusting game settings like music and sound volume/toggles.
+ * Typically displayed as an overlay during gameplay.
+ */
 const GameSettingsPanel: React.FC<GameSettingsPanelProps> = ({
   isOpen,
   // onClose,

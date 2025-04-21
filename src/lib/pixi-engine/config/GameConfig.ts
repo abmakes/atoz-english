@@ -1,178 +1,275 @@
 export {};
 
-// TODO: Define these interfaces in detail in subtask 3.2
+/**
+ * Configuration for a single team participating in the game.
+ */
 export interface TeamConfig {
+  /** Unique identifier for the team (can be string or number). */
   id: string | number;
+  /** Display name of the team. */
   name: string;
-  color?: string; // Changed to string
-  players?: { id: string | number; name: string }[]; // Optional player details within a team
+  /** Optional color representation for the team (e.g., hex string like '#FF0000'). */
+  color?: string;
+  /** Optional list of players belonging to this team. */
+  players?: { id: string | number; name: string }[];
+  /** Optional initial number of lives if the game mode supports it. */
   initialLives?: number;
-  maxPlayers?: number; // Max players if team-based
-  startingResources?: ResourceMap; // e.g., { score: 0, lives: 3 }
+  /** Optional maximum number of players allowed on this team. */
+  maxPlayers?: number;
+  /** Initial resources for the team, like score or lives. Keys are resource names, values are numbers. */
+  startingResources?: ResourceMap;
 }
 
-// Base Resource Map (Example)
+/** 
+ * A generic map for storing named numerical resources (e.g., score, lives, coins).
+ * Key: Resource name (string)
+ * Value: Resource amount (number)
+ */
 export type ResourceMap = Record<string, number>;
 
-/** Base configuration for any game mode. */
+/** Base configuration common to all game modes. */
 export interface BaseGameModeConfig {
-  /** Unique identifier for the game mode type. */
+  /** A string identifying the type of game mode (e.g., 'score', 'lives', 'timeAttack'). */
   type: string; 
-  /** Display name for the game mode. */
+  /** The user-friendly display name for the game mode. */
   name: string; 
 }
 
-/** Example: Configuration for a score-based game mode. */
+/** Configuration specific to score-based game modes. */
 export interface ScoreModeConfig extends BaseGameModeConfig {
   type: 'score';
-  targetScore?: number; // Optional score to reach for winning
-  timeLimitSeconds?: number; // Optional time limit
+  /** Optional score target a team needs to reach to potentially win. */
+  targetScore?: number;
+  /** Optional overall time limit for the game in seconds. */
+  timeLimitSeconds?: number;
 }
 
-/** Example: Configuration for a lives-based game mode. */
+/** Configuration specific to lives-based game modes. */
 export interface LivesModeConfig extends BaseGameModeConfig {
   type: 'lives';
+  /** The number of lives each team starts with. */
   initialLives: number;
+  /** Optional maximum number of lives a team can have. */
   maxLives?: number;
 }
 
-// Union type for different game modes
-export type GameModeConfig = ScoreModeConfig | LivesModeConfig; // Add other modes here
+/** 
+ * Union type representing the configuration for the specific game mode being played.
+ * Extend this union with new game mode config interfaces as needed.
+ */
+export type GameModeConfig = ScoreModeConfig | LivesModeConfig;
 
-/** Defines a single game rule, potentially loaded from JSON. */
+/** 
+ * Defines a single game rule processed by the RuleEngine. 
+ * Rules are triggered by events and execute actions if conditions are met.
+ */
 export interface RuleDefinition {
+  /** Unique identifier for this rule. */
   id: string;
+  /** Optional description of what the rule does. */
   description?: string;
-  triggerEvent: string; // Event name from EventTypes that triggers this rule
-  conditions: ConditionDefinition[]; // Conditions to meet for the rule to apply
-  actions: ActionDefinition[]; // Actions to take if conditions are met
-  priority?: number; // For ordering rule execution
+  /** The name of the event (from EventTypes) that triggers this rule evaluation. */
+  triggerEvent: string;
+  /** An array of conditions that must all evaluate to true for the actions to run. */
+  conditions: ConditionDefinition[];
+  /** An array of actions to execute sequentially if all conditions are met. */
+  actions: ActionDefinition[];
+  /** Optional number determining the order of rule execution (higher priority runs first). Defaults to 0. */
+  priority?: number;
+  /** Whether this rule is currently active. Defaults to true. */
   enabled?: boolean;
 }
 
-/** Defines a condition for a rule. */
+/** 
+ * Defines a condition within a RuleDefinition. 
+ * Compares a value from the game state or event payload against an expected value.
+ */
 export interface ConditionDefinition {
-  type: 'compareState' | 'checkPowerup' | 'timerCheck' // etc.
-  property: string; // e.g., 'gameState.currentPhase', 'scoring.teamScore[teamId]'
+  /** The type of check to perform (e.g., compare a game state value, check timer status, check powerup). */
+  type: 'compareState' | 'checkPowerup' | 'timerCheck'; // Add more as needed
+  /** The property to check. Can be a path (e.g., 'gameState.currentPhase') or an ID (e.g., a timer ID). */
+  property: string;
+  /** The comparison operator to use. */
   operator: 'eq' | 'ne' | 'gt' | 'lt' | 'gte' | 'lte' | 'contains';
-  value: unknown; // Value to compare against (use type guards/checks when evaluating)
+  /** The expected value to compare the property against. Type should match the property being checked. */
+  value: unknown;
 }
 
-/** Defines an action for a rule. */
+/** 
+ * Defines an action to be executed by the RuleEngine if a rule's conditions are met. 
+ */
 export interface ActionDefinition {
-  type: 'changePhase' | 'modifyScore' | 'startTimer' | 'activatePowerup'; // etc.
-  params: Record<string, unknown>; // Parameters for the action (use type assertions/checks)
+  /** The type of action to perform (e.g., change game phase, modify score, start a timer). */
+  type: 'changePhase' | 'modifyScore' | 'startTimer' | 'activatePowerup'; // Add more as needed
+  /** A map of parameters required by the action type (e.g., { newPhase: 'playing' }, { amount: 10, teamId: 'team1' }). */
+  params: Record<string, unknown>;
 }
 
-/** Configuration for game rules. */
+/** 
+ * Configuration container for all game rules. 
+ */
 export interface RuleConfig {
-  /** Array of rule definitions to apply. */
+  /** An array of RuleDefinition objects defining the game's logic. */
   rules: RuleDefinition[];
-  /** Optional path to load rules from JSON. */
+  /** Optional: A path to a JSON file from which to load rule definitions. */
   rulesPath?: string; 
 }
 
-/** Mapping for a single player action. */
+/** 
+ * Defines the mapping for a single input source (keyboard key, gamepad button/axis, touch area)
+ * to a game action.
+ */
 export interface ActionMapping {
-  keyboard?: string; // e.g., 'KeyW', 'ArrowUp'
-  gamepadButton?: number; // Gamepad button index
-  gamepadAxis?: { index: number; threshold: number; direction: 'positive' | 'negative' };
-  touchArea?: string; // Identifier for a touch region
+  /** Keyboard key code (e.g., 'KeyW', 'ArrowUp', 'Space'). */
+  keyboard?: string;
+  /** Gamepad button index (refer to standard gamepad mapping). */
+  gamepadButton?: number;
+  /** Gamepad axis configuration. */
+  gamepadAxis?: {
+    /** The index of the axis (e.g., 0 for left stick X, 1 for left stick Y). */
+    index: number;
+    /** The threshold the axis value must exceed (0 to 1). */
+    threshold: number;
+    /** The direction on the axis ('positive' or 'negative'). */
+    direction: 'positive' | 'negative';
+  };
+  /** Identifier for a specific touch-sensitive area on the screen. */
+  touchArea?: string;
 }
 
-/** Configuration for player controls. */
+/** 
+ * Configuration for player input controls handled by the ControlsManager. 
+ */
 export interface ControlsConfig {
-  /** Mapping from standard player actions (e.g., 'UP', 'DOWN', 'ACTION_A') to input sources. */
+  /** 
+   * A map defining which physical inputs trigger logical game actions.
+   * Keys are logical action names (e.g., 'MOVE_UP', 'JUMP', 'CONFIRM').
+   * Values are ActionMapping objects specifying the physical inputs.
+   */
   actionMap: Record<string, ActionMapping>;
-  /** Configuration per player/input device. */
+  /** Configuration specifying which player controls which input device. */
   playerMappings: PlayerControlMapping[]; 
-  /** Deadzone for analog sticks (0 to 1). */
+  /** The deadzone for gamepad analog sticks (0 to 1), below which input is ignored. Defaults typically around 0.25. */
   gamepadDeadzone?: number;
 }
 
-/** Defines control mapping for a specific player slot. */
+/** 
+ * Defines how a specific player is mapped to an input device. 
+ */
 export interface PlayerControlMapping {
-  playerId: string | number; // Identifier for the player
-  deviceType: 'keyboard' | 'gamepad' | 'touch' | 'auto'; // Preferred device
-  deviceIndex?: number; // e.g., Gamepad index
+  /** The unique identifier for the player this mapping applies to. */
+  playerId: string | number;
+  /** The type of input device this player uses ('auto' usually defaults to keyboard or first available gamepad). */
+  deviceType: 'keyboard' | 'gamepad' | 'touch' | 'auto';
+  /** Optional index for the device (e.g., which gamepad: 0, 1, etc.). */
+  deviceIndex?: number;
 }
 
-/** Definition for a single asset to be loaded. */
+/** 
+ * Defines a single asset (e.g., image, sound, spritesheet) to be loaded. 
+ */
 export interface AssetDefinition {
-  /** Unique alias/key for the asset. */
+  /** A unique alias or key used to reference this asset after loading. */
   key: string; 
-  /** Source URL or path for the asset. */
+  /** The source URL or path relative to the basePath where the asset file can be found. */
   src: string; 
-  /** Optional data associated with the asset (e.g., frame size for spritesheet). Use type assertions when accessing. */
+  /** Optional: Additional data associated with the asset, such as frame dimensions for a spritesheet or atlas data. */
   data?: Record<string, unknown>; 
 }
 
-/** Defines a bundle of assets. */
+/** 
+ * Defines a named collection (bundle) of assets that can be loaded together. 
+ */
 export interface AssetBundle {
+  /** The name of the asset bundle, used for loading (e.g., 'common', 'level1'). */
   name: string;
+  /** An array of AssetDefinition objects included in this bundle. */
   assets: AssetDefinition[];
 }
 
-/** Configuration specifying required assets. */
+/** 
+ * Configuration for game assets managed by the AssetLoader or PixiJS Assets. 
+ */
 export interface AssetConfig {
-  /** Base path for asset URLs. */
+  /** An optional base path prefixed to all asset source URLs. */
   basePath?: string; 
-  /** Bundles of assets to load. */
+  /** An array of AssetBundle definitions for the game. */
   bundles: AssetBundle[]; 
-  /** Optional: List of specific fonts to ensure are loaded. */
+  /** Optional: A list of font family names that should be explicitly loaded or verified. */
   requiredFonts?: string[]; 
 }
 
-/** Configuration for a single type of power-up. */
+/** 
+ * Defines a specific type of power-up available in the game. 
+ */
 export interface PowerupDefinition {
-  id: string; // Unique ID for the power-up type
-  name: string; // Display name
+  /** Unique identifier for this type of power-up (e.g., 'double_points', 'shield'). */
+  id: string;
+  /** User-friendly display name for the power-up. */
+  name: string;
+  /** Optional description of the power-up's effect. */
   description?: string;
+  /** Optional duration in seconds for timed power-ups. If undefined, the power-up may be permanent or event-triggered. */
   durationSeconds?: number;
-  effectType: string; // Identifier for the associated PowerUpEffect class/logic
-  /** Parameters for the effect. Use type assertions when accessing. */
+  /** A string identifying the logic or effect associated with this power-up (implementation specific). */
+  effectType: string;
+  /** Optional parameters specific to the power-up's effect (e.g., { multiplier: 2 } for double points). */
   effectParams?: Record<string, unknown>; 
-  assetKey?: string; // Key for the visual representation (icon)
+  /** Optional key/alias of the asset used for the power-up's visual representation (e.g., icon). */
+  assetKey?: string;
 }
 
-/** Configuration related to power-ups. */
+/** 
+ * Configuration container for all power-up related settings. 
+ */
 export interface PowerupConfig {
-  /** List of power-up types available in the game. */
+  /** An array defining all types of power-ups that can appear in the game. */
   availablePowerups: PowerupDefinition[]; 
-  /** How power-ups might spawn or be awarded (config depends on game). Use type assertions when accessing. */
+  /** Optional configuration defining how power-ups are introduced into the game (e.g., spawn timing, locations, award conditions). */
   spawnMechanic?: Record<string, unknown>; 
 }
 
 /**
  * Defines the overall configuration structure for launching
  * and running a specific game instance within the PixiEngine.
+ * This object aggregates all specific configurations needed by the various engine managers.
  */
 export interface GameConfig {
-  /** The unique identifier for the quiz/content being used. */
+  /** 
+   * The unique identifier for the specific quiz, level, or content set being used.
+   * Used for loading appropriate questions, scenarios, etc.
+   */
   quizId: string;
 
-  /** The unique slug identifying the specific game type (e.g., 'multiple-choice'). */
+  /** 
+   * A unique slug identifying the type of game being played (e.g., 'multiple-choice', 'platformer').
+   * Used by the engine to potentially load the correct BaseGame implementation.
+   */
   gameSlug: string;
 
-  /** Configuration for teams and players involved. */
+  /** An array configuring the teams (and optionally players) participating in the game. */
   teams: TeamConfig[];
 
-  /** Configuration defining the game mode and its specific settings. */
+  /** Configuration defining the specific game mode (e.g., score-based, lives-based) and its parameters. */
   gameMode: GameModeConfig;
 
-  /** Configuration for game rules, win conditions, scoring modifiers. */
+  /** Configuration for game rules, defining event triggers, conditions, and actions for game logic. */
   rules: RuleConfig;
 
-  /** Configuration for input controls and player mappings. */
+  /** Configuration for mapping player inputs (keyboard, gamepad, touch) to game actions. */
   controls: ControlsConfig;
 
-  /** Configuration specifying required assets (textures, sounds, etc.). */
+  /** Configuration specifying all required game assets (images, sounds, fonts, etc.) organized into bundles. */
   assets: AssetConfig;
 
-  /** Configuration related to available power-ups and their behavior. */
+  /** Configuration defining available power-ups and potentially how they spawn or are awarded. */
   powerups: PowerupConfig;
 
-  /** The time limit in seconds for each question based on intensity setting. */
+  /** 
+   * A setting typically used in quiz games to control the time limit for each question,
+   * often derived from a user-selected intensity level (e.g., easy=60s, medium=30s, hard=15s).
+   * Expressed in seconds. 
+   */
   intensityTimeLimit: number;
 }
 

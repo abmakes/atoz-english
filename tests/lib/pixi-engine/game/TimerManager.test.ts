@@ -1,7 +1,7 @@
-import { TimerManager, TimerStatus, TimerType, TimerInstance } from '@/lib/pixi-engine/game/TimerManager';
+import { TimerManager, TimerStatus, TimerType } from '@/lib/pixi-engine/game/TimerManager';
 import { EventBus } from '@/lib/pixi-engine/core/EventBus';
 import { StorageManager } from '@/lib/pixi-engine/core/StorageManager';
-import { TIMER_EVENTS, TimerEventPayload } from '@/lib/pixi-engine/core/EventTypes';
+import { TIMER_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
 
 // Mocks
 jest.mock('@/lib/pixi-engine/core/EventBus');
@@ -27,8 +27,13 @@ describe('TimerManager', () => {
     mockEventBusInstance = new MockedEventBus() as jest.Mocked<EventBus>;
     mockStorageManagerInstance = new MockedStorageManager() as jest.Mocked<StorageManager>;
 
-    // Mock StorageManager behavior
-    mockStorageManagerInstance.get = jest.fn((key: string): unknown | null => mockStorage[key] ?? null);
+    // Implement mock StorageManager behavior correctly
+    mockStorageManagerInstance.get = jest.fn((key: string) => {
+        const value = mockStorage[key];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return value !== undefined ? (value as any) : null;
+    }) as jest.MockedFunction<<T>(key: string) => T | null>;
+
     mockStorageManagerInstance.set = jest.fn((key: string, value: unknown) => { mockStorage[key] = value; });
     mockStorageManagerInstance.remove = jest.fn((key: string) => { delete mockStorage[key]; });
     mockStorageManagerInstance.isStorageAvailable = jest.fn(() => true);

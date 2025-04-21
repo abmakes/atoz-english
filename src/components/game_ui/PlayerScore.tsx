@@ -29,19 +29,27 @@ export interface PlayerScoreTheme {
   boxShadow?: string;
 }
 
+/**
+ * Props for the PlayerScore component.
+ */
 export interface PlayerScoreProps {
+  /** The display name of the player. */
   playerName: string;
+  /** The current score of the player. */
   score: number;
+  /** Flag indicating if this player is the currently active one. Defaults to false. */
   isActive?: boolean;
+  /** Optional additional CSS class names for the wrapper div. */
   className?: string;
+  /** Optional theme object to override default styles. */
   theme?: PlayerScoreTheme;
+  /** Optional callback function to be executed when the component is clicked. */
   onClick?: () => void;
 }
 
 /**
- * PlayerScore component displays a player's name and score
- * with different styling for active vs inactive players
- * Based on the reference image with player names and scores
+ * Displays a player's name and score with distinct styling for active/inactive states.
+ * Can be made clickable via the onClick prop.
  */
 const PlayerScore: React.FC<PlayerScoreProps> = ({
   playerName,

@@ -17,12 +17,21 @@ interface PlayerScoreState extends PlayerScoreData {
   teamId: string | number;
 }
 
+/**
+ * Props for the GameplayView component.
+ */
 interface GameplayViewProps {
+  /** The full configuration object for the PixiEngine. */
   config: GameConfig;
+  /** CSS class name defining the visual theme. */
   themeClassName: string;
+  /** Callback function invoked when the game ends. */
   onGameOver: (payload: GameOverPayload) => void;
+  /** Callback function invoked when the user requests to exit the game. */
   onExit: () => void;
+  /** React ref pointing to the DOM element where the PixiJS canvas should be mounted. */
   pixiMountPointRef: React.RefObject<HTMLDivElement>;
+  /** Factory function to create the specific game instance. */
   gameFactory: (config: GameConfig, managers: PixiEngineManagers) => BaseGame;
 }
 
@@ -31,6 +40,11 @@ const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" he
 const MenuIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>;
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>;
 
+/**
+ * Renders the main gameplay interface, including the PixiJS canvas,
+ * player scores, navigation menu, and overlay panels (settings, main menu).
+ * Initializes and manages the PixiEngine lifecycle.
+ */
 const GameplayView: React.FC<GameplayViewProps> = ({
   config,
   themeClassName,
@@ -55,6 +69,10 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   const managersRef = useRef<PixiEngineManagers | null>(null);
 
   // --- PixiJS Event Handlers (using managersRef) ---
+  /**
+   * Handles the GAME_ENDED event from the PixiEngine.
+   * Retrieves final scores and determines the winner, then calls the onGameOver prop.
+   */
   const handlePixiGameOver = useCallback(() => {
       console.log("React received GAME_ENDED event");
       const currentManagers = managersRef.current; // Access via ref
@@ -85,6 +103,11 @@ const GameplayView: React.FC<GameplayViewProps> = ({
 
   // --- Update score handler type --- 
 
+  /**
+   * Handles the SCORE_UPDATED event from the PixiEngine's ScoringManager.
+   * Updates the displayed score for the relevant player.
+   * @param payload - Data containing the updated team ID and score.
+   */
   const handlePixiScoreUpdate = useCallback((payload: ScoringScoreUpdatedPayload) => {
       console.log("React received SCORE_UPDATED event:", payload);
       // Update player score based on teamId
@@ -99,6 +122,10 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   // -------------------------------
 
   // --- Engine Initialization Effect --- 
+  /**
+   * Initializes the PixiEngine when the component mounts or config/factory changes.
+   * Attaches necessary event listeners and handles cleanup on unmount.
+   */
   useEffect(() => {
       let engine: PixiEngine | null = null; // Temporary variable for cleanup scope
       

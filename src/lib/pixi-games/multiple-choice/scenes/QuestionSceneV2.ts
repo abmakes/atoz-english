@@ -1,11 +1,11 @@
 import * as PIXI from 'pixi.js';
 import { GifSprite } from 'pixi.js/gif';
 // Remove direct PixiEngine import
-// import { PixiEngine } from '@/lib/pixi-engine/core/PixiEngine';
 // Import managers/types needed
 import { EventBus } from '@/lib/pixi-engine/core/EventBus'; // Example manager
 // Assume AssetLoader provides a method like getDisplayObject
 import { AssetLoader } from '@/lib/pixi-engine/assets/AssetLoader';
+import { PixiApplication } from '@/lib/pixi-engine/core/PixiApplication'; // Import PixiApplication
 
 // Remove type, AssetLoader handles creation now
 /*
@@ -15,7 +15,7 @@ type AnimatedResource = {
 } | PIXI.Texture;
 */
 
-export class QuestionSceneV2 extends PIXI.Container {
+export class QuestionScene extends PIXI.Container {
     private questionText: PIXI.Text;
     // Type remains the same, but creation is delegated
     private questionMedia: PIXI.Sprite | GifSprite | PIXI.AnimatedSprite | null = null;
@@ -26,10 +26,12 @@ export class QuestionSceneV2 extends PIXI.Container {
     private eventBus: EventBus; // Example
     // Keep AssetLoader reference, though not used directly here anymore
     private assetLoader: AssetLoader;
+    private pixiApp: PixiApplication; // Store the PixiApplication instance
 
     // Update constructor signature
-    constructor(eventBus: EventBus, assetLoader: AssetLoader) {
+    constructor(pixiApp: PixiApplication, eventBus: EventBus, assetLoader: AssetLoader) {
         super();
+        this.pixiApp = pixiApp; // Store instance
         this.eventBus = eventBus;
         this.assetLoader = assetLoader; // Store reference even if not used directly in update
 
@@ -37,15 +39,16 @@ export class QuestionSceneV2 extends PIXI.Container {
         this.interactive = true;
         this.interactiveChildren = true; // Allow events to reach children
 
-        // Use placeholder or default screen size for initial text wrap
-        const initialScreenWidth = 800; // Placeholder
+        // Get initial screen dimensions from the instance
+        const { width: initialScreenWidth, height: initialScreenHeight } = this.pixiApp.getScreenSize();
+
         const textStyle = new PIXI.TextStyle({
             fontFamily: 'Grandstander',
             fontSize: 36,
             fill: 0x111111,
             align: 'center',
             wordWrap: true,
-            wordWrapWidth: initialScreenWidth * 0.8
+            wordWrapWidth: initialScreenWidth * 0.8 // <-- Use dynamic width
         });
 
         this.questionText = new PIXI.Text({ text: '', style: textStyle });
@@ -58,8 +61,8 @@ export class QuestionSceneV2 extends PIXI.Container {
         this.answerOptionsContainer.interactiveChildren = true; // Allow events to reach buttons
         this.addChild(this.answerOptionsContainer);
 
-        // Initial position with placeholder dimensions
-        this._positionElements(initialScreenWidth, 600); // Pass placeholder dimensions
+        // Initial position with dynamic dimensions
+        this._positionElements(initialScreenWidth, initialScreenHeight);
     }
 
     public updateQuestion(text: string, imageUrl?: string ): void {
@@ -75,9 +78,11 @@ export class QuestionSceneV2 extends PIXI.Container {
 
         // Update text
         this.questionText.text = text;
-        const currentScreenWidth = 800; 
+        // Get dimensions from the instance
+        const { width: currentScreenWidth, height: currentScreenHeight } = this.pixiApp.getScreenSize();
+
         this.questionText.style.wordWrapWidth = currentScreenWidth * 0.8;
-        this._positionElements(currentScreenWidth, 600); // Position text
+        this._positionElements(currentScreenWidth, currentScreenHeight);
 
         // Get and add new media
         if (imageUrl) {
@@ -112,7 +117,7 @@ export class QuestionSceneV2 extends PIXI.Container {
                 }
                 
                 // Position elements *after* adding potential media
-                this._positionElements(currentScreenWidth, 600);
+                this._positionElements(currentScreenWidth, currentScreenHeight);
 
             } catch (error) {
                  // Catch potential errors from getDisplayObject itself (though it has internal catch)
@@ -126,7 +131,7 @@ export class QuestionSceneV2 extends PIXI.Container {
                       this.questionMedia?.destroy();
                       this.questionMedia = null;
                  }
-                 this._positionElements(currentScreenWidth, 600); // Reposition elements after error
+                 this._positionElements(currentScreenWidth, currentScreenHeight);
              }
         } else {
              console.log("No imageUrl provided.");
@@ -138,23 +143,23 @@ export class QuestionSceneV2 extends PIXI.Container {
     // Update method signature to accept dimensions
     private _positionElements(screenWidth: number, screenHeight: number): void {
         // Use passed dimensions instead of engineRef
-        const padding = 20;
+        const padding = 10;
 
         // Position question text
         this.questionText.x = screenWidth / 2;
         // Adjust y positioning based on screen height
-        this.questionText.y = screenHeight * 0.15; // Position near top
+        this.questionText.y = screenHeight * 0.7 - this.questionText.height;
 
         // Position media (if any)
         if (this.questionMedia) {
             const maxMediaWidth = screenWidth * 0.8;
             // Adjust max height calculation based on new text position
-            const availableHeight = screenHeight * 0.5; // Space between text and answers
+            const availableHeight = screenHeight * 0.6; // Space between text and answers
             const maxMediaHeight = availableHeight - 2 * padding;
 
             // Use const for dimensions if not reassigned later
-            const mediaWidth = this.questionMedia.width || 100;
-            const mediaHeight = this.questionMedia.height || 100;
+            const mediaWidth = this.questionMedia.width || 300;
+            const mediaHeight = this.questionMedia.height || 300;
             
             // Calculate scale based on the *display object's* current size
             let scale = 1;
@@ -170,13 +175,15 @@ export class QuestionSceneV2 extends PIXI.Container {
 
             // Recalculate position based on scaled dimensions
             this.questionMedia.x = screenWidth / 2;
-            this.questionMedia.y = this.questionText.y + this.questionText.height / 2 + padding + (this.questionMedia.height / 2); // height is already scaled
+            this.questionMedia.y = padding + (this.questionMedia.height / 2);
+
         }
 
         // Position answer options container below media (or text if no media)
-        const mediaBottom = this.questionMedia ? this.questionMedia.y + this.questionMedia.height / 2 : this.questionText.y + this.questionText.height / 2;
-        this.answerOptionsContainer.x = screenWidth / 2; // Center the container origin
-        this.answerOptionsContainer.y = mediaBottom + padding * 2; // Position below media/text with padding
+        // const mediaBottom = this.questionMedia ? this.questionMedia.y + this.questionMedia.height / 2 : this.questionText.y + this.questionText.height / 2;
+        this.answerOptionsContainer.x = 0; // Center the container origin
+
+        this.answerOptionsContainer.y = screenHeight - this.answerOptionsContainer.height; // Position below media/text with padding
     }
 
     public getAnswerOptionContainer(): PIXI.Container {

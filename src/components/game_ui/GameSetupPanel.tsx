@@ -5,12 +5,18 @@ import styles from '@/styles/themes/themes.module.css'; // Assuming '@/' alias i
 // Remove Zustand import
 // import { useGameStore } from '@/stores/useGameStore';
 // Import only necessary types from central location
-import { FullGameConfig, TeamData, GameSettingsData, PowerupsData } from '@/types/gameTypes';
+import { TeamData, GameSettingsData, PowerupsData, GameSetupData } from '@/types/gameTypes';
 
 // Define props explicitly, using imported types
+/**
+ * Props for the GameSetupPanel component.
+ */
 interface GameSetupPanelProps {
-    onStartGame: (config: Omit<FullGameConfig, 'quizId' | 'gameSlug'>) => void;
+    /** Callback function invoked when the user clicks the 'Play' button with the selected configuration. */
+    onStartGame: (config: Omit<GameSetupData, 'quizId' | 'gameSlug'>) => void;
+    /** Callback function invoked when the user clicks the 'Back' button. */
     onGoBack: () => void;
+    /** The URL slug for the game type, passed from the parent. */
     initialGameSlug: string; // Already receives initial slug
 }
 
@@ -21,9 +27,13 @@ type LocalGameSettings = GameSettingsData;
 type LocalPowerups = PowerupsData;
 
 // Define the type for the config object created locally
-type LocalConfig = Omit<FullGameConfig, 'quizId' | 'gameSlug'>;
+type LocalConfig = Omit<GameSetupData, 'quizId' | 'gameSlug'>;
 
 // --- Component ---
+/**
+ * Allows users to configure game settings before starting,
+ * including teams, theme, intensity, and powerups.
+ */
 const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }) => {
   // Remove Zustand usage
   // const selectedQuizTitle = useGameStore((state) => state.selectedQuizTitle);
@@ -115,12 +125,16 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
     setPowerups(prev => ({ ...prev, [powerup]: !prev[powerup] }));
   };
 
+  /**
+   * Constructs the game configuration object from the current state
+   * and calls the onStartGame prop.
+   */
   const handlePlayGame = () => {
     // Construct the config object matching the Omit type expected by onStartGame
     const config: LocalConfig = {
       teams,
       settings,
-      theme: selectedTheme, // Ensure property name matches FullGameConfig
+      theme: selectedTheme, // Ensure property name matches GameSetupData
       gameFeatures: selectedGameFeatures,
       intensityTimeLimit,
       limitedGuesses,
@@ -132,6 +146,9 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
     onStartGame(config); // Pass the correctly typed object
   };
 
+  /**
+   * Calls the onGoBack prop when the back button is clicked.
+   */
   const handleBackClick = () => {
       console.log("Back button clicked - calling onGoBack");
       onGoBack();
