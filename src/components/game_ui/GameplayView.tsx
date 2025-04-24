@@ -225,12 +225,14 @@ const GameplayView: React.FC<GameplayViewProps> = ({
 
         <div className={styles.gameplayNavMenuOverlay}>
              <NavMenu items={navMenuItems} orientation="horizontal" />
+             {managersRef.current?.eventBus && (
               <GameSettingsPanel
                 isOpen={isSettingsOpen}
                 onClose={closeSettings}
                 className={styles.settingsPanelGameplay}
-                eventBus={managersRef.current?.eventBus ?? null}
+                eventBus={managersRef.current.eventBus}
               />
+             )}
               <MainMenuDropdown
                 isOpen={isMainMenuOpen}
                 onClose={closeMainMenu}
