@@ -15,11 +15,12 @@ import {
     RuleDefinition,
     RuleConfig,
     ControlsConfig,
+    AudioConfiguration,
 } from '@/lib/pixi-engine/config/GameConfig';
 import { PixiEngineManagers } from '@/lib/pixi-engine/core/PixiEngine';
 import { MultipleChoiceGame } from '@/lib/pixi-games/multiple-choice/MultipleChoiceGame';
 import type { NavMenuItemProps } from './NavMenu';
-import { GAME_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
+import { GAME_EVENTS, ENGINE_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
 
 const GameplayView = dynamic(() => import('./GameplayView'), {
     ssr: false,
@@ -111,7 +112,65 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
       
       // --- Define Rule Config Object ---
       const ruleConfig: RuleConfig = {
-          rules: [scoringRule]
+          rules: [
+              scoringRule,
+              {
+                  id: 'play-correct-sound',
+                  description: 'Play correct answer sound when answer is correct',
+                  triggerEvent: GAME_EVENTS.ANSWER_SELECTED,
+                  conditions: [
+                      {
+                          type: 'compareState',
+                          property: 'isCorrect',
+                          operator: 'eq',
+                          value: true
+                      }
+                  ],
+                  actions: [
+                      {
+                          type: 'playSound',
+                          params: {
+                              soundId: 'correct-sound'
+                          }
+                      }
+                  ]
+              },
+              {
+                  id: 'play-incorrect-sound',
+                  description: 'Play incorrect answer sound when answer is wrong',
+                  triggerEvent: GAME_EVENTS.ANSWER_SELECTED,
+                  conditions: [
+                      {
+                          type: 'compareState',
+                          property: 'isCorrect',
+                          operator: 'eq',
+                          value: false
+                      }
+                  ],
+                  actions: [
+                      {
+                          type: 'playSound',
+                          params: {
+                              soundId: 'incorrect-sound'
+                          }
+                      }
+                  ]
+              },
+              {
+                  id: 'play-background-music',
+                  description: 'Play background music when engine is ready',
+                  triggerEvent: ENGINE_EVENTS.ENGINE_READY_FOR_GAME,
+                  conditions: [],
+                  actions: [
+                      {
+                          type: 'playSound',
+                          params: {
+                              soundId: 'background-music'
+                          }
+                      }
+                  ]
+              }
+          ]
       };
 
       // --- Define Controls Config (using ControlsConfig) ---
@@ -133,6 +192,36 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
       // --- Define Basic Assets (Example - Adapt/Make Dynamic Later) ---
       const assetConfig = DEFAULT_GAME_CONFIG.assets; // Use default for now
 
+      // --- Define Audio Configuration ---
+      const audioConfig: AudioConfiguration = {
+          defaultVolume: 0.7,
+          startMuted: false,
+          sounds: [
+              {
+                  id: 'correct-sound',
+                  filename: '/audio/default/correct-sound.mp3',
+                  type: 'sfx'
+              },
+              {
+                  id: 'incorrect-sound',
+                  filename: '/audio/default/incorrect-sound.mp3',
+                  type: 'sfx'
+              },
+              {
+                  id: 'victory-sound',
+                  filename: '/audio/default/crowd-cheering.mp3',
+                  type: 'sfx'
+              },
+              {
+                  id: 'background-music',
+                  filename: '/audio/default/background-music.mp3',
+                  loop: true,
+                  volume: 0.7,
+                  type: 'music'
+              }
+          ]
+      };
+
       // --- Assemble Full Config ---
       const fullEngineConfig: GameConfig = {
           ...DEFAULT_GAME_CONFIG, // Start with defaults
@@ -144,7 +233,11 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
           intensityTimeLimit: setupData.intensityTimeLimit,
           rules: ruleConfig, // Assign the RuleConfig object
           controls: controlConfig, // Assign the ControlsConfig object
-          assets: assetConfig, 
+          assets: assetConfig,
+          audio: audioConfig, // Add the audio configuration
+          // Pass initial mute states (inverted from settings toggles)
+          initialMusicMuted: !setupData.settings.music,
+          initialSfxMuted: !setupData.settings.sounds,
       };
 
       console.log('Prepared full engine config:', fullEngineConfig);

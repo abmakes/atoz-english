@@ -1,12 +1,14 @@
-import type { EventBus } from './EventBus';
+import { EventBus } from './EventBus';
 import type { EngineEvents } from './EventTypes'; // Keep base EngineEvents
 import type { GameConfig, RuleConfig, RuleDefinition, ConditionDefinition, ActionDefinition } from '../config/GameConfig';
 // Import implemented managers
 import { type TimerManager, TimerStatus } from '../game/TimerManager'; // Import TimerStatus enum
 // Import placeholder types for other managers
-import type { GameStateManager } from './GameStateManager';
-import type { ScoringManager } from '../game/ScoringManager';
-import type { PowerUpManager } from '../game/PowerUpManager'; // Use the actual type now
+import { GameStateManager, GamePhase } from './GameStateManager';
+import { ScoringManager } from '../game/ScoringManager';
+import { PowerUpManager } from '../game/PowerUpManager'; // Use the actual type now
+import { AudioManager } from './AudioManager';
+import { StorageManager } from './StorageManager';
 
 /**
  * Represents a rule to be processed by the RuleEngine.
@@ -35,10 +37,12 @@ export class RuleEngine {
     private rules: RuntimeRule[] = [];
     private isEnabled: boolean = true;
     // References to other managers needed for evaluation
-    private timerManager: TimerManager;
-    private gameStateManager: GameStateManager | null = null;
-    private scoringManager: ScoringManager | null = null;
-    private powerUpManager: PowerUpManager | null = null;
+    private timerManager?: TimerManager;
+    private gameStateManager?: GameStateManager;
+    private scoringManager?: ScoringManager;
+    private powerUpManager?: PowerUpManager;
+    private audioManager?: AudioManager;
+    private storageManager?: StorageManager;
 
     /**
      * Creates an instance of RuleEngine.
@@ -50,20 +54,21 @@ export class RuleEngine {
         eventBus: EventBus,
         config: GameConfig,
         managers: {
-            timerManager: TimerManager;
-            // Disable lint errors for using types not yet exported
-            // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
             gameStateManager?: GameStateManager;
-            // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
             scoringManager?: ScoringManager;
             powerUpManager?: PowerUpManager;
+            timerManager?: TimerManager;
+            storageManager?: StorageManager;
+            audioManager?: AudioManager;
         }
     ) {
         this.eventBus = eventBus;
-        this.timerManager = managers.timerManager;
-        this.gameStateManager = managers.gameStateManager ?? null;
-        this.scoringManager = managers.scoringManager ?? null;
-        this.powerUpManager = managers.powerUpManager ?? null;
+        this.gameStateManager = managers.gameStateManager ?? undefined;
+        this.scoringManager = managers.scoringManager ?? undefined;
+        this.powerUpManager = managers.powerUpManager ?? undefined;
+        this.timerManager = managers.timerManager ?? undefined;
+        this.storageManager = managers.storageManager ?? undefined;
+        this.audioManager = managers.audioManager ?? undefined;
 
         if (!this.gameStateManager) console.warn('RuleEngine: GameStateManager not provided. Some rule conditions/actions may fail.');
         if (!this.scoringManager) console.warn('RuleEngine: ScoringManager not provided. Some rule conditions/actions may fail.');
@@ -307,26 +312,58 @@ export class RuleEngine {
                     console.warn('RuleEngine: Cannot execute changePhase action, GameStateManager missing.');
                     return;
                 }
-                // Type check for phase parameter
-                if (typeof params.phase === 'string') {
-                    // this.gameStateManager.changePhase(params.phase);
-                    console.log(`   -> (Mock) Changing phase to '${params.phase}'`);
+                // Get the value and validate it against the GamePhase enum
+                const newPhaseValue = params.newPhase;
+                // Check if the provided value exists in the GamePhase enum values
+                if (newPhaseValue !== undefined && Object.values(GamePhase).includes(newPhaseValue as GamePhase)) {
+                    const validPhase = newPhaseValue as GamePhase; // Cast after validation
+                    // Call the actual manager method
+                    this.gameStateManager.setPhase(validPhase);
+                    console.log(`   -> Called gameStateManager.setPhase(${validPhase})`);
                 } else {
-                    console.warn(`RuleEngine: Missing or invalid 'phase' string parameter for changePhase action.`);
+                    console.warn(`RuleEngine: Missing or invalid 'newPhase' (must be a valid GamePhase value) parameter for changePhase action. Received: ${newPhaseValue}`);
                 }
                 break;
 
             case 'modifyScore':
                 if (!this.scoringManager) {
-                     console.warn('RuleEngine: Cannot execute modifyScore action, ScoringManager missing.');
+                    console.warn('RuleEngine: Cannot execute modifyScore action, ScoringManager missing.');
                     return;
                 }
-                // TODO: Implement score modification based on params (teamId, value, multiplier)
-                // Example with type checking:
-                // const teamId = params.teamId as string | number; 
-                // const value = typeof params.value === 'number' ? params.value : undefined;
-                // if (teamId !== undefined && value !== undefined) { ... }
-                console.log(`   -> (Mock) Modifying score with params: ${JSON.stringify(params)}`);
+                const teamId = (typeof params.teamId === 'string' || typeof params.teamId === 'number') ? String(params.teamId) : undefined;
+                const amount = typeof params.amount === 'number' ? params.amount : undefined;
+
+                if (teamId === undefined || amount === undefined) {
+                    console.warn(`RuleEngine: Missing or invalid 'teamId' (string|number) or 'amount' (number) parameter for modifyScore action.`);
+                    return;
+                }
+
+                // Add logging to confirm this block is reached
+                console.log(`   -> Executing modifyScore logic for team ${teamId} amount ${amount}`);
+
+                if (amount > 0) {
+                    this.scoringManager.addScore(teamId, amount);
+                    console.log(`   -> Called scoringManager.addScore(${teamId}, ${amount})`);
+                } else if (amount < 0) {
+                    this.scoringManager.subtractScore(teamId, Math.abs(amount));
+                    console.log(`   -> Called scoringManager.subtractScore(${teamId}, ${Math.abs(amount)})`);
+                } else {
+                    console.log(`   -> modifyScore amount is zero, no action taken.`);
+                }
+                break;
+
+            case 'playSound':
+                if (!this.audioManager) {
+                    console.warn('RuleEngine: Cannot execute playSound action, AudioManager missing.');
+                    return;
+                }
+                // Type check for sound ID parameter
+                if (typeof params.soundId === 'string') {
+                    this.audioManager.play(params.soundId);
+                    console.log(`   -> Playing sound '${params.soundId}'`);
+                } else {
+                    console.warn(`RuleEngine: Missing or invalid 'soundId' string parameter for playSound action.`);
+                }
                 break;
 
             case 'startTimer':

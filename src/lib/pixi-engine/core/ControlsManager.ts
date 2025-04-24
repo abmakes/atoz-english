@@ -2,10 +2,10 @@
 import type { ControlsConfig, ActionMapping } from '../config/GameConfig';
 import type { EventBus } from './EventBus';
 import { CONTROLS_EVENTS, type ControlsPlayerActionPayload } from './EventTypes'; // Import necessary types and constants
-import { Point } from 'pixi.js';
+import { Point, Container, type FederatedPointerEvent } from 'pixi.js';
 
 /**
- * Manages player input controls, mapping raw input events (keyboard, gamepad, touch)
+ * Manages player input controls, mapping raw input events (keyboard, mouse/touch)
  * to standardized game actions defined in {@link ControlsConfig}.
  * Emits {@link CONTROLS_EVENTS.PLAYER_ACTION} events via the provided {@link EventBus}.
  */
@@ -14,6 +14,12 @@ export class ControlsManager {
     private eventBus: EventBus | null = null;
     private actionStates: Map<string, boolean> = new Map(); // Tracks if an action is currently pressed
     private isEnabled: boolean = false;
+    private isKeyboardEnabled: boolean = true; // Control keyboard input
+    private isPointerEnabled: boolean = true;  // Control pointer input
+
+    // Stores registered interactive objects and their associated action
+    // TODO: Find the correct importable type for PixiJS display objects instead of 'any'
+    private interactiveAreas: Map<unknown, { action: string; listeners: Record<string, (event: FederatedPointerEvent) => void> }> = new Map();
 
     /**
      * Initializes the ControlsManager with configuration and event bus.
@@ -76,6 +82,19 @@ export class ControlsManager {
         // Optionally reset action states on disable?
         // this.actionStates.forEach((_, key) => this.actionStates.set(key, false));
         console.log('ControlsManager disabled.');
+
+        // Remove listeners from all registered interactive areas
+        this.interactiveAreas.forEach(({ listeners }, displayObject) => {
+            // Cast displayObject to Container to access PixiJS methods
+            const pixiObject = displayObject as Container;
+            for (const eventName in listeners) {
+                pixiObject.off(eventName, listeners[eventName]);
+            }
+        });
+
+        this.isEnabled = false;
+        // Optionally reset action states on disable?
+        // this.actionStates.forEach((_, key) => this.actionStates.set(key, false));
     }
 
     /**
@@ -89,6 +108,7 @@ export class ControlsManager {
         this.config = null;
         this.eventBus = null;
         this.actionStates.clear();
+        this.interactiveAreas.clear(); // Clear registered areas
         console.log('ControlsManager destroyed.');
     }
 
@@ -99,6 +119,114 @@ export class ControlsManager {
      */
     isActionActive(action: string): boolean {
         return this.actionStates.get(action) ?? false;
+    }
+
+    /**
+     * Registers a PixiJS DisplayObject as an interactive area linked to a specific action.
+     * Attaches pointer listeners (pointerdown, pointerup) to the object.
+     * @param {DisplayObject} displayObject - The PixiJS object to make interactive.
+     * @param {string} action - The action identifier to associate with interactions on this object.
+     */
+    registerInteractiveArea(displayObject: Container, action: string): void {
+        if (!this.isEnabled) {
+            console.warn(`ControlsManager: Cannot register area for action "${action}", manager is disabled.`);
+            return;
+        }
+        if (this.interactiveAreas.has(displayObject)) {
+            console.warn(`ControlsManager: DisplayObject already registered for action "${this.interactiveAreas.get(displayObject)?.action}". Re-registering for action "${action}".`);
+            this.unregisterInteractiveArea(displayObject); // Unregister previous first
+        }
+
+        displayObject.interactive = true;
+        displayObject.eventMode = 'static'; // Recommended for performance
+
+        // Create bound handlers specific to this object/action
+        const handlePointerDown = (event: FederatedPointerEvent) => this.handlePointerEvent(event, action, true);
+        const handlePointerUp = (event: FederatedPointerEvent) => this.handlePointerEvent(event, action, false);
+        // Consider adding pointerover/pointerout for hover states if needed
+
+        displayObject.on('pointerdown', handlePointerDown);
+        displayObject.on('pointerup', handlePointerUp);
+        displayObject.on('pointerupoutside', handlePointerUp); // Handle case where pointer is released outside
+
+        this.interactiveAreas.set(displayObject, {
+            action,
+            listeners: {
+                'pointerdown': handlePointerDown,
+                'pointerup': handlePointerUp,
+                'pointerupoutside': handlePointerUp
+            }
+        });
+        console.log(`ControlsManager: Registered interactive area for action "${action}".`);
+    }
+
+    /**
+     * Unregisters a PixiJS DisplayObject, removing its listeners and association with an action.
+     * @param {DisplayObject} displayObject - The object to unregister.
+     */
+    unregisterInteractiveArea(displayObject: Container): void {
+        const registeredArea = this.interactiveAreas.get(displayObject);
+        if (registeredArea) {
+            for (const eventName in registeredArea.listeners) {
+                displayObject.off(eventName, registeredArea.listeners[eventName]);
+            }
+            this.interactiveAreas.delete(displayObject);
+            // Optionally reset interactivity, but might interfere if object is used elsewhere
+            // displayObject.interactive = false;
+            console.log(`ControlsManager: Unregistered interactive area for action "${registeredArea.action}".`);
+        }
+    }
+
+    /**
+     * Enables or disables handling of keyboard inputs.
+     * @param {boolean} enabled - True to enable, false to disable.
+     */
+    setKeyboardEnabled(enabled: boolean): void {
+        this.isKeyboardEnabled = enabled;
+        console.log(`ControlsManager: Keyboard input ${enabled ? 'enabled' : 'disabled'}.`);
+        // If disabling, we might want to force-release any currently held keys
+        if (!enabled) {
+            this.actionStates.forEach((isActive, action) => {
+                // Heuristic: Assume keyboard actions might be active
+                // This is imperfect; ideally, track source per action
+                if (isActive) {
+                    // Check if action is mapped to a keyboard key
+                    let isKeyboardAction = false;
+                    if (this.config?.actionMap) {
+                        const mapping = this.config.actionMap[action];
+                        if (mapping?.keyboard) isKeyboardAction = true;
+                    }
+                    if (isKeyboardAction) {
+                         this.updateActionState(action, false, 'keyboard', undefined);
+                    }
+                }
+            });
+        }
+    }
+
+    /**
+     * Enables or disables handling of pointer (mouse/touch) inputs on registered areas.
+     * @param {boolean} enabled - True to enable, false to disable.
+     */
+    setPointerEnabled(enabled: boolean): void {
+        this.isPointerEnabled = enabled;
+        console.log(`ControlsManager: Pointer input ${enabled ? 'enabled' : 'disabled'}.`);
+         // If disabling, force-release any actions potentially triggered by pointers
+        if (!enabled) {
+            this.actionStates.forEach((isActive, action) => {
+                // Heuristic: Check if this action is associated with any interactive area
+                 let isPointerAction = false;
+                 this.interactiveAreas.forEach(areaData => {
+                     if (areaData.action === action) {
+                         isPointerAction = true;
+                     }
+                 });
+
+                if (isActive && isPointerAction) {
+                   this.updateActionState(action, false, 'pointer', undefined);
+                }
+            });
+        }
     }
 
     /**
@@ -130,21 +258,43 @@ export class ControlsManager {
     // --- Private Event Handlers ---
 
     private handleKeyDown(event: KeyboardEvent): void {
-        if (!this.config || event.repeat) return; // Ignore repeat events
+        if (!this.config || event.repeat || !this.isKeyboardEnabled) return; // Ignore repeat events and if disabled
 
         const action = this.getActionForKey(event.code);
         if (action && !this.actionStates.get(action)) { // Check if action exists and wasn't already pressed
-            this.updateActionState(action, true);
+            this.updateActionState(action, true, 'keyboard'); // Pass device type
         }
     }
 
     private handleKeyUp(event: KeyboardEvent): void {
+        // Allow key up events even if keyboard is disabled to release stuck keys
         if (!this.config) return;
 
         const action = this.getActionForKey(event.code);
         if (action && this.actionStates.get(action)) { // Check if action exists and was pressed
-            this.updateActionState(action, false);
+            this.updateActionState(action, false, 'keyboard'); // Pass device type
         }
+    }
+
+    /**
+     * Handles pointer events (pointerdown, pointerup) on registered interactive areas.
+     * @param {FederatedPointerEvent} event - The PixiJS pointer event.
+     * @param {string} action - The action associated with the interacted object.
+     * @param {boolean} isPressed - True if it's a 'press' event (pointerdown), false otherwise.
+     */
+    private handlePointerEvent(event: FederatedPointerEvent, action: string, isPressed: boolean): void {
+        if (!this.isPointerEnabled) return; // Ignore if pointer input is disabled
+
+        // Prevent triggering state update if the state is already correct
+        if (this.actionStates.get(action) === isPressed) {
+            return;
+        }
+
+        const position = { x: event.global.x, y: event.global.y };
+        this.updateActionState(action, isPressed, 'pointer', position);
+
+        // Optional: Stop propagation if needed, e.g., if UI elements overlap
+        // event.stopPropagation();
     }
 
     // --- Helper Methods ---
@@ -171,8 +321,10 @@ export class ControlsManager {
      * Updates the state of an action and emits an event.
      * @param action - The action identifier.
      * @param isPressed - The new state (true for pressed, false for released).
+     * @param device - The type of device triggering the action.
+     * @param position - Optional position data for pointer events.
      */
-    private updateActionState(action: string, isPressed: boolean): void {
+    private updateActionState(action: string, isPressed: boolean, device: 'keyboard' | 'pointer' | 'gamepad' | 'unknown', position?: { x: number; y: number }): void {
         this.actionStates.set(action, isPressed);
 
         // TODO: Determine playerId based on config.playerMappings and device (later)
@@ -183,10 +335,11 @@ export class ControlsManager {
             action: action,
             value: isPressed, // Use boolean value for pressed state
             playerId: playerId,
-            device: 'keyboard' // Specify device type
+            device: device,
+            position: position // Include position if available
         };
 
-        console.log(`Action event: ${action} ${isPressed ? 'pressed' : 'released'} (Key)`); // Log human-readable state
+        console.log(`Action event: ${action} ${isPressed ? 'pressed' : 'released'} (${device})`); // Log human-readable state
         this.eventBus?.emit(CONTROLS_EVENTS.PLAYER_ACTION, payload);
     }
 

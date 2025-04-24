@@ -1,5 +1,7 @@
 export {};
 
+import { AudioConfig } from '../core/AudioManager';
+
 /**
  * Configuration for a single team participating in the game.
  */
@@ -100,7 +102,7 @@ export interface ConditionDefinition {
  */
 export interface ActionDefinition {
   /** The type of action to perform (e.g., change game phase, modify score, start a timer). */
-  type: 'changePhase' | 'modifyScore' | 'startTimer' | 'activatePowerup'; // Add more as needed
+  type: 'changePhase' | 'modifyScore' | 'startTimer' | 'activatePowerup' | 'playSound'; // Add more as needed
   /** A map of parameters required by the action type (e.g., { newPhase: 'playing' }, { amount: 10, teamId: 'team1' }). */
   params: Record<string, unknown>;
 }
@@ -230,6 +232,20 @@ export interface PowerupConfig {
 }
 
 /**
+ * Audio configuration for the game
+ */
+export interface AudioConfiguration {
+  /** Base path for audio assets */
+  basePath?: string;
+  /** Default volume for all sounds (0.0 to 1.0) */
+  defaultVolume?: number;
+  /** Whether to start muted */
+  startMuted?: boolean;
+  /** List of sounds to register */
+  sounds: AudioConfig[];
+}
+
+/**
  * Defines the overall configuration structure for launching
  * and running a specific game instance within the PixiEngine.
  * This object aggregates all specific configurations needed by the various engine managers.
@@ -271,6 +287,14 @@ export interface GameConfig {
    * Expressed in seconds. 
    */
   intensityTimeLimit: number;
+
+  /** Audio configuration */
+  audio?: AudioConfiguration;
+  
+  /** Optional: Initial mute state for music when the game starts. Overrides stored settings. */
+  initialMusicMuted?: boolean;
+  /** Optional: Initial mute state for SFX when the game starts. Overrides stored settings. */
+  initialSfxMuted?: boolean;
 }
 
 // --- Default Configurations ---
@@ -453,6 +477,9 @@ export function createGameConfig(
         assets: partialConfig.assets ?? DEFAULT_GAME_CONFIG.assets,
         powerups: partialConfig.powerups ?? DEFAULT_GAME_CONFIG.powerups,
         intensityTimeLimit: partialConfig.intensityTimeLimit ?? DEFAULT_GAME_CONFIG.intensityTimeLimit,
+        audio: partialConfig.audio ?? DEFAULT_GAME_CONFIG.audio,
+        initialMusicMuted: partialConfig.initialMusicMuted,
+        initialSfxMuted: partialConfig.initialSfxMuted,
     };
 
     // Validate the final configuration

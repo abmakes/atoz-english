@@ -229,6 +229,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
                 isOpen={isSettingsOpen}
                 onClose={closeSettings}
                 className={styles.settingsPanelGameplay}
+                eventBus={managersRef.current?.eventBus ?? null}
               />
               <MainMenuDropdown
                 isOpen={isMainMenuOpen}

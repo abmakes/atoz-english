@@ -92,8 +92,9 @@ describe('GameStateManager', () => {
 
     it('should allow valid transitions (assuming isValidTransition returns true)', () => {
         gameStateManager.init(createMockGameConfig()); // SETUP
-        // Spy on the private method. Using `as any` is a common way to handle private methods in Jest spies.
-        const isValidSpy = jest.spyOn(gameStateManager as any, 'isValidTransition');
+        // Spy on the private method. Using `@ts-expect-error` is preferred for targeting specific errors.
+        // @ts-expect-error - TS doesn't know about private method 'isValidTransition' for spying
+        const isValidSpy: jest.SpyInstance = jest.spyOn(gameStateManager, 'isValidTransition');
         isValidSpy.mockReturnValue(true);
 
         const result = gameStateManager.setPhase(GamePhase.GAME_OVER);
@@ -107,7 +108,8 @@ describe('GameStateManager', () => {
 
     it('should prevent invalid transitions and not emit event', () => {
         gameStateManager.init(createMockGameConfig()); // SETUP
-        const isValidSpy = jest.spyOn(gameStateManager as any, 'isValidTransition');
+        // @ts-expect-error - TS doesn't know about private method 'isValidTransition' for spying
+        const isValidSpy: jest.SpyInstance = jest.spyOn(gameStateManager, 'isValidTransition');
         isValidSpy.mockReturnValue(false); // Force invalid transition
         mockEventBusInstance.emit.mockClear(); // Clear init call
 
@@ -122,7 +124,8 @@ describe('GameStateManager', () => {
 
      it('should force phase change even if transition is invalid', () => {
         gameStateManager.init(createMockGameConfig()); // SETUP
-        const isValidSpy = jest.spyOn(gameStateManager as any, 'isValidTransition');
+        // @ts-expect-error - TS doesn't know about private method 'isValidTransition' for spying
+        const isValidSpy: jest.SpyInstance = jest.spyOn(gameStateManager, 'isValidTransition');
         isValidSpy.mockReturnValue(false); // Force invalid transition
         mockEventBusInstance.emit.mockClear(); // Clear init call
 

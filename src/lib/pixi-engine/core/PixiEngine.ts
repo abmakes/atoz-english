@@ -6,12 +6,15 @@ import { GameStateManager } from './GameStateManager';
 import { RuleEngine } from './RuleEngine';
 import { ControlsManager } from './ControlsManager';
 import { StorageManager } from './StorageManager';
+import { AudioManager, AudioConfig } from './AudioManager';
 import { ScoringManager } from '../game/ScoringManager';
 import { TimerManager } from '../game/TimerManager';
 import { PowerUpManager } from '../game/PowerUpManager';
 import { BaseGame } from '../game/BaseGame';
 import { GameConfig } from '../config/GameConfig';
 import { AssetLoader } from '../assets/AssetLoader';
+import { getThemeConfig } from '../../themes';
+import { ENGINE_EVENTS, SETTINGS_EVENTS } from './EventTypes'; // Assuming ENGINE_EVENTS exists and contains ENGINE_READY_FOR_GAME
 
 /**
  * Defines the structure for the object containing all core engine managers.
@@ -28,6 +31,8 @@ export interface PixiEngineManagers {
   controlsManager: ControlsManager;
   /** Provides an interface for persistent storage (e.g., localStorage). */
   storageManager: StorageManager;
+  /** Manages audio playback and settings. */
+  audioManager: AudioManager;
   /** Manages player/team scores and lives. */
   scoringManager: ScoringManager;
   /** Manages game timers (e.g., countdowns, elapsed time). */
@@ -94,6 +99,8 @@ export class PixiEngine {
   private controlsManager: ControlsManager;
   /** The storage manager instance. */
   private storageManager: StorageManager;
+  /** The audio manager instance. */
+  private audioManager!: AudioManager; // Remove initializer, add definite assignment assertion
   /** The scoring manager instance. */
   private scoringManager: ScoringManager;
   /** The timer manager instance. */
@@ -119,6 +126,11 @@ export class PixiEngine {
     this.timerManager = new TimerManager(this.eventBus, this.storageManager);
     this.controlsManager = new ControlsManager(); // Init called later with config
     this.scoringManager = new ScoringManager(this.eventBus, this.storageManager); // Now takes storageManager
+    
+    // --- AudioManager is now created in init() ---
+    // REMOVED AudioManager creation and default sound registration from here
+
+    // --- Settings listeners moved to init() after AudioManager creation ---
 
     // Managers requiring GameConfig (powerUpManager, ruleEngine) are initialized in init()
 
@@ -165,13 +177,60 @@ export class PixiEngine {
       // PowerUpManager init
       this.powerUpManager = new PowerUpManager(this.eventBus, this.config); // Use this.config
 
-      // RuleEngine init (needs other managers)
+      // --- Create AudioManager with Theme and Initial Mute States ---
+      const themeConfig = getThemeConfig('default'); // Hardcode 'default' for now
+      this.audioManager = new AudioManager(
+        this.eventBus, 
+        this.storageManager, 
+        themeConfig.soundsBasePath, 
+        this.config.initialMusicMuted, // Pass initial state from config
+        this.config.initialSfxMuted   // Pass initial state from config
+      );
+      // --- Register Default Sounds (Now happens after AudioManager creation) ---
+      const defaultSounds: AudioConfig[] = [
+        { id: 'correct-sound', filename: 'correct-sound.mp3', volume: 0.8, type: 'sfx' },
+        { id: 'incorrect-sound', filename: 'incorrect-sound.mp3', volume: 0.8, type: 'sfx' },
+        { id: 'background-music', filename: 'background-music.mp3', loop: true, volume: 0.7, type: 'music' },
+        { id: 'victory-sound', filename: 'crowd-cheering.mp3', volume: 0.7, type: 'sfx' },
+      ];
+      defaultSounds.forEach(soundConfig => {
+          try {
+              this.audioManager.registerSound(soundConfig);
+          } catch (error) {
+              console.error(`Failed to register default sound ${soundConfig.id}:`, error);
+          }
+      });
+      // ------------------------------------------------------------------
+
+      // --- Add Settings Listeners (Now happens after AudioManager creation) ---
+      this.eventBus.on(SETTINGS_EVENTS.SET_GLOBAL_VOLUME, (volume: number) => { 
+          console.log(`[EventBus Listener] Received SET_GLOBAL_VOLUME: ${volume}`);
+          this.audioManager.setGlobalVolume(volume);
+      });
+      this.eventBus.on(SETTINGS_EVENTS.SET_MUSIC_MUTED, (muted: boolean) => { 
+          console.log(`[EventBus Listener] Received SET_MUSIC_MUTED: ${muted}`);
+          this.audioManager.setMusicMuted(muted);
+      });
+      this.eventBus.on(SETTINGS_EVENTS.SET_SFX_MUTED, (muted: boolean) => { 
+          console.log(`[EventBus Listener] Received SET_SFX_MUTED: ${muted}`);
+          this.audioManager.setSfxMuted(muted);
+      });
+      // -------------------------------------------------------------------
+
+      // RuleEngine init (needs other managers, including AudioManager)
       this.ruleEngine = new RuleEngine(this.eventBus, this.config, { // Use this.config
           timerManager: this.timerManager,
           gameStateManager: this.gameStateManager,
           scoringManager: this.scoringManager,
-          powerUpManager: this.powerUpManager // Pass the initialized powerUpManager
+          powerUpManager: this.powerUpManager, // Pass the initialized powerUpManager
+          audioManager: this.audioManager // Add audioManager
       });
+
+      // --- Emit Engine Ready Event (Before Asset Loading) ---
+      console.log('PixiEngine: Emitting ENGINE_READY_FOR_GAME');
+      // Use the imported constant if available
+      this.eventBus.emit(ENGINE_EVENTS.ENGINE_READY_FOR_GAME);
+      // -------------------------------------------------------
 
       // --- Asset Initialization (Static) ---
       console.log('Initializing PixiJS Assets...');
@@ -250,6 +309,7 @@ export class PixiEngine {
           ruleEngine: this.ruleEngine,
           controlsManager: this.controlsManager,
           storageManager: this.storageManager,
+          audioManager: this.audioManager,
           scoringManager: this.scoringManager,
           timerManager: this.timerManager,
           powerUpManager: this.powerUpManager,
@@ -384,6 +444,7 @@ export class PixiEngine {
         this.powerUpManager?.destroy(); // Destroy PowerUpManager
         this.scoringManager?.destroy(); // Destroy ScoringManager
         this.controlsManager?.destroy(); // Destroy ControlsManager
+        this.audioManager?.destroy(); // Destroy AudioManager
         // No destroy for TimerManager, AssetLoader, StorageManager, EventBus
         // this.timerManager?.destroy(); // Removed
         // this.gameStateManager?.destroy(); // Destroy GameStateManager
@@ -420,6 +481,8 @@ export class PixiEngine {
         this.timerManager = null;
         // @ts-expect-error Allow null assignments
         this.powerUpManager = null;
+        // @ts-expect-error Allow null assignments
+        this.audioManager = null;
 
 
         console.log("PixiEngine destroyed successfully.");
@@ -509,6 +572,14 @@ export class PixiEngine {
   public getPowerUpManager(): PowerUpManager {
       if (!this.powerUpManager) throw new Error("PowerUpManager is not available.");
       return this.powerUpManager;
+  }
+
+  /**
+   * Get the audio manager instance
+   * @returns The AudioManager instance
+   */
+  public getAudioManager(): AudioManager {
+    return this.audioManager;
   }
 
   /**

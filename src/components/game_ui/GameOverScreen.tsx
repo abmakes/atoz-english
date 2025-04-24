@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Image from 'next/image'; // For the crown image
 import PlayerScore, { PlayerScoreProps } from './PlayerScore';
 import NavMenu, { NavMenuProps } from './NavMenu';
@@ -36,6 +36,23 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({
   // onMainMenuClick,
   // onBackClick,
 }) => {
+  // --- Play Victory Sound on Mount ---
+  useEffect(() => {
+    const victorySoundPath = '/audio/default/crowd-cheering.mp3';
+    const audio = new Audio(victorySoundPath);
+    audio.play().catch(error => {
+      console.error('Error playing victory sound:', error);
+      // Handle error - e.g., user hasn't interacted with the page yet
+    });
+
+    // Optional: Cleanup function if needed, though unlikely for short sound
+    // return () => {
+    //   audio.pause();
+    //   audio.src = ''; 
+    // };
+  }, []); // Empty dependency array ensures this runs only once on mount
+  // ---------------------------------
+
   // Prepare NavMenu items by potentially overriding the back handler
   const gameOverNavItems = navMenuItems.map(item =>
     item.id === 'back' ? { ...item, onClick: onExit, label: 'Exit Game' } : item // Make back button exit

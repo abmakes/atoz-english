@@ -17,6 +17,7 @@ export const ENGINE_EVENTS = {
   AFTER_RENDER: 'engine:afterRender',   // Fired after rendering
   RESIZED: 'engine:resized',
   ERROR: 'engine:error',
+  ENGINE_READY_FOR_GAME: 'engine:readyForGame',
 } as const;
 
 export interface EngineResizedPayload {
@@ -113,10 +114,20 @@ export const CONTROLS_EVENTS = {
 } as const;
 
 export interface ControlsPlayerActionPayload {
-  playerId: string | number;
-  action: string; // e.g., 'JUMP', 'FIRE', 'ANSWER_1'
-  value?: number | boolean; // For analog input or button state
-  device?: string; // e.g., 'keyboard', 'gamepad0'
+  /** The identifier of the action being performed (e.g., 'UP', 'ACTION_A'). */
+  action: string;
+  /**
+   * The value associated with the action.
+   * - For binary actions (pressed/released), this is a boolean (true for pressed, false for released).
+   * - For analog actions (like joystick axes, though not yet implemented), this could be a number.
+   */
+  value: boolean | number;
+  /** The identifier of the player performing the action (e.g., 'player1'). */
+  playerId: string;
+  /** The type of device that triggered the action. */
+  device: 'keyboard' | 'pointer' | 'gamepad' | 'unknown'; // Added pointer/gamepad
+  /** Optional position data, relevant for pointer events. */
+  position?: { x: number; y: number }; // Added position
 }
 
 // --- Asset Events ---
@@ -171,6 +182,13 @@ export const GAME_EVENTS = {
     // Add other common game actions here (e.g., ITEM_COLLECTED, LEVEL_START)
 } as const;
 
+// Add this definition alongside other event constants (e.g., ENGINE_EVENTS)
+export const SETTINGS_EVENTS = {
+  SET_GLOBAL_VOLUME: 'settings:setGlobalVolume',
+  SET_MUSIC_MUTED: 'settings:setMusicMuted',
+  SET_SFX_MUTED: 'settings:setSfxMuted',
+} as const;
+
 /**
  * A type map defining the payload structure for each event type.
  * This is used for type-safe event handling with the EventBus.
@@ -188,6 +206,7 @@ export interface EngineEvents {
   [ENGINE_EVENTS.AFTER_RENDER]: () => void;
   [ENGINE_EVENTS.RESIZED]: (payload: EngineResizedPayload) => void;
   [ENGINE_EVENTS.ERROR]: (payload: EngineErrorPayload) => void;
+  [ENGINE_EVENTS.ENGINE_READY_FOR_GAME]: () => void;
 
   [GAME_STATE_EVENTS.PHASE_CHANGED]: (payload: GameStatePhaseChangedPayload) => void;
   [GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED]: (payload: GameStateActiveTeamChangedPayload) => void;
@@ -229,4 +248,9 @@ export interface EngineEvents {
   // Add Game Specific Events
   [GAME_EVENTS.ANSWER_SELECTED]: (payload: AnswerSelectedPayload) => void;
   // Add other game events here...
+
+  // Add Settings Events
+  [SETTINGS_EVENTS.SET_GLOBAL_VOLUME]: (volume: number) => void;
+  [SETTINGS_EVENTS.SET_MUSIC_MUTED]: (muted: boolean) => void;
+  [SETTINGS_EVENTS.SET_SFX_MUTED]: (muted: boolean) => void;
 } 

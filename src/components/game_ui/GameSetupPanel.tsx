@@ -6,6 +6,7 @@ import styles from '@/styles/themes/themes.module.css'; // Assuming '@/' alias i
 // import { useGameStore } from '@/stores/useGameStore';
 // Import only necessary types from central location
 import { TeamData, GameSettingsData, PowerupsData, GameSetupData } from '@/types/gameTypes';
+import { Switch } from "@/components/ui/switch"; // Import Switch
 
 // Define props explicitly, using imported types
 /**
@@ -81,6 +82,29 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
     // document.body.className = themeClassName; // Be careful with this approach
   }, [selectedTheme]);
 
+  // Effect to load initial audio settings from localStorage on mount
+  useEffect(() => {
+    try {
+        const STORAGE_KEY = 'pixi-engine/audio_settings';
+        const storedSettingsRaw = localStorage.getItem(STORAGE_KEY);
+        if (storedSettingsRaw) {
+            const storedSettings = JSON.parse(storedSettingsRaw);
+            console.log("GameSetupPanel: Found stored audio settings:", storedSettings);
+            // Update local state based on stored muted values (inverted logic)
+            setSettings(prev => ({
+                ...prev,
+                music: !(storedSettings.musicMuted ?? false), // If muted is true, setting is false (off)
+                sounds: !(storedSettings.sfxMuted ?? false)   // If muted is true, setting is false (off)
+            }));
+        } else {
+            console.log("GameSetupPanel: No stored audio settings found, using defaults.");
+        }
+    } catch (error) {
+        console.error("Error reading audio settings from localStorage in GameSetupPanel:", error);
+        // Keep default settings if error occurs
+    }
+  }, []); // Empty dependency array ensures this runs only once on mount
+
 
   // --- Handlers (Placeholders) ---
   const handleAddTeam = () => {
@@ -102,7 +126,36 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
   };
 
   const handleSettingToggle = (setting: keyof LocalGameSettings) => {
-    setSettings(prev => ({ ...prev, [setting]: !prev[setting] }));
+    setSettings(prev => {
+        const newState = !prev[setting];
+        // Also update localStorage to persist this choice for next session's initial state
+        try {
+            const STORAGE_KEY = 'pixi-engine/audio_settings';
+            const storedSettingsRaw = localStorage.getItem(STORAGE_KEY);
+            const storedSettings = storedSettingsRaw ? JSON.parse(storedSettingsRaw) : {};
+            
+            // Update the corresponding MUTE state (inverted logic)
+            if (setting === 'music') {
+                storedSettings.musicMuted = !newState; 
+                console.log(`GameSetupPanel: Setting persisted musicMuted to ${!newState}`);
+            } else if (setting === 'sounds') {
+                storedSettings.sfxMuted = !newState;
+                 console.log(`GameSetupPanel: Setting persisted sfxMuted to ${!newState}`);
+            }
+            
+            // Ensure volume exists if creating settings for the first time
+            if (storedSettings.volume === undefined) {
+                storedSettings.volume = 1.0; // Default volume
+            }
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(storedSettings));
+
+        } catch (error) {
+            console.error("Error saving setting to localStorage from GameSetupPanel:", error);
+        }
+
+        return { ...prev, [setting]: newState }; 
+    });
   };
 
   const handleThemeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -227,16 +280,20 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
           <h2 className={styles.textHeading2}>Settings:</h2>
           <div className={styles.settingsContainer}>
             <span className={styles.textLabel}>Turn ON:</span>
-            {(Object.keys(settings) as Array<keyof LocalGameSettings>).map((key) => (
-              <label key={key} className={styles.label}>
-                <input
-                  type="checkbox"
-                  checked={settings[key]}
-                  onChange={() => handleSettingToggle(key)}
-                  className={styles.checkbox}
-                />
-                <span className={styles.textInputLabel}>{key}</span>
-              </label>
+            {(Object.keys(settings) as Array<keyof LocalGameSettings>)
+              .filter(key => key === 'music' || key === 'sounds') // Only show music/sounds
+              .map((key) => (
+              <label key={key} className={`${styles.label} ${styles.settingsToggleContainer}`}> {/* Add flex styles */} 
+                 <span className={styles.textInputLabel}> {/* Text first */} 
+                   {key === 'music' ? 'Music' : key === 'sounds' ? 'Sound Effects' : key}
+                 </span>
+                 <Switch
+                    checked={settings[key]} // Checked state from local component state
+                    onCheckedChange={() => handleSettingToggle(key)} // Call handler on change
+                    className={styles.switch} // Apply theme switch style if needed
+                    aria-label={key === 'music' ? 'Toggle Music' : 'Toggle Sound Effects'}
+                 />
+               </label>
             ))}
           </div>
         </div>
