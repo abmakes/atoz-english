@@ -227,7 +227,7 @@ export class AssetLoader {
 	 */
 	public static getDisplayObject(key: string): Sprite | AnimatedSprite | GifSprite | null {
 		if (!this.manifestLoaded) {
-			console.warn('AssetLoader.getDisplayObject used before initialization. Asset might not be available yet.');
+			// console.warn('AssetLoader.getDisplayObject used before initialization. Asset might not be available yet.');
 		}
 
 		try {

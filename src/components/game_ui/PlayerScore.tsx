@@ -9,18 +9,22 @@ export interface PlayerScoreTheme {
   activeTextColor?: string;
   activeScoreBackgroundColor?: string;
   activeScoreColor?: string;
+  activeBorder?: string; // e.g., '2px solid blue'
   
   // Colors for inactive player
   inactiveBackgroundColor?: string;
   inactiveTextColor?: string;
   inactiveScoreBackgroundColor?: string;
   inactiveScoreColor?: string;
+  inactiveBorder?: string; // e.g., '1px solid #ccc'
   
   // Typography
   fontFamily?: string;
   fontSize?: string;
   scoreFontSize?: string;
-  fontWeight?: string;
+  fontWeight?: string; // Default/fallback weight
+  activeFontWeight?: string | number; // Specific weight for active player
+  inactiveFontWeight?: string | number; // Specific weight for inactive player
   
   // Styling
   borderRadius?: string;
@@ -61,23 +65,26 @@ const PlayerScore: React.FC<PlayerScoreProps> = ({
 }) => {
   // Apply theme defaults based on the image
   const {
-    // Active player (blue theme like in Banana example)
+    // Active player
     activeBackgroundColor = '#93E1FF',
     activeTextColor = '#003A5C',
     activeScoreBackgroundColor = '#00AAFF',
     activeScoreColor = '#FFFFFF',
+    activeBorder = '2px solid #00AAFF', // Example active border
     
-    // Inactive player (gray/white theme like in Dolphin and Capybara examples)
+    // Inactive player
     inactiveBackgroundColor = '#FFFFFF',
     inactiveTextColor = '#003A5C',
     inactiveScoreBackgroundColor = '#E0E0E0',
     inactiveScoreColor = '#003A5C',
+    inactiveBorder = '1px solid #E0E0E0', // Example inactive border
     
     // Typography
     fontFamily = 'Nunito, sans-serif',
-    fontSize = '1.25rem',
+    fontSize = '1.1rem',
     scoreFontSize = '1.5rem',
-    fontWeight = '600',
+    activeFontWeight = '700', // Default bold for active
+    inactiveFontWeight = '600', // Default normal for inactive
     
     // Styling
     borderRadius = '0.75rem',
@@ -85,22 +92,25 @@ const PlayerScore: React.FC<PlayerScoreProps> = ({
     boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)'
   } = theme;
 
-  // Determine which theme to use based on active state
-  const backgroundColor = isActive ? activeBackgroundColor : inactiveBackgroundColor;
-  const textColor = isActive ? activeTextColor : inactiveTextColor;
-  const scoreBackgroundColor = isActive ? activeScoreBackgroundColor : inactiveScoreBackgroundColor;
-  const scoreColor = isActive ? activeScoreColor : inactiveScoreColor;
+  // Determine which styles to use based on active state
+  const currentBackgroundColor = isActive ? activeBackgroundColor : inactiveBackgroundColor;
+  const currentTextColor = isActive ? activeTextColor : inactiveTextColor;
+  const currentScoreBackgroundColor = isActive ? activeScoreBackgroundColor : inactiveScoreBackgroundColor;
+  const currentScoreColor = isActive ? activeScoreColor : inactiveScoreColor;
+  const currentFontWeight = isActive ? activeFontWeight : inactiveFontWeight;
+  const currentBorder = isActive ? activeBorder : inactiveBorder;
 
   // Interactive class for click behavior
   const interactiveClass = onClick ? 'cursor-pointer transition-transform hover:scale-[1.02]' : '';
 
   // Combine base wrapper class with active class if applicable, and any passed className
+  // The .playerScoreActive class in themes.module.css can add/override styles (like border)
   const wrapperClasses = `
     ${styles.playerScoreWrapper}
     ${isActive ? styles.playerScoreActive : ''}
     ${interactiveClass}
     ${className}
-  `.trim(); // Use trim to clean up potential extra spaces
+  `.trim();
 
   return (
     <div
@@ -110,22 +120,24 @@ const PlayerScore: React.FC<PlayerScoreProps> = ({
         fontFamily,
         boxShadow,
         borderRadius,
-        overflow: 'hidden', // Ensures child elements don't overflow the border radius
+        border: currentBorder, // Apply border dynamically
+        overflow: 'hidden',
       }}
       onClick={onClick}
-      role="button" // Indicate it's clickable
-      tabIndex={onClick ? 0 : -1} // Make clickable items focusable
-      aria-pressed={isActive} // Indicate active state for accessibility
+      role="button" 
+      tabIndex={onClick ? 0 : -1}
+      aria-pressed={isActive} 
       aria-label={`Player ${playerName}, Score ${score}, ${isActive ? 'Active' : 'Inactive'}`}
     >
       {/* Player name section */}
       <div 
         className={styles.playerName}
         style={{
-          backgroundColor,
-          color: textColor,
-          fontWeight,
+          backgroundColor: currentBackgroundColor,
+          color: currentTextColor,
+          fontWeight: currentFontWeight, // Apply dynamic weight
           fontSize,
+          padding: '0.5rem 0.75rem', // Add some padding
           borderTopLeftRadius: borderRadius,
           borderTopRightRadius: borderRadius,
         }}
@@ -137,10 +149,11 @@ const PlayerScore: React.FC<PlayerScoreProps> = ({
       <div 
         className={styles.playerScoreValue}
         style={{
-          backgroundColor: scoreBackgroundColor,
-          color: scoreColor,
-          fontWeight,
+          backgroundColor: currentScoreBackgroundColor,
+          color: currentScoreColor,
+          fontWeight: currentFontWeight, // Apply dynamic weight
           fontSize: scoreFontSize,
+          padding: '0.5rem 0.75rem', // Add some padding
           borderBottomLeftRadius: borderRadius,
           borderBottomRightRadius: borderRadius,
         }}

@@ -152,11 +152,12 @@ export class PixiApplication {
       this.app.stage.addChild(this.mainStage);
       console.log('Main stage added to application stage');
       
-      // ---> Make the main stage interactive <--- 
+      // Make the main stage interactive
       this.app.stage.interactive = true;
-      // ---> And allow children to receive events <--- 
       this.app.stage.interactiveChildren = true;
-      console.log('Main stage set to interactive');
+      // Enable sorting of children based on zIndex for layering
+      this.app.stage.sortableChildren = true; 
+      console.log('Main stage set to interactive and sortableChildren enabled');
       
       // --- REMOVE stage debug listener <---
       /*

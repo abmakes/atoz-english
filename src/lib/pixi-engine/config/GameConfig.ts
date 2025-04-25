@@ -229,6 +229,8 @@ export interface PowerupConfig {
   availablePowerups: PowerupDefinition[]; 
   /** Optional configuration defining how power-ups are introduced into the game (e.g., spawn timing, locations, award conditions). */
   spawnMechanic?: Record<string, unknown>; 
+  /** Optional flag to indicate if power-ups should be used in this game session. Defaults to false. */
+  powerupsEnabled?: boolean;
 }
 
 /**
@@ -243,6 +245,22 @@ export interface AudioConfiguration {
   startMuted?: boolean;
   /** List of sounds to register */
   sounds: AudioConfig[];
+}
+
+/**
+ * Configuration for how questions are handled
+ */
+export interface QuestionHandlingConfig {
+  /** How questions are distributed: 'sharedPool' (all teams answer from the same pool) or 'perTeam' (questions divided equally). */
+  distributionMode: 'sharedPool' | 'perTeam';
+  /** Whether to randomize the order of questions before starting. */
+  randomizeOrder: boolean;
+  /** 
+   * If distributionMode is 'perTeam', determines if the total number of questions asked should be 
+   * truncated to ensure equal turns (e.g., 10 questions, 3 teams -> 9 questions total). 
+   * If false, all questions are used, and some teams might get one less turn (in perTeam mode).
+   */
+  truncateForFairness?: boolean; 
 }
 
 /**
@@ -295,6 +313,9 @@ export interface GameConfig {
   initialMusicMuted?: boolean;
   /** Optional: Initial mute state for SFX when the game starts. Overrides stored settings. */
   initialSfxMuted?: boolean;
+
+  /** Optional question handling configuration */
+  questionHandling?: QuestionHandlingConfig;
 }
 
 // --- Default Configurations ---
@@ -338,12 +359,19 @@ export const DEFAULT_RULE_CONFIG: RuleConfig = {
   rules: [],
 };
 
+export const DEFAULT_QUESTION_HANDLING_CONFIG: QuestionHandlingConfig = {
+  distributionMode: 'perTeam', // Default to turn-based
+  randomizeOrder: true,       // Default to shuffling
+  truncateForFairness: true, // Default to ensuring equal turns
+};
+
 export const DEFAULT_GAME_CONFIG: Omit<GameConfig, 'teams' | 'gameMode' | 'quizId' | 'gameSlug'> = {
   rules: DEFAULT_RULE_CONFIG,
   controls: DEFAULT_CONTROLS_CONFIG,
   assets: DEFAULT_ASSET_CONFIG,
   powerups: DEFAULT_POWERUP_CONFIG,
   intensityTimeLimit: 30, // Default to 30 seconds if not provided
+  questionHandling: DEFAULT_QUESTION_HANDLING_CONFIG,
 };
 
 // --- Type Guards ---
@@ -404,7 +432,28 @@ function validateControlsConfig(_config: ControlsConfig): string[] { return []; 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function validateAssetConfig(_config: AssetConfig): string[] { return []; }
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function validatePowerupConfig(_config: PowerupConfig): string[] { return []; }
+function validatePowerupConfig(_config: PowerupConfig): string[] { 
+  // Validation for powerupsEnabled could be added here if needed (e.g., must be boolean)
+  // For now, as it's optional, no explicit validation is strictly required.
+  return []; 
+}
+
+// <<< ADDED: Validation for Question Handling Config >>>
+function validateQuestionHandlingConfig(config?: QuestionHandlingConfig): string[] {
+  if (!config) return []; // Optional, so okay if missing
+  const errors: string[] = [];
+  if (!['sharedPool', 'perTeam'].includes(config.distributionMode)) {
+    errors.push('QuestionHandling: Invalid distributionMode.');
+  }
+  if (typeof config.randomizeOrder !== 'boolean') {
+    errors.push('QuestionHandling: randomizeOrder must be a boolean.');
+  }
+  if (config.truncateForFairness !== undefined && typeof config.truncateForFairness !== 'boolean') {
+    errors.push('QuestionHandling: truncateForFairness must be a boolean if provided.');
+  }
+  return errors;
+}
+// <<< END ADDED >>>
 
 /**
  * Validates a complete GameConfig object.
@@ -447,6 +496,10 @@ export function validateGameConfig(config: GameConfig): string[] {
   if (!config.powerups) errors.push('GameConfig.powerups is missing.');
   else errors = errors.concat(validatePowerupConfig(config.powerups));
   
+  // <<< ADDED: Validate questionHandling >>>
+  errors = errors.concat(validateQuestionHandlingConfig(config.questionHandling));
+  // <<< END ADDED >>>
+  
   return errors;
 }
 
@@ -464,6 +517,17 @@ export function createGameConfig(
     partialConfig: Pick<GameConfig, 'teams' | 'gameMode' | 'quizId' | 'gameSlug'>
                     & Partial<Omit<GameConfig, 'teams' | 'gameMode' | 'quizId' | 'gameSlug'>>
 ): GameConfig {
+    // Merge default powerup config first, then partial config
+    const defaultPowerupConf = DEFAULT_POWERUP_CONFIG;
+    // Use partialConfig.powerups directly for checking the enabled flag
+    const mergedPowerups: PowerupConfig = {
+        ...defaultPowerupConf,
+        ...(partialConfig.powerups ?? {}), // Spread the partial config itself
+        // Ensure powerupsEnabled from partial config takes precedence
+        powerupsEnabled: partialConfig.powerups?.powerupsEnabled // Use optional chaining
+                         ?? defaultPowerupConf.powerupsEnabled // Fallback to default if partial or its enabled flag is undefined
+    };
+
     const fullConfig: GameConfig = {
         ...DEFAULT_GAME_CONFIG,
         // Directly assign required fields
@@ -471,13 +535,19 @@ export function createGameConfig(
         gameSlug: partialConfig.gameSlug,
         teams: partialConfig.teams,
         gameMode: partialConfig.gameMode,
-        // Merge optional overrides
+        // Merge optional overrides, using the merged powerups config
         rules: partialConfig.rules ?? DEFAULT_GAME_CONFIG.rules,
         controls: partialConfig.controls ?? DEFAULT_GAME_CONFIG.controls,
         assets: partialConfig.assets ?? DEFAULT_GAME_CONFIG.assets,
-        powerups: partialConfig.powerups ?? DEFAULT_GAME_CONFIG.powerups,
+        powerups: mergedPowerups, // Use the merged powerup config
         intensityTimeLimit: partialConfig.intensityTimeLimit ?? DEFAULT_GAME_CONFIG.intensityTimeLimit,
         audio: partialConfig.audio ?? DEFAULT_GAME_CONFIG.audio,
+        // <<< ADDED: Merge questionHandling config >>>
+        questionHandling: { 
+            ...DEFAULT_QUESTION_HANDLING_CONFIG, 
+            ...(partialConfig.questionHandling ?? {}) 
+        },
+        // <<< END ADDED >>>
         initialMusicMuted: partialConfig.initialMusicMuted,
         initialSfxMuted: partialConfig.initialSfxMuted,
     };

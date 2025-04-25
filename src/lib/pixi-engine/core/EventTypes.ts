@@ -165,14 +165,36 @@ export interface PowerUpEventPayload {
   duration?: number;
 }
 
+// --- Transition Events ---
+
+export const TRANSITION_EVENTS = {
+  START: 'transition:start',
+  END: 'transition:end',
+} as const;
+
+export interface TransitionStartPayload {
+  type: 'loading' | 'turn' | 'powerup' | 'custom';
+  message?: string;
+  duration?: number; // Match TransitionScreenConfig
+}
+
+export interface TransitionEndPayload {
+  type: 'loading' | 'turn' | 'powerup' | 'custom';
+}
+
 // --- Game Specific Events ---
 
-// Payload for answer selection events
+/** Payload for when an answer is selected in a game */
 export interface AnswerSelectedPayload {
-    questionId: string;
-    selectedOptionId: string;
-    isCorrect: boolean;
-    teamId: string | number | undefined; // ID of the team that answered
+  /** Unique ID of the question answered */
+  questionId: string;
+  /** Unique ID of the option selected by the user, or null if timed out */
+  selectedOptionId: string | null;
+  /** Whether the selected answer was correct */
+  isCorrect: boolean;
+  /** Optional ID of the team/player who answered */
+  teamId?: string | number;
+  // Add other relevant info like time taken, points awarded?
 }
 
 // Add other game-specific payloads here...
@@ -244,6 +266,10 @@ export interface EngineEvents {
   [POWERUP_EVENTS.ACTIVATED]: (payload: PowerUpEventPayload) => void;
   [POWERUP_EVENTS.DEACTIVATED]: (payload: PowerUpEventPayload) => void;
   [POWERUP_EVENTS.EXPIRED]: (payload: PowerUpEventPayload) => void;
+
+  // Add Transition Events
+  [TRANSITION_EVENTS.START]: (payload: TransitionStartPayload) => void;
+  [TRANSITION_EVENTS.END]: (payload: TransitionEndPayload) => void;
 
   // Add Game Specific Events
   [GAME_EVENTS.ANSWER_SELECTED]: (payload: AnswerSelectedPayload) => void;

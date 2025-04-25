@@ -7,7 +7,7 @@ import GameSettingsPanel from './GameSettingsPanel';
 import MainMenuDropdown from './MainMenuDropdown';
 import styles from '@/styles/themes/themes.module.css';
 import { PlayerScoreData, GameOverPayload } from '@/types/gameTypes';
-import { GAME_STATE_EVENTS, SCORING_EVENTS, ScoringScoreUpdatedPayload } from '@/lib/pixi-engine/core/EventTypes';
+import { GAME_STATE_EVENTS, SCORING_EVENTS, ScoringScoreUpdatedPayload, GameStateActiveTeamChangedPayload } from '@/lib/pixi-engine/core/EventTypes';
 import { PixiEngine, PixiEngineManagers } from '@/lib/pixi-engine/core/PixiEngine';
 import { GameConfig } from '@/lib/pixi-engine/config/GameConfig';
 import { BaseGame } from '@/lib/pixi-engine/game/BaseGame';
@@ -63,6 +63,9 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   );
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMainMenuOpen, setIsMainMenuOpen] = useState(false);
+  const [activeTeamId, setActiveTeamId] = useState<string | number | null>(
+    config.teams.length > 0 ? config.teams[0].id : null
+  );
 
   // --- Refs for internal engine/managers ---
   const engineInstanceRef = useRef<PixiEngine | null>(null);
@@ -101,8 +104,6 @@ const GameplayView: React.FC<GameplayViewProps> = ({
       onGameOver(payload);
   }, [onGameOver]); // Removed playerScores dependency as it's derived now
 
-  // --- Update score handler type --- 
-
   /**
    * Handles the SCORE_UPDATED event from the PixiEngine's ScoringManager.
    * Updates the displayed score for the relevant player.
@@ -119,7 +120,19 @@ const GameplayView: React.FC<GameplayViewProps> = ({
           )
       );
   }, []); // No dependency on managers needed here
-  // -------------------------------
+
+  // <<< ADD Handler for Active Team Change >>>
+  const handlePixiActiveTeamChanged = useCallback((payload: GameStateActiveTeamChangedPayload) => {
+    console.log("React received ACTIVE_TEAM_CHANGED event. Payload:", payload);
+    setActiveTeamId(payload.currentTeamId);
+    console.log("React state activeTeamId SET TO:", payload.currentTeamId);
+  }, []);
+  // -------------------------------------
+
+  // Optional: Add effect to log state whenever it changes
+  useEffect(() => {
+    console.log("React activeTeamId state CHANGED TO:", activeTeamId);
+  }, [activeTeamId]);
 
   // --- Engine Initialization Effect --- 
   /**
@@ -145,6 +158,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
                        console.log("GameplayView: Attaching event listeners post-init...");
                       currentManagers.eventBus.on(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
                       currentManagers.eventBus.on(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
+                      currentManagers.eventBus.on(GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED, handlePixiActiveTeamChanged);
                   } else {
                       console.error("GameplayView: Managers are null after engine init!");
                   }
@@ -169,6 +183,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
                   console.log("GameplayView: Detaching listeners during cleanup...");
                   currentManagers.eventBus.off(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
                   currentManagers.eventBus.off(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
+                  currentManagers.eventBus.off(GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED, handlePixiActiveTeamChanged);
               }
               engineToDestroy.destroy();
               engineInstanceRef.current = null;
@@ -179,7 +194,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
       };
       // Dependencies: config and factory trigger re-init if they change.
       // Ref changes don't trigger effects, but we check .current inside.
-  }, [config, gameFactory, pixiMountPointRef, handlePixiGameOver, handlePixiScoreUpdate]); // Added callbacks to dependency array
+  }, [config, gameFactory, pixiMountPointRef, handlePixiGameOver, handlePixiScoreUpdate, handlePixiActiveTeamChanged]); // Added callbacks to dependency array
   // ------------------------------------------------------
 
   // --- Dropdown Handlers ---
@@ -212,15 +227,18 @@ const GameplayView: React.FC<GameplayViewProps> = ({
     <div className={`${styles.gameplayViewContainer} ${themeClassName}`}>
         {/* Overlays */}
         <div className={styles.gameplayPlayerScoresOverlay}>
-            {/* Use teamId as the key */} 
-            {playerScores.map((player: PlayerScoreState) => (
-            <PlayerScore
-                key={player.teamId} 
-                playerName={player.playerName}
-                score={player.score}
-                isActive={false}
-            />
-            ))}
+            {/* Use teamId as the key */}
+            {playerScores.map((player: PlayerScoreState) => {
+                console.log(`Rendering PlayerScore for teamId: ${player.teamId}. Current activeTeamId: ${activeTeamId}. Will set isActive to: ${player.teamId === activeTeamId}`);
+                return (
+                    <PlayerScore
+                        key={player.teamId}
+                        playerName={player.playerName}
+                        score={player.score}
+                        isActive={player.teamId === activeTeamId}
+                    />
+                );
+            })}
         </div>
 
         <div className={styles.gameplayNavMenuOverlay}>

@@ -398,8 +398,9 @@
   margin-bottom: 0.25rem;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-top-left-radius: var(--border-radius-lg);
+  border-top-right-radius: var(--border-radius-lg);
 }
 .playerScoreValue {
   font-size: var(--font-size-lg);

@@ -1,8 +1,3 @@
----
-description: 
-globs: 
-alwaysApply: true
----
 - **PixiJS Engine Structure (`src/lib/pixi-engine/`)**
   - All code related to the PixiJS game engine **MUST** reside within the `src/lib/pixi-engine/` directory.
   - Do **NOT** create or place engine files in a top-level `lib/pixi-engine/` directory.
@@ -39,7 +34,9 @@ alwaysApply: true
     - Detailed markdown or text files generated for each task or subtask, providing human-readable context and details. Names typically follow the pattern `task_XXX.txt` or `subtask_X.Y.txt`.
     - Example: `tasks/task_001.txt`
 
-- **Tests should live in a `/tests` folder located in the root directory alongside `/src`, `/public` and `/tasks`** mirroring the main app structure.
-
-
 - **Reference:** The authoritative source for the overall project structure, including the Pixi engine, is detailed in the file structure section of `[pixi-structure-doc.md](mdc:src/lib/pixi-engine/pixi-structure-doc.md)`.
+
+  - Use `src/lib/pixi-engine/ui/` for shared Pixi UI components.
+  - Use `src/lib/pixi-engine/utils/` for engine utilities.
+
+- **Reference:** The correct structure is defined in `scripts/prd.txt` under the "Components Structure & Architecture" section.

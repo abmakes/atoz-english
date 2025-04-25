@@ -157,36 +157,67 @@ export class PixiEngine {
     this.config = config;
     
     try {
-      // Initialize the PixiApplication
+      // --- Initialize the core PixiApplication FIRST ---
       await this.app.init();
-      
-      // Initialize/Configure managers that depend on GameConfig
+      console.log('PixiApplication core initialized.');
+      // -------------------------------------------------
+
+      // --- Initialize PixiJS Assets EARLY (Requires PixiApplication) ---
+      console.log('Initializing PixiJS Assets...');
+      let bundleLoadPromise: Promise<unknown> = Promise.resolve(); 
+      if (this.config.assets) {
+         const manifest = { bundles: this.config.assets.bundles };
+         await Assets.init({
+            basePath: this.config.assets.basePath,
+            manifest: manifest
+         });
+         console.log('PixiJS Assets initialized.');
+         
+         if (this.config.assets.bundles && this.config.assets.bundles.length > 0) {
+             const bundleNames = this.config.assets.bundles.map(b => b.name);
+             console.log('Starting background loading of asset bundles:', bundleNames);
+             bundleLoadPromise = Promise.all(bundleNames.map(bundleName =>
+                 Assets.loadBundle(bundleName)
+             ));
+             bundleLoadPromise.then(() => {
+                 console.log('All defined asset bundles loaded (in background).');
+             }).catch(err => {
+                 console.error('Error loading asset bundles in background:', err);
+             });
+         } else {
+             console.log('No asset bundles defined in config to preload.');
+         }
+      } else {
+          console.warn('PixiEngine: No assets configuration found in GameConfig.');
+          await Assets.init({});
+          console.log('PixiJS Assets initialized (no config).');
+      }
+      // --- End Asset Init/Start Loading ---
+
+      // --- Initialize Managers (Now safe to access this.app) ---
       console.log('Initializing GameConfig-dependent managers...');
 
       // ControlsManager init
       if (this.config.controls) {
         this.controlsManager.init(this.config.controls, this.eventBus);
-        this.controlsManager.enable(); // Enable controls after init
+        this.controlsManager.enable(); 
       } else {
         console.warn("PixiEngine: No controls configuration found in GameConfig.");
       }
-
       // ScoringManager init
       this.scoringManager.init(this.config.teams, this.config.gameMode);
-
       // PowerUpManager init
-      this.powerUpManager = new PowerUpManager(this.eventBus, this.config); // Use this.config
-
-      // --- Create AudioManager with Theme and Initial Mute States ---
-      const themeConfig = getThemeConfig('default'); // Hardcode 'default' for now
+      this.powerUpManager = new PowerUpManager(this.eventBus, this.config);
+      // Create AudioManager 
+      const themeConfig = getThemeConfig('default');
       this.audioManager = new AudioManager(
         this.eventBus, 
         this.storageManager, 
         themeConfig.soundsBasePath, 
-        this.config.initialMusicMuted, // Pass initial state from config
-        this.config.initialSfxMuted   // Pass initial state from config
+        this.config.initialMusicMuted, 
+        this.config.initialSfxMuted   
       );
-      // --- Register Default Sounds (Now happens after AudioManager creation) ---
+      // Register Default Sounds 
       const defaultSounds: AudioConfig[] = [
         { id: 'correct-sound', filename: 'correct-sound.mp3', volume: 0.8, type: 'sfx' },
         { id: 'incorrect-sound', filename: 'incorrect-sound.mp3', volume: 0.8, type: 'sfx' },
@@ -200,9 +231,7 @@ export class PixiEngine {
               console.error(`Failed to register default sound ${soundConfig.id}:`, error);
           }
       });
-      // ------------------------------------------------------------------
-
-      // --- Add Settings Listeners (Now happens after AudioManager creation) ---
+      // Add Settings Listeners
       this.eventBus.on(SETTINGS_EVENTS.SET_GLOBAL_VOLUME, (volume: number) => { 
           console.log(`[EventBus Listener] Received SET_GLOBAL_VOLUME: ${volume}`);
           this.audioManager.setGlobalVolume(volume);
@@ -215,79 +244,49 @@ export class PixiEngine {
           console.log(`[EventBus Listener] Received SET_SFX_MUTED: ${muted}`);
           this.audioManager.setSfxMuted(muted);
       });
-      // -------------------------------------------------------------------
-
-      // RuleEngine init (needs other managers, including AudioManager)
-      this.ruleEngine = new RuleEngine(this.eventBus, this.config, { // Use this.config
+      // RuleEngine init (needs other managers)
+      this.ruleEngine = new RuleEngine(this.eventBus, this.config, { 
           timerManager: this.timerManager,
           gameStateManager: this.gameStateManager,
           scoringManager: this.scoringManager,
-          powerUpManager: this.powerUpManager, // Pass the initialized powerUpManager
-          audioManager: this.audioManager // Add audioManager
+          powerUpManager: this.powerUpManager, 
+          audioManager: this.audioManager 
       });
+      // --- End Manager Init ---
 
-      // --- Emit Engine Ready Event (Before Asset Loading) ---
+      // --- Emit Engine Ready Event ---
       console.log('PixiEngine: Emitting ENGINE_READY_FOR_GAME');
-      // Use the imported constant if available
       this.eventBus.emit(ENGINE_EVENTS.ENGINE_READY_FOR_GAME);
-      // -------------------------------------------------------
+      // ----------------------------
 
-      // --- Asset Initialization (Static) ---
-      console.log('Initializing PixiJS Assets...');
-      if (this.config.assets) {
-         const manifest = { bundles: this.config.assets.bundles };
-         await Assets.init({
-            basePath: this.config.assets.basePath,
-            manifest: manifest
-         });
-         console.log('PixiJS Assets initialized.');
-         if (this.config.assets.bundles && this.config.assets.bundles.length > 0) {
-             console.log('Loading all defined asset bundles:', this.config.assets.bundles.map(b => b.name));
-             await Promise.all(this.config.assets.bundles.map(bundle =>
-                 Assets.loadBundle(bundle.name)
-             ));
-             console.log('All defined asset bundles loaded.');
-         } else {
-            console.log('No asset bundles defined in config.');
-         }
-      } else {
-          console.warn("PixiEngine: No assets configuration found in GameConfig. Assets not initialized.");
-      }
-      // --- End Asset Initialization ---
-
-      // --- Mark engine as initialized BEFORE creating game instance ---
-      this.initialized = true;
-      // -------------------------------------------------------------
-
-      // Instantiate the specific game using the factory
+      // --- Game Creation and Initialization ---
       console.log('Creating game instance...');
-      this.currentGame = gameFactory(this.config, this.getManagers());
-      if (!this.currentGame || !(this.currentGame instanceof BaseGame)) {
-          throw new Error("Game factory did not return a valid BaseGame instance.");
-      }
-      this.app.getStage().addChild(this.currentGame.view);
+      // Now create managers object AFTER all managers are initialized
+      const managers = this.getAllManagers(); 
+      this.currentGame = gameFactory(this.config, managers);
+      this.app.getStage().addChild(this.currentGame.view); 
 
-      // Initialize the game
       console.log('Initializing game...');
-      await this.currentGame.init();
+      // Pass the bundle loading promise 
+      await this.currentGame.init(bundleLoadPromise); 
+      console.log('Game initialization complete.');
+      // ---------------------------------------
 
-      // Set up update loop
-      this.app.getApp().ticker.add(this.handleUpdate);
+      // Add update listener with null check
+      const ticker = this.app.getTicker();
+      if (ticker) {
+          ticker.add(this.handleUpdate);
+      } else {
+          console.warn('PixiEngine: Ticker not available, update loop not started.');
+      }
 
-      // Set up resize handling
-      this.app.onResize(this.handleResize);
-      // Initial resize call
-      this.handleResize(this.app.getScreenSize().width, this.app.getScreenSize().height);
-
-      // TODO: Define 'engineInitialized' event in EventBus
-      // this.eventBus.emit('engineInitialized', this);
-      console.log('PixiEngine initialized successfully');
+      this.initialized = true;
+      console.log('PixiEngine initialization complete.');
+      
     } catch (error) {
-      console.error('Error initializing PixiEngine:', error);
-      // TODO: Define 'engineError' event in EventBus
-      // this.eventBus.emit('engineError', { type: 'initialization', error });
-      await this.destroy(); // Attempt cleanup on failed init
-      throw error; // Rethrow the error after cleanup attempt
+       console.error('Error during PixiEngine initialization:', error);
+       await this.destroy(); 
+       throw error; 
     }
   }
 
@@ -299,9 +298,8 @@ export class PixiEngine {
    * @throws {Error} If called before PowerUpManager and RuleEngine are initialized.
    */
   private getAllManagers(): PixiEngineManagers {
-       // Ensure managers initialized in init() are available
-       if (!this.powerUpManager || !this.ruleEngine) {
-           throw new Error("Cannot get all managers before PowerUpManager and RuleEngine are initialized in PixiEngine.init()");
+       if (!this.powerUpManager || !this.ruleEngine || !this.audioManager) { // Add check for audioManager
+           throw new Error("Cannot get all managers before PowerUpManager, RuleEngine, and AudioManager are initialized in PixiEngine.init()");
        }
       return {
           eventBus: this.eventBus,
@@ -314,7 +312,7 @@ export class PixiEngine {
           timerManager: this.timerManager,
           powerUpManager: this.powerUpManager,
           assetLoader: AssetLoader,
-          pixiApp: this.app
+          pixiApp: this.app // this.app should be valid now
       };
   }
 

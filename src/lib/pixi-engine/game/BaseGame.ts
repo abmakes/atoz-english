@@ -18,10 +18,14 @@ import {
   GAME_STATE_EVENTS, 
   ENGINE_EVENTS,
   GameStateActiveTeamChangedPayload, 
-  EngineEvents 
+  EngineEvents, 
+  TRANSITION_EVENTS,
+  TransitionStartPayload,
+  TransitionEndPayload
 } from '../core/EventTypes';
 import { v4 as uuidv4 } from 'uuid';
 import * as PIXI from 'pixi.js';
+import { TransitionScreen, TransitionScreenConfig } from '../ui/TransitionScreen';
 
 // Extend GameConfig with missing properties used in this class
 declare module '../config/GameConfig' {
@@ -83,7 +87,11 @@ export enum GameState {
  * Provides common properties used across different game types.
  */
 export interface BaseGameState {
-  /** Current high-level phase of the game (e.g., "setup", "playing", "gameOver") */
+  /** 
+   * Current high-level phase of the game.
+   * Standard phases include: 'loading', 'ready', 'playing', 'paused', 'transition', 'gameOver'.
+   * Games can define additional phases internally.
+   */
   phase?: string;
   /** Score information by team/player */
   scores?: Record<string, number>;
@@ -252,6 +260,12 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED
   ] as const;
 
+  /** Optional transition screen instance for managing intermediate states */
+  protected transitionScreen?: TransitionScreen;
+
+  /** Promise for the completion of engine-level asset loading (e.g., bundles) */
+  private engineAssetsPromise: Promise<unknown> = Promise.resolve(); 
+
   /**
    * Creates an instance of BaseGame.
    * @param config The specific game configuration object.
@@ -280,28 +294,33 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
 
     // Initialize fixed timestep value from config or use default
     this.FIXED_TIMESTEP_MS = 1000 / (config.fixedUpdateFPS || 60);
+
+    // Initialize game state immediately using the subclass implementation
+    this._gameState = this.createInitialState();
   }
 
   /**
-   * Asynchronously initializes the game. This is the first lifecycle method called.
-   * Should typically involve:
-   * - Setting up the initial game scene and UI elements.
-   * - Loading any assets specific to this game (if not preloaded).
-   * - Binding necessary event listeners.
-   * - Preparing game state but NOT starting actual gameplay.
-   * 
-   * Upon successful completion, sets the `isInitialized` flag to true
-   * and updates gameState to INITIALIZED. This method should only be called once.
-   * 
-   * @throws Error if called when the game is already initialized
-   * @returns A promise that resolves when initialization is complete.
+   * Asynchronously initializes the game.
+   * @param engineAssetsPromise - A promise that resolves when engine-level assets (like bundles) are loaded.
+   * @returns A promise that resolves when game initialization is complete.
    */
-  async init(): Promise<void> {
+  async init(engineAssetsPromise: Promise<unknown>): Promise<void> {
+    // Store the promise
+    this.engineAssetsPromise = engineAssetsPromise;
+
+    // Create and add the transition screen
+    if (!this.transitionScreen) {
+      const { width, height } = this.pixiApp.getScreenSize();
+      this.transitionScreen = new TransitionScreen(width, height);
+      // Add to the highest UI layer
+      this.addToLayer(this.transitionScreen, RenderLayer.UI_FOREGROUND);
+    }
+    
     // Emit game starting event
     this.emitEvent(GAME_STATE_EVENTS.GAME_STARTING);
     
-    // Initialize the game (abstract method implemented by subclasses)
-    await this.initImplementation();
+    // Initialize the game (abstract method implemented by subclasses), passing the promise
+    await this.initImplementation(this.engineAssetsPromise);
     
     // Set game state and emit game started event
     this.gameState = GameState.INITIALIZED;
@@ -311,8 +330,17 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
   
   /**
    * Abstract method that subclasses must implement to provide game-specific initialization.
+   * @param engineAssetsPromise - A promise that resolves when engine-level assets (like bundles) are loaded.
    */
-  protected abstract initImplementation(): Promise<void>;
+  protected abstract initImplementation(engineAssetsPromise: Promise<unknown>): Promise<void>;
+
+  /**
+   * Provides access to the promise tracking engine-level asset loading completion.
+   * @returns The promise for engine asset loading.
+   */
+  protected getEngineAssetsPromise(): Promise<unknown> { 
+    return this.engineAssetsPromise; 
+  }
 
   /**
    * Starts the actual gameplay after initialization is complete.
@@ -463,6 +491,8 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public onResize(width: number, height: number): void {
     console.log(`${this.constructor.name}: onResize (${width}x${height})`);
+    // Resize transition screen if it exists
+    this.transitionScreen?.onResize(width, height);
     // Subclasses implement layout adjustments here.
   }
 
@@ -478,6 +508,10 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    * @throws Error if called before the game has been initialized
    */
   destroy(): void {
+    // Destroy transition screen if it exists
+    this.transitionScreen?.destroy();
+    this.transitionScreen = undefined;
+
     // Unregister all event listeners to prevent memory leaks
     this.unregisterAllEventListeners();
     
@@ -1453,11 +1487,12 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
   public getLayerContainer(layer: RenderLayer | string): Container {
     if (!this._layerContainers.has(layer)) {
       const container = new Container();
-      // Set z-index based on layer if it's a RenderLayer enum
-      if (typeof layer === 'number') {
-        container.zIndex = layer;
-      }
+      container.label = typeof layer === 'string' ? layer : RenderLayer[layer];
+      container.zIndex = typeof layer === 'number' ? layer : RenderLayer.OBJECTS;
+      container.sortableChildren = true;
       this._layerContainers.set(layer, container);
+      this.view.addChild(container);
+      this.view.sortChildren();
     }
     return this._layerContainers.get(layer)!;
   }
@@ -1682,5 +1717,90 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     
     // Set the value on the parent object
     current[lastPart] = value;
+  }
+
+  // === Transition Screen Methods ===
+
+  /**
+   * Shows the transition screen and sets the game state to 'transition'.
+   * Emits TRANSITION_START event.
+   * 
+   * @param config - Configuration for the transition screen.
+   * @returns A promise that resolves when the transition screen is hidden.
+   */
+  protected async showTransition(config: TransitionScreenConfig): Promise<void> {
+    if (!this.transitionScreen) {
+      console.warn('Attempted to show transition screen, but it was not initialized.');
+      return Promise.resolve();
+    }
+    
+    // Store previous phase BEFORE setting to transition
+    const previousPhase = this._gameState.phase;
+    // Set phase to transition immediately
+    this.setState({ phase: 'transition' } as Partial<TGameState>, { silent: true }); // Don't trigger phase change events yet
+    
+    // Emit TRANSITION_START event
+    const startPayload: TransitionStartPayload = {
+      type: config.type,
+      message: config.message,
+      duration: config.duration
+    };
+    this.emitEvent(TRANSITION_EVENTS.START, startPayload);
+
+    // Trigger the screen display
+    const screenPromise = this.transitionScreen.show(config);
+
+    // If autoHide is TRUE, await the screen's promise, then handle end/cleanup
+    if (config.autoHide) {
+        await screenPromise;
+        // Check if the phase is still 'transition' before restoring.
+        // It might have been changed elsewhere (e.g., manual hide, game over).
+        if (this._gameState.phase === 'transition') {
+            const endPayload: TransitionEndPayload = { type: config.type };
+            this.emitEvent(TRANSITION_EVENTS.END, endPayload);
+            // Restore previous phase or default to 'playing'
+            const phaseToRestore = (previousPhase && previousPhase !== 'transition') ? previousPhase : 'playing'; 
+            this.setState({ phase: phaseToRestore } as Partial<TGameState>);
+        } else {
+            console.log(`[BaseGame.showTransition] AutoHide finished, but phase was no longer 'transition' (was ${this._gameState.phase}). Not restoring phase or emitting END.`);
+        }
+    } else {
+        // If autoHide is FALSE, DO NOT await here. Return immediately.
+        // The responsibility to call hideTransition() lies with the caller.
+        return Promise.resolve();
+    }
+  }
+
+  /**
+   * Hides the transition screen if it is currently visible.
+   * Also handles emitting TRANSITION_END and restoring the game phase.
+   */
+  protected hideTransition(): void {
+    if (this.transitionScreen?.visible) {
+      const currentScreenConfig = this.transitionScreen.getCurrentConfig(); // Assuming TransitionScreen has a method to get current config
+      
+      // Hide the screen (this resolves the promise stored in TransitionScreen if manual)
+      this.transitionScreen.hide();
+
+      // Only emit END event and restore phase if we were actually in a transition phase
+      if (this._gameState.phase === 'transition') {
+          const endPayload: TransitionEndPayload = { type: currentScreenConfig?.type || 'custom' }; // Use stored type or default
+          this.emitEvent(TRANSITION_EVENTS.END, endPayload);
+
+          // Restore the phase that was active BEFORE the transition started.
+          // We need to retrieve this. Let's assume it was stored somewhere or revert to a sensible default.
+          // For simplicity now, revert to 'playing' if history is empty or previous was also 'transition'.
+          const history = this.getStateHistory(1);
+          const phaseBeforeTransition = (history.length > 0 && history[0].phase !== 'transition') ? history[0].phase : 'playing';
+
+          this.setState({ phase: phaseBeforeTransition } as Partial<TGameState>);
+          console.log(`[BaseGame.hideTransition] Transition hidden. Phase restored to: ${phaseBeforeTransition}`);
+      } else {
+          console.log(`[BaseGame.hideTransition] Transition hidden, but game phase was already '${this._gameState.phase}'. Not emitting END or changing phase.`);
+      }
+    } else {
+        // Optional: Log if hideTransition is called when not visible
+        // console.log('[BaseGame.hideTransition] Called, but transition screen was not visible.');
+    }
   }
 }
