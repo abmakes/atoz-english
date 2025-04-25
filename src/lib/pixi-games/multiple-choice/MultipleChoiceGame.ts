@@ -9,8 +9,7 @@ import { Button } from '@pixi/ui';
 import { GameSetupData as MultipleChoiceGameConfig } from '@/types/gameTypes';
 import { QuestionData } from '@/types';
 import { GifAsset } from 'pixi.js/gif';
-
-const POINTS_PER_CORRECT_ANSWER = 10;
+import { QuestionSequencer } from '@/lib/pixi-engine/game/QuestionSequencer';
 
 async function ensureFontIsLoaded(fontFamily: string, descriptor: string = '28px'): Promise<void> {
     const fontCheckString = `${descriptor} "${fontFamily}"`;
@@ -47,6 +46,7 @@ interface MultipleChoiceGameState extends BaseGameState {
 export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
     private questionsData: QuestionData[] = [];
     private questionScene?: QuestionScene;
+    private _questionSequencer?: QuestionSequencer;
     private answerButtons: Button[] = [];
     private preloadedMediaUrls: string[] = [];
     private readonly QUESTION_TIMER_ID = 'multipleChoiceQuestionTimer';
@@ -120,10 +120,20 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                 throw new Error("No questions loaded.");
             }
             
-            // Show the first question
-            console.log("[MultipleChoiceGame] initImplementation: Calling _showQuestion(0)...");
-            this._showQuestion(this.getState().currentQuestionIndex);
-            console.log("[MultipleChoiceGame] initImplementation: AFTER _showQuestion(0).");
+            // Initialize Question Sequencer
+            if (!this.config.questionHandling) {
+                throw new Error("Question handling configuration is missing in GameConfig.");
+            }
+            this._questionSequencer = new QuestionSequencer(
+                this.questionsData, 
+                this.config.teams.length, 
+                this.config.questionHandling
+            );
+
+            // Show the first question using the sequencer
+            console.log("[MultipleChoiceGame] initImplementation: Calling _showQuestion() for first question...");
+            this._showQuestion();
+            console.log("[MultipleChoiceGame] initImplementation: AFTER _showQuestion() for first question.");
 
             this.setState({ phase: 'playing' }); 
             
@@ -292,7 +302,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
              }
 
              const quizData = await response.json();
-
+             console.log("Quiz data recieved from API:", quizData);
              const potentialQuestions = quizData?.data?.questions ?? quizData?.questions;
 
              if (!potentialQuestions || !Array.isArray(potentialQuestions)) {
@@ -348,20 +358,41 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
     }
 
     /**
-     * Shows a question at the specified index
+     * Shows the next question from the sequencer.
+     * Handles game over if the sequence is finished.
      */
-    private _showQuestion(index: number): void {
-        if (!this.questionScene || index >= this.questionsData.length) {
-            console.log("Invalid question index or scene not ready:", index);
+    private _showQuestion(): void {
+        if (!this._questionSequencer) {
+            console.error("Cannot show question: QuestionSequencer not initialized.");
+            this._triggerGameOver();
+            return;
+        }
+
+        // Get next question data from sequencer
+        const question = this._questionSequencer.getNextQuestion();
+
+        // Check if sequence is finished
+        if (!question) {
+            console.log("[MultipleChoiceGame] _showQuestion: Sequencer finished. Triggering game over.");
             if (!this.getState().hasTriggeredGameOver) {
                 this._triggerGameOver();
             }
             return;
         }
 
-        this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
-
-        const question: QuestionData = this.questionsData[index];
+        if (!this.questionScene) {
+            console.error("Cannot show question: QuestionScene not ready.");
+            if (!this.getState().hasTriggeredGameOver) { 
+                this._triggerGameOver(); 
+            }
+            return;
+        }
+        
+        // Timer removal should happen *before* showing the question, 
+        // perhaps in the handler that *calls* _showQuestion (like _handleAnswerSelected)
+        // Or ensure startTimer does not create duplicates.
+        // For now, we remove the redundant call here as discussed.
+        // this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
 
         // Clear previous question state
         this._clearQuestionState();
@@ -373,10 +404,16 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         const generatedOptions = this._createAnswerOptions(question);
         
         // Setup UI for answer options
-        this._setupAnswerButtons(generatedOptions);
+        this._setupAnswerButtons(question, generatedOptions);
         
         // Start the timer for this question
         this._startQuestionTimer();
+        
+        // Update state with the actual index from the sequencer (optional, but good for debugging/state)
+        this.setState({ 
+            currentQuestionIndex: this._questionSequencer.getCurrentProgressIndex() - 1 // Index of the *just shown* question
+        });
+        console.log(`[MultipleChoiceGame] Showing question index ${this.getState().currentQuestionIndex} (Sequencer progress: ${this._questionSequencer.getCurrentProgressIndex()}/${this._questionSequencer.getTotalQuestionsToAsk()})`);
     }
 
     private _clearQuestionState(): void {
@@ -414,12 +451,10 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
     /**
      * Sets up answer buttons for the current question
      */
-    private _setupAnswerButtons(generatedOptions: Array<{
-        id: string;
-        text: string;
-        isCorrect: boolean;
-        length: number;
-    }>): void {
+    private _setupAnswerButtons(
+        question: QuestionData,
+        generatedOptions: Array<{ id: string; text: string; isCorrect: boolean; length: number }>
+    ): void {
         if (!this.questionScene) return;
         
         this.questionScene.clearAnswerOptions();
@@ -476,9 +511,8 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             button.view.y = row * (buttonHeight + gap);
             
             // Bind to the current question and option
-            const currentQuestion = this.questionsData[this.getState().currentQuestionIndex];
             button.onPress.connect(() => {
-                this._handleAnswerSelected(currentQuestion.id, option.id);
+                this._handleAnswerSelected(question.id, option.id);
             });
             
             // Setup button interaction effects
@@ -528,7 +562,10 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
 
         // Find the selected question and option
         const question = this.questionsData.find(q => q.id === questionId);
-        if (!question) return;
+        if (!question) {
+             console.error(`[MultipleChoiceGame] _handleAnswerSelected: Could not find question data for ID ${questionId}`);
+             return; 
+        }
 
         const generatedOptions = this._createAnswerOptions(question);
         const selectedOption = generatedOptions.find(o => o.id === selectedGeneratedOptionId);
@@ -538,7 +575,8 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         console.log("[MultipleChoiceGame] _handleAnswerSelected: Processing answer...");
         this._processAnswerSelection(question, selectedOption, generatedOptions);
         
-        const isLastQuestion = this.getState().currentQuestionIndex >= this.questionsData.length - 1;
+        // Check if sequencer is finished
+        const isSequenceFinished = this._questionSequencer?.isFinished() ?? true; 
 
         // --- Transition Logic --- 
         console.log("[MultipleChoiceGame] _handleAnswerSelected: Waiting 1.5s for feedback...");
@@ -549,23 +587,23 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             return; 
         }
         
-        if (isLastQuestion) {
-            console.log("[MultipleChoiceGame] _handleAnswerSelected: Last question answered. Triggering game over.");
+        if (isSequenceFinished) {
+            console.log("[MultipleChoiceGame] _handleAnswerSelected: Sequencer finished after this question. Triggering game over.");
             this._triggerGameOver();
         } else {
-            // Determine next team and show transition screen
+            // Determine next team 
             const currentTeamIndex = this.getState().activeTeamIndex;
             const nextTeamIndex = (currentTeamIndex + 1) % this.config.teams.length;
             const nextTeam = this.config.teams[nextTeamIndex];
-            const nextTeamId = nextTeam?.id ?? 'unknown';
+            const nextTeamId = nextTeam?.id ?? 'unknown'; 
             const nextTeamName = nextTeam?.name || `Team ${nextTeamIndex + 1}`;
             
             console.log(`[MultipleChoiceGame] _handleAnswerSelected: Current team index: ${currentTeamIndex}, Next team index: ${nextTeamIndex}, Next team ID: ${nextTeamId}`);
             
+            // State update only needs team change
             const nextState = { 
-                currentQuestionIndex: this.getState().currentQuestionIndex + 1,
                 activeTeamIndex: nextTeamIndex,
-                activeTeam: nextTeamId
+                activeTeam: nextTeamId 
             };
             
             console.log(`[MultipleChoiceGame] _handleAnswerSelected: Calling showTransition (turn) for ${nextTeamName}...`);
@@ -577,17 +615,17 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             });
             console.log("[MultipleChoiceGame] _handleAnswerSelected: AFTER await showTransition (turn).");
 
-            // After transition hides, update state and show next question
             if (this.getState().hasTriggeredGameOver) {
                 console.log("[MultipleChoiceGame] _handleAnswerSelected: Game over detected after turn transition. Exiting.");
                 return; 
             }
 
             this.setState(nextState);
-            console.log(`[MultipleChoiceGame] _handleAnswerSelected: State updated. New question index: ${this.getState().currentQuestionIndex}, New team index: ${this.getState().activeTeamIndex}, New active team ID: ${this.getState().activeTeam}`);
-            console.log("[MultipleChoiceGame] _handleAnswerSelected: Calling _showQuestion for next turn...");
-            this._showQuestion(this.getState().currentQuestionIndex);
-            console.log("[MultipleChoiceGame] _handleAnswerSelected: AFTER _showQuestion for next turn.");
+            console.log(`[MultipleChoiceGame] _handleAnswerSelected: State updated. New active team index: ${this.getState().activeTeamIndex}, New active team ID: ${this.getState().activeTeam}`); 
+            
+            console.log("[MultipleChoiceGame] _handleAnswerSelected: Calling _showQuestion() for next turn...");
+            this._showQuestion();
+            console.log("[MultipleChoiceGame] _handleAnswerSelected: AFTER _showQuestion() for next turn.");
             this._setAnswerButtonsEnabled(true);
         }
         // ------------------------
@@ -617,12 +655,6 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             teamId: currentTeamId
         };
         this.emitEvent(GAME_EVENTS.ANSWER_SELECTED, payload);
-
-        // Update score if correct (based on the team that answered)
-        if (isCorrect && currentTeamId !== undefined) {
-            this.scoringManager.addScore(currentTeamId, POINTS_PER_CORRECT_ANSWER);
-            console.log(`Awarded ${POINTS_PER_CORRECT_ANSWER} points to team ${currentTeamId}. New score: ${this.scoringManager.getScore(currentTeamId)}`);
-        }
 
         // Log that the next team calculation is deferred
         console.log(`[MultipleChoiceGame] _processAnswerSelection finished. Next team calculation deferred to handler.`);
@@ -742,23 +774,24 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             return; // Stop if this section fails
         }
 
-        // Determine if this is the last question
-        const isLastQuestion = this.getState().currentQuestionIndex >= this.questionsData.length - 1;
-        console.log(`[MultipleChoiceGame] _handleTimerComplete: Is last question? ${isLastQuestion}`); // Added log
+        // Determine if the sequence is finished using the sequencer
+        // We check *before* getting the next question in this case
+        const isSequenceFinished = this._questionSequencer?.isFinished() ?? true; 
+        console.log(`[MultipleChoiceGame] _handleTimerComplete: Is sequence finished? ${isSequenceFinished}`);
 
         // --- Transition Logic --- 
         console.log("[MultipleChoiceGame] _handleTimerComplete: Waiting 1.5s for feedback..."); 
         await new Promise(resolve => setTimeout(resolve, 1500)); // Feedback delay
         console.log("[MultipleChoiceGame] _handleTimerComplete: Finished feedback delay.");
 
-        // Re-check game over state AFTER delay
         if (this.getState().hasTriggeredGameOver) { 
             console.log("[MultipleChoiceGame] _handleTimerComplete: Game over detected after feedback delay. Exiting.");
             return; 
         } 
-
-        if (isLastQuestion) {
-            console.log("[MultipleChoiceGame] _handleTimerComplete: Last question timed out. Triggering game over."); 
+        
+        // <<< MODIFIED: Use sequencer finish state >>>
+        if (isSequenceFinished) {
+            console.log("[MultipleChoiceGame] _handleTimerComplete: Sequencer finished after timeout. Triggering game over."); 
             this._triggerGameOver();
         } else {
              console.log("[MultipleChoiceGame] _handleTimerComplete: Not last question. Calculating next turn..."); 
@@ -770,10 +803,10 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
              
              console.log(`[MultipleChoiceGame] _handleTimerComplete: Current team index: ${currentTeamIndex}, Next team index: ${nextTeamIndex}, Next team ID: ${nextTeamId}`);
              
+             // State update only needs team change
              const nextState = { 
-                 currentQuestionIndex: this.getState().currentQuestionIndex + 1,
                  activeTeamIndex: nextTeamIndex,
-                 activeTeam: nextTeamId
+                 activeTeam: nextTeamId 
              };
              
              console.log(`[MultipleChoiceGame] _handleTimerComplete: Calling showTransition (turn) for ${nextTeamName}...`);
@@ -785,19 +818,17 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
              });
              console.log("[MultipleChoiceGame] _handleTimerComplete: AFTER await showTransition (turn)."); 
 
-             // Re-check game over state AFTER transition
              if (this.getState().hasTriggeredGameOver) {
                   console.log("[MultipleChoiceGame] _handleTimerComplete: Game over detected after turn transition. Exiting.");
                  return; 
              }
 
-             console.log(`[MultipleChoiceGame] _handleTimerComplete: Advancing to question index: ${nextState.currentQuestionIndex}`);
              this.setState(nextState); 
-             console.log(`[MultipleChoiceGame] _handleTimerComplete: State updated. New question index: ${this.getState().currentQuestionIndex}, New team index: ${this.getState().activeTeamIndex}, New active team ID: ${this.getState().activeTeam}`);
+             console.log(`[MultipleChoiceGame] _handleTimerComplete: State updated. New active team index: ${this.getState().activeTeamIndex}, New active team ID: ${this.getState().activeTeam}`); 
 
-             console.log("[MultipleChoiceGame] _handleTimerComplete: Calling _showQuestion for next turn..."); 
-             this._showQuestion(this.getState().currentQuestionIndex); 
-             console.log("[MultipleChoiceGame] _handleTimerComplete: AFTER _showQuestion for next turn."); 
+             console.log("[MultipleChoiceGame] _handleTimerComplete: Calling _showQuestion() for next turn..."); 
+             this._showQuestion();
+             console.log("[MultipleChoiceGame] _handleTimerComplete: AFTER _showQuestion() for next turn."); 
 
              this._setAnswerButtonsEnabled(true);
              console.log("[MultipleChoiceGame] _handleTimerComplete: End of method."); 

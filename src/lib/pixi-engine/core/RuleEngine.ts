@@ -330,25 +330,46 @@ export class RuleEngine {
                     console.warn('RuleEngine: Cannot execute modifyScore action, ScoringManager missing.');
                     return;
                 }
-                const teamId = (typeof params.teamId === 'string' || typeof params.teamId === 'number') ? String(params.teamId) : undefined;
-                const amount = typeof params.amount === 'number' ? params.amount : undefined;
+                
+                // <<< MODIFIED: Look for 'points' and handle 'target' >>>
+                let teamId: string | number | undefined;
+                const points = typeof params.points === 'number' ? params.points : undefined;
+                const target = params.target;
 
-                if (teamId === undefined || amount === undefined) {
-                    console.warn(`RuleEngine: Missing or invalid 'teamId' (string|number) or 'amount' (number) parameter for modifyScore action.`);
-                    return;
+                if (target === 'payload.teamId') {
+                    // Extract teamId from the event payload
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const payloadTeamId = (context.eventPayload as any)?.teamId;
+                    if (typeof payloadTeamId === 'string' || typeof payloadTeamId === 'number') {
+                        teamId = payloadTeamId;
+                    } else {
+                        console.warn(`RuleEngine: modifyScore target was 'payload.teamId', but teamId not found or invalid in event payload.`);
+                    }
+                } else if (typeof target === 'string' || typeof target === 'number') {
+                    // Use target directly if it's a specific ID
+                    teamId = target;
                 }
 
-                // Add logging to confirm this block is reached
-                console.log(`   -> Executing modifyScore logic for team ${teamId} amount ${amount}`);
+                // Validate that we found a teamId and points
+                if (teamId === undefined || points === undefined) {
+                    // Updated warning message to reflect expected params
+                    console.warn(`RuleEngine: Missing or invalid 'target' (string | number | 'payload.teamId') or 'points' (number) parameter for modifyScore action. Received target: ${target}, points: ${points}`);
+                    return;
+                }
+                // <<< END MODIFIED >>>
 
-                if (amount > 0) {
-                    this.scoringManager.addScore(teamId, amount);
-                    console.log(`   -> Called scoringManager.addScore(${teamId}, ${amount})`);
-                } else if (amount < 0) {
-                    this.scoringManager.subtractScore(teamId, Math.abs(amount));
-                    console.log(`   -> Called scoringManager.subtractScore(${teamId}, ${Math.abs(amount)})`);
+                // Add logging to confirm this block is reached
+                console.log(`   -> Executing modifyScore logic for team ${teamId} points ${points}`);
+
+                // <<< MODIFIED: Use 'points' instead of 'amount' >>>
+                if (points > 0) {
+                    this.scoringManager.addScore(teamId, points);
+                    console.log(`   -> Called scoringManager.addScore(${teamId}, ${points})`);
+                } else if (points < 0) {
+                    this.scoringManager.subtractScore(teamId, Math.abs(points));
+                    console.log(`   -> Called scoringManager.subtractScore(${teamId}, ${Math.abs(points)})`);
                 } else {
-                    console.log(`   -> modifyScore amount is zero, no action taken.`);
+                    console.log(`   -> modifyScore points is zero, no action taken.`);
                 }
                 break;
 
