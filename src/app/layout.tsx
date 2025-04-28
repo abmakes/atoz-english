@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Grandstander } from "next/font/google";
 import "./globals.css";
+import ConditionalLayoutWrapper from "@/components/layout/ConditionalLayoutWrapper";
 
 const inter = Inter({ subsets: ["latin"] });
 const grandstander = Grandstander({ 
@@ -20,7 +21,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} ${grandstander.variable}`}>{children}</body>
+      <body className={`${inter.className} ${grandstander.variable}`}>
+        <ConditionalLayoutWrapper>
+          {children}
+        </ConditionalLayoutWrapper>
+      </body>
     </html>
   );
 }

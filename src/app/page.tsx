@@ -1,15 +1,14 @@
-import { Button } from "../components/ui/button"
-import Link from "next/link"
-export default function Home() {
+import Image from 'next/image';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+
+export default function HomePage() {
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-[#E8F8FF]">
-      {/* Navigation */}
-      <nav className="absolute top-0 right-0 z-50 p-6 flex gap-4">
-        <Button variant="outline" className="bg-white hover:bg-gray-100">Login</Button>
-        <Button className="bg-blue-500 hover:bg-blue-600 text-white">Sign up</Button>
-      </nav>
+    <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden">
+      {/* Navigation - REMOVED FROM HERE */}
 
       {/* Cloud layers */}
+      
       <div className="cloud-layer-1 absolute top-[5%] w-full h-20">
         {[...Array(8)].map((_, i) => (
           <div
@@ -67,16 +66,25 @@ export default function Home() {
       </div>
 
       {/* Main content */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen">
-        <h1 className="text-6xl font-bold mb-12 text-blue-900 font-[family-name:var(--font-grandstander)]">
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-center px-4">
+        <h1 className="text-6xl font-bold mb-6 text-blue-900 font-[family-name:var(--font-grandstander)]">
           AtoZ English
         </h1>
-        <Link href="/games">
-          <Button size="lg" className="bg-blue-500 hover:bg-blue-600 text-white text-xl px-8 py-6 rounded-full">
-            Play Now
-          </Button>
-        </Link>
+        <div className="mb-10">
+           <Image 
+              src="/placeholder.webp" 
+              alt="AtoZ English Logo" 
+              width={150} 
+              height={50} 
+              priority 
+            />
+        </div>
+         <Link href="/games">
+           <Button size="lg" className="bg-blue-500 hover:bg-blue-600 text-white text-xl px-8 py-6 rounded-full">
+             Play Now
+           </Button>
+         </Link>
       </div>
-    </main>
-  )
+    </div>
+  );
 }

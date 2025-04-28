@@ -52,15 +52,15 @@ export default function TasksPage({
   return (
     <>
       {/* Simple navigation */}
-      <div className="border-b py-3 px-6 bg-white shadow-sm mb-4">
+      <div className="border-b border-border bg-background py-3 px-6 shadow-sm mb-4">
         <div className="container mx-auto flex justify-between items-center">
-          <Link href="/" className="text-blue-600 hover:text-blue-800 font-medium">
+          <Link href="/" className="text-primary hover:text-primary/80 font-medium">
             Back to Home
           </Link>
         </div>
       </div>
     
-      <main className="container mx-auto py-6 px-4">
+      <main className="container mx-auto py-6 px-4 text-foreground">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold">Project Tasks</h1>
           
@@ -89,7 +89,7 @@ export default function TasksPage({
         {isLoading ? (
           <div className="flex justify-center items-center py-20">
             <div className="text-center">
-              <p className="text-lg text-gray-500">Loading tasks...</p>
+              <p className="text-lg text-muted-foreground">Loading tasks...</p>
             </div>
           </div>
         ) : (

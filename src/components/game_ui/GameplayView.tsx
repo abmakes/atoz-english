@@ -227,16 +227,16 @@ const GameplayView: React.FC<GameplayViewProps> = ({
     <div className={`${styles.gameplayViewContainer} ${themeClassName}`}>
         {/* Overlays */}
         <div className={styles.gameplayPlayerScoresOverlay}>
-            {/* Use teamId as the key */}
+            {/* Use teamId as the key */} 
             {playerScores.map((player: PlayerScoreState) => {
                 console.log(`Rendering PlayerScore for teamId: ${player.teamId}. Current activeTeamId: ${activeTeamId}. Will set isActive to: ${player.teamId === activeTeamId}`);
                 return (
-                    <PlayerScore
-                        key={player.teamId}
-                        playerName={player.playerName}
-                        score={player.score}
+            <PlayerScore
+                key={player.teamId} 
+                playerName={player.playerName}
+                score={player.score}
                         isActive={player.teamId === activeTeamId}
-                    />
+            />
                 );
             })}
         </div>

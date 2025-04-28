@@ -170,31 +170,43 @@ export interface PowerUpEventPayload {
 export const TRANSITION_EVENTS = {
   START: 'transition:start',
   END: 'transition:end',
+  POWERUP_SELECTED: 'transition:powerupSelected',
 } as const;
 
 export interface TransitionStartPayload {
   type: 'loading' | 'turn' | 'powerup' | 'custom';
   message?: string;
   duration?: number; // Match TransitionScreenConfig
+  triggerPowerupRoll?: boolean;
 }
 
 export interface TransitionEndPayload {
   type: 'loading' | 'turn' | 'powerup' | 'custom';
 }
 
+export interface TransitionPowerupSelectedPayload {
+  /** The ID of the power-up type that was randomly selected */
+  selectedPowerupId: string;
+  /** The type of transition during which the selection occurred */
+  transitionType: TransitionStartPayload['type'];
+}
+
 // --- Game Specific Events ---
 
-/** Payload for when an answer is selected in a game */
+/** Payload for when an answer is selected or time runs out */
 export interface AnswerSelectedPayload {
-  /** Unique ID of the question answered */
-  questionId: string;
-  /** Unique ID of the option selected by the user, or null if timed out */
+  /** The ID of the question that was answered */
+    questionId: string;
+  /** The ID of the option selected by the user, or null if timed out */
   selectedOptionId: string | null;
-  /** Whether the selected answer was correct */
-  isCorrect: boolean;
-  /** Optional ID of the team/player who answered */
+  /** Whether the selected option was correct */
+    isCorrect: boolean;
+  /** The ID of the team that selected the answer */
   teamId?: string | number;
-  // Add other relevant info like time taken, points awarded?
+  /** Optional: Time remaining in milliseconds when the answer was selected */
+  remainingTimeMs?: number;
+  /** Optional: Score multiplier active when the answer was selected (e.g., from power-up) */
+  scoreMultiplier?: number;
 }
 
 // Add other game-specific payloads here...
@@ -270,6 +282,7 @@ export interface EngineEvents {
   // Add Transition Events
   [TRANSITION_EVENTS.START]: (payload: TransitionStartPayload) => void;
   [TRANSITION_EVENTS.END]: (payload: TransitionEndPayload) => void;
+  [TRANSITION_EVENTS.POWERUP_SELECTED]: (payload: TransitionPowerupSelectedPayload) => void;
 
   // Add Game Specific Events
   [GAME_EVENTS.ANSWER_SELECTED]: (payload: AnswerSelectedPayload) => void;

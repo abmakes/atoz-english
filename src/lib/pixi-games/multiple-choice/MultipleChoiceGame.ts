@@ -2,7 +2,7 @@ import * as PIXI from 'pixi.js';
 import { BaseGame, BaseGameState, GameState } from '@/lib/pixi-engine/game/BaseGame';
 import { PixiEngineManagers } from '@/lib/pixi-engine/core/PixiEngine';
 import { GameConfig } from '@/lib/pixi-engine/config/GameConfig';
-import { GAME_STATE_EVENTS, TIMER_EVENTS, TimerEventPayload, GAME_EVENTS, AnswerSelectedPayload } from '@/lib/pixi-engine/core/EventTypes';
+import { GAME_STATE_EVENTS, TIMER_EVENTS, TimerEventPayload, GAME_EVENTS, AnswerSelectedPayload, TransitionPowerupSelectedPayload } from '@/lib/pixi-engine/core/EventTypes';
 import { TimerType } from '@/lib/pixi-engine/game/TimerManager';
 import { QuestionScene } from './scenes/QuestionSceneV2';
 import { Button } from '@pixi/ui';
@@ -77,7 +77,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             phase: 'loading',
             scores: {}
         };
-    }
+        }
 
     /**
      * Game-specific initialization implementation.
@@ -119,7 +119,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                 console.error("No questions loaded after waiting for data.");
                 throw new Error("No questions loaded.");
             }
-            
+
             // Initialize Question Sequencer
             if (!this.config.questionHandling) {
                 throw new Error("Question handling configuration is missing in GameConfig.");
@@ -184,7 +184,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         // Also use bind when unregistering to ensure the correct listener reference is removed
         this.unregisterEventListener(TIMER_EVENTS.TIMER_COMPLETED, this._handleTimerComplete.bind(this));
         this.unregisterEventListener(TIMER_EVENTS.TIMER_TICK, this._handleTimerTick.bind(this));
-    }
+        }
 
     /**
      * Start gameplay after initialization
@@ -206,10 +206,13 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
      * Update game logic each frame
      * @param delta Time elapsed since last frame
      */
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     public update(delta: number): void {
         // Current implementation doesn't need per-frame updates
         // But we could add animations or other time-based effects here
+        
+        // Update power-ups (handles durations)
+        const deltaTimeMs = delta * 1000; // Assuming delta is in seconds, convert to ms
+        this.powerUpManager.update(deltaTimeMs);
     }
 
     /**
@@ -387,7 +390,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             }
             return;
         }
-        
+
         // Timer removal should happen *before* showing the question, 
         // perhaps in the handler that *calls* _showQuestion (like _handleAnswerSelected)
         // Or ensure startTimer does not create duplicates.
@@ -418,14 +421,14 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
 
     private _clearQuestionState(): void {
         if (this.questionScene) {
-            this.questionScene.clearAnswerOptions();
-            this.answerButtons = [];
+        this.questionScene.clearAnswerOptions();
+        this.answerButtons = [];
         }
     }
     
     private _updateQuestionContent(question: QuestionData): void {
         if (!this.questionScene) return;
-        
+
         console.log("MultipleChoiceGame.ts: Updating question content");
         this.questionScene.updateQuestion(question.question, question.imageUrl);
     }
@@ -457,9 +460,44 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
     ): void {
         if (!this.questionScene) return;
         
+        // --- 50/50 Power-up Logic --- START ---
+        const currentTeamId = this.config.teams[this.getState().activeTeamIndex]?.id;
+        let optionsToDisplay = [...generatedOptions]; // Start with all options
+
+        console.log(`[MultipleChoiceGame._setupAnswerButtons] Checking fifty_fifty for team: ${currentTeamId}`); // DEBUG
+        const fiftyFiftyActive = currentTeamId ? this.isPowerUpActive('fifty_fifty', currentTeamId) : false;
+        console.log(`[MultipleChoiceGame._setupAnswerButtons] isPowerUpActive('fifty_fifty') result: ${fiftyFiftyActive}`); // DEBUG
+
+        if (fiftyFiftyActive) {
+            console.log(`[MultipleChoiceGame] 50/50 power-up ACTIVE for team ${currentTeamId}. Applying effect.`);
+            const correctOption = optionsToDisplay.find(opt => opt.isCorrect);
+            const incorrectOptions = optionsToDisplay.filter(opt => !opt.isCorrect);
+
+            if (correctOption && incorrectOptions.length > 1) {
+                // Shuffle incorrect options
+                for (let i = incorrectOptions.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [incorrectOptions[i], incorrectOptions[j]] = [incorrectOptions[j], incorrectOptions[i]];
+                }
+                // Keep the correct one and one random incorrect one
+                optionsToDisplay = [correctOption, incorrectOptions[0]]; 
+            } else {
+                console.warn("[MultipleChoiceGame] 50/50 active, but couldn't apply effect (not enough incorrect options?). Displaying all.");
+            }
+            
+            // Deactivate immediately after applying (assuming single use)
+            const activePowerups = this.powerUpManager.getActivePowerupsForTarget(currentTeamId);
+            const fiftyFiftyInstance = activePowerups.find(p => p.id === 'fifty_fifty');
+            if (fiftyFiftyInstance) {
+                console.log(`[MultipleChoiceGame] Deactivating 50/50 instance: ${fiftyFiftyInstance.instanceId}`);
+                this.powerUpManager.deactivatePowerUp(fiftyFiftyInstance.instanceId);
+            }
+        }
+        // --- 50/50 Power-up Logic --- END ---
+
         this.questionScene.clearAnswerOptions();
         this.answerButtons = [];
-        
+
         const optionsContainer = this.questionScene.getAnswerOptionContainer();
         const screenWidth = this.pixiApp.getScreenSize().width;
         const screenHeight = this.pixiApp.getScreenSize().height;
@@ -468,8 +506,9 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         const gap = 10;
         const columns = 2;
         const totalWidth = columns * buttonWidth + (columns - 1) * gap;
-        
-        generatedOptions.forEach((option, i) => {
+
+        // Use the potentially modified optionsToDisplay array
+        optionsToDisplay.forEach((option, i) => {
             const buttonView = new PIXI.Graphics()
                 .roundRect(0, 0, buttonWidth, buttonHeight, 16)
                 .fill(0xFFFFFF);
@@ -486,7 +525,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                  style: { 
                   fontSize: fontSize, 
                   fill: 0x333333, 
-                 fontFamily: 'Grandstander',
+                  fontFamily: 'Grandstander', 
                   wordWrap: wordWrap, 
                   wordWrapWidth: buttonWidth * 0.8, 
                   align: 'center'
@@ -496,7 +535,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             buttonText.x = buttonWidth / 2;
             buttonText.y = buttonHeight / 2;
             buttonView.addChild(buttonText);
-            
+
             // Add an explicit hitArea matching the graphics dimensions
             buttonView.hitArea = new PIXI.Rectangle(0, 0, buttonWidth, buttonHeight);
 
@@ -509,7 +548,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             const row = Math.floor(i / columns);
             button.view.x = col * (buttonWidth + gap) - totalWidth / 2 + buttonWidth / 2;
             button.view.y = row * (buttonHeight + gap);
-            
+
             // Bind to the current question and option
             button.onPress.connect(() => {
                 this._handleAnswerSelected(question.id, option.id);
@@ -536,7 +575,19 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
     
     private _startQuestionTimer(): void {
         const specificConfig = this.config as unknown as MultipleChoiceGameConfig;
-        const questionDuration = specificConfig.intensityTimeLimit * 1000;
+        let questionDuration = specificConfig.intensityTimeLimit * 1000;
+        const currentTeamId = this.config.teams[this.getState().activeTeamIndex]?.id;
+
+        // Check for 'time_extension' power-up
+        console.log(`[MultipleChoiceGame._startQuestionTimer] Checking time_extension for team: ${currentTeamId}`); // DEBUG LOG
+        const timeExtensionActive = currentTeamId ? this.isPowerUpActive('time_extension', currentTeamId) : false; // DEBUG LOG HELPER
+        console.log(`[MultipleChoiceGame._startQuestionTimer] isPowerUpActive('time_extension') result: ${timeExtensionActive}`); // DEBUG LOG
+        if (timeExtensionActive) {
+            const definition = this.powerUpManager.getPowerupDefinition('time_extension');
+            const extraTimeMs = (definition?.effectParams?.amount as number || 0) * 1000; 
+            questionDuration += extraTimeMs;
+            console.log(`[MultipleChoiceGame] Time extension active! Adding ${extraTimeMs}ms. New duration: ${questionDuration}ms`); // Existing log
+        }
 
         this.timerManager.createTimer(this.QUESTION_TIMER_ID, questionDuration, TimerType.COUNTDOWN);
         this.timerManager.startTimer(this.QUESTION_TIMER_ID);
@@ -553,7 +604,8 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
      */
     private async _handleAnswerSelected(questionId: string, selectedGeneratedOptionId: string): Promise<void> {
         console.log(`handleAnswerSelected triggered! questionId: ${questionId}, selectedOptionId: ${selectedGeneratedOptionId}`);
-        this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
+        // REMOVE TIMER REMOVAL FROM HERE
+        // this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
 
         if (this.getState().hasTriggeredGameOver) {
              return;
@@ -605,13 +657,28 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                 activeTeamIndex: nextTeamIndex,
                 activeTeam: nextTeamId 
             };
+
+            // *** MOVE STATE UPDATE HERE ***
+            this.setState(nextState);
+            console.log(`[MultipleChoiceGame] _handleAnswerSelected: State updated BEFORE transition. New active team index: ${this.getState().activeTeamIndex}, New active team ID: ${this.getState().activeTeam}`); 
             
+            // --- Calculate if power-up roll should trigger ---
+            const progressIndex = this._questionSequencer?.getCurrentProgressIndex() ?? 0;
+            const numTeams = this.config.teams.length;
+            // Trigger roll when the first round is complete (index >= numTeams)
+            // This means the roll starts just before Player 1's second turn.
+            const shouldTriggerRoll = progressIndex >= numTeams;
+            console.log(`[MultipleChoiceGame] _handleAnswerSelected: Checking power-up roll trigger. ProgressIndex: ${progressIndex}, NumTeams: ${numTeams}, ShouldTrigger: ${shouldTriggerRoll}`);
+            // --- End calculation ---
+
             console.log(`[MultipleChoiceGame] _handleAnswerSelected: Calling showTransition (turn) for ${nextTeamName}...`);
             await this.showTransition({ 
                 type: 'turn', 
                 message: `${nextTeamName}'s Turn!`,
                 duration: 3000,
-                autoHide: true
+                autoHide: true,
+                // Pass the updated boolean
+                triggerPowerupRoll: shouldTriggerRoll 
             });
             console.log("[MultipleChoiceGame] _handleAnswerSelected: AFTER await showTransition (turn).");
 
@@ -619,9 +686,6 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                 console.log("[MultipleChoiceGame] _handleAnswerSelected: Game over detected after turn transition. Exiting.");
                 return; 
             }
-
-            this.setState(nextState);
-            console.log(`[MultipleChoiceGame] _handleAnswerSelected: State updated. New active team index: ${this.getState().activeTeamIndex}, New active team ID: ${this.getState().activeTeam}`); 
             
             console.log("[MultipleChoiceGame] _handleAnswerSelected: Calling _showQuestion() for next turn...");
             this._showQuestion();
@@ -640,21 +704,68 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         generatedOptions: Array<{ id: string; text: string; isCorrect: boolean; length?: number }>
     ): void {
         const isCorrect = !!selectedOption.isCorrect;
-        // Get the team ID based on the current state *before* advancing
         const currentTeamId = this.config.teams[this.getState().activeTeamIndex]?.id;
         console.log(`Answer selected: ${selectedOption.id}, Correct: ${isCorrect}, Team: ${currentTeamId}`);
+
+        // Get remaining time BEFORE emitting event and stopping timer
+        const remainingTimeMs = this.timerManager.getTimeRemaining(this.QUESTION_TIMER_ID);
+        console.log(`[MultipleChoiceGame] Remaining time: ${remainingTimeMs}ms`);
+        
+        // --- DEBUG: Check active powerups for the current team --- START ---
+        if (currentTeamId) {
+            const activePUs = this.powerUpManager.getActivePowerupsForTarget(currentTeamId);
+            console.log(`[MultipleChoiceGame._processAnswerSelection] Active Powerups for team ${currentTeamId}:`, 
+                activePUs.length > 0 ? activePUs.map(p => ({id: p.id, instanceId: p.instanceId, remaining: p.remainingDurationMs})) : 'None'
+            );
+        }
+        // --- DEBUG: Check active powerups for the current team --- END ---
+        
+        // Check for 'double_points' power-up
+        let scoreMultiplier = 1;
+        console.log(`[MultipleChoiceGame._processAnswerSelection] Checking double_points for team: ${currentTeamId}`); // DEBUG LOG
+        const doublePointsActive = currentTeamId && isCorrect ? this.isPowerUpActive('double_points', currentTeamId) : false; // DEBUG LOG HELPER
+        console.log(`[MultipleChoiceGame._processAnswerSelection] isPowerUpActive('double_points') result: ${doublePointsActive}`); // DEBUG LOG
+        if (doublePointsActive) {
+            scoreMultiplier = 2; // Or read from power-up definition if value is variable
+            console.log(`[MultipleChoiceGame] Double Points active! Score multiplier: ${scoreMultiplier}`); // Existing log
+
+            // --- Deactivate Double Points Instance --- START ---
+            if (currentTeamId) { 
+                const activeInstances = this.powerUpManager.getActivePowerupsForTarget(currentTeamId)
+                                           .filter(p => p.id === 'double_points');
+                if (activeInstances.length > 0) {
+                    const instanceToDeactivate = activeInstances[0]; // Deactivate the first one found
+                    console.log(`[MultipleChoiceGame] Deactivating double_points instance ${instanceToDeactivate.instanceId} after applying effect.`);
+                    this.powerUpManager.deactivatePowerUp(instanceToDeactivate.instanceId);
+                } else {
+                     console.warn("[MultipleChoiceGame] Double points was active, but couldn't find instance to deactivate?");
+                }
+            }
+            // --- Deactivate Double Points Instance --- END ---
+        }
+        
+        // Calculate score modification if applicable (e.g., for progressive scoring)
+        // This is where the score multiplier would be applied.
+        // For now, we just include it in the payload. Rules/ScoringManager should handle it.
 
         // Show visual feedback
         this._showAnswerFeedback(generatedOptions, selectedOption.id);
 
-        // Emit event with the ID of the team that just answered
+        // Emit event with the ID of the team that just answered AND remaining time
         const payload: AnswerSelectedPayload = {
             questionId: question.id,
             selectedOptionId: selectedOption.id,
             isCorrect,
-            teamId: currentTeamId
+            teamId: currentTeamId,
+            remainingTimeMs: remainingTimeMs, // Include remaining time
+            scoreMultiplier: scoreMultiplier
         };
+        console.log(`[MultipleChoiceGame._processAnswerSelection] Emitting ANSWER_SELECTED payload:`, payload); // DEBUG LOG
         this.emitEvent(GAME_EVENTS.ANSWER_SELECTED, payload);
+
+        // STOP/REMOVE the timer AFTER processing and emitting the event
+        this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
+        console.log(`[MultipleChoiceGame] Timer ${this.QUESTION_TIMER_ID} removed.`);
 
         // Log that the next team calculation is deferred
         console.log(`[MultipleChoiceGame] _processAnswerSelection finished. Next team calculation deferred to handler.`);
@@ -675,15 +786,15 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
 
              if (option.isCorrect) {
                  // Always highlight the correct answer green
-                 buttonView.tint = 0x90EE90; 
+                 buttonView.tint = 0x90EE90;
              } else {
                  // If this incorrect option was the one selected
                  if (option.id === selectedOptionId) {
                      buttonView.tint = 0xFF8080; // Highlight selected incorrect answer (e.g., light red)
                  } else {
                      // Dim unselected incorrect answers
-                     buttonView.tint = 0xE0E0E0; 
-                     buttonView.alpha = 0.7;
+                 buttonView.tint = 0xE0E0E0;
+                 buttonView.alpha = 0.7;
                  }
              }
          });
@@ -701,7 +812,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         if (this.getState().hasTriggeredGameOver) {
              console.log("triggerGameOver: Already triggered. Skipping emission/cleanup.");
              return;
-        }
+         }
         
         // Hide transition screen if it happens to be visible during game over trigger
         console.log("[MultipleChoiceGame] _triggerGameOver: Calling hideTransition()...");
@@ -809,22 +920,34 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                  activeTeam: nextTeamId 
              };
              
+             // *** MOVE STATE UPDATE HERE ***
+             this.setState(nextState); 
+             console.log(`[MultipleChoiceGame] _handleTimerComplete: State updated BEFORE transition. New active team index: ${this.getState().activeTeamIndex}, New active team ID: ${this.getState().activeTeam}`); 
+
+             // --- Calculate if power-up roll should trigger ---
+             const progressIndex = this._questionSequencer?.getCurrentProgressIndex() ?? 0;
+             const numTeams = this.config.teams.length;
+             // Trigger roll when the first round is complete (index >= numTeams)
+             // This means the roll starts just before Player 1's second turn.
+             const shouldTriggerRoll = progressIndex >= numTeams;
+             console.log(`[MultipleChoiceGame] _handleTimerComplete: Checking power-up roll trigger. ProgressIndex: ${progressIndex}, NumTeams: ${numTeams}, ShouldTrigger: ${shouldTriggerRoll}`);
+             // --- End calculation ---
+
              console.log(`[MultipleChoiceGame] _handleTimerComplete: Calling showTransition (turn) for ${nextTeamName}...`);
              await this.showTransition({ 
                  type: 'turn', 
                  message: `${nextTeamName}'s Turn!`, 
                  duration: 3000, 
-                 autoHide: true 
+                 autoHide: true,
+                 // Pass the updated boolean
+                 triggerPowerupRoll: shouldTriggerRoll
              });
              console.log("[MultipleChoiceGame] _handleTimerComplete: AFTER await showTransition (turn)."); 
 
              if (this.getState().hasTriggeredGameOver) {
                   console.log("[MultipleChoiceGame] _handleTimerComplete: Game over detected after turn transition. Exiting.");
-                 return; 
+                  return;
              }
-
-             this.setState(nextState); 
-             console.log(`[MultipleChoiceGame] _handleTimerComplete: State updated. New active team index: ${this.getState().activeTeamIndex}, New active team ID: ${this.getState().activeTeam}`); 
 
              console.log("[MultipleChoiceGame] _handleTimerComplete: Calling _showQuestion() for next turn..."); 
              this._showQuestion();
@@ -849,29 +972,19 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             // Emit ANSWER_SELECTED event for timeout (incorrect answer)
             const payload: AnswerSelectedPayload = {
                 questionId: question.id,
-                selectedOptionId: null, // Indicate no option was selected (now allowed by interface)
+                selectedOptionId: null, // Indicate no option was selected
                 isCorrect: false,
-                teamId: currentTeamId
+                teamId: currentTeamId,
+                remainingTimeMs: 0 // Explicitly set 0 time for timeout
             };
             console.log(`[MultipleChoiceGame] _handleTimeUp: Emitting ANSWER_SELECTED event...`);
             this.emitEvent(GAME_EVENTS.ANSWER_SELECTED, payload);
             console.log(`[MultipleChoiceGame] _handleTimeUp: AFTER emitting ANSWER_SELECTED event.`);
 
-        } else {
+            } else {
             console.warn(`[MultipleChoiceGame] _handleTimeUp: Timer complete for question index ${this.getState().currentQuestionIndex}, but question data not found.`);
-        }
-
-        // Logic to advance the active team index is now handled later in _handleTimerComplete 
-        // after the feedback delay and potential transition.
-        // We remove the setState call from here to avoid potential double updates.
-        // // Move to next team
-        // this.setState({
-        //     activeTeamIndex: (this.getState().activeTeamIndex + 1) % this.config.teams.length
-        // });
+            }
         
-        // console.log(`Timer ran out. No points awarded. Next team calculation will happen in _handleTimerComplete.`);
-
-        // Add final log
         console.log(`[MultipleChoiceGame] _handleTimeUp: Finished.`);
     }
 
@@ -905,5 +1018,68 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    /**
+     * Placeholder method to handle skipping the current question.
+     * Triggering this would require a separate mechanism (button, power-up action).
+     */
+    private _skipCurrentQuestion(): void {
+        console.log("[MultipleChoiceGame] Skipping current question...");
+        
+        // 1. Stop the current timer immediately
+        this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
+        
+        // 2. Disable answer buttons
+        this._setAnswerButtonsEnabled(false);
+        
+        // 3. Optionally emit an event indicating a skip
+        // this.emitGameEvent('questionSkipped', { teamId: this.getState().activeTeam });
+        
+        // 4. Advance the sequencer (might already be handled if _showQuestion is called next)
+        
+        // 5. Trigger the next question logic (similar to end of _handleAnswerSelected/TimerComplete)
+        const isSequenceFinished = this._questionSequencer?.isFinished() ?? true; // Check if this was the last question
+        
+        if (isSequenceFinished) {
+            this._triggerGameOver();
+        } else {
+            // Show next question immediately or after a short delay/transition?
+            // For now, just show the next question directly
+            this._showQuestion(); 
+            this._setAnswerButtonsEnabled(true);
+        }
+    }
+
+    /**
+     * Overrides BaseGame method to handle the power-up selected during transition.
+     * Activates the selected power-up for the team whose turn is about to begin.
+     */
+    protected override _handlePowerupSelected(payload: TransitionPowerupSelectedPayload): void {
+        super._handlePowerupSelected(payload); // Call base class log if needed
+
+        // Determine the target team: It should be the team stored in the current game state,
+        // as the state is updated *before* _showQuestion and the transition happens.
+        const targetTeamId = this.getState().activeTeam;
+        console.log(`[MultipleChoiceGame._handlePowerupSelected] Received selected power-up: ${payload.selectedPowerupId}. Target team determined as: ${targetTeamId}`); // DEBUG LOG
+
+        if (targetTeamId !== undefined) {
+            console.log(`[MultipleChoiceGame] Attempting to activate randomly selected power-up '${payload.selectedPowerupId}' for team ${targetTeamId}`); // DEBUG LOG
+            // Activate the power-up using the PowerUpManager
+            // Optional: Add logic here to check if the team can receive this power-up
+            // (e.g., maybe they can only have one active at a time)
+            
+            // Special handling for 50/50: Don't deactivate here, it deactivates upon use in _setupAnswerButtons
+            if (payload.selectedPowerupId !== 'fifty_fifty') {
+                const activationResult = this.activatePowerUp(payload.selectedPowerupId, targetTeamId); // Store result
+                console.log(`[MultipleChoiceGame] Power-up activation result:`, activationResult ? `Instance ID ${activationResult.instanceId}` : activationResult); // DEBUG LOG
+            } else {
+                // For 50/50, just activate it. It will be used and deactivated when the next question buttons are set up.
+                 const activationResult = this.activatePowerUp(payload.selectedPowerupId, targetTeamId); // Store result
+                 console.log(`[MultipleChoiceGame] 50/50 activation result (will deactivate on use):`, activationResult ? `Instance ID ${activationResult.instanceId}` : activationResult); // DEBUG LOG
+            }
+        } else {
+            console.warn(`[MultipleChoiceGame] Could not determine target team ID to activate selected power-up '${payload.selectedPowerupId}'. State activeTeam: ${this.getState().activeTeam}`);
+        }
     }
 } 

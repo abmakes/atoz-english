@@ -264,7 +264,7 @@ export class PixiEngine {
       // Now create managers object AFTER all managers are initialized
       const managers = this.getAllManagers(); 
       this.currentGame = gameFactory(this.config, managers);
-      this.app.getStage().addChild(this.currentGame.view); 
+      this.app.getStage().addChild(this.currentGame.view);
 
       console.log('Initializing game...');
       // Pass the bundle loading promise 

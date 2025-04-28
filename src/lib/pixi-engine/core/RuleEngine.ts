@@ -305,6 +305,8 @@ export class RuleEngine {
     private executeSingleAction(action: ActionDefinition, context: RuleContext): void {
         console.log(`RuleEngine: Executing action '${action.type}' with params: ${JSON.stringify(action.params)}`);
         const params = action.params || {}; // Ensure params is an object
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const eventPayload = context.eventPayload as any; // Use 'any' for flexibility
 
         switch (action.type) {
             case 'changePhase':
@@ -325,53 +327,96 @@ export class RuleEngine {
                 }
                 break;
 
-            case 'modifyScore':
+            case 'modifyScore': { // Use block scope for clarity
                 if (!this.scoringManager) {
                     console.warn('RuleEngine: Cannot execute modifyScore action, ScoringManager missing.');
                     return;
                 }
-                
-                // <<< MODIFIED: Look for 'points' and handle 'target' >>>
-                let teamId: string | number | undefined;
-                const points = typeof params.points === 'number' ? params.points : undefined;
-                const target = params.target;
 
+                const mode = params.mode || 'fixed'; // Default to fixed scoring
+                const target = params.target;
+                let teamId: string | number | undefined;
+
+                // --- Determine Target Team ID ---
                 if (target === 'payload.teamId') {
-                    // Extract teamId from the event payload
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const payloadTeamId = (context.eventPayload as any)?.teamId;
+                    const payloadTeamId = eventPayload?.teamId;
                     if (typeof payloadTeamId === 'string' || typeof payloadTeamId === 'number') {
                         teamId = payloadTeamId;
                     } else {
                         console.warn(`RuleEngine: modifyScore target was 'payload.teamId', but teamId not found or invalid in event payload.`);
+                        return; // Cannot proceed without target
                     }
                 } else if (typeof target === 'string' || typeof target === 'number') {
-                    // Use target directly if it's a specific ID
-                    teamId = target;
-                }
-
-                // Validate that we found a teamId and points
-                if (teamId === undefined || points === undefined) {
-                    // Updated warning message to reflect expected params
-                    console.warn(`RuleEngine: Missing or invalid 'target' (string | number | 'payload.teamId') or 'points' (number) parameter for modifyScore action. Received target: ${target}, points: ${points}`);
-                    return;
-                }
-                // <<< END MODIFIED >>>
-
-                // Add logging to confirm this block is reached
-                console.log(`   -> Executing modifyScore logic for team ${teamId} points ${points}`);
-
-                // <<< MODIFIED: Use 'points' instead of 'amount' >>>
-                if (points > 0) {
-                    this.scoringManager.addScore(teamId, points);
-                    console.log(`   -> Called scoringManager.addScore(${teamId}, ${points})`);
-                } else if (points < 0) {
-                    this.scoringManager.subtractScore(teamId, Math.abs(points));
-                    console.log(`   -> Called scoringManager.subtractScore(${teamId}, ${Math.abs(points)})`);
+                    teamId = target; // Use target directly if it's a specific ID
                 } else {
-                    console.log(`   -> modifyScore points is zero, no action taken.`);
+                     console.warn(`RuleEngine: Missing or invalid 'target' (string | number | 'payload.teamId') parameter for modifyScore action. Received target: ${target}`);
+                     return; // Cannot proceed without target
                 }
-                break;
+                // --- End Target Team ID ---
+
+                // <<< ADD: Get score multiplier from payload >>>
+                const scoreMultiplier = typeof eventPayload?.scoreMultiplier === 'number' && eventPayload.scoreMultiplier > 0 
+                                        ? eventPayload.scoreMultiplier 
+                                        : 1;
+                // DEBUG LOG:
+                console.log(`   -> [RuleEngine.modifyScore] Received event payload:`, context.eventPayload);
+                console.log(`   -> [RuleEngine.modifyScore] Score multiplier determined from payload: ${scoreMultiplier}`);
+                // <<< END ADD >>>
+
+                // --- Execute based on Mode ---
+                if (mode === 'progressive') {
+                    // Parameters needed from rule config:
+                    const pointsPerSecond = typeof params.pointsPerSecond === 'number' ? params.pointsPerSecond : undefined;
+                    
+                    // Parameter needed from event payload:
+                    const remainingTimeMs = typeof eventPayload?.remainingTimeMs === 'number' ? eventPayload.remainingTimeMs : undefined;
+
+                    if (pointsPerSecond === undefined) {
+                        console.warn(`RuleEngine: Missing or invalid 'pointsPerSecond' (number) parameter for progressive modifyScore action.`);
+                        return;
+                    }
+                    
+                    if (remainingTimeMs === undefined || remainingTimeMs <= 0) {
+                        console.log(`RuleEngine: Progressive score: No time remaining in event payload or invalid value (${remainingTimeMs}). Awarding 0 points.`);
+                        // Optionally award a minimum score here?
+                } else {
+                        const remainingSeconds = Math.ceil(remainingTimeMs / 1000); // Round UP seconds
+                        const calculatedPoints = remainingSeconds * pointsPerSecond;
+                        const finalPoints = calculatedPoints * scoreMultiplier; // <<< APPLY MULTIPLIER >>>
+
+                        console.log(`   -> Progressive score: ${remainingSeconds}s * ${pointsPerSecond}/s * ${scoreMultiplier}x = ${finalPoints} points for team ${teamId}`);
+                        // DEBUG LOG:
+                        console.log(`   -> [RuleEngine.modifyScore - Progressive] Calculated points: ${calculatedPoints}, Final points (after ${scoreMultiplier}x): ${finalPoints}`);
+                        if (finalPoints > 0) {
+                            this.scoringManager.addScore(teamId, finalPoints);
+                            console.log(`   -> Called scoringManager.addScore(${teamId}, ${finalPoints})`);
+                        }
+                    }
+
+                } else { // Fixed mode (default)
+                    const points = typeof params.points === 'number' ? params.points : undefined;
+
+                    if (points === undefined) {
+                        console.warn(`RuleEngine: Missing or invalid 'points' (number) parameter for fixed modifyScore action.`);
+                        return;
+                    }
+
+                    const finalPoints = points * scoreMultiplier; // <<< APPLY MULTIPLIER >>>
+
+                    console.log(`   -> Fixed score: ${points} points * ${scoreMultiplier}x = ${finalPoints} points for team ${teamId}`);
+                    // DEBUG LOG:
+                    console.log(`   -> [RuleEngine.modifyScore - Fixed] Base points: ${points}, Final points (after ${scoreMultiplier}x): ${finalPoints}`);
+                    if (finalPoints > 0) {
+                        this.scoringManager.addScore(teamId, finalPoints);
+                        console.log(`   -> Called scoringManager.addScore(${teamId}, ${finalPoints})`);
+                    } else if (finalPoints < 0) {
+                        // Note: Multiplying negative points might not be desired, adjust if needed.
+                        this.scoringManager.subtractScore(teamId, Math.abs(finalPoints));
+                        console.log(`   -> Called scoringManager.subtractScore(${teamId}, ${Math.abs(finalPoints)})`);
+                    }
+                }
+                break; // End case 'modifyScore'
+            } // End block scope
 
             case 'playSound':
                 if (!this.audioManager) {

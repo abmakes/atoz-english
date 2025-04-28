@@ -10,7 +10,6 @@ import { GameSetupData, PlayerScoreData, GameOverPayload } from '@/types/gameTyp
 import {
     GameConfig,
     ScoreModeConfig,
-    PowerupConfig,
     DEFAULT_GAME_CONFIG,
     RuleDefinition,
     RuleConfig,
@@ -21,6 +20,7 @@ import { PixiEngineManagers } from '@/lib/pixi-engine/core/PixiEngine';
 import { MultipleChoiceGame } from '@/lib/pixi-games/multiple-choice/MultipleChoiceGame';
 import type { NavMenuItemProps } from './NavMenu';
 import { GAME_EVENTS, ENGINE_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
+import { PowerupConfig, STANDARD_SCORE_MODE_POWERUPS } from '@/lib/pixi-engine/config/PowerupConfig';
 
 const GameplayView = dynamic(() => import('./GameplayView'), {
     ssr: false,
@@ -81,10 +81,25 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
           type: 'score',
           name: 'Score Attack',
       };
+      // --- Define Powerup Config --- 
       const powerupConfig: PowerupConfig = {
-          availablePowerups: [],
-          spawnMechanic: {},
+          // Check if any powerup is enabled in UI selections
+          powerupsEnabled: Object.values(setupData.powerups).some(enabled => enabled),
+          // Filter STANDARD_SCORE_MODE_POWERUPS based on UI selections
+          availablePowerups: STANDARD_SCORE_MODE_POWERUPS.filter(powerup => {
+              // Match powerup.id to corresponding key in setupData.powerups
+              switch (powerup.id) {
+                  case 'fifty_fifty': return setupData.powerups.fiftyFifty;
+                  case 'double_points': return setupData.powerups.doublePoints;
+                  case 'time_extension': return setupData.powerups.timeExtension;
+                  case 'comeback': return setupData.powerups.comeback;
+                  default: return false;
+              }
+          }),
+          spawnMechanic: {}, // Keep empty for now, activation is via transition/rules
       };
+      
+      console.log("GameContainer: Enabled powerups:", powerupConfig.availablePowerups.map(p => p.id));
 
       // --- Define Scoring Rule (using RuleDefinition) ---
       const scoringRule: RuleDefinition = {
@@ -103,12 +118,32 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
               {
                   type: 'modifyScore', // Correct action type
                   params: {
-                      points: 10,
                       target: 'payload.teamId' // Target team from event payload
                   }
               }
           ]
       };
+      
+      // --- Dynamically Set Scoring Params ---
+      const modifyScoreAction = scoringRule.actions.find(action => action.type === 'modifyScore');
+      if (modifyScoreAction && modifyScoreAction.params) {
+           if (setupData.gameFeatures === 'boosted') {
+               console.log("GameContainer: Applying BOOSTED scoring rules.");
+               modifyScoreAction.params.mode = 'progressive';
+               modifyScoreAction.params.timerId = 'multipleChoiceQuestionTimer'; // Make sure this ID matches game timer
+               modifyScoreAction.params.pointsPerSecond = 5; // Set progressive points
+               delete modifyScoreAction.params.points; // Clean up fixed points param
+           } else { // 'basic' or default
+               console.log("GameContainer: Applying BASIC (fixed) scoring rules.");
+               modifyScoreAction.params.mode = 'fixed';
+               modifyScoreAction.params.points = 10; // Set fixed points
+               delete modifyScoreAction.params.timerId; // Clean up progressive params
+               delete modifyScoreAction.params.pointsPerSecond;
+           }
+      } else {
+          console.error("GameContainer: Could not find 'modifyScore' action in scoringRule to set parameters.");
+      }
+      // --- End Dynamic Scoring Params ---
       
       // --- Define Rule Config Object ---
       const ruleConfig: RuleConfig = {

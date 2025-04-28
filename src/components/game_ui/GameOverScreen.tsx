@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import Image from 'next/image'; // For the crown image
 import PlayerScore, { PlayerScoreProps } from './PlayerScore';
 import NavMenu, { NavMenuProps } from './NavMenu';
@@ -36,6 +36,34 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({
   // onMainMenuClick,
   // onBackClick,
 }) => {
+  // --- Calculate Tie/Winner --- 
+  const { titleMessage, winningPlayerNames } = useMemo(() => {
+    if (!finalScores || finalScores.length === 0) {
+      return { titleMessage: 'Game Over!', winningPlayerNames: new Set<string>() };
+    }
+
+    // Find max score
+    const maxScore = Math.max(...finalScores.map(s => s.score));
+
+    // Find all players who achieved the max score
+    const winners = finalScores.filter(s => s.score === maxScore);
+    const winnerNamesSet = new Set(winners.map(w => w.playerName));
+
+    let message = 'Game Over!';
+    if (winners.length > 1) {
+      message = "It's a Tie!";
+    } else if (winners.length === 1) {
+      // Use the winnerName prop if provided and matches, otherwise use calculated name
+      const calculatedWinnerName = winners[0].playerName;
+      const finalWinnerName = (winnerName && winnerName === calculatedWinnerName) ? winnerName : calculatedWinnerName;
+      message = `${finalWinnerName} Wins!`;
+    }
+    // If winners.length === 0 (e.g., all negative scores? Or empty scores array handled above), default 'Game Over!' is kept
+
+    return { titleMessage: message, winningPlayerNames: winnerNamesSet };
+  }, [finalScores, winnerName]);
+  // --------------------------
+
   // --- Play Victory Sound on Mount ---
   useEffect(() => {
     const victorySoundPath = '/audio/default/crowd-cheering.mp3';
@@ -73,12 +101,11 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({
       <div className={styles.gameOverPlayerScoresOverlay}>
         {finalScores.map((player) => (
           <PlayerScore
-            key={player.playerName} // Assuming playerName is unique for this view
+            key={player.playerName} 
             playerName={player.playerName}
             score={player.score}
-            isActive={player.playerName === winnerName} // Highlight winner
-            // Disable clicking on scores in game over screen?
-            // onClick={undefined}
+            // Highlight player if their name is in the set of winners
+            isActive={winningPlayerNames.has(player.playerName)} 
           />
         ))}
       </div>
@@ -98,13 +125,13 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({
       {/* Central Results Panel */}
       <div className={styles.gameOverPanel}>
         <h2 className={styles.gameOverTitle}>
-          {winnerName ? `${winnerName} Wins!` : 'Game Over!'}
+          {titleMessage}
         </h2>
-        <div className={styles.gameOverButtons}>
-          <button onClick={onPlayAgain} className={styles.gameOverButton}>
+        <div className="w-full max-w-3xl mx-auto flex justify-center gap-6">
+          <button onClick={onPlayAgain} className={`w-96 ${styles.buttonXLarge}`}>
             Play Again
           </button>
-          <button onClick={onExit} className={`${styles.gameOverButton} ${styles.gameOverButtonSecondary}`}>
+          <button onClick={onExit} className={`w-96 ${styles.buttonXLarge}`}>
             Exit
           </button>
         </div>

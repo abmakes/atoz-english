@@ -1,0 +1,56 @@
+{
+  "Starters": {
+    "Grammar": [
+      "Present Simple", "Present Continuous", "Imperatives", "Verb to be", "Verb to have",
+      "Subject Pronouns", "Object Pronouns", "Possessive 's", "Possessive Pronouns",
+      "Plural Nouns (regular)", "Articles", "There is / There are", "Can / Can't",
+      "Wh- Questions", "Yes/No Questions", "Short Answers", "Prepositions of Place",
+      "Basic Adjectives", "Conjunctions (and, but)", "Let's + verb"
+    ],
+    "VocabularyTopics": [
+      "Food & Drink", "Animals (Pets)", "Colours", "Toys & Games", "Body Parts",
+      "Clothes (General)", "School Objects", "Numbers & Counting", "Time Words (days, clock)",
+      "Family", "Emotions (happy, sad, tired)", "Basic Furniture", "Vehicles (car, bike)",
+      "Weather Words", "Basic Verbs (run, jump)", "My Family", "My House", "My School",
+      "At the Park", "Daily Routines"
+    ]
+  },
+  "Movers": {
+    "Grammar": [
+      "Past Simple (regular)", "Past Simple (irregular)", "Future with going to",
+      "Adverbs of Manner", "Comparatives", "Superlatives", "Must / Mustn't",
+      "Like + -ing", "Countable / Uncountable", "Prepositions of Time", 
+      "Prepositions of Movement", "Negative Sentences", "Expanded Question Words",
+      "Adjective Order", "Verb + infinitive", "Word Order in Questions",
+      "Conjunctions (because, or)", "Before / After", "Have to / Don't have to",
+      "Review Object Pronouns"
+    ],
+    "VocabularyTopics": [
+      "Animals (Farm)", "Animals (Wild)", "Clothes (Weather-based)", "Sports Equipment",
+      "Musical Instruments", "School Subjects", "Rooms in a House", "Opposites",
+      "Descriptive Adjectives", "Jobs", "Places in Town", "Nature (plants, trees)",
+      "My Town", "At the Beach", "Going Shopping", "Hobbies & Interests", "Eating Out",
+      "Holidays & Travel", "Festivals & Birthdays", "Weekend Activities"
+    ]
+  },
+  "Flyers": {
+    "Grammar": [
+      "Present Perfect", "Reflexive Pronouns", "Should / Shouldn't", "Sequencing Words",
+      "Complex Sentences (if, when)", "So / Because / Although", "Expanded Past Simple",
+      "Adverbs of Frequency", "Word Order in Adjective Phrases",
+      "Reported Speech (basic)", "Second Conditional (optional)",
+      "Both...and / either...or", "Too / Enough", "Past Continuous", 
+      "Phrasal Verbs (get up, take off)"
+    ],
+    "VocabularyTopics": [
+      "Materials (wood, plastic)", "Shapes & Sizes", "Transport (train, plane, boat)",
+      "Household Objects", "Technology (computer, phone)", "Money & Shopping Items",
+      "Health & Illness", "Going to the Doctor", "Fantasy & Imaginative Stories",
+      "Adventure Stories", "Feelings (worried, proud)", "Time Expressions (yesterday, soon)",
+      "Recycling & Environment", "Science / Space Words", "Story Vocabulary (hero, magic)",
+      "Travel Language (passport, ticket)", "Communication Words (phone, message)",
+      "Map & Direction Words (turn left, across from)", "Public Places (museum, library)",
+      "Language of Instructions (follow, explain)"
+    ]
+  }
+}

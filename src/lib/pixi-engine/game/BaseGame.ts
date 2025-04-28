@@ -21,7 +21,8 @@ import {
   EngineEvents, 
   TRANSITION_EVENTS,
   TransitionStartPayload,
-  TransitionEndPayload
+  TransitionEndPayload,
+  TransitionPowerupSelectedPayload
 } from '../core/EventTypes';
 import { v4 as uuidv4 } from 'uuid';
 import * as PIXI from 'pixi.js';
@@ -297,6 +298,21 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
 
     // Initialize game state immediately using the subclass implementation
     this._gameState = this.createInitialState();
+
+    // Create and add the transition screen early in the BaseGame constructor
+    // Pass the necessary managers including the powerUpManager
+    const { width, height } = this.pixiApp.getScreenSize();
+    this.transitionScreen = new TransitionScreen(
+        width, 
+        height, 
+        this.eventBus, 
+        this.powerUpManager // <-- Pass powerUpManager here
+    );
+    // Add to the highest UI layer
+    this.addToLayer(this.transitionScreen, RenderLayer.UI_FOREGROUND);
+
+    // Add listener for the new power-up selection event
+    this.registerEventListener(TRANSITION_EVENTS.POWERUP_SELECTED, this._handlePowerupSelected.bind(this));
   }
 
   /**
@@ -308,14 +324,6 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     // Store the promise
     this.engineAssetsPromise = engineAssetsPromise;
 
-    // Create and add the transition screen
-    if (!this.transitionScreen) {
-      const { width, height } = this.pixiApp.getScreenSize();
-      this.transitionScreen = new TransitionScreen(width, height);
-      // Add to the highest UI layer
-      this.addToLayer(this.transitionScreen, RenderLayer.UI_FOREGROUND);
-    }
-    
     // Emit game starting event
     this.emitEvent(GAME_STATE_EVENTS.GAME_STARTING);
     
@@ -842,6 +850,8 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
       // Cast the function to the expected type to satisfy TypeScript
       this.eventBus.off(entry.eventName, entry.listener as EngineEvents[typeof entry.eventName]);
     });
+    // Ensure the powerup selected listener is also removed if it was added via registerEventListener
+    this.eventBus.off(TRANSITION_EVENTS.POWERUP_SELECTED, this._handlePowerupSelected.bind(this)); 
     this._eventListeners = [];
     return this;
   }
@@ -1725,8 +1735,8 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    * Shows the transition screen and sets the game state to 'transition'.
    * Emits TRANSITION_START event.
    * 
-   * @param config - Configuration for the transition screen.
-   * @returns A promise that resolves when the transition screen is hidden.
+   * @param config - Configuration for the transition screen, including optional triggerPowerupRoll.
+   * @returns A promise that resolves when the transition screen is hidden (if autoHide is true).
    */
   protected async showTransition(config: TransitionScreenConfig): Promise<void> {
     if (!this.transitionScreen) {
@@ -1743,31 +1753,31 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     const startPayload: TransitionStartPayload = {
       type: config.type,
       message: config.message,
-      duration: config.duration
+      duration: config.duration,
+      triggerPowerupRoll: config.triggerPowerupRoll
     };
     this.emitEvent(TRANSITION_EVENTS.START, startPayload);
 
-    // Trigger the screen display
+    // Trigger the screen display, passing the full config including the roll trigger
     const screenPromise = this.transitionScreen.show(config);
 
-    // If autoHide is TRUE, await the screen's promise, then handle end/cleanup
     if (config.autoHide) {
-        await screenPromise;
-        // Check if the phase is still 'transition' before restoring.
-        // It might have been changed elsewhere (e.g., manual hide, game over).
-        if (this._gameState.phase === 'transition') {
-            const endPayload: TransitionEndPayload = { type: config.type };
-            this.emitEvent(TRANSITION_EVENTS.END, endPayload);
-            // Restore previous phase or default to 'playing'
-            const phaseToRestore = (previousPhase && previousPhase !== 'transition') ? previousPhase : 'playing'; 
-            this.setState({ phase: phaseToRestore } as Partial<TGameState>);
-        } else {
-            console.log(`[BaseGame.showTransition] AutoHide finished, but phase was no longer 'transition' (was ${this._gameState.phase}). Not restoring phase or emitting END.`);
-        }
+      await screenPromise;
+      // Check if the phase is still 'transition' before restoring.
+      // It might have been changed elsewhere (e.g., manual hide, game over).
+      if (this._gameState.phase === 'transition') {
+        const endPayload: TransitionEndPayload = { type: config.type };
+        this.emitEvent(TRANSITION_EVENTS.END, endPayload);
+        // Restore previous phase or default to 'playing'
+        const phaseToRestore = (previousPhase && previousPhase !== 'transition') ? previousPhase : 'playing'; 
+        this.setState({ phase: phaseToRestore } as Partial<TGameState>);
+      } else {
+        console.log(`[BaseGame.showTransition] AutoHide finished, but phase was no longer 'transition' (was ${this._gameState.phase}). Not restoring phase or emitting END.`);
+      }
     } else {
-        // If autoHide is FALSE, DO NOT await here. Return immediately.
-        // The responsibility to call hideTransition() lies with the caller.
-        return Promise.resolve();
+      // If autoHide is FALSE, DO NOT await here. Return immediately.
+      // The responsibility to call hideTransition() lies with the caller.
+      return Promise.resolve();
     }
   }
 
@@ -1802,5 +1812,28 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
         // Optional: Log if hideTransition is called when not visible
         // console.log('[BaseGame.hideTransition] Called, but transition screen was not visible.');
     }
+  }
+
+  /**
+   * Handles the power-up selection event during a transition.
+   * @param payload - The event payload containing the selected power-up ID.
+   */
+  protected _handlePowerupSelected(payload: TransitionPowerupSelectedPayload): void {
+    console.log(`[BaseGame] Power-up selected during transition: ${payload.selectedPowerupId}`);
+    
+    // --- Placeholder Logic ---
+    // Subclasses (like MultipleChoiceGame) should override this method.
+    // Example logic:
+    // 1. Determine the target team (e.g., the team whose turn is NEXT).
+    //    You might need to look at the game state or the transition type.
+    // const targetTeamId = this.getState().activeTeam; // Or the team about to play
+    // 2. Decide whether to activate the power-up based on game rules/state.
+    //    Maybe only activate if the team doesn't already have one?
+    // 3. Call activatePowerUp if applicable.
+    // if (targetTeamId) {
+    //    this.activatePowerUp(payload.selectedPowerupId, targetTeamId);
+    // }
+    
+    // Default implementation does nothing further.
   }
 }

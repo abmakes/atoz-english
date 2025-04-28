@@ -1,6 +1,7 @@
 export {};
 
 import { AudioConfig } from '../core/AudioManager';
+import { type PowerupConfig, DEFAULT_POWERUP_CONFIG } from './PowerupConfig';
 
 /**
  * Configuration for a single team participating in the game.
@@ -201,38 +202,6 @@ export interface AssetConfig {
   requiredFonts?: string[]; 
 }
 
-/** 
- * Defines a specific type of power-up available in the game. 
- */
-export interface PowerupDefinition {
-  /** Unique identifier for this type of power-up (e.g., 'double_points', 'shield'). */
-  id: string;
-  /** User-friendly display name for the power-up. */
-  name: string;
-  /** Optional description of the power-up's effect. */
-  description?: string;
-  /** Optional duration in seconds for timed power-ups. If undefined, the power-up may be permanent or event-triggered. */
-  durationSeconds?: number;
-  /** A string identifying the logic or effect associated with this power-up (implementation specific). */
-  effectType: string;
-  /** Optional parameters specific to the power-up's effect (e.g., { multiplier: 2 } for double points). */
-  effectParams?: Record<string, unknown>; 
-  /** Optional key/alias of the asset used for the power-up's visual representation (e.g., icon). */
-  assetKey?: string;
-}
-
-/** 
- * Configuration container for all power-up related settings. 
- */
-export interface PowerupConfig {
-  /** An array defining all types of power-ups that can appear in the game. */
-  availablePowerups: PowerupDefinition[]; 
-  /** Optional configuration defining how power-ups are introduced into the game (e.g., spawn timing, locations, award conditions). */
-  spawnMechanic?: Record<string, unknown>; 
-  /** Optional flag to indicate if power-ups should be used in this game session. Defaults to false. */
-  powerupsEnabled?: boolean;
-}
-
 /**
  * Audio configuration for the game
  */
@@ -349,10 +318,6 @@ export const DEFAULT_CONTROLS_CONFIG: ControlsConfig = {
 
 export const DEFAULT_ASSET_CONFIG: AssetConfig = {
   bundles: [],
-};
-
-export const DEFAULT_POWERUP_CONFIG: PowerupConfig = {
-  availablePowerups: [],
 };
 
 export const DEFAULT_RULE_CONFIG: RuleConfig = {

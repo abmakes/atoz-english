@@ -15,46 +15,48 @@ Okay, let's map out the updated game flow incorporating the component interactio
 2.  **Game Setup (`GameContainer` & `GameSetupPanel`)**
     *   The game page mounts, rendering `GameContainer`. Props `quizId="quiz-123"` and `gameSlug="multiple-choice"` are passed to `GameContainer`.
     *   `GameContainer`'s initial `currentView` state is `'setup'`, so it renders `GameSetupPanel`.
-    *   `GameSetupPanel` displays configuration options (Team names, Theme selector, Intensity timer buttons, Limited guesses options, Powerup toggles, etc.).
-    *   User interacts with `GameSetupPanel`, updating its internal state (e.g., adds team "Eagles", selects "Forest" theme, chooses 10s intensity).
+    *   `GameSetupPanel` displays configuration options (Team names, Theme selector, Intensity timer buttons, **Game Features (Basic/Boosted)**, Limited guesses options, Powerup toggles, etc.).
+    *   User interacts with `GameSetupPanel`, updating its internal state (e.g., adds team "Eagles", selects "Forest" theme, chooses 10s intensity, **selects "Boosted" features**).
     *   User clicks the "Play" button in `GameSetupPanel`.
 
 3.  **Configuration Handoff (`GameSetupPanel` -> `GameContainer`)**
     *   `GameSetupPanel.handlePlayGame` executes:
-        *   It gathers the user's selections into a `setupConfig` object (matching `Omit<GameSetupData, 'quizId' | 'gameSlug'>`).
+        *   It gathers the user's selections into a `setupConfig` object (matching `Omit<GameSetupData, 'quizId' | 'gameSlug'>`, **including `gameFeatures`**).
         *   It calls the `onStartGame` prop (provided by `GameContainer`) passing this `setupConfig` object.
 
 4.  **Engine Configuration Assembly (`GameContainer`)**
     *   `GameContainer.handleStartGame(setupData)` executes:
-        *   **Fetches Quiz Details:** Makes an API call `GET /api/quizzes/quiz-123` to retrieve the full quiz data (questions, answers, media URLs, etc.).
-        *   **Constructs `GameConfig`:** This is the crucial step where `GameContainer` translates the user's `setupData` and the fetched quiz details into the precise structure the `PixiEngine` needs (`GameConfig` from `@/lib/pixi-engine/config/GameConfig`). This involves:
-            *   Mapping `setupData.teams` to `GameConfig.teams`.
-            *   Setting `GameConfig.quizId` and `GameConfig.gameSlug` from props.
-            *   Determining `GameConfig.gameMode` (e.g., setting `type: 'score'` or `'lives'` based on `setupData.limitedGuesses`).
-            *   Defining `GameConfig.rules` (e.g., selecting a predefined `RuleConfig` based on `gameSlug` or `setupData.gameFeatures`, like the rule to award 10 points for a correct answer).
-            *   Defining `GameConfig.controls` (e.g., using default keyboard mappings).
-            *   Defining `GameConfig.powerups` based on `setupData.powerups` toggles.
-            *   Defining `GameConfig.assets` by combining default assets with any specific asset URLs fetched from the quiz data.
-            *   Setting `GameConfig.intensityTimeLimit` from `setupData.intensityTimeLimit`.
+        *   **Fetches Quiz Details:** Makes an API call `GET /api/quizzes/quiz-123` to retrieve the full quiz data.
+        *   **Loads Base `GameConfig`:** Retrieves a template or default configuration structure.
+        *   **Constructs `GameConfig`:** Merges `setupData` and quiz details into the base config. **Sets `initialMusicMuted` and `initialSfxMuted` based on `setupData.settings`.**
+        *   **Dynamically Configures Rules:** Specifically finds the scoring rule(s) (e.g., for correct answers) and modifies the `params` of the `modifyScore` action based on `setupData.gameFeatures`:
+            *   If 'Boosted', sets mode to `progressive`, adds `timerId` and `pointsPerSecond`.
+            *   If 'Basic', sets mode to `fixed`, adds `points`.
         *   Updates its internal state: `setGameConfig(fullEngineConfig)`.
         *   Updates theme state: `setThemeClassName(...)` based on `setupData.theme`.
         *   Updates view state: `setCurrentView('playing')`.
 
 5.  **Engine Initialization (`GameContainer` -> `GameplayView` -> `PixiEngine`)**
-    *   `GameContainer` re-renders, now showing `GameplayView`. It passes the newly created `gameConfig`, `themeClassName`, callbacks (`onGameOver`, `onExit`), the `pixiMountPointRef`, and the `gameFactory` function as props.
-    *   `GameplayView` mounts. Its `useEffect` hook runs:
-        *   Creates a `new PixiEngine({ targetElement: pixiMountPointRef.current })`.
-        *   Calls `pixiEngine.init(gameConfig, gameFactory)`.
+    *   `GameContainer` re-renders, showing `GameplayView` with the dynamically adjusted `gameConfig`.
+    *   `GameplayView` mounts, creates `PixiEngine`, calls `pixiEngine.init(gameConfig, gameFactory)`.
     *   `PixiEngine.init(config, factory)` executes:
-        *   Initializes `PixiApplication` (canvas, renderer).
-        *   Initializes core managers (`EventBus`, `StorageManager`, `GameStateManager`, etc.).
-        *   Configures managers using the provided `config` (`ScoringManager.init`, `ControlsManager.init`, `RuleEngine` reads rules, `PowerUpManager` reads available powerups).
-        *   Uses `AssetLoader` (via `PIXI.Assets`) to load assets defined in `config.assets`.
-        *   Calls `factory(config, this.getManagers())` which returns a `new MultipleChoiceGame(config, managers)`. Stores this as `this.currentGame`.
-        *   Adds `currentGame.view` to the Pixi stage.
-        *   Calls `this.currentGame.init()`.
-        *   Starts the Pixi ticker, which calls `PixiEngine.update` each frame.
-    *   Once `pixiEngine.init()` promise resolves, `GameplayView`'s `useEffect` attaches listeners to the engine's `eventBus` (e.g., for `SCORE_UPDATED`, `GAME_ENDED`).
+        *   Initializes `PixiApplication`.
+        *   Initializes core managers (`EventBus`, `StorageManager`, etc.).
+        *   **Initializes `AudioManager`, using theme/config path and initial mute states.**
+        *   Configures other managers (`ScoringManager`, `ControlsManager`, `RuleEngine`, `PowerUpManager`) using `config`.
+        *   **Creates the `TransitionScreen` instance within `BaseGame`.**
+        *   Loads/Preloads assets.
+        *   Calls `gameFactory` -> `new MultipleChoiceGame(config, managers)`.
+        *   Adds game view to stage.
+        *   Calls `currentGame.init()`.
+            *   `MultipleChoiceGame.initImplementation()`:
+                *   **Calls `this.showTransition({ type: 'loading', ... })`**.
+                *   Loads game data (questions, media).
+                *   **Calls `this.hideTransition()`**.
+                *   Sets up UI, binds events.
+                *   Shows first question.
+        *   Starts Pixi ticker.
+    *   `GameplayView` attaches listeners.
 
 6.  **Gameplay Loop (`PixiEngine` & `MultipleChoiceGame`)**
     *   `PixiEngine.update(deltaTime)` runs each frame via the ticker.
@@ -64,22 +66,29 @@ Okay, let's map out the updated game flow incorporating the component interactio
         *   Renders the current question and answer options (managed perhaps by a `QuestionScene` helper class).
     *   `GameplayView` (React) passively displays overlays like scores, menus. It only updates when its state changes (e.g., due to an engine event).
 
-7.  **User Interaction & Event Flow (Example: Correct Answer)**
-    *   User clicks an interactive answer option (a PIXI object) in `MultipleChoiceGame`.
-    *   The click handler within `MultipleChoiceGame` emits an event via the shared `EventBus`: `eventBus.emit(GAME_EVENTS.ANSWER_SELECTED, { teamId: 't1', answerValue: 'C', isCorrect: true, questionId: 'q5' })`.
-    *   `RuleEngine` listens for `GAME_EVENTS.ANSWER_SELECTED`.
-        *   It finds the rule defined in `GameConfig` ('score-correct-answer').
-        *   It evaluates the rule's conditions against the event payload (e.g., `payload.isCorrect === true`). Condition matches.
-        *   It executes the rule's actions: `modifyScore`.
-        *   The `modifyScore` action handler within `RuleEngine` calls `scoringManager.addScore(payload.teamId, 10)`.
-    *   `ScoringManager.addScore('t1', 10)` executes:
-        *   Updates the score for team 't1' in its internal `scores` map.
-        *   Saves updated scores via `StorageManager`.
-        *   Emits `eventBus.emit(SCORING_EVENTS.SCORE_UPDATED, { teamId: 't1', currentScore: 110, previousScore: 100, delta: 10 })`.
-    *   `GameplayView.handlePixiScoreUpdate` (React listener) catches the `SCORE_UPDATED` event.
-        *   Calls `setPlayerScores(...)`, updating the React state.
-        *   React re-renders the relevant `PlayerScore` component to show "110".
-    *   `MultipleChoiceGame` (or potentially `RuleEngine` action) proceeds to the next question or game state logic.
+7.  **User Interaction & Event Flow (Example: Correct Answer in Boosted Mode)**
+    *   User clicks correct answer in `MultipleChoiceGame`.
+    *   `_handleAnswerSelected`:
+        *   Gets `remainingTimeMs`.
+        *   **Calls `_processAnswerSelection`:**
+            *   Shows visual feedback.
+            *   Emits `GAME_EVENTS.ANSWER_SELECTED` (with `isCorrect: true`, `teamId`, `remainingTimeMs`).
+            *   Removes the question timer.
+    *   `RuleEngine` receives event:
+        *   Processes `score-correct-answer` rule:
+            *   Condition matches.
+            *   Executes `modifyScore` action (progressive mode): Calculates points using `remainingTimeMs` from payload, calls `scoringManager.addScore()`.
+        *   Processes `play-correct-sound` rule:
+            *   Condition matches.
+            *   Executes `playSound` action.
+            *   `RuleEngine` calls `audioManager.play('correct-sound')`.
+            *   `AudioManager` plays the sound.
+    *   `ScoringManager` emits `SCORING_EVENTS.SCORE_UPDATED`.
+    *   `GameplayView` updates score display.
+    *   (Back in `_handleAnswerSelected` after delay):
+        *   If game not over, determines next team.
+        *   **Calls `this.showTransition({ type: 'turn', ... })` to show next team's turn.**
+        *   After transition hides (auto or manual), calls `_showQuestion()` for next turn.
 
 8.  **Game End Condition**
     *   An end condition is met (e.g., `TimerManager` completes the main timer, `ScoringManager` detects zero lives, `MultipleChoiceGame` runs out of questions).
@@ -88,13 +97,14 @@ Okay, let's map out the updated game flow incorporating the component interactio
     *   `GameStateManager` emits `GAME_STATE_EVENTS.PHASE_CHANGED`. If appropriate, `GAME_STATE_EVENTS.GAME_ENDED` is also emitted (either by `GameStateManager` or the logic triggering the phase change).
 
 9.  **Game Over Sequence (`GameplayView` -> `GameContainer` -> `GameOverScreen`)**
-    *   `GameplayView.handlePixiGameOver` listener catches `GAME_STATE_EVENTS.GAME_ENDED`.
-        *   It calls `pixiEngine.getScoringManager().getAllTeamData()` to get final scores and names.
-        *   It calls the `onGameOver` prop (passed from `GameContainer`) with the `GameOverPayload`.
-    *   `GameContainer.handleGameOver(payload)` executes:
-        *   Updates state: `setFinalScores(payload.scores)`, `setWinnerName(payload.winner)`.
-        *   Updates view state: `setCurrentView('gameover')`.
-    *   `GameContainer` re-renders, now showing `GameOverScreen`, passing final scores, winner, and callbacks (`onPlayAgain`, `onExit`).
+    *   `GameplayView` catches `GAME_ENDED` event.
+    *   Gets final scores via `pixiEngine.getScoringManager().getAllTeamData()`.
+    *   Calls `onGameOver` prop with `GameOverPayload`.
+    *   `GameContainer.handleGameOver(payload)` updates state (`finalScores`, `winnerName`).
+    *   `setCurrentView('gameover')`.
+    *   `GameContainer` re-renders `GameOverScreen`.
+    *   **`GameOverScreen` calculates the maximum score, identifies players with that score, and displays "{Winner} Wins!" or "It's a Tie!" accordingly. Highlights all winning players.**
+    *   **Plays victory sound via `new Audio()` in `useEffect`.**
 
 10. **Post-Game**
     *   User interacts with `GameOverScreen`, clicking "Play Again" or "Exit".

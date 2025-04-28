@@ -1,7 +1,9 @@
 import type { EventBus } from '../core/EventBus';
 // Re-add event types needed for activation/deactivation
 import { POWERUP_EVENTS, type PowerUpEventPayload } from '../core/EventTypes';
-import type { GameConfig, PowerupConfig, PowerupDefinition } from '../config/GameConfig';
+// Import GameConfig and related types fully
+import type { GameConfig } from '../config/GameConfig';
+import type { PowerupConfig, PowerupDefinition } from '../config/PowerupConfig';
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating unique instance IDs
 
 /**
@@ -20,12 +22,22 @@ export interface ActivePowerUp extends PowerupDefinition {
 }
 
 /**
+ * Interface for the object returned by getSelectablePowerups,
+ * containing both the ID and the user-friendly display name.
+ */
+export interface SelectablePowerupInfo {
+    id: string;
+    displayName: string;
+}
+
+/**
  * Manages the lifecycle and state of power-ups within the game.
  * Handles loading power-up definitions, activating/deactivating instances,
  * tracking durations, and emitting related events.
  */
 export class PowerUpManager {
     private eventBus: EventBus;
+    private config: GameConfig; // <-- Store the full config
     private availablePowerups: Map<string, PowerupDefinition> = new Map();
     private activePowerups: Map<string, ActivePowerUp> = new Map(); // Keyed by instanceId
     // TODO: Potentially group active powerups by targetId for faster lookup
@@ -37,6 +49,7 @@ export class PowerUpManager {
      */
     constructor(eventBus: EventBus, config: GameConfig) {
         this.eventBus = eventBus;
+        this.config = config; // <-- Store the full config
         this.loadDefinitions(config.powerups);
         console.log(`PowerUpManager initialized with ${this.availablePowerups.size} available power-up types.`);
     }
@@ -55,6 +68,54 @@ export class PowerUpManager {
             }
         });
          console.log('Available power-ups loaded:', Array.from(this.availablePowerups.keys()));
+    }
+
+    /**
+     * Gets the list of power-ups that are currently selectable based on the game mode
+     * and whether power-ups are enabled in the config. Formats names for display.
+     * @returns {SelectablePowerupInfo[]} An array of objects containing power-up ID and display name.
+     */
+    public getSelectablePowerups(): SelectablePowerupInfo[] {
+        // 1. Check if power-ups are globally disabled
+        if (!this.config.powerups?.powerupsEnabled) {
+            console.log("[PowerUpManager] getSelectablePowerups: Power-ups globally disabled.");
+            return [];
+        }
+
+        // 2. Determine allowed IDs based on game mode
+        const gameModeType = this.config.gameMode?.type;
+        let allowedPowerupIds: string[] = [];
+
+        // Define allowed powerups per mode (adjust as needed)
+        switch (gameModeType) {
+            case 'score':
+                allowedPowerupIds = ['double_points', 'time_extension', 'fifty_fifty'];
+                break;
+            case 'lives':
+                 allowedPowerupIds = ['shield', 'fifty_fifty']; // Example: different set for lives mode
+                 break;
+            // Add cases for other game modes here
+            default:
+                // Fallback: Allow all defined power-ups if mode doesn't match known types
+                console.warn(`[PowerUpManager] getSelectablePowerups: Unknown or missing gameMode type '${gameModeType}'. Allowing all defined power-ups.`);
+                allowedPowerupIds = Array.from(this.availablePowerups.keys());
+        }
+         console.log(`[PowerUpManager] getSelectablePowerups: Mode '${gameModeType}', Allowed IDs: ${allowedPowerupIds.join(', ')}`);
+
+
+        // 3. Filter the master list and format the result
+        const selectable: SelectablePowerupInfo[] = [];
+        for (const powerupDef of this.availablePowerups.values()) {
+            if (allowedPowerupIds.includes(powerupDef.id)) {
+                 // Use the 'name' field directly, assuming it's nicely formatted
+                 // Add more sophisticated formatting here if needed (e.g., removing underscores, title casing)
+                 const displayName = powerupDef.name || powerupDef.id; // Fallback to ID if name is missing
+                 selectable.push({ id: powerupDef.id, displayName: displayName });
+            }
+        }
+        
+        console.log(`[PowerUpManager] getSelectablePowerups: Returning ${selectable.length} selectable power-ups.`);
+        return selectable;
     }
 
     /**

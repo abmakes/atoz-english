@@ -22,6 +22,7 @@ export interface GameSettingsData {
 export interface PowerupsData {
     fiftyFifty: boolean;
     doublePoints: boolean;
+    timeExtension: boolean;
     comeback: boolean;
 }
 

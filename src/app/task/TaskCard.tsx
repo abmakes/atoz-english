@@ -7,55 +7,66 @@ interface TaskCardProps {
   onClick: (task: Task) => void;
 }
 
-// Helper functions for badge variants
-const getPriorityVariant = (priority: string) => {
+// Helper functions for badge variants - using theme colors
+const getPriorityVariant = (priority: string): string => {
   switch (priority.toLowerCase()) {
     case "high":
-      return "destructive";
+      // Assuming --destructive maps to black/dark text suitable for a light bg
+      return "bg-destructive text-destructive-foreground"; // destructive might need adjustment
     case "medium":
-      return "secondary";
+      // Assuming --secondary maps to a darker color
+      return "bg-secondary text-secondary-foreground"; 
     case "low":
-      return "default";
+      // Use default button style (likely primary bg/text)
+      return "bg-primary text-primary-foreground";
     default:
-      return "outline";
+      // Outline with border color
+      return "border border-border text-foreground"; 
   }
 };
 
-const getStatusVariant = (status: string) => {
+const getStatusVariant = (status: string): string => {
   switch (status.toLowerCase()) {
     case "done":
-      return "default";
+      // Use a muted/neutral look for done
+      return "bg-muted text-muted-foreground"; 
     case "pending":
-      return "secondary";
+      // Use secondary for pending
+      return "bg-secondary text-secondary-foreground"; 
     case "in-progress":
-      return "destructive";
+      // Use primary for active/in-progress
+      return "bg-primary text-primary-foreground";
     default:
-      return "outline";
+      return "border border-border text-foreground"; 
   }
 };
 
 export default function TaskCard({ task, onClick }: TaskCardProps) {
   return (
     <Card 
-      className="flex flex-col h-full cursor-pointer hover:shadow-md transition-shadow" 
+      // Apply theme card background and text color
+      className="flex flex-col h-full cursor-pointer hover:shadow-md transition-shadow bg-card text-card-foreground border-border"
       onClick={() => onClick(task)}
     >
       <CardHeader>
         <div className="flex justify-between items-start mb-2">
-          <Badge variant="outline" className="text-sm">
+          {/* Use border color for outline badge */}
+          <Badge variant="outline" className="text-sm border-border text-foreground">
             Task {task.id}
           </Badge>
           <div className="flex gap-2">
-            <Badge variant={getPriorityVariant(task.priority)}>
+            {/* Apply the dynamic class string directly */}
+            <Badge className={getPriorityVariant(task.priority)}>
               {task.priority}
             </Badge>
-            <Badge variant={getStatusVariant(task.status)}>
+            <Badge className={getStatusVariant(task.status)}>
               {task.status}
             </Badge>
           </div>
         </div>
         <CardTitle className="text-lg">{task.title}</CardTitle>
-        <CardDescription className="line-clamp-2">{task.description}</CardDescription>
+        {/* Use muted text color for description */}
+        <CardDescription className="line-clamp-2 text-muted-foreground">{task.description}</CardDescription>
       </CardHeader>
     </Card>
   );
