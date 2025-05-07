@@ -200,6 +200,35 @@ export class PowerUpManager {
     }
 
     /**
+     * Deactivates the first found active instance of a specific power-up type
+     * for a given target entity. Useful for effects consumed upon use.
+     * Emits a `POWERUP_EVENTS.DEACTIVATED` event via the internal deactivatePowerUp call.
+     * @param {string} typeId - The ID of the power-up type to deactivate (e.g., 'fifty_fifty').
+     * @param {string | number} targetId - The ID of the entity (player, team) whose power-up should be deactivated.
+     * @returns {boolean} True if a matching power-up instance was found and deactivated, false otherwise.
+     */
+    public deactivatePowerUpByTypeAndTarget(typeId: string, targetId: string | number): boolean {
+        let instanceIdToDeactivate: string | null = null;
+
+        // Iterate through active power-ups to find the first match
+        for (const [instanceId, powerup] of this.activePowerups.entries()) {
+            if (powerup.id === typeId && powerup.targetId === targetId) {
+                instanceIdToDeactivate = instanceId;
+                break; // Found the first one, stop searching
+            }
+        }
+
+        if (instanceIdToDeactivate) {
+            console.log(`[PowerUpManager] Found active instance '${instanceIdToDeactivate}' of type '${typeId}' for target '${targetId}'. Deactivating.`);
+            this.deactivatePowerUp(instanceIdToDeactivate, false); // Use existing method for deactivation logic + event emission
+            return true;
+        } else {
+            console.warn(`[PowerUpManager] Could not find an active power-up of type '${typeId}' for target '${targetId}' to deactivate.`);
+            return false;
+        }
+    }
+
+    /**
      * Deactivates a specific instance of an active power-up using its unique instance ID.
      * Emits a `POWERUP_EVENTS.DEACTIVATED` or `POWERUP_EVENTS.EXPIRED` event.
      * @param {string} instanceId - The unique instance ID of the power-up activation to deactivate.
@@ -213,7 +242,7 @@ export class PowerUpManager {
         }
 
         this.activePowerups.delete(instanceId);
-        console.log(`PowerUpManager: Deactivated power-up '${powerup.id}' (Instance: ${instanceId}) for target '${powerup.targetId}'. Reason: ${expired ? 'Expired' : 'Manual'}`);
+        console.log(`PowerUpManager: Deactivated power-up '${powerup.id}' (Instance: ${instanceId}) for target '${powerup.targetId}'. Reason: ${expired ? 'Expired' : 'Manual/Consumed'}`);
 
         // Emit event
         const payload: PowerUpEventPayload = {

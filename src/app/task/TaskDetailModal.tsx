@@ -46,8 +46,8 @@ export default function TaskDetailModal({ task, open, onOpenChange }: TaskDetail
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* Apply theme background and text color to modal content */}
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-background text-foreground border-border">
+      {/* Apply theme popover background/text color to modal content */}
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-popover text-popover-foreground border-border">
         <DialogHeader>
           <div className="flex justify-between items-start mb-2">
             {/* Use border color for outline badge */}

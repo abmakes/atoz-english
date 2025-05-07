@@ -13,6 +13,7 @@ export interface PixiApplicationOptions extends Partial<ApplicationOptions> {
   autoStart?: boolean;
   targetFPS?: number;
   debug?: boolean;
+  onResize?: (width: number, height: number) => void;
 }
 
 export type ResizeCallback = (width: number, height: number) => void;
@@ -91,7 +92,7 @@ export class PixiApplication {
     const defaults = {
       width: 800,
       height: 600,
-      backgroundColor: '#1099bb',
+      backgroundColor: 'white',
       resolution: window.devicePixelRatio || 1,
       autoResize: true,
       autoStart: true,
@@ -345,10 +346,13 @@ export class PixiApplication {
     console.log('After resize - Canvas style dimensions:', 
       this.app.canvas.style.width, 'x', this.app.canvas.style.height);
     
-    // Call registered resize callbacks
+    // Call registered resize callbacks (from PixiApplication.onResize)
     for (const callback of this.resizeCallbacks) {
       callback(width, height);
     }
+
+    // Call the specific onResize callback passed during construction (from PixiEngine)
+    this.options.onResize?.(width, height); 
     
     // Update any layout that depends on screen size
     this.updateLayout();

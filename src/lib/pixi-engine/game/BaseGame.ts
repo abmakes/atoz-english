@@ -7,6 +7,9 @@ import { TimerManager } from './TimerManager';
 import { AssetLoader } from '../assets/AssetLoader';
 // Import the managers type from PixiEngine
 import { PixiEngineManagers } from '../core/PixiEngine';
+// Import theme config types and loader
+import { getThemeConfig } from '../../themes';
+import type { PixiThemeConfig } from '../../themes'; // Revert to simple type import
 // Import other managers
 import { ControlsManager } from '../core/ControlsManager';
 import { GameStateManager } from '../core/GameStateManager';
@@ -191,6 +194,12 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    */
   protected readonly config: Readonly<GameConfig>;
 
+  /** 
+   * A read-only reference to the specific PixiJS theme configuration 
+   * loaded based on the game config's theme ID.
+   */
+  protected readonly themeConfig: PixiThemeConfig;
+
   // Manager references
   /** Provides access to the central event bus for emitting and subscribing to engine events. */
   protected readonly eventBus: EventBus;
@@ -276,7 +285,20 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     config: GameConfig,
     managers: PixiEngineManagers
   ) {
-    this.config = Object.freeze(config);
+    // Validate the incoming configuration first
+    const validationErrors = validateGameConfig(config);
+    // Check if the validation returned any errors
+    if (validationErrors.length > 0) {
+      console.error("Invalid GameConfig provided:", validationErrors);
+      // Throw an error to prevent initialization with bad config
+      throw new Error(`Invalid GameConfig: ${validationErrors.join(', ')}`);
+    }
+    this.config = Object.freeze({ ...config }); // Store validated config
+
+    // Load and store the corresponding theme configuration using the optional theme property
+    this.themeConfig = getThemeConfig(this.config.theme);
+
+    // Assign managers
     this.eventBus = managers.eventBus;
     this.storageManager = managers.storageManager;
     this.scoringManager = managers.scoringManager;
@@ -301,12 +323,10 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
 
     // Create and add the transition screen early in the BaseGame constructor
     // Pass the necessary managers including the powerUpManager
-    const { width, height } = this.pixiApp.getScreenSize();
     this.transitionScreen = new TransitionScreen(
-        width, 
-        height, 
+        this.pixiApp.getApp(), // Pass the actual PIXI.Application instance
         this.eventBus, 
-        this.powerUpManager // <-- Pass powerUpManager here
+        this.powerUpManager // Pass powerUpManager here
     );
     // Add to the highest UI layer
     this.addToLayer(this.transitionScreen, RenderLayer.UI_FOREGROUND);
@@ -499,8 +519,8 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public onResize(width: number, height: number): void {
     console.log(`${this.constructor.name}: onResize (${width}x${height})`);
-    // Resize transition screen if it exists
-    this.transitionScreen?.onResize(width, height);
+    // Resize transition screen if it exists (no arguments needed)
+    this.transitionScreen?.onResize();
     // Subclasses implement layout adjustments here.
   }
 

@@ -3,14 +3,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import PlayerScore from './PlayerScore';
 import NavMenu, { NavMenuItemProps } from './NavMenu';
-import GameSettingsPanel from './GameSettingsPanel';
-import MainMenuDropdown from './MainMenuDropdown';
-import styles from '@/styles/themes/themes.module.css';
+import GameControlDropdown from './GameControlDropdown';
 import { PlayerScoreData, GameOverPayload } from '@/types/gameTypes';
 import { GAME_STATE_EVENTS, SCORING_EVENTS, ScoringScoreUpdatedPayload, GameStateActiveTeamChangedPayload } from '@/lib/pixi-engine/core/EventTypes';
 import { PixiEngine, PixiEngineManagers } from '@/lib/pixi-engine/core/PixiEngine';
 import { GameConfig } from '@/lib/pixi-engine/config/GameConfig';
 import { BaseGame } from '@/lib/pixi-engine/game/BaseGame';
+import { Settings, ArrowLeft } from 'lucide-react';
+import { SETTINGS_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
+// import type { EventBus } from '@/lib/pixi-engine/core/EventBus';
 
 // Update state structure to include teamId
 interface PlayerScoreState extends PlayerScoreData {
@@ -35,11 +36,6 @@ interface GameplayViewProps {
   gameFactory: (config: GameConfig, managers: PixiEngineManagers) => BaseGame;
 }
 
-// Example SVGs for NavMenu (replace with actual imports)
-const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z"/><path d="M19.43 12.98c.04-.32.07-.64.07-.98 0-.34-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98 0 .33.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>;
-const MenuIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>;
-const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>;
-
 /**
  * Renders the main gameplay interface, including the PixiJS canvas,
  * player scores, navigation menu, and overlay panels (settings, main menu).
@@ -61,15 +57,18 @@ const GameplayView: React.FC<GameplayViewProps> = ({
       score: team.startingResources?.score ?? 0,
     }))
   );
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isMainMenuOpen, setIsMainMenuOpen] = useState(false);
   const [activeTeamId, setActiveTeamId] = useState<string | number | null>(
     config.teams.length > 0 ? config.teams[0].id : null
   );
+  const [volume, setVolume] = useState(80);
+  const [musicMuted, setMusicMuted] = useState(false);
+  const [sfxMuted, setSfxMuted] = useState(false);
 
   // --- Refs for internal engine/managers ---
   const engineInstanceRef = useRef<PixiEngine | null>(null);
   const managersRef = useRef<PixiEngineManagers | null>(null);
+
+  console.log(config, 'AS GAME Confing form container !!!!!!!!!!!')
 
   // --- PixiJS Event Handlers (using managersRef) ---
   /**
@@ -78,16 +77,12 @@ const GameplayView: React.FC<GameplayViewProps> = ({
    */
   const handlePixiGameOver = useCallback(() => {
       console.log("React received GAME_ENDED event");
-      const currentManagers = managersRef.current; // Access via ref
-      // Use ScoringManager to get final data including teamId and displayName
+      const currentManagers = managersRef.current;
       const finalScoreData = currentManagers?.scoringManager?.getAllTeamData() ?? [];
-
       const formattedScores: PlayerScoreData[] = finalScoreData.map(t => ({
-          playerName: t.displayName ?? String(t.teamId), // Use displayName as playerName for UI
+          playerName: t.displayName ?? String(t.teamId),
           score: t.score
       }));
-
-      // Calculate winner from formatted scores
       let winner: PlayerScoreData | undefined;
       if (formattedScores.length > 0) {
           winner = formattedScores.reduce((prev: PlayerScoreData, current: PlayerScoreData) => (prev.score > current.score) ? prev : current);
@@ -95,14 +90,13 @@ const GameplayView: React.FC<GameplayViewProps> = ({
             const maxScore = winner.score;
             const winners = formattedScores.filter((s: PlayerScoreData) => s.score === maxScore); 
             if (winners.length > 1) {
-                winner = undefined; // It's a tie
+                winner = undefined;
             }
           }
       }
-      // Pass playerName from the winner object to GameOverPayload
       const payload: GameOverPayload = { scores: formattedScores, winner: winner?.playerName };
       onGameOver(payload);
-  }, [onGameOver]); // Removed playerScores dependency as it's derived now
+  }, [onGameOver]);
 
   /**
    * Handles the SCORE_UPDATED event from the PixiEngine's ScoringManager.
@@ -111,7 +105,6 @@ const GameplayView: React.FC<GameplayViewProps> = ({
    */
   const handlePixiScoreUpdate = useCallback((payload: ScoringScoreUpdatedPayload) => {
       console.log("React received SCORE_UPDATED event:", payload);
-      // Update player score based on teamId
       setPlayerScores(prevScores =>
           prevScores.map(p =>
               p.teamId === payload.teamId
@@ -119,7 +112,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
                   : p
           )
       );
-  }, []); // No dependency on managers needed here
+  }, []);
 
   // <<< ADD Handler for Active Team Change >>>
   const handlePixiActiveTeamChanged = useCallback((payload: GameStateActiveTeamChangedPayload) => {
@@ -140,7 +133,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
    * Attaches necessary event listeners and handles cleanup on unmount.
    */
   useEffect(() => {
-      let engine: PixiEngine | null = null; // Temporary variable for cleanup scope
+      let engine: PixiEngine | null = null;
       
       if (config && gameFactory && pixiMountPointRef.current && !engineInstanceRef.current) {
           console.log("GameplayView: Initializing PixiEngine...");
@@ -150,7 +143,8 @@ const GameplayView: React.FC<GameplayViewProps> = ({
           engine.init(config, gameFactory)
               .then(() => {
                   console.log("GameplayView: PixiEngine initialized successfully.");
-                  const currentManagers = engine?.getManagers(); // Use local engine var
+                  console.log(config, 'ENGINE !!!!!!!!!!!')
+                  const currentManagers = engine?.getManagers();
                   managersRef.current = currentManagers ?? null;
 
                   // Attach listeners ONLY after managers are confirmed
@@ -174,7 +168,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
       // --- Cleanup function ---
       return () => {
           console.log("GameplayView: Cleanup effect running...");
-          const engineToDestroy = engineInstanceRef.current; // Use ref for cleanup
+          const engineToDestroy = engineInstanceRef.current;
           if (engineToDestroy) {
               console.log("GameplayView: Destroying PixiEngine instance.");
               const currentManagers = managersRef.current;
@@ -194,40 +188,98 @@ const GameplayView: React.FC<GameplayViewProps> = ({
       };
       // Dependencies: config and factory trigger re-init if they change.
       // Ref changes don't trigger effects, but we check .current inside.
-  }, [config, gameFactory, pixiMountPointRef, handlePixiGameOver, handlePixiScoreUpdate, handlePixiActiveTeamChanged]); // Added callbacks to dependency array
+  }, [config, gameFactory, pixiMountPointRef, handlePixiGameOver, handlePixiScoreUpdate, handlePixiActiveTeamChanged]);
   // ------------------------------------------------------
 
-  // --- Dropdown Handlers ---
-  const toggleSettings = useCallback(() => setIsSettingsOpen(prev => !prev), []);
-  const toggleMainMenu = useCallback(() => setIsMainMenuOpen(prev => !prev), []);
-  const closeSettings = useCallback(() => setIsSettingsOpen(false), []);
-  const closeMainMenu = useCallback(() => setIsMainMenuOpen(false), []);
+  // --- Settings/Audio Handlers (Connect to EventBus/AudioManager) ---
+  const handleMusicToggle = useCallback(() => {
+    const newMutedState = !musicMuted;
+    console.log('Music toggled to:', newMutedState ? 'Muted' : 'Unmuted');
+    setMusicMuted(newMutedState);
+    managersRef.current?.eventBus.emit(SETTINGS_EVENTS.SET_MUSIC_MUTED, newMutedState);
+  }, [musicMuted]);
+
+  const handleSfxToggle = useCallback(() => {
+    const newMutedState = !sfxMuted;
+    console.log('SFX toggled to:', newMutedState ? 'Muted' : 'Unmuted');
+    setSfxMuted(newMutedState);
+    managersRef.current?.eventBus.emit(SETTINGS_EVENTS.SET_SFX_MUTED, newMutedState);
+  }, [sfxMuted]);
+  // --- End Settings/Audio Handlers ---
 
   // --- Main Menu Action Handlers ---
   const handleRestartGame = useCallback(() => {
     console.log('Restart requested');
     onExit();
-    closeMainMenu();
-  }, [onExit, closeMainMenu]);
+  }, [onExit]);
 
-  const handleGoHome = useCallback(() => {
-    console.log('Go Home requested');
-    onExit();
-    closeMainMenu();
-  }, [onExit, closeMainMenu]);
-
-  // Nav Menu Items definition
-  const navMenuItems: NavMenuItemProps[] = [
-      { id: 'settings', label: 'Settings', icon: <SettingsIcon />, onClick: toggleSettings },
-      { id: 'menu', label: 'Menu', icon: <MenuIcon />, onClick: toggleMainMenu },
-      { id: 'back', label: 'Exit Game', icon: <BackIcon />, onClick: onExit },
+  // --- Nav Menu Items definition ---
+  const navMenuItems: NavMenuItemProps[] = managersRef.current?.eventBus ? [
+      {
+        id: 'game-controls',
+        label: 'Audio Settings & Menu',
+        customInteraction: true,
+        icon: (
+          <GameControlDropdown
+            eventBus={managersRef.current.eventBus}
+            musicMuted={musicMuted}
+            sfxMuted={sfxMuted}
+            volume={volume}
+            onMusicToggle={handleMusicToggle}
+            onSfxToggle={handleSfxToggle}
+            onRestartGame={handleRestartGame}
+            onQuitGame={onExit}
+            className={``}
+          />
+        )
+      },
+      { id: 'back', label: 'Exit Game', icon: <ArrowLeft />, onClick: onExit },
+  ] : [
+      { id: 'game-controls', label: 'Audio Settings (Loading...)', icon: <Settings className="opacity-50"/>,},
+      { id: 'back', label: 'Exit Game', icon: <ArrowLeft />, onClick: onExit },
   ];
 
+  // Effect to listen for volume changes from AudioManager/Storage to update local state for display
+  useEffect(() => {
+    const handleExternalVolumeChange = (newVolume: number) => {
+      const newVolumePercent = Math.round(newVolume * 100);
+      console.log(`GameplayView: Received SET_GLOBAL_VOLUME event (${newVolume}), updating state volume to ${newVolumePercent}`);
+      setVolume(newVolumePercent);
+    };
+    const handleExternalMusicMute = (muted: boolean) => setMusicMuted(muted);
+    const handleExternalSfxMute = (muted: boolean) => setSfxMuted(muted);
+
+    const bus = managersRef.current?.eventBus;
+    if (bus) {
+       // Get initial values on mount AFTER bus is ready
+        const initialVol = managersRef.current?.audioManager?.getGlobalVolume() ?? 0.8;
+        const initialMusicMuted = managersRef.current?.audioManager?.getIsMusicMuted() ?? false;
+        const initialSfxMuted = managersRef.current?.audioManager?.getIsSfxMuted() ?? false;
+        const initialVolumePercent = Math.round(initialVol * 100);
+        console.log(`GameplayView: Initializing volume state to ${initialVolumePercent}`);
+        setVolume(initialVolumePercent);
+        setMusicMuted(initialMusicMuted);
+        setSfxMuted(initialSfxMuted);
+
+        // Listen for future changes
+       bus.on(SETTINGS_EVENTS.SET_GLOBAL_VOLUME, handleExternalVolumeChange);
+       bus.on(SETTINGS_EVENTS.SET_MUSIC_MUTED, handleExternalMusicMute);
+       bus.on(SETTINGS_EVENTS.SET_SFX_MUTED, handleExternalSfxMute);
+    }
+
+    return () => {
+       if (bus) {
+         bus.off(SETTINGS_EVENTS.SET_GLOBAL_VOLUME, handleExternalVolumeChange);
+         bus.off(SETTINGS_EVENTS.SET_MUSIC_MUTED, handleExternalMusicMute);
+         bus.off(SETTINGS_EVENTS.SET_SFX_MUTED, handleExternalSfxMute);
+       }
+    }
+  }, []);
+
   return (
-    <div className={`${styles.gameplayViewContainer} ${themeClassName}`}>
+    <div className={`${themeClassName} relative min-h-screen w-full overflow-hidden`}>
         {/* Overlays */}
-        <div className={styles.gameplayPlayerScoresOverlay}>
-            {/* Use teamId as the key */} 
+        <div className={`absolute flex flex-col gap-2 top-4 left-4 z-10`}>
             {playerScores.map((player: PlayerScoreState) => {
                 console.log(`Rendering PlayerScore for teamId: ${player.teamId}. Current activeTeamId: ${activeTeamId}. Will set isActive to: ${player.teamId === activeTeamId}`);
                 return (
@@ -235,52 +287,22 @@ const GameplayView: React.FC<GameplayViewProps> = ({
                 key={player.teamId} 
                 playerName={player.playerName}
                 score={player.score}
-                        isActive={player.teamId === activeTeamId}
+                isActive={player.teamId === activeTeamId}
+                className={`${themeClassName}`}
             />
                 );
             })}
         </div>
 
-        <div className={styles.gameplayNavMenuOverlay}>
-             <NavMenu items={navMenuItems} orientation="horizontal" />
-             {managersRef.current?.eventBus && (
-              <GameSettingsPanel
-                isOpen={isSettingsOpen}
-                onClose={closeSettings}
-                className={styles.settingsPanelGameplay}
-                eventBus={managersRef.current.eventBus}
-              />
-             )}
-              <MainMenuDropdown
-                isOpen={isMainMenuOpen}
-                onClose={closeMainMenu}
-                onRestartGame={handleRestartGame}
-                onGoHome={handleGoHome}
-                onQuitGame={onExit}
-                className={styles.mainMenuDropdownGameplay}
-              />
+        <div className={`absolute top-6 right-6 z-10`}>
+             <NavMenu items={navMenuItems}/>
         </div>
 
       {/* Render the mount point div for PixiJS canvas */}
-      <div ref={pixiMountPointRef} className={styles.pixiCanvasContainer}></div>
+      <div ref={pixiMountPointRef} className={`${themeClassName} pixiCanvasContainer`}></div>
 
     </div>
   );
 };
-
-// // --- Prop Type Definitions for Child Components ---
-// interface GameSettingsPanelPropsForGameplay {
-//   isOpen: boolean;
-//   onClose: () => void;
-//   className?: string;
-// }
-// interface MainMenuDropdownPropsForGameplay {
-//   isOpen: boolean;
-//   onClose: () => void;
-//   className?: string;
-//   onRestartGame: () => void;
-//   onGoHome: () => void;
-//   onQuitGame: () => void;
-// }
 
 export default GameplayView; 

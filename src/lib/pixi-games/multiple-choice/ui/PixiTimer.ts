@@ -1,200 +1,196 @@
 import * as PIXI from 'pixi.js';
-import { EventEmitter } from 'eventemitter3';
-
-export enum TimerEventType {
-    COMPLETE = 'timer_complete',
-    TICK = 'timer_tick' // Optional: emit every second
-}
-
-// --- Helper type for listener function based on event type ---
-// Use conditional types to map event types directly to function signatures
-type TimerEventListener<T extends TimerEventType> =
-    T extends TimerEventType.COMPLETE ? () => void :
-    // Add other event types here if needed, e.g.:
-    // T extends TimerEventType.TICK ? (remainingTime: number) => void :
-    never; // Fallback case
 
 interface PixiTimerOptions {
     radius?: number;
     backgroundColor?: number;
-    foregroundColor?: number;
-    textColor?: number;
+    backgroundAlpha?: number; // Added alpha for background
+    textColor?: PIXI.ColorSource; // Use ColorSource type
     textSize?: number;
-    lineWidth?: number;
+    fontFamily?: string; // Added font family
+    fontWeight?: PIXI.TextStyleFontWeight; // Added font weight
+    progressBarWidth?: number;
+    progressBackgroundColor?: PIXI.ColorSource; // Use ColorSource type
+    progressBackgroundAlpha?: number; // Added alpha for track
+    progressBarColor?: PIXI.ColorSource; // Use ColorSource type
+    progressBarAlpha?: number; // Added alpha for progress arc
+    clockwise?: boolean; // Keep clockwise option
+    pauseColor?: PIXI.ColorSource; // Color for progress bar when paused
+    pauseAlpha?: number; // Alpha for progress bar when paused
 }
 
 export class PixiTimer extends PIXI.Container {
     private options: Required<PixiTimerOptions>;
     private backgroundCircle: PIXI.Graphics;
+    private progressTrack: PIXI.Graphics;
     private progressArc: PIXI.Graphics;
     private timeText: PIXI.Text;
-    private emitter: EventEmitter;
+    private isPaused: boolean = false; // Internal state for visual pause
 
-    private duration: number = 0;
-    private remainingTime: number = 0;
-    private isRunning: boolean = false;
-    private tickerCallback?: (ticker: PIXI.Ticker) => void; // Store ticker ref
+    // Store last known values to redraw on resume if needed
+    private lastRemainingTime: number = 0;
+    private lastDuration: number = 0;
 
     constructor(options: PixiTimerOptions = {}) {
         super();
-        this.emitter = new EventEmitter();
 
-        // Default options merged with provided ones
+        // --- Default values matching UIManager's current implementation ---
         this.options = {
-            radius: 40,
-            backgroundColor: 0xFFFFFF, // White background
-            foregroundColor: 0x3b82f6, // Blue accent (Tailwind blue-500)
-            textColor: 0x1F2937,      // Dark text (Tailwind gray-800)
-            textSize: 24,
-            lineWidth: 8,
-            ...options,
+            radius: 60, // from UIManager._updateTimerCircle
+            backgroundColor: 0xDDDDDD, // Example: neutral background
+            backgroundAlpha: 0.0, // Invisible background circle by default
+            textColor: 0x114257, // Example: Dark text
+            textSize: 48, // from UIManager constructor
+            fontFamily: 'Grandstander', // from UIManager constructor
+            fontWeight: 'bold', // from UIManager constructor
+            progressBarWidth: 14, // from UIManager._updateTimerCircle
+            progressBackgroundColor: 0xE0E0E0, // Example: Light grey track
+            progressBackgroundAlpha: 0.0, // Invisible track by default
+            progressBarColor: 0x00FF00, // Example: Green progress (will use theme below)
+            progressBarAlpha: 1.0,
+            clockwise: false, // Default direction
+            pauseColor: 0xAAAAAA, // Example: Grey color when paused
+            pauseAlpha: 0.7, // Slightly transparent when paused
+            ...options, // Allow overriding defaults
         };
+        // --- End Defaults ---
 
-        // Create visual elements
         this.backgroundCircle = new PIXI.Graphics();
+        this.progressTrack = new PIXI.Graphics();
         this.progressArc = new PIXI.Graphics();
         this.timeText = new PIXI.Text({
-            text: '', // Initial text
+            text: '--', // Initial text
             style: {
-                fontFamily: 'Arial', // Make configurable later
+                fontFamily: this.options.fontFamily,
                 fontSize: this.options.textSize,
                 fill: this.options.textColor,
-                fontWeight: 'bold',
+                fontWeight: this.options.fontWeight,
+                align: 'center', // Center align text
             }
         });
         this.timeText.anchor.set(0.5);
 
         this.addChild(this.backgroundCircle);
+        this.addChild(this.progressTrack);
         this.addChild(this.progressArc);
         this.addChild(this.timeText);
 
-        this.drawBackground();
-        this.updateDisplay(0); // Initial display
+        // Initial draw (mostly invisible based on defaults, can be shown via options)
+        this.drawBackgroundAndTrack();
+        this.updateDisplay(0, 1); // Initialize display (e.g., showing '--')
     }
 
-    private drawBackground(): void {
+    private drawBackgroundAndTrack(): void {
+        const center = 0;
+        // Background (often invisible)
         this.backgroundCircle.clear()
-            .circle(0, 0, this.options.radius)
-            .fill({ color: this.options.backgroundColor, alpha: 0.8 })
-            .stroke({ width: this.options.lineWidth / 2, color: 0xEEEEEE, alpha: 0.5 }); // Optional subtle border
-    }
+            .circle(center, center, this.options.radius) // Use full radius if needed
+            .fill({ color: this.options.backgroundColor, alpha: this.options.backgroundAlpha });
 
-    private updateDisplay(time: number): void {
-        const progress = this.duration > 0 ? Math.max(0, time) / this.duration : 0;
-        const angle = progress * Math.PI * 2 - Math.PI / 2; // Start from top (-90 deg)
-
-        // Update arc
-        this.progressArc.clear()
-            .moveTo(0, 0) // Needed for fill to work correctly on arc in v8
-            .arc(0, 0, this.options.radius - this.options.lineWidth / 2, -Math.PI / 2, angle)
-            .stroke({ width: this.options.lineWidth, color: this.options.foregroundColor })
-
-        // Update text
-        this.timeText.text = `${Math.ceil(time)}`; // Show ceiling of remaining time
-    }
-
-    public start(duration: number, ticker: PIXI.Ticker): void {
-        if (this.isRunning && this.tickerCallback) {
-            ticker.remove(this.tickerCallback); // Remove old ticker if running
-        }
-
-        this.duration = duration;
-        this.remainingTime = duration;
-        this.isRunning = true;
-        this.updateDisplay(this.remainingTime);
-
-        // Use shared ticker passed from engine/game
-        this.tickerCallback = (tickerInstance: PIXI.Ticker) => {
-            if (!this.isRunning) return;
-
-            // Use deltaMS for accuracy, divided by 1000 for seconds
-            const deltaTime = tickerInstance.deltaMS / 1000;
-            this.remainingTime -= deltaTime;
-
-            if (this.remainingTime <= 0) {
-                this.remainingTime = 0;
-                this.updateDisplay(this.remainingTime);
-                this.stop(ticker); // Stop internal logic
-                // Emit COMPLETE with no arguments, matching TimerEventPayloads
-                this.emitter.emit(TimerEventType.COMPLETE);
-            } else {
-                this.updateDisplay(this.remainingTime);
-                // Optional: Emit tick event every second change
-                // Example if TICK were enabled:
-                // const prevTime = this.remainingTime + deltaTime;
-                // if (Math.floor(prevTime) !== Math.floor(this.remainingTime)) {
-                //    this.emitter.emit(TimerEventType.TICK, Math.ceil(this.remainingTime));
-                // }
-            }
-        };
-
-        ticker.add(this.tickerCallback);
-    }
-
-    public stop(ticker: PIXI.Ticker): void {
-        if (this.tickerCallback) {
-            ticker.remove(this.tickerCallback);
-            this.tickerCallback = undefined;
-        }
-        this.isRunning = false;
-    }
-
-    public reset(duration: number = 0, ticker?: PIXI.Ticker): void {
-         if (ticker) this.stop(ticker);
-         this.duration = duration;
-         this.remainingTime = duration;
-         this.updateDisplay(this.remainingTime);
-    }
-
-     // --- Updated Event Listener Methods ---
-
-     /**
-      * Register an event handler for a timer event.
-      * @param event - The event type (e.g., TimerEventType.COMPLETE).
-      * @param fn - The callback function. Its arguments are typed based on the event.
-      * @param context - Optional execution context for the listener. Use `unknown` instead of `any`.
-      */
-    public onTimerEvent<T extends TimerEventType>(event: T, fn: TimerEventListener<T>, context?: unknown): this {
-        // Cast to a slightly more specific function type accepting unknown args
-        this.emitter.on(event, fn as (...args: unknown[]) => void, context);
-        return this;
+        // Progress Track (often invisible or subtle)
+        this.progressTrack.clear()
+             .arc(center, center, this.options.radius - this.options.progressBarWidth / 2, 0, Math.PI * 2)
+             .stroke({
+                 width: this.options.progressBarWidth,
+                 color: this.options.progressBackgroundColor,
+                 alpha: this.options.progressBackgroundAlpha
+             });
     }
 
     /**
-     * Register a one-time event handler for a timer event.
-     * @param event - The event type (e.g., TimerEventType.COMPLETE).
-     * @param fn - The callback function. Its arguments are typed based on the event.
-     * @param context - Optional execution context for the listener. Use `unknown` instead of `any`.
+     * Updates the visual representation of the timer.
+     * @param remainingTime The current remaining time (in ms).
+     * @param duration The total duration of the timer (in ms).
      */
-    public onceTimerEvent<T extends TimerEventType>(event: T, fn: TimerEventListener<T>, context?: unknown): this {
-        this.emitter.once(event, fn as (...args: unknown[]) => void, context);
-        return this;
+    public updateDisplay(remainingTime: number, duration: number): void {
+        // Store last values in case of resume redraw
+        this.lastRemainingTime = remainingTime;
+        this.lastDuration = duration;
+
+        // Format text display (always update text even if paused)
+        const remainingSeconds = Math.max(0, Math.ceil(remainingTime / 1000));
+        this.timeText.text = `${remainingSeconds}`;
+        this.timeText.position.set(0); // Ensure centered
+
+        // Don't update the progress arc if paused visually
+        if (this.isPaused) {
+            return;
+        }
+
+        // --- Draw Progress Arc ---
+        const center = 0;
+        // Calculate progress: clamp between 0 and 1
+        const progress = duration > 0 ? Math.max(0, Math.min(1, remainingTime / duration)) : 0;
+
+        const startAngle = -Math.PI / 2; // 12 o'clock
+        // Use min(progress, 0.99999) to prevent full circle overlap issue if progress hits exactly 1
+        const clampedProgress = Math.min(progress, 0.99999);
+        const endAngle = startAngle + (this.options.clockwise ? -1 : 1) * clampedProgress * (Math.PI * 2);
+
+        this.progressArc.clear();
+        // Only draw the arc if there's progress to show (remaining > 0)
+        if (progress > 0) {
+            this.progressArc
+                // Draw from startAngle to endAngle
+                .arc(center, center, this.options.radius - this.options.progressBarWidth / 2, startAngle, endAngle, this.options.clockwise)
+                .stroke({
+                    width: this.options.progressBarWidth,
+                    color: this.options.progressBarColor, // Use normal color when running
+                    alpha: this.options.progressBarAlpha
+                 });
+        }
+        // --- End Draw Progress Arc ---
     }
 
-     /**
-      * Remove an event handler for a timer event.
-      * @param event - The event type (e.g., TimerEventType.COMPLETE).
-      * @param fn - Optional callback function to remove. If omitted, all listeners for the event are removed.
-      * @param context - Optional execution context to match. Use `unknown` instead of `any`.
-      * @param once - Optional flag to specify if the listener was added with `once`.
-      */
-    public offTimerEvent<T extends TimerEventType>(event: T, fn?: TimerEventListener<T>, context?: unknown, once?: boolean): this {
-         // Cast to a slightly more specific function type accepting unknown args
-        this.emitter.off(event, fn as ((...args: unknown[]) => void) | undefined, context, once);
-        return this;
+    /** Puts the timer into a visually paused state. */
+    public pause(): void {
+        if (this.isPaused) return;
+        this.isPaused = true;
+        console.log("PixiTimer: Visually Paused");
+
+        // Redraw the progress arc with pause styling
+        this.redrawPausedState();
+    }
+
+    /** Resumes the timer from a visually paused state. */
+    public resume(): void {
+        if (!this.isPaused) return;
+        this.isPaused = false;
+        console.log("PixiTimer: Visually Resumed");
+
+        // Redraw the arc with normal styling using the last known time
+        this.updateDisplay(this.lastRemainingTime, this.lastDuration);
+    }
+
+    private redrawPausedState(): void {
+        // Reuse drawing logic from updateDisplay but with different style
+        const center = 0;
+        const progress = this.lastDuration > 0 ? Math.max(0, Math.min(1, this.lastRemainingTime / this.lastDuration)) : 0;
+        const startAngle = -Math.PI / 2;
+        const clampedProgress = Math.min(progress, 0.99999);
+        const endAngle = startAngle + (this.options.clockwise ? -1 : 1) * clampedProgress * (Math.PI * 2);
+
+        this.progressArc.clear();
+        if (progress > 0) {
+            this.progressArc
+                .arc(center, center, this.options.radius - this.options.progressBarWidth / 2, startAngle, endAngle, this.options.clockwise)
+                .stroke({
+                    width: this.options.progressBarWidth,
+                    color: this.options.pauseColor, // Use pause color
+                    alpha: this.options.pauseAlpha   // Use pause alpha
+                 });
+        }
     }
 
     public destroy(options?: boolean | PIXI.DestroyOptions): void {
-        this.emitter.removeAllListeners();
-        // Stop ticker if running and reference exists
-        // Note: Ticker reference might be tricky if destroyed externally
-        // Consider passing the ticker only when starting/stopping
-        // if (this.tickerCallback && PIXI.Ticker.shared) { // Or use passed ticker ref if available
-        //     PIXI.Ticker.shared.remove(this.tickerCallback);
-        // }
         this.backgroundCircle.destroy();
+        this.progressTrack.destroy();
         this.progressArc.destroy();
         this.timeText.destroy();
         super.destroy(options);
     }
-} 
+
+    public getVisualBounds(): PIXI.Rectangle {
+        const diameter = this.options.radius * 2;
+        return new PIXI.Rectangle(-this.options.radius, -this.options.radius, diameter, diameter);
+    }
+}

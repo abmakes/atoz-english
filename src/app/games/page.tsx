@@ -2,13 +2,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Heart } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import type { QuizListItem } from '@/types/gameTypes';
 
@@ -45,18 +38,15 @@ async function getQuizzes(): Promise<QuizListItem[]> {
     }
 }
 
-// Mock data removed
-// const mockQuizzes: QuizListItem[] = [ ... ];
-
-// TODO: Fetch actual levels/filters from API or define statically
-const mockFilters = ['Pre-A1 Starters', 'A1 Movers', 'A2 Flyers', 'B1 Preliminary'];
-
 // Make the page component async
 export default async function GamesPage() {
   const quizzes = await getQuizzes();
 
   // Handle the case where fetching fails or returns no quizzes
   if (!quizzes || quizzes.length === 0) {
+      // Add quiz data to local storage
+      
+      
       return (
           // Apply theme background
           <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
@@ -77,7 +67,7 @@ export default async function GamesPage() {
            {/* Search Input */}
            <div className="flex w-96 items-center gap-2 md:w-auto md:flex-1">
              <Input type="text" placeholder="Search for a quiz" className="border-none rounded-full" />
-             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="1.5" d="M21.25 12H8.895m-4.361 0H2.75m18.5 6.607h-5.748m-4.361 0H2.75m18.5-13.214h-3.105m-4.361 0H2.75m13.214 2.18a2.18 2.18 0 1 0 0-4.36a2.18 2.18 0 0 0 0 4.36Zm-9.25 6.607a2.18 2.18 0 1 0 0-4.36a2.18 2.18 0 0 0 0 4.36Zm6.607 6.608a2.18 2.18 0 1 0 0-4.361a2.18 2.18 0 0 0 0 4.36Z"/></svg>
+             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" strokeLinecap="round" stroke-miterlimit="10" stroke-width="1.5" d="M21.25 12H8.895m-4.361 0H2.75m18.5 6.607h-5.748m-4.361 0H2.75m18.5-13.214h-3.105m-4.361 0H2.75m13.214 2.18a2.18 2.18 0 1 0 0-4.36a2.18 2.18 0 0 0 0 4.36Zm-9.25 6.607a2.18 2.18 0 1 0 0-4.36a2.18 2.18 0 0 0 0 4.36Zm6.607 6.608a2.18 2.18 0 1 0 0-4.361a2.18 2.18 0 0 0 0 4.36Z"/></svg>
            </div>
 
         </div>

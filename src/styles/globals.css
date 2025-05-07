@@ -10,34 +10,35 @@
 
 @layer base {
   :root {
-    --font-sans: Poppins, ui-sans-serif, sans-serif;
-    --font-serif: Grandstander, ui-serif, sans-serif;
-    --font-mono: Space Mono, ui-monospace, monospace;
-  
-    --radius: 1.5rem;
-    --background: #ffffff;
-    --foreground: #114257;
+    /* Base variables from src/styles/globals.css - some may be overridden below */
+    --radius: 1.5rem; /* Prioritizing this value */
+    --background: #ffffff; /* Will be overridden by --primary-bg? Check usage */
+    --foreground: #114257; /* Will be overridden by --text-color? Check usage */
     --card: #ffffff;
     --card-foreground: #114257;
     --popover: #ffffff;
     --popover-foreground: #111827;
-    --primary: #49c8ff;
+    --primary: #49c8ff; /* Maps to primary-accent */
     --primary-foreground: #0a0a0a;
-    --secondary: #114257;
+    --secondary: #114257; /* Maps to text-color */
     --secondary-foreground: #fafafa;
     --muted: #e9e7e7;
-    --muted-foreground: #0a0a0a;
-    --accent: #ffffff;
+    --muted-foreground: #0a0a0a; /* Might map to text-light? */
+    --accent: #49C8FF; /* Maps to primary-accent */
     --accent-foreground: #0a0a0a;
-    --destructive: #000000;
-    --border: #114257;
-    --input: #c7c7c7;
+    --destructive: #000000; /* Will be overridden by --danger-color */
+    --border: #114257; /* Might map to --input-border or --box-border */
+    --input: #c7c7c7; /* Maps to --input-bg or --input-border? */
     --ring: #49c8ff;
+
+    /* Chart colors from src/styles/globals.css */
     --chart-1: #42c0a9;
     --chart-2: #f68fff;
     --chart-3: #fcba67;
     --chart-4: #2d80a6;
     --chart-5: #34c9ff;
+
+    /* Sidebar colors from src/styles/globals.css (Keep if sidebar is used) */
     --sidebar: #cfcfcf;
     --sidebar-foreground: #0a0a0a;
     --sidebar-primary: #49c8ff;
@@ -46,9 +47,76 @@
     --sidebar-accent-foreground: #111827;
     --sidebar-border: #111827;
     --sidebar-ring: #49c8ff;
+
+    /* Variables from themes.module.css .themeWrapper/.themeBasic (Prioritized) */
+    --primary-bg: #e0f2fe;
+    --secondary-bg: #bfdbfe;
+    --panel-bg: white;
+    --panel-bg-theme: rgba(232, 248, 255, 0.8);
+    --panel-border: transparent;
+    --theme-background-image: url('/images/default/bg_image.png');
+    --text-color: #114257; /* Overrides --foreground */
+    --text-light: #175975; /* Potential override for --muted-foreground */
+    --heading-color: #114257;
+    --primary-accent-600: #49c8ff9b;
+    --primary-accent: #49C8FF; /* Overrides --primary and --accent */
+    --primary-accent-hover: #2DA4D8;
+    --secondary-accent: #42c0a9; /* Same as --chart-1 */
+    --secondary-accent-hover: #359886;
+    --danger-color: #f68fff; /* Same as --chart-2, overrides --destructive */
+    --danger-color-hover: #f268ff;
+    --input-bg: #ffffff; /* Potential override for --input */
+    --input-border: #d1d5db; /* Potential override for --input or --border */
+    --input-shadow: #a4a7ab;
+    --input-label-grey: #D9D9D9;
+    --input-text: var(--text-color);
+    --button-text-light: #ffffff;
+    --button-text-dark: var(--text-color);
+    --box-bg: #f9fafb;
+    --box-border: #e5e7eb;
+    --active-button-bg: var(--primary-accent);
+    --active-button-text: var(--button-text-light);
+    --inactive-button-bg: #ffffff;
+    --inactive-button-text: var(--text-color);
+    --inactive-button-border: var(--input-border);
+    --inactive-button-hover-bg: #f3f4f6;
+    --checkbox-accent: var(--primary-accent);
+
+    /* Radii from themes.module.css (Prioritized) */
+    --border-radius-sm: 0.25rem;
+    --border-radius-md: 0.5rem;
+    --border-radius-lg: 0.75rem;
+    --border-radius-xl: 1rem;
+    --border-radius-full: 9999px;
+
+    /* Shadows from themes.module.css (Prioritized) */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 25px 25px 0px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --border-dark: #114257;
+    --shadow-solid: 4px 6px 0px 0px rgb(17 66 87 / 1);
+    --shadow-solid-hover: 4px 6px 0px 0px rgb(17 66 87 / 1);
+    --shadow-solid-sm: 2px 4px 0 0 var(--primary-accent-hover);
+
+    /* Font sizes & weights from themes.module.css */
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 2rem;
+    --font-size-4xl: 2.5rem;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
   }
-  
+
   .dark {
+    /* Base dark variables from src/styles/globals.css */
+    --radius: 1.5rem; /* Keep consistent */
     --background: #051e28;
     --foreground: #fafafa;
     --card: #051e28;
@@ -61,17 +129,21 @@
     --secondary-foreground: #fafafa;
     --muted: #0a2632;
     --muted-foreground: #fafafa;
-    --accent: #49c8ff;
+    --accent: #49C8FF;
     --accent-foreground: #0a0a0a;
-    --destructive: #882222;
+    --destructive: #882222; /* Prioritize this over --danger-color? */
     --border: #114257;
     --input: #52525c;
     --ring: #49c8ff;
+
+    /* Chart colors from src/styles/globals.css dark */
     --chart-1: #9f9fa9;
     --chart-2: #71717b;
     --chart-3: #52525c;
     --chart-4: #3f3f46;
     --chart-5: #fafafa;
+
+    /* Sidebar colors from src/styles/globals.css dark */
     --sidebar: #051014;
     --sidebar-foreground: #fafafa;
     --sidebar-primary: #49c8ff;
@@ -80,40 +152,128 @@
     --sidebar-accent-foreground: #fafafa;
     --sidebar-border: #e4e4e7;
     --sidebar-ring: #49c8ff;
+
+    /* Variables from themes.module.css .themeDark (Prioritized) */
+    --primary-bg: #1f2937;
+    --secondary-bg: #111827;
+    --panel-bg: rgba(55, 65, 81, 0.85);
+    --panel-border: #4b5563;
+    --theme-background-image: url('/images/default/bg_image_dark.png'); /* Assuming dark version */
+    --text-color: #d1d5db; /* Overrides --foreground */
+    --text-light: #9ca3af; /* Overrides --muted-foreground */
+    --heading-color: #f3f4f6;
+    --primary-accent-600: #49C8FF; /* Different from light theme */
+    --primary-accent: #49C8FF; /* Overrides --primary, --accent */
+    --primary-accent-hover: #2DA4D8;
+    --secondary-accent: #34d399;
+    --secondary-accent-hover: #10b981;
+    --danger-color: #f87171; /* Overrides --destructive */
+    --danger-color-hover: #ef4444;
+    --input-bg: #374151; /* Overrides --input */
+    --input-border: #4b5563; /* Overrides --border */
+    --input-shadow: #2d3748; /* Darker shadow needed */
+    --input-label-grey: #718096; /* Darker grey */
+    --input-text: var(--text-color);
+    --button-text-light: #111827; /* Dark text on light buttons */
+    --button-text-dark: var(--text-color); /* Light text */
+    --box-bg: #374151;
+    --box-border: #4b5563;
+    --active-button-bg: var(--primary-accent);
+    --active-button-text: var(--button-text-light);
+    --inactive-button-bg: #4b5563;
+    --inactive-button-text: var(--text-color);
+    --inactive-button-border: #556170;
+    --inactive-button-hover-bg: #556170;
+    --checkbox-accent: var(--primary-accent);
+    --font-theme: "Grandstander", cursive;
+
+
+    /* Radii likely stay the same */
+    /* Shadows likely stay the same or adjust intensity */
+    --shadow-solid: 4px 6px 0px 0px rgb(74 182 229 / 1); /* Example using accent */
+    --shadow-solid-hover: 4px 6px 0px 0px rgb(45 164 216 / 1);
+    --shadow-solid-sm: 2px 4px 0 0 var(--primary-accent-hover);
+
+    /* Fonts likely stay the same */
   }
-  
+
+  /* Added .themeForest variables from themes.module.css */
+  .themeForest {
+    --primary-bg: #d4e9d7;
+    --secondary-bg: #a3c9a8;
+    --panel-bg: rgba(240, 255, 240, 0.85);
+    --panel-border: #8fbc8f;
+    --theme-background-image: url('/images/forest/bg_image.png'); 
+    --text-color: #2f4f4f;
+    --text-light: #556b2f;
+    --heading-color: #006400;
+    --primary-accent-600: #556b2f9b; 
+    --primary-accent: #556b2f;
+    --primary-accent-hover: #6b8e23;
+    --secondary-accent: #8fbc8f;
+    --secondary-accent-hover: #3cb371;
+    --danger-color: #cd5c5c;
+    --danger-color-hover: #b22222;
+    --input-bg: #f5fff5;
+    --input-border: #a3c9a8;
+    --input-shadow: #8aa89a; 
+    --input-label-grey: #c8e6c9; 
+    --input-text: var(--text-color);
+    --button-text-light: #ffffff;
+    --button-text-dark: var(--text-color);
+    --box-bg: #e8f5e9;
+    --box-border: #c8e6c9;
+    --active-button-bg: var(--primary-accent);
+    --active-button-text: var(--button-text-light);
+    --inactive-button-bg: #ffffff;
+    --inactive-button-text: var(--text-color);
+    --inactive-button-border: var(--input-border);
+    --inactive-button-hover-bg: #f0fff0;
+    --checkbox-accent: var(--primary-accent);
+
+    --shadow-solid: 4px 6px 0px 0px rgb(85 107 47 / 1);
+    --shadow-solid-hover: 4px 6px 0px 0px rgb(107 142 35 / 1);
+    --shadow-solid-sm: 2px 4px 0 0 var(--primary-accent-hover);
+  }
+
+  /* @theme inline block from src/styles/globals.css (Consider if still needed or simplify) */
+  /* This block essentially aliases base variables. Might be removable */
+  /* if tailwind config directly uses the base CSS vars now. */
   @theme inline {
-    --font-sans: InclusiveSans, ui-sans-serif, sans-serif;
-    --font-serif: Grandstander, ui-sans-serif, sans-serif;
-    --font-mono: Space Mono, ui-monospace, monospace;
-  
+    --font-sans: "InclusiveSans", ui-sans-serif, sans-serif; /* Note: Different sans font? */
+    --font-mono: "Space Mono", ui-monospace, monospace;
+    --font-theme: "Grandstander", cursive;
+
     --radius-sm: calc(var(--radius) - 4px);
     --radius-md: calc(var(--radius) - 2px);
     --radius-lg: var(--radius);
     --radius-xl: calc(var(--radius) + 4px);
-    --color-background: var(--background);
-    --color-foreground: var(--foreground);
-    --color-primary: var(--primary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-secondary: var(--secondary);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-card: var(--card);
-    --color-card-foreground: var(--card-foreground);
-    --color-popover: var(--popover);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-muted: var(--muted);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-accent: var(--accent);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-destructive: var(--destructive);
-    --color-border: var(--border);
-    --color-input: var(--input);
-    --color-ring: var(--ring);
+    --color-background: var(--primary-bg); /* Map to new theme vars */
+    --color-foreground: var(--text-color);
+    --color-primary: var(--primary-accent);
+    --color-primary-foreground: var(--button-text-light); /* Adjust mapping */
+    --color-secondary: var(--secondary-accent); /* Adjust mapping */
+    --color-secondary-foreground: var(--button-text-dark); /* Adjust mapping */
+    --color-card: var(--panel-bg); /* Adjust mapping */
+    --color-card-foreground: var(--text-color);
+    --color-popover: var(--panel-bg); /* Adjust mapping */
+    --color-popover-foreground: var(--text-color);
+    --color-muted: var(--secondary-bg); /* Adjust mapping */
+    --color-muted-foreground: var(--text-light);
+    --color-accent: var(--primary-accent);
+    --color-accent-foreground: var(--button-text-light); /* Adjust mapping */
+    --color-destructive: var(--danger-color);
+    /* --color-destructive-foreground: var(--button-text-light); Add if needed */
+    --color-border: var(--input-border); /* Adjust mapping */
+    --color-input: var(--input-bg); /* Adjust mapping */
+    --color-ring: var(--primary-accent); /* Adjust mapping */
+    /* Chart color mappings (Seem okay) */
     --color-chart-1: var(--chart-1);
     --color-chart-2: var(--chart-2);
     --color-chart-3: var(--chart-3);
     --color-chart-4: var(--chart-4);
     --color-chart-5: var(--chart-5);
+    /* Sidebar color mappings (Seem okay) */
     --color-sidebar: var(--sidebar);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar-primary: var(--sidebar-primary);
@@ -123,56 +283,28 @@
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
   }
-}
 
-@layer base {
-
-}
-
-/* Cloud animation */
-@keyframes moveCloud {
-  0% {
-    transform: translateX(100vw);
-  }
-  100% {
-    transform: translateX(-100%);
+  /* Body style from src/app/globals.css */
+  body {
+    @apply bg-background text-foreground; /* Uses base vars */
   }
 }
 
-.cloud {
-  animation: moveCloud linear infinite;
-  /* Make clouds oval-shaped instead of perfectly round */
-  border-radius: 100px / 50px;
-}
 
-.cloud-layer-1 .cloud {
-  animation-duration: 15s;
-}
-
-.cloud-layer-2 .cloud {
-  animation-duration: 25s;
-}
-
-.cloud-layer-3 .cloud {
-  animation-duration: 35s;
-}
-
-.cloud-layer-4 .cloud {
-  animation-duration: 45s;
-}
 
 /* Grandstander font class */
 .grandstander {
-  font-family: 'Grandstander', cursive;
+  font-family: 'Grandstander', cursive; /* Use --font-theme variable */
 }
 
 .inclusive-sans {
   font-family: 'InclusiveSans', sans-serif;
 }
 
+/* Font Faces from both files */
 @font-face {
   font-family: 'Grandstander';
-  src: url('/fonts/GrandstanderVF.ttf') format('truetype-variations');
+  src: url('/fonts/GrandstanderVF.ttf') format('truetype-variations'); /* From themes */
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -180,9 +312,251 @@
 
 @font-face {
   font-family: 'InclusiveSans';
-  src: url('/fonts/InclusiveSans-Regular.ttf') format('truetype');
-  font-weight: 100 900;
+  src: url('/fonts/InclusiveSans-Regular.ttf') format('truetype'); /* From styles/globals */
+  font-weight: 100 900; /* Maybe adjust weight range? */
   font-style: normal;
   font-display: swap;
 }
 
+/********************************************************/
+/* Styles for game select, react UI and gameover screen */
+/********************************************************/
+
+.titleXLarge {
+  font-size: 5rem; /* Make it bigger */
+  margin-bottom: 1.5rem;
+  color: var(--heading-color); /* Or primary accent? */
+  position: relative; /* For crown positioning */
+  display: inline-block; /* Allow crown positioning */
+}
+
+/* Buttons */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, transform 0.2s, box-shadow 0.2s;
+  font-weight: var(--font-weight-medium);
+}
+.buttonXLarge {
+  composes: button;
+  background-color:white;
+  color: var(--button-text-dark);
+  border-radius: var(--border-radius-full);
+  border: 6px solid var(--primary-accent-600);
+  padding: 0.75rem 4rem 0.75rem 4rem; /* Tailwind px-16 py-3 */
+  font-size: var(--font-size-4xl);
+  line-height: 1;
+  font-weight: var(--font-weight-bold);
+  box-shadow: 4px 6px 0px 0px var(--primary-accent-hover);
+}
+.buttonXLarge:hover {
+  background-color: var(--primary-accent-600);
+  transform: scale(1.05);
+}
+.buttonAddTeam {
+  composes: button;
+  background-color: var(--input-bg);
+  color: var(--text-color);
+  border-radius: var(--border-radius-full);
+  border: 2px solid var(--primary-accent-600);
+  box-shadow: var(--shadow-solid-sm);
+  font-size: var(--font-size-sm);
+  padding: 0.25rem 0.75rem; /* Tailwind px-3 py-1 */
+  margin-left: 0.5rem;
+}
+.buttonAddTeam:hover {
+  font-weight: var(--font-weight-bold);
+  transform: scale(1.05); 
+}
+.buttonRemoveTeam {
+  composes: button;
+  color: var(--danger-color);
+  font-size: 1.5rem; /* Ensure large enough click target */
+  line-height: 1.5;
+  padding: 0.1rem; /* Minimal padding */
+}
+.buttonRemoveTeam:hover {
+  color: var(--danger-color-hover);
+}
+.buttonIcon {
+  composes: button;
+  position: absolute;
+  top: 1.5rem; /* Tailwind top-6 */
+  right: 1.5rem; /* Tailwind right-6 */
+  background-color: var(--input-bg); /* Match input/select bg */
+  padding: 0.5rem; /* Tailwind p-2 */
+  border-radius: var(--border-radius-full);
+  box-shadow: var(--shadow);
+  color: var(--text-color); /* Use default text color */
+}
+.buttonGroup {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem; /* Tailwind space-x-2 */
+}
+.buttonChoice {
+  composes: button;
+  background-color: var(--inactive-button-bg);
+  color: var(--inactive-button-text);
+  border: 1px solid var(--inactive-button-border);
+  border-radius: var(--border-radius-full);
+  padding: 0.25rem 1rem; /* Tailwind px-4 py-1 */
+  font-size: var(--font-size-sm);
+}
+.buttonChoice:hover {
+  background-color: var(--inactive-button-hover-bg);
+}
+.buttonChoiceActive {
+  /* Note: Higher specificity might be needed if base .button styles interfere */
+  background-color: var(--active-button-bg);
+  color: var(--active-button-text);
+  border-color: transparent; /* Remove border when active */
+}
+
+/****************************/ 
+/*      Forms & Inputs     */
+/****************************/
+
+.inputField {
+  flex-grow: 1;
+  background-color: var(--input-bg);
+  border: 2px solid var(--input-border);
+  border-radius: var(--border-radius-md);
+  padding: 0.25rem 0.5rem; /* Tailwind p-1 */
+  color: var(--input-text);
+  font-size: var(--font-size-base);
+}
+.inputField::placeholder {
+  color: var(--text-light);
+  opacity: 0.7;
+}
+.selectField {
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--border-radius-md);
+  padding: 0.5rem; /* Tailwind p-2 */
+  box-shadow: var(--shadow-sm);
+  color: var(--input-text);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+}
+.checkbox {
+  width: 1.25rem; /* Tailwind h-5 w-5 */
+  height: 1.25rem;
+  border-radius: var(--border-radius-sm);
+  color: var(--checkbox-accent); /* Accent color */
+  border-color: var(--input-border); /* Border color when unchecked */
+  cursor: pointer;
+}
+.checkbox:focus {
+  /* Basic focus ring, can be customized */
+  outline: 2px solid var(--primary-accent);
+  outline-offset: 1px;
+}
+.label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem; /* Tailwind space-x-1 */
+  cursor: pointer;
+}
+.labelInline {
+   display: inline-flex;
+   align-items: center;
+   gap: 0.5rem; /* Tailwind space-x-2 */
+   cursor: pointer;
+}
+.labelBlock {
+   display: block; /* Or flex if needed */
+   margin-bottom: 0.5rem;
+}
+
+.checkboxGroup {
+   display: flex;
+   flex-direction: column;
+   gap: 0.5rem; /* Tailwind space-y-2 */
+   padding-left: 1rem; /* Indent checkboxes */
+}
+
+/*************************/
+/* Pixi Canvas Container */
+/*************************/
+
+.pixiCanvasContainer {
+  position: absolute;
+  inset: 0; /* Make it cover the entire gameplay view container */
+  z-index: 0; /* Ensure it's behind the overlays */
+  /* Styles for the canvas element itself (if needed) */
+  /* canvas { display: block; width: 100%; height: 100%; } */
+}
+
+.backgroundOverlay { /* For clouds or other background elements */
+  background-image: var(--theme-background-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: absolute;
+  inset: 0;
+  opacity: 1;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* --- Game Over Screen Styles --- */
+.gameOverScreen {
+  position: fixed; /* Cover the whole screen */
+  inset: 0;
+  z-index: 50; /* High z-index to cover everything */
+  display: flex; /* Using flex might be useful for centering panel, but maybe not needed if panel is absolute */
+  flex-direction: column; /* Or just use absolute positioning for overlays */
+  align-items: center;
+  justify-content: center;
+  overflow: hidden; /* Prevent scrollbars */
+  font-family: var(--font-theme);
+}
+.optionsGrid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr)); /* Mobile default */
+  gap: 1.5rem; /* Tailwind gap-6 */
+}
+@media (min-width: 768px) { /* Tailwind md: breakpoint */
+  .optionsGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.optionBox {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border: 3px solid var(--input-border);
+  background-color: var(--box-bg);
+  border-radius: 32px;
+  padding: 1rem;
+  box-shadow: 2px 4px 0px 0px var(--input-shadow);
+  text-align: center;
+}
+
+.shadow-solid {
+  box-shadow: 4px 4px 0px 0px var(--border-dark);
+}
+
+.shadow-solid-sm {
+  box-shadow: 1px 2px 0px 0px var(--input-shadow);
+}
+/* Typography */
+/* .textDefault { color: var(--text-color); font-size: var(--font-size-base); }
+.textLight { color: var(--text-light); }
+.textHeading1 { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: var(--heading-color); } 
+.textHeading2 { font-size: var(--font-size-xl); font-weight: var(--font-weight-semibold); color: var(--heading-color); margin-bottom: 1rem; }
+.textHeading3 { font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); color: var(--heading-color); margin-bottom: 0.5rem; }
+.textLabel { color: var(--text-color); font-weight: var(--font-weight-medium); }
+.textInputLabel { color: var(--text-color); text-transform: capitalize; }
+.textDescription { font-size: var(--font-size-sm); color: var(--text-light); margin-bottom: 0.5rem; } */
+
+/* Ensure Poppins and Space Mono are loaded if used (or remove definitions if unused) */
+/* Add @font-face for Poppins if needed */
+/* Add @font-face for Space Mono if needed */

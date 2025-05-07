@@ -4,7 +4,7 @@ import { EventBus } from '../core/EventBus'; // Import EventBus
 import { TRANSITION_EVENTS, TransitionPowerupSelectedPayload } from '../core/EventTypes'; // Import event types - Removed TransitionStartPayload
 import { MathUtils } from '../utils/MathUtils'; // Import MathUtils
 // Import PowerUpManager and the new SelectablePowerupInfo interface
-import { PowerUpManager, SelectablePowerupInfo } from '../game/PowerUpManager'; 
+import { PowerUpManager, SelectablePowerupInfo } from '../game/PowerUpManager';
 
 // Define the list of power-ups available for random selection
 // const SELECTABLE_POWERUPS: string[] = ['double_points', 'time_extension', 'fifty_fifty']; // Replaced skip_question
@@ -19,11 +19,12 @@ export interface TransitionScreenConfig {
 
 /**
  * A reusable screen component for showing transitions between game states.
- * Handles displaying messages, loading indicators, and potential future elements like a power-up wheel.
+ * Displays as a full-screen overlay with centered text elements.
  */
 export class TransitionScreen extends PIXI.Container {
-  private background: PIXI.Graphics;
+  private panelBackground: PIXI.Graphics; // Changed from background
   private messageText: Text;
+  private getReadyText: Text; // New text element
   private powerupTextDisplay: Text; // Text to show cycling power-up
   private currentConfig: TransitionScreenConfig | null = null;
   private timeoutId: number | null = null;
@@ -31,6 +32,7 @@ export class TransitionScreen extends PIXI.Container {
   private _manualHideResolve: (() => void) | null = null;
   private eventBus: EventBus; // Add EventBus reference
   private powerUpManager: PowerUpManager; // <-- Add PowerUpManager reference
+  private app: PIXI.Application; // Store PIXI app reference
 
   // State for power-up cycling
   private isCyclingPowerups: boolean = false;
@@ -41,63 +43,116 @@ export class TransitionScreen extends PIXI.Container {
   private readonly CYCLE_INTERVAL_MS = 50; // How fast to cycle
   private readonly CYCLE_DURATION_MS = 1500; // How long to cycle before stopping
 
+  // Panel Dimensions (will be calculated dynamically)
+  private panelWidth: number = 0;
+  private panelHeight: number = 0;
+  // private panelRadius: number = 64; // No longer needed
+
   constructor(
-    screenWidth: number, 
-    screenHeight: number, 
-    eventBus: EventBus, 
-    powerUpManager: PowerUpManager // <-- Add powerUpManager parameter
+    app: PIXI.Application, // Pass PIXI app instance
+    eventBus: EventBus,
+    powerUpManager: PowerUpManager
   ) {
     super();
-    this.eventBus = eventBus; // Store EventBus
-    this.powerUpManager = powerUpManager; // <-- Store PowerUpManager
-    console.log('[TransitionScreen Constructor] PowerUpManager received:', this.powerUpManager); // DEBUG LOG
+    this.app = app;
+    this.eventBus = eventBus;
+    this.powerUpManager = powerUpManager;
+    console.log('[TransitionScreen Constructor] PowerUpManager received:', this.powerUpManager);
 
-    // Make it interactive to block clicks on elements behind it
     this.interactive = true;
-    this.eventMode = 'static'; // Use 'static' for optimized hit testing
-    // Set a high zIndex to ensure it appears on top
-    this.zIndex = RenderLayer.UI_FOREGROUND; // Assuming RenderLayer is available or use a high number
+    this.eventMode = 'static';
+    this.zIndex = RenderLayer.UI_FOREGROUND;
 
-    // Semi-transparent background
-    this.background = new PIXI.Graphics()
-      .rect(0, 0, screenWidth, screenHeight)
-      .fill({ color: 0x000000, alpha: 0.7 });
-    this.addChild(this.background);
+    // Create Panel Background - Draw/Position later in show/resize
+    this.panelBackground = new PIXI.Graphics();
+    this.addChild(this.panelBackground);
 
-    // Message Text
+    // Message Text Styling
     this.messageText = new Text({ 
       text: '', 
       style: {
-        fontFamily: 'Arial', // TODO: Use a themed font?
-        fontSize: 48,
-        fill: 0xffffff,
+        fontFamily: 'Grandstander',
+        fontSize: 64, // Keep size 64
+        fontWeight: 'bold',
+        fill: 0x114257, // Main text color
         align: 'center',
         wordWrap: true,
-        wordWrapWidth: screenWidth * 0.8
+        wordWrapWidth: 1 // Placeholder, will be set in show/resize
       }
     });
     this.messageText.anchor.set(0.5);
-    this.messageText.position.set(screenWidth / 2, screenHeight / 2);
     this.addChild(this.messageText);
 
-    // Power-up Text Display (initially hidden or empty)
-    this.powerupTextDisplay = new Text({ 
-      text: '', 
+    // Get Ready Text Styling
+    this.getReadyText = new Text({
+      text: 'Get ready!', // Static text
       style: {
-        fontFamily: 'Arial', 
-        fontSize: 36, 
-        fill: 0xFFFF00, // Yellow color for emphasis
-        align: 'center' 
+        fontFamily: 'Grandstander',
+        fontSize: 42, // Size 42
+        fontWeight: 'normal',
+        fill: 0x114257, // Same color as main message
+        align: 'center'
+      }
+    });
+    this.getReadyText.anchor.set(0.5);
+    this.addChild(this.getReadyText);
+
+    // Power-up Text Display
+    this.powerupTextDisplay = new Text({
+      text: '',
+      style: {
+        fontFamily: 'Grandstander',
+        fontSize: 42,
+        fill: 0x059669, // Keep distinct color for power-up
+        align: 'center'
       }
     });
     this.powerupTextDisplay.anchor.set(0.5);
-    // Position it below the main message
-    this.powerupTextDisplay.position.set(screenWidth / 2, screenHeight / 2 + 60);
-    this.powerupTextDisplay.visible = false; // Start hidden
+    this.powerupTextDisplay.visible = false;
     this.addChild(this.powerupTextDisplay);
 
-    // Initially hidden
     this.visible = false;
+  }
+
+  private _updatePanelDimensions(): void {
+    // Make it full screen
+    this.panelWidth = this.app.screen.width;
+    this.panelHeight = this.app.screen.height;
+  }
+
+  private _drawPanelBackground(): void {
+    this.panelBackground.clear()
+       // Use rect for full screen, no radius
+       .rect(0, 0, this.panelWidth, this.panelHeight)
+       .fill({ color: 0xe8f8ff, alpha: 0.95 }); // Slightly less transparent
+  }
+
+  private _centerPanel(): void {
+      // Position at top-left for full screen
+      this.panelBackground.x = 0;
+      this.panelBackground.y = 0;
+  }
+
+  private _centerMessageText(): void {
+      // Position main message higher
+      this.messageText.style.wordWrapWidth = this.panelWidth * 0.9;
+      this.messageText.position.set(this.app.screen.width / 2, this.app.screen.height / 2 - 80); // Adjusted Y
+  }
+
+  private _centerGetReadyText(): void {
+      // Position "Get ready!" below the main message
+      this.getReadyText.position.set(
+          this.app.screen.width / 2,
+          this.messageText.y + this.messageText.height / 2 + 30 // Add padding
+      );
+  }
+
+  private _centerPowerupText(): void {
+      // Position power-up text below "Get ready!" text
+      this.powerupTextDisplay.position.set(
+          this.app.screen.width / 2,
+          this.getReadyText.y + this.getReadyText.height / 2 + 50 // Add padding
+      );
   }
 
   /**
@@ -108,14 +163,29 @@ export class TransitionScreen extends PIXI.Container {
   public async show(config: TransitionScreenConfig): Promise<void> {
     console.log(`[TransitionScreen] show() called. Config:`, config);
     this.currentConfig = config;
+
+    // *** Calculate dimensions and position elements HERE ***
+    this._updatePanelDimensions();
+    this._drawPanelBackground();
+    this._centerPanel();
+    this._centerMessageText();
+    this._centerGetReadyText(); // Position the new text
+    this._centerPowerupText();
+    // ****************************************************
+
     this.messageText.text = config.message || '';
-    this.powerupTextDisplay.text = ''; // Reset power-up text
-    this.powerupTextDisplay.visible = false; // Ensure hidden initially
+    // wordWrapWidth is set in _centerMessageText
+
+    // Make "Get ready!" visible (it's always the same text)
+    this.getReadyText.visible = true;
+
+    this.powerupTextDisplay.text = '';
+    this.powerupTextDisplay.visible = false;
     this.visible = true;
     this.alpha = 1;
-    this.finalSelectedPowerupId = null; // Reset selection
+    this.finalSelectedPowerupId = null;
     this.isCyclingPowerups = false;
-    this.currentSelectablePowerups = []; // Reset selectable list
+    this.currentSelectablePowerups = [];
     if (this.cycleIntervalId) {
         clearInterval(this.cycleIntervalId);
         this.cycleIntervalId = null;
@@ -123,12 +193,10 @@ export class TransitionScreen extends PIXI.Container {
 
     // Start power-up roll if requested
     if (config.triggerPowerupRoll) {
-        // DEBUG LOG before accessing powerUpManager
         console.log('[TransitionScreen show()] Checking this.powerUpManager before getSelectablePowerups:', this.powerUpManager);
-        // Get selectable power-ups from the manager
-        this.currentSelectablePowerups = this.powerUpManager.getSelectablePowerups(); 
-        console.log(`[TransitionScreen] Got ${this.currentSelectablePowerups.length} selectable powerups from manager.`); // DEBUG
-        
+        this.currentSelectablePowerups = this.powerUpManager.getSelectablePowerups();
+        console.log(`[TransitionScreen] Got ${this.currentSelectablePowerups.length} selectable powerups from manager.`);
+
         if (this.currentSelectablePowerups.length > 0) {
             this.startPowerupCycle();
         } else {
@@ -139,19 +207,19 @@ export class TransitionScreen extends PIXI.Container {
     // Handle auto-hide logic
     if (config.autoHide && config.duration) {
       console.log(`[TransitionScreen] show(): Starting auto-hide timer for ${config.duration}ms`);
-      // Return a promise that resolves after the duration
       return new Promise(resolve => {
-        setTimeout(() => {
+        // Use window.setTimeout for browser compatibility
+        this.timeoutId = window.setTimeout(() => {
           console.log(`[TransitionScreen] show(): Auto-hide timer finished. Calling hide().`);
-          this.hide(); // Hide the screen automatically
-          resolve(); // Resolve the promise
+          this.hide();
+          resolve();
+          this.timeoutId = null; // Clear timeout ID after execution
         }, config.duration);
       });
     } else {
       console.log(`[TransitionScreen] show(): No auto-hide. Storing manual resolve.`);
-      // If not auto-hiding, return a promise that resolves ONLY when hide() is called manually.
       return new Promise(resolve => {
-        this._manualHideResolve = resolve; // Store the resolve function
+        this._manualHideResolve = resolve;
       });
     }
   }
@@ -171,14 +239,17 @@ export class TransitionScreen extends PIXI.Container {
   public hide(): void {
     console.log(`[TransitionScreen] hide() called. Current visibility: ${this.visible}`);
     if (this.visible) {
-      // --- Power-up Selection Logic --- START ---
-      if (this.isCyclingPowerups) {
-          // If still cycling when hide is called, stop it immediately and select
-          console.log("[TransitionScreen] hide(): Cycling was active, stopping and selecting power-up.");
-          this.stopPowerupCycle(true); // Force immediate stop and selection
+      // Stop timers/intervals first
+      if (this.timeoutId) {
+        clearTimeout(this.timeoutId);
+        this.timeoutId = null;
       }
-      
-      // Emit event if a power-up was selected *before* setting visible = false
+      if (this.isCyclingPowerups) {
+          console.log("[TransitionScreen] hide(): Cycling was active, stopping and selecting power-up.");
+          this.stopPowerupCycle(true);
+      }
+
+      // Emit event if a power-up was selected *before* hiding
       if (this.finalSelectedPowerupId) {
           console.log(`[TransitionScreen] hide(): Emitting POWERUP_SELECTED (${this.finalSelectedPowerupId})`);
           const payload: TransitionPowerupSelectedPayload = {
@@ -188,16 +259,14 @@ export class TransitionScreen extends PIXI.Container {
           this.eventBus.emit(TRANSITION_EVENTS.POWERUP_SELECTED, payload);
           this.finalSelectedPowerupId = null; // Clear after emitting
       }
-      // --- Power-up Selection Logic --- END ---
 
       this.visible = false;
       console.log(`[TransitionScreen] hide(): Set visible = false.`);
 
-      // If a manual resolve function exists (from a non-autoHide show), call it
       if (this._manualHideResolve) {
         console.log(`[TransitionScreen] hide(): Calling stored manualHideResolve().`);
         this._manualHideResolve();
-        this._manualHideResolve = null; // Clear it after use
+        this._manualHideResolve = null;
       }
     } else {
       console.log(`[TransitionScreen] hide(): Already hidden. Doing nothing.`);
@@ -216,21 +285,14 @@ export class TransitionScreen extends PIXI.Container {
 
   /**
    * Adjusts layout when the screen resizes.
-   * @param screenWidth - New screen width.
-   * @param screenHeight - New screen height.
    */
-  public onResize(screenWidth: number, screenHeight: number): void {
-    // Resize background
-    this.background.clear()
-      .rect(0, 0, screenWidth, screenHeight)
-      .fill({ color: 0x000000, alpha: 0.7 });
-
-    // Reposition and resize message text
-    this.messageText.style.wordWrapWidth = screenWidth * 0.8;
-    this.messageText.position.set(screenWidth / 2, screenHeight / 2);
-    
-    // TODO: Reposition other elements (spinner, wheel placeholder) if added
-    this.powerupTextDisplay.position.set(screenWidth / 2, screenHeight / 2 + 60);
+  public onResize(): void { // Now doesn't need parameters
+    this._updatePanelDimensions();
+    this._drawPanelBackground();
+    this._centerPanel();
+    this._centerMessageText();
+    this._centerGetReadyText(); // Also reposition this text
+    this._centerPowerupText();
   }
 
   /**
@@ -309,6 +371,8 @@ export class TransitionScreen extends PIXI.Container {
         clearInterval(this.cycleIntervalId);
         this.cycleIntervalId = null;
     }
+    // Destroy the new text element
+    this.getReadyText.destroy();
     super.destroy(options);
   }
 }

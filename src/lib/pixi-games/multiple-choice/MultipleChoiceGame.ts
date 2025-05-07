@@ -1,15 +1,15 @@
-import * as PIXI from 'pixi.js';
 import { BaseGame, BaseGameState, GameState } from '@/lib/pixi-engine/game/BaseGame';
 import { PixiEngineManagers } from '@/lib/pixi-engine/core/PixiEngine';
 import { GameConfig } from '@/lib/pixi-engine/config/GameConfig';
 import { GAME_STATE_EVENTS, TIMER_EVENTS, TimerEventPayload, GAME_EVENTS, AnswerSelectedPayload, TransitionPowerupSelectedPayload } from '@/lib/pixi-engine/core/EventTypes';
 import { TimerType } from '@/lib/pixi-engine/game/TimerManager';
-import { QuestionScene } from './scenes/QuestionSceneV2';
-import { Button } from '@pixi/ui';
 import { GameSetupData as MultipleChoiceGameConfig } from '@/types/gameTypes';
 import { QuestionData } from '@/types';
 import { GifAsset } from 'pixi.js/gif';
-import { QuestionSequencer } from '@/lib/pixi-engine/game/QuestionSequencer';
+import { MultipleChoiceDataManager } from './managers/MultipleChoiceDataManager';
+import { MultipleChoiceUIManager, AnswerOptionUIData } from './managers/MultipleChoiceUIManager';
+import { GameBackgroundManager } from './managers/GameBackgroundManager';
+import { MultipleChoiceLayoutManager } from './managers/MultipleChoiceLayoutManager';
 
 async function ensureFontIsLoaded(fontFamily: string, descriptor: string = '28px'): Promise<void> {
     const fontCheckString = `${descriptor} "${fontFamily}"`;
@@ -44,13 +44,11 @@ interface MultipleChoiceGameState extends BaseGameState {
  * and tracks player/team scores based on correct answers.
  */
 export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
-    private questionsData: QuestionData[] = [];
-    private questionScene?: QuestionScene;
-    private _questionSequencer?: QuestionSequencer;
-    private answerButtons: Button[] = [];
-    private preloadedMediaUrls: string[] = [];
+    private dataManager!: MultipleChoiceDataManager;
+    private uiManager!: MultipleChoiceUIManager;
+    private backgroundManager!: GameBackgroundManager;
+    private layoutManager!: MultipleChoiceLayoutManager;
     private readonly QUESTION_TIMER_ID = 'multipleChoiceQuestionTimer';
-    private timerDisplay?: PIXI.Text;
     
     constructor(config: GameConfig, managers: PixiEngineManagers) {
         super(config, managers);
@@ -93,9 +91,41 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             await this.showTransition({ type: 'loading', message: 'Getting Ready...', autoHide: false });
             console.log("[MultipleChoiceGame] initImplementation: AFTER await showTransition (loading) - Screen is visible.");
 
-            // Start loading game-specific data (questions, media links) and get its promise
-            console.log("[MultipleChoiceGame] initImplementation: Starting game data load (_loadGameData)..."); 
-            const gameDataPromise = this._loadGameData();
+            // Initialize Layout Manager first (it has no dependencies)
+            const { width, height } = this.pixiApp.getScreenSize();
+            this.layoutManager = new MultipleChoiceLayoutManager(width, height);
+            console.log("[MultipleChoiceGame] Layout Manager initialized with screen size:", width, "x", height);
+
+            // --- Instantiate and Load Data Manager ---
+            console.log("[MultipleChoiceGame] Config check before DataManager:", { 
+                quizId: this.config?.quizId, 
+                questionHandling: this.config?.questionHandling,
+                assetLoaderExists: !!this.assetLoader 
+            }); // Log values being passed
+
+            if (!this.config.questionHandling) {
+                throw new Error("Question handling configuration is missing in GameConfig.");
+            }
+            if (!this.config.quizId) { // Add explicit check here too
+                throw new Error("Quiz ID is missing in GameConfig.");
+            }
+
+            console.log("[MultipleChoiceGame] Attempting to instantiate DataManager...");
+            this.dataManager = new MultipleChoiceDataManager(
+                this.config.quizId, 
+                this.config.questionHandling,
+                this.assetLoader 
+            );
+            console.log("[MultipleChoiceGame] DataManager instantiated:", this.dataManager ? 'Success' : 'FAILED'); // Check if assigned
+
+            // Check if it's defined RIGHT BEFORE using it
+            if (!this.dataManager) {
+                 throw new Error("[MultipleChoiceGame] CRITICAL ERROR: this.dataManager is still undefined after instantiation attempt!");
+            }
+
+            console.log("[MultipleChoiceGame] Attempting to call dataManager.loadData()...");
+            const gameDataPromise = this.dataManager.loadData(); // Line 96 (approx) - Error source
+            // --- End Data Manager Init ---
 
             // Wait for both engine assets AND game data to load concurrently
             console.log("[MultipleChoiceGame] initImplementation: Awaiting Promise.all for engine assets and game data...");
@@ -111,29 +141,57 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             console.log("[MultipleChoiceGame] initImplementation: Ensuring font loaded...");
             await ensureFontIsLoaded('Grandstander');
             console.log("[MultipleChoiceGame] initImplementation: Setting up UI...");
-            this._setupUI();
-            console.log("[MultipleChoiceGame] initImplementation: Binding game events...");
-            this._bindGameEvents();
 
-            if (this.questionsData.length === 0) {
-                console.error("No questions loaded after waiting for data.");
-                throw new Error("No questions loaded.");
-            }
-
-            // Initialize Question Sequencer
-            if (!this.config.questionHandling) {
-                throw new Error("Question handling configuration is missing in GameConfig.");
-            }
-            this._questionSequencer = new QuestionSequencer(
-                this.questionsData, 
-                this.config.teams.length, 
-                this.config.questionHandling
+            // --- Instantiate Background Manager ---
+            console.log("[MultipleChoiceGame] Instantiating GameBackgroundManager...");
+            this.backgroundManager = new GameBackgroundManager(
+                this.pixiApp,
+                this.themeConfig, // Pass the full themeConfig (PixiThemeConfig type)
+                this.eventBus
             );
+            // Add its view BEHIND everything else (at index 0)
+            this.view.addChildAt(this.backgroundManager.getView(), 0);
+            console.log("[MultipleChoiceGame] GameBackgroundManager instantiated and view added.");
+            // --- End Background Manager Init ---
+
+            // --- Instantiate UI Manager ---
+            console.log("[MultipleChoiceGame] Instantiating UIManager...");
+            // Define the gameRef object with necessary callbacks/getters
+             const gameRefForUIManager = {
+                 handleAnswerSelected: this._handleAnswerSelected.bind(this),
+                 isPowerUpActive: this.isPowerUpActive.bind(this), // Pass BaseGame method
+                 // TODO: Refine how power-up deactivation is handled. Need instance ID.
+                 deactivatePowerUpInstance: (instanceId: string) => {
+                     console.warn(`[GameRef] Deactivate power-up instance ${instanceId} - Needs implementation in BaseGame/PowerUpManager`);
+                     this.powerUpManager.deactivatePowerUp(instanceId); // Assuming BaseGame has powerUpManager
+                 },
+                 getPowerUpTargetId: () => this.getState()?.activeTeam,
+                 powerUpManager: this.powerUpManager
+             };
+            this.uiManager = new MultipleChoiceUIManager(
+                this.pixiApp,
+                this.eventBus,
+                this.assetLoader,
+                this.themeConfig.pixiConfig, // Pass the Pixi-specific theme part
+                gameRefForUIManager, // Pass the callback reference object
+                this.layoutManager // Pass the layout manager instance
+            );
+            // Add the UI Manager's view ON TOP of the background
+            this.view.addChild(this.uiManager.getView());
+             // Add the timer container ON TOP
+             this.view.addChild(this.uiManager.getTimerContainer());
+            console.log("[MultipleChoiceGame] UIManager instantiated and view added.");
+            // --- End UI Manager Init ---
+
+            this.dataManager.initializeSequencer(this.config.teams.length);
 
             // Show the first question using the sequencer
             console.log("[MultipleChoiceGame] initImplementation: Calling _showQuestion() for first question...");
             this._showQuestion();
             console.log("[MultipleChoiceGame] initImplementation: AFTER _showQuestion() for first question.");
+
+            // Bind game-specific events after UI and data are ready
+            this._bindGameEvents();
 
             this.setState({ phase: 'playing' }); 
             
@@ -146,45 +204,37 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             this.hideTransition(); 
             this.setState({ hasTriggeredGameOver: true, phase: 'gameOver' });
             this._unbindGameEvents();
+            // Ensure UIManager is destroyed if init fails after its creation
+            this.uiManager?.destroy();
+            this.backgroundManager?.destroy();
             throw error; // Re-throw error after cleanup attempt
         }
-    }
-
-    /**
-     * Loads game data including questions from API
-     */
-    private async _loadGameData(): Promise<void> {
-        await this._loadQuestionData();
-        await this._preloadQuestionMedia(this.questionsData);
-    }
-
-    /**
-     * Sets up UI elements including scene and timer display
-     */
-    private _setupUI(): void {
-        this._setupInitialScene();
-        this._setupTimerDisplay();
     }
 
     /**
      * Binds event listeners for game events
      */
     private _bindGameEvents(): void {
-        console.log("[MultipleChoiceGame] _bindGameEvents: START Registering listeners..."); 
+        console.log("[MultipleChoiceGame] _bindGameEvents: START Registering listeners...");
         // Explicitly bind 'this' context to the handler functions
         this.registerEventListener(TIMER_EVENTS.TIMER_COMPLETED, this._handleTimerComplete.bind(this));
-        this.registerEventListener(TIMER_EVENTS.TIMER_TICK, this._handleTimerTick.bind(this));
-        console.log("[MultipleChoiceGame] _bindGameEvents: END Registering listeners."); 
+        // --- Add Pause/Resume Listeners ---
+        this.registerEventListener(GAME_STATE_EVENTS.GAME_PAUSED, this._handleGamePaused.bind(this));
+        this.registerEventListener(GAME_STATE_EVENTS.GAME_RESUMED, this._handleGameResumed.bind(this));
+        // --- End Add Listeners ---
+        console.log("[MultipleChoiceGame] _bindGameEvents: END Registering listeners.");
     }
 
     /**
      * Unbinds all event listeners
      */
     private _unbindGameEvents(): void {
-        // Also use bind when unregistering to ensure the correct listener reference is removed
         this.unregisterEventListener(TIMER_EVENTS.TIMER_COMPLETED, this._handleTimerComplete.bind(this));
-        this.unregisterEventListener(TIMER_EVENTS.TIMER_TICK, this._handleTimerTick.bind(this));
-        }
+        // --- Unregister Pause/Resume Listeners ---
+        this.unregisterEventListener(GAME_STATE_EVENTS.GAME_PAUSED, this._handleGamePaused.bind(this));
+        this.unregisterEventListener(GAME_STATE_EVENTS.GAME_RESUMED, this._handleGameResumed.bind(this));
+        // --- End Unregister ---
+    }
 
     /**
      * Start gameplay after initialization
@@ -229,364 +279,113 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
     protected endImplementation(): void {
         console.log(`${this.constructor.name}: End implementation`);
         
-        // Stop any active timers
-        this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
-        
+        // --- Add Guard for Timer Removal ---
+        if (this.timerManager && this.timerManager.getTimer(this.QUESTION_TIMER_ID)) {
+            this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
+            console.log(`[MultipleChoiceGame.endImplementation] Timer ${this.QUESTION_TIMER_ID} removed.`);
+        } else {
+            console.warn(`[MultipleChoiceGame.endImplementation] Timer '${this.QUESTION_TIMER_ID}' not found when attempting removal.`);
+        }
+        // --- End Guard ---
+
         // Disable interaction with answer buttons
-        this._setAnswerButtonsEnabled(false);
+        this.uiManager?.setAnswerButtonsEnabled(false);
         
         // Any other end-game logic (could show final scores, etc.)
-        if (this.questionScene) {
-            this.questionScene.clearAnswerOptions();
-        }
+        this.uiManager?.clearQuestionState();
     }
 
     /**
      * Clean up all resources during game destruction
      */
     protected destroyImplementation(): void {
+        console.log(`[!!! MultipleChoiceGame !!!] Entering destroyImplementation`);
         console.log(`${this.constructor.name}: Destroying...`);
-
-        // Remove event listeners (should be done by BaseGame's unregisterAllEventListeners)
-        // But we'll explicitly unbind our custom ones
         this._unbindGameEvents();
 
-        // Remove any active timers
-        this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
+         // --- Add Guard for Timer Removal ---
+         if (this.timerManager && this.timerManager.getTimer(this.QUESTION_TIMER_ID)) {
+             this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
+             console.log(`[MultipleChoiceGame.destroyImplementation] Timer ${this.QUESTION_TIMER_ID} removed.`);
+         } else {
+            // This might be expected if destroy is called due to init failure
+            console.log(`[MultipleChoiceGame.destroyImplementation] Timer '${this.QUESTION_TIMER_ID}' not found during destroy (might be expected).`);
+         }
+         // --- End Guard ---
 
-        // Destroy UI elements
-        if (this.questionScene) {
-            this.questionScene.destroy({ children: true });
-            this.questionScene = undefined;
-        }
+        // Check if uiManager exists right before calling destroy
+        console.log(`[!!! MultipleChoiceGame !!!] uiManager exists?`, !!this.uiManager);
+        // Delegate UI destruction to the UI Manager
+        this.uiManager?.destroy();
+        this.backgroundManager?.destroy();
+        // @ts-expect-error - uiManager is intentionally set to null after destruction for cleanup.
+        this.uiManager = null;
 
-        if (this.timerDisplay) {
-            this.timerDisplay.destroy();
-            this.timerDisplay = undefined;
-        }
-
-        // Clear all children from the main view
-        this.view.removeChildren();
+        this.view.removeChildren(); // Clear game's main view
         console.log(`${this.constructor.name}: Destroy complete.`);
     }
 
-    private _positionTimerDisplay(): void {
-        if (!this.timerDisplay) return;
-        const screenWidth = 800;
-        const screenHeight = 600;
-        this.timerDisplay.x = screenWidth * 0.85;
-        this.timerDisplay.y = screenHeight * 0.1;
-        this.timerDisplay.anchor.set(0.5, 0);
-    }
-
-    private async _loadQuestionData(): Promise<void> {
-        const specificConfig = this.config as unknown as MultipleChoiceGameConfig;
-        if (!specificConfig.quizId) {
-            console.error("Cannot load questions: quizId is missing in config.");
-            this.questionsData = [];
-            return;
-        }
-        const apiUrl = `/api/quizzes/${specificConfig.quizId}`;
-        try {
-            const response = await fetch(apiUrl, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-
-             if (!response.ok) {
-                const errorText = await response.text();
-                if (response.status === 404) {
-                   console.error(`Quiz not found (404) for ID: ${specificConfig.quizId}`);
-                   throw new Error(`Quiz not found for ID: ${specificConfig.quizId}`);
-                }
-                throw new Error(`API Error fetching quiz: ${response.status} ${response.statusText} - ${errorText}`);
-             }
-
-             const quizData = await response.json();
-             console.log("Quiz data recieved from API:", quizData);
-             const potentialQuestions = quizData?.data?.questions ?? quizData?.questions;
-
-             if (!potentialQuestions || !Array.isArray(potentialQuestions)) {
-                console.error("Invalid quiz data format received from API (expected object with 'questions' array, possibly nested in 'data'):", quizData);
-                throw new Error("Invalid quiz data format received.");
-             }
-
-             this.questionsData = potentialQuestions as QuestionData[];
-
-         } catch (error) {
-            console.error("Failed to load question data:", error);
-            this.questionsData = [];
-            throw new Error("Failed to load critical question data."); 
-        }
-    }
-
-    private async _preloadQuestionMedia(questions: QuestionData[]): Promise<void> {
-        const imageUrls = questions.map(q => q.imageUrl).filter((url): url is string =>
-            typeof url === 'string' && url.length > 0);
-        const uniqueImageUrls = Array.from(new Set(imageUrls));
-
-        this.preloadedMediaUrls = uniqueImageUrls;
-
-        console.log(`Preloading ${uniqueImageUrls.length} unique question media assets...`);
-
-        if (uniqueImageUrls.length === 0) {
-             console.log("No unique media URLs to preload.");
-             return;
-         }
-
-        try {
-             console.log("Starting PIXI.Assets.load for:", uniqueImageUrls);
-             await PIXI.Assets.load(uniqueImageUrls);
-             console.log("Question media preloaded successfully via PIXI.Assets.load.");
-
-         } catch (error) {
-             console.error("Error during PIXI.Assets.load for question media:", error);
-             uniqueImageUrls.forEach(url => PIXI.Assets.unload(url).catch(unloadErr => console.warn(`Failed to unload ${url} after load error`, unloadErr)));
-         }
-    }
-
-    private _setupInitialScene(): void {
-        // Create scene, passing necessary managers
-        if (!this.questionScene) {
-            // Pass the eventBus (and other managers if needed) from the game to the scene
-            this.questionScene = new QuestionScene(this.pixiApp, this.eventBus, this.assetLoader);
-            // Add the scene instance itself (which is a Container) to the game's view
-            this.view.addChild(this.questionScene);
-            console.log("QuestionScene created and added to the game view.");
-        } else {
-             console.log("QuestionScene already exists.");
-        }
-    }
-
     /**
-     * Shows the next question from the sequencer.
-     * Handles game over if the sequence is finished.
+     * Shows the next question using Data and UI Managers.
      */
     private _showQuestion(): void {
-        if (!this._questionSequencer) {
-            console.error("Cannot show question: QuestionSequencer not initialized.");
+        if (!this.dataManager || !this.uiManager) {
+            console.error("Cannot show question: Managers not initialized.");
             this._triggerGameOver();
             return;
         }
 
-        // Get next question data from sequencer
-        const question = this._questionSequencer.getNextQuestion();
-
-        // Check if sequence is finished
+        const question = this.dataManager.getNextQuestion();
         if (!question) {
-            console.log("[MultipleChoiceGame] _showQuestion: Sequencer finished. Triggering game over.");
+            console.log("[MultipleChoiceGame] _showQuestion: DataManager indicates sequence finished.");
             if (!this.getState().hasTriggeredGameOver) {
                 this._triggerGameOver();
             }
             return;
         }
-
-        if (!this.questionScene) {
-            console.error("Cannot show question: QuestionScene not ready.");
-            if (!this.getState().hasTriggeredGameOver) { 
-                this._triggerGameOver(); 
-            }
-            return;
-        }
-
-        // Timer removal should happen *before* showing the question, 
-        // perhaps in the handler that *calls* _showQuestion (like _handleAnswerSelected)
-        // Or ensure startTimer does not create duplicates.
-        // For now, we remove the redundant call here as discussed.
-        // this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
-
-        // Clear previous question state
-        this._clearQuestionState();
         
-        // Update question content
-        this._updateQuestionContent(question);
-        
-        // Create answer options
+        // UI Manager handles clearing old state
+        this.uiManager.clearQuestionState();
+
+        // UI Manager handles displaying the new question content
+        this.uiManager.updateQuestionContent(question);
+
+        // Game logic creates the answer options data structure
         const generatedOptions = this._createAnswerOptions(question);
-        
-        // Setup UI for answer options
-        this._setupAnswerButtons(question, generatedOptions);
-        
-        // Start the timer for this question
-        this._startQuestionTimer();
-        
-        // Update state with the actual index from the sequencer (optional, but good for debugging/state)
+
+        // UI Manager handles creating and displaying buttons
+        this.uiManager.setupAnswerButtons(question.id, generatedOptions);
+
+        // Start the timer (Engine Manager)
+        this._startQuestionTimer(); // This also updates the UI via UIManager's listener
+
+        // Update state
         this.setState({ 
-            currentQuestionIndex: this._questionSequencer.getCurrentProgressIndex() - 1 // Index of the *just shown* question
+            currentQuestionIndex: this.dataManager.getCurrentProgressIndex() - 1 
         });
-        console.log(`[MultipleChoiceGame] Showing question index ${this.getState().currentQuestionIndex} (Sequencer progress: ${this._questionSequencer.getCurrentProgressIndex()}/${this._questionSequencer.getTotalQuestionsToAsk()})`);
+        console.log(`[MultipleChoiceGame] Showing question index ${this.getState().currentQuestionIndex} ...`);
     }
 
-    private _clearQuestionState(): void {
-        if (this.questionScene) {
-        this.questionScene.clearAnswerOptions();
-        this.answerButtons = [];
-        }
-    }
-    
-    private _updateQuestionContent(question: QuestionData): void {
-        if (!this.questionScene) return;
-
-        console.log("MultipleChoiceGame.ts: Updating question content");
-        this.questionScene.updateQuestion(question.question, question.imageUrl);
-    }
-    
-    private _createAnswerOptions(question: QuestionData): Array<{
-        id: string;
-        text: string;
-        isCorrect: boolean;
-        length: number;
-    }> {
+    private _createAnswerOptions(question: QuestionData): AnswerOptionUIData[] {
         return ((question.answers as string[]) ?? []).map((answerText: string, i: number) => {
             const optionId = `${question.id}-opt-${i}`;
             const isCorrect = answerText === question.correctAnswer;
-            return {
-                id: optionId,
-                text: answerText,
-                isCorrect: isCorrect,
-                length: answerText.length
-            };
+            return { id: optionId, text: answerText, isCorrect: isCorrect, length: answerText.length };
         });
-    }
-    
-    /**
-     * Sets up answer buttons for the current question
-     */
-    private _setupAnswerButtons(
-        question: QuestionData,
-        generatedOptions: Array<{ id: string; text: string; isCorrect: boolean; length: number }>
-    ): void {
-        if (!this.questionScene) return;
-        
-        // --- 50/50 Power-up Logic --- START ---
-        const currentTeamId = this.config.teams[this.getState().activeTeamIndex]?.id;
-        let optionsToDisplay = [...generatedOptions]; // Start with all options
-
-        console.log(`[MultipleChoiceGame._setupAnswerButtons] Checking fifty_fifty for team: ${currentTeamId}`); // DEBUG
-        const fiftyFiftyActive = currentTeamId ? this.isPowerUpActive('fifty_fifty', currentTeamId) : false;
-        console.log(`[MultipleChoiceGame._setupAnswerButtons] isPowerUpActive('fifty_fifty') result: ${fiftyFiftyActive}`); // DEBUG
-
-        if (fiftyFiftyActive) {
-            console.log(`[MultipleChoiceGame] 50/50 power-up ACTIVE for team ${currentTeamId}. Applying effect.`);
-            const correctOption = optionsToDisplay.find(opt => opt.isCorrect);
-            const incorrectOptions = optionsToDisplay.filter(opt => !opt.isCorrect);
-
-            if (correctOption && incorrectOptions.length > 1) {
-                // Shuffle incorrect options
-                for (let i = incorrectOptions.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [incorrectOptions[i], incorrectOptions[j]] = [incorrectOptions[j], incorrectOptions[i]];
-                }
-                // Keep the correct one and one random incorrect one
-                optionsToDisplay = [correctOption, incorrectOptions[0]]; 
-            } else {
-                console.warn("[MultipleChoiceGame] 50/50 active, but couldn't apply effect (not enough incorrect options?). Displaying all.");
-            }
-            
-            // Deactivate immediately after applying (assuming single use)
-            const activePowerups = this.powerUpManager.getActivePowerupsForTarget(currentTeamId);
-            const fiftyFiftyInstance = activePowerups.find(p => p.id === 'fifty_fifty');
-            if (fiftyFiftyInstance) {
-                console.log(`[MultipleChoiceGame] Deactivating 50/50 instance: ${fiftyFiftyInstance.instanceId}`);
-                this.powerUpManager.deactivatePowerUp(fiftyFiftyInstance.instanceId);
-            }
-        }
-        // --- 50/50 Power-up Logic --- END ---
-
-        this.questionScene.clearAnswerOptions();
-        this.answerButtons = [];
-
-        const optionsContainer = this.questionScene.getAnswerOptionContainer();
-        const screenWidth = this.pixiApp.getScreenSize().width;
-        const screenHeight = this.pixiApp.getScreenSize().height;
-        const buttonWidth = screenWidth * 0.4 - 20;
-        const buttonHeight = 90;
-        const gap = 10;
-        const columns = 2;
-        const totalWidth = columns * buttonWidth + (columns - 1) * gap;
-
-        // Use the potentially modified optionsToDisplay array
-        optionsToDisplay.forEach((option, i) => {
-            const buttonView = new PIXI.Graphics()
-                .roundRect(0, 0, buttonWidth, buttonHeight, 16)
-                .fill(0xFFFFFF);
-
-            let fontSize = 30;
-            let wordWrap = false;
-            if (option.length > 30) {
-              fontSize = 24;
-              wordWrap = true;              
-            } 
-
-            const buttonText = new PIXI.Text({
-                 text: option.text,
-                 style: { 
-                  fontSize: fontSize, 
-                  fill: 0x333333, 
-                  fontFamily: 'Grandstander', 
-                  wordWrap: wordWrap, 
-                  wordWrapWidth: buttonWidth * 0.8, 
-                  align: 'center'
-                 }
-            });
-            buttonText.anchor.set(0.5);
-            buttonText.x = buttonWidth / 2;
-            buttonText.y = buttonHeight / 2;
-            buttonView.addChild(buttonText);
-
-            // Add an explicit hitArea matching the graphics dimensions
-            buttonView.hitArea = new PIXI.Rectangle(0, 0, buttonWidth, buttonHeight);
-
-            const button = new Button(buttonView);
-
-            // Explicitly set the view interactive (though Button usually does this)
-            button.view.interactive = true; 
-
-            const col = i % columns;
-            const row = Math.floor(i / columns);
-            button.view.x = col * (buttonWidth + gap) - totalWidth / 2 + buttonWidth / 2;
-            button.view.y = row * (buttonHeight + gap);
-
-            // Bind to the current question and option
-            button.onPress.connect(() => {
-                this._handleAnswerSelected(question.id, option.id);
-            });
-            
-            // Setup button interaction effects
-            this._setupButtonInteractionEffects(button);
-
-            optionsContainer.addChild(button.view);
-            this.answerButtons.push(button);
-        });
-
-        optionsContainer.x = (screenWidth / 2) - buttonWidth / 2;
-        optionsContainer.y = screenHeight - optionsContainer.height - 15;
-    }
-    
-    private _setupButtonInteractionEffects(button: Button): void {
-        button.onHover.connect(() => button.view.tint = 0xDDDDDD);
-        button.onOut.connect(() => button.view.tint = 0xFFFFFF);
-        button.onDown.connect(() => button.view.scale.set(0.95));
-        button.onUp.connect(() => button.view.scale.set(1.0));
-        button.onUpOut.connect(() => button.view.scale.set(1.0));
     }
     
     private _startQuestionTimer(): void {
         const specificConfig = this.config as unknown as MultipleChoiceGameConfig;
         let questionDuration = specificConfig.intensityTimeLimit * 1000;
-        const currentTeamId = this.config.teams[this.getState().activeTeamIndex]?.id;
+        const currentTeamId = this.getState().activeTeam;
 
-        // Check for 'time_extension' power-up
-        console.log(`[MultipleChoiceGame._startQuestionTimer] Checking time_extension for team: ${currentTeamId}`); // DEBUG LOG
-        const timeExtensionActive = currentTeamId ? this.isPowerUpActive('time_extension', currentTeamId) : false; // DEBUG LOG HELPER
-        console.log(`[MultipleChoiceGame._startQuestionTimer] isPowerUpActive('time_extension') result: ${timeExtensionActive}`); // DEBUG LOG
-        if (timeExtensionActive) {
-            const definition = this.powerUpManager.getPowerupDefinition('time_extension');
-            const extraTimeMs = (definition?.effectParams?.amount as number || 0) * 1000; 
-            questionDuration += extraTimeMs;
-            console.log(`[MultipleChoiceGame] Time extension active! Adding ${extraTimeMs}ms. New duration: ${questionDuration}ms`); // Existing log
+        if (currentTeamId) {
+             const timeExtensionActive = this.isPowerUpActive('time_extension', currentTeamId);
+             if (timeExtensionActive) {
+                 const definition = this.powerUpManager.getPowerupDefinition('time_extension');
+                 const extraTimeMs = (definition?.effectParams?.amount as number || 0) * 1000;
+                 questionDuration += extraTimeMs;
+             }
         }
 
         this.timerManager.createTimer(this.QUESTION_TIMER_ID, questionDuration, TimerType.COUNTDOWN);
@@ -594,60 +393,57 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
 
         console.log(`Created and started timer ${this.QUESTION_TIMER_ID} for ${questionDuration}ms`);
 
-        if (this.timerDisplay) {
-             this.timerDisplay.text = this._formatTime(questionDuration);
-        }
+        // Update initial display via UIManager
+        this.uiManager?.updateTimerDisplay(questionDuration);
     }
 
     /**
-     * Handles user selection of an answer option
+     * Handles user selection of an answer option. Triggered by UIManager via callback.
      */
     private async _handleAnswerSelected(questionId: string, selectedGeneratedOptionId: string): Promise<void> {
-        console.log(`handleAnswerSelected triggered! questionId: ${questionId}, selectedOptionId: ${selectedGeneratedOptionId}`);
-        // REMOVE TIMER REMOVAL FROM HERE
-        // this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
-
-        if (this.getState().hasTriggeredGameOver) {
+        console.log(`[MultipleChoiceGame] _handleAnswerSelected received: Q:${questionId}, O:${selectedGeneratedOptionId}`);
+        if (!this.dataManager || !this.uiManager) {
+             console.error("_handleAnswerSelected: Managers not ready.");
              return;
-         }
-        this._setAnswerButtonsEnabled(false);
+        }
+        if (this.getState().hasTriggeredGameOver) { return; }
 
-        // Find the selected question and option
-        const question = this.questionsData.find(q => q.id === questionId);
+        // Delegate disabling buttons
+        this.uiManager.setAnswerButtonsEnabled(false);
+
+        const question = this.dataManager.getQuestionById(questionId);
         if (!question) {
-             console.error(`[MultipleChoiceGame] _handleAnswerSelected: Could not find question data for ID ${questionId}`);
-             return; 
+             console.error(`_handleAnswerSelected: Could not find question data ID ${questionId}`);
+             this.uiManager.setAnswerButtonsEnabled(true); // Re-enable if error
+             return;
         }
 
         const generatedOptions = this._createAnswerOptions(question);
         const selectedOption = generatedOptions.find(o => o.id === selectedGeneratedOptionId);
-        if (!selectedOption) return;
-
-        // Process the answer selection (emits event with CURRENT team ID)
-        console.log("[MultipleChoiceGame] _handleAnswerSelected: Processing answer...");
-        this._processAnswerSelection(question, selectedOption, generatedOptions);
-        
-        // Check if sequencer is finished
-        const isSequenceFinished = this._questionSequencer?.isFinished() ?? true; 
-
-        // --- Transition Logic --- 
-        console.log("[MultipleChoiceGame] _handleAnswerSelected: Waiting 1.5s for feedback...");
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Wait for feedback display
-
-        if (this.getState().hasTriggeredGameOver) {
-            console.log("[MultipleChoiceGame] _handleAnswerSelected: Game over detected after feedback delay. Exiting.");
-            return; 
+        if (!selectedOption) {
+             console.error(`_handleAnswerSelected: Could not find selected option ID ${selectedGeneratedOptionId}`);
+             this.uiManager.setAnswerButtonsEnabled(true); // Re-enable if error
+             return;
         }
-        
+
+        // Process the answer (emits events, stops timer, updates score via rules)
+        this._processAnswerSelection(question, selectedOption, generatedOptions);
+
+        const isSequenceFinished = this.dataManager.isSequenceFinished();
+
+        // --- Transition Logic ---
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Feedback delay
+
+        if (this.getState().hasTriggeredGameOver) { return; }
+
         if (isSequenceFinished) {
-            console.log("[MultipleChoiceGame] _handleAnswerSelected: Sequencer finished after this question. Triggering game over.");
             this._triggerGameOver();
         } else {
             // Determine next team 
             const currentTeamIndex = this.getState().activeTeamIndex;
             const nextTeamIndex = (currentTeamIndex + 1) % this.config.teams.length;
             const nextTeam = this.config.teams[nextTeamIndex];
-            const nextTeamId = nextTeam?.id ?? 'unknown'; 
+            const nextTeamId = nextTeam?.id ?? 'unknown';
             const nextTeamName = nextTeam?.name || `Team ${nextTeamIndex + 1}`;
             
             console.log(`[MultipleChoiceGame] _handleAnswerSelected: Current team index: ${currentTeamIndex}, Next team index: ${nextTeamIndex}, Next team ID: ${nextTeamId}`);
@@ -663,11 +459,10 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             console.log(`[MultipleChoiceGame] _handleAnswerSelected: State updated BEFORE transition. New active team index: ${this.getState().activeTeamIndex}, New active team ID: ${this.getState().activeTeam}`); 
             
             // --- Calculate if power-up roll should trigger ---
-            const progressIndex = this._questionSequencer?.getCurrentProgressIndex() ?? 0;
+            const progressIndex = this.dataManager.getCurrentProgressIndex();
             const numTeams = this.config.teams.length;
-            // Trigger roll when the first round is complete (index >= numTeams)
-            // This means the roll starts just before Player 1's second turn.
-            const shouldTriggerRoll = progressIndex >= numTeams;
+            // Trigger roll only AFTER the first round is fully complete (progress index > num teams)
+            const shouldTriggerRoll = progressIndex > numTeams;
             console.log(`[MultipleChoiceGame] _handleAnswerSelected: Checking power-up roll trigger. ProgressIndex: ${progressIndex}, NumTeams: ${numTeams}, ShouldTrigger: ${shouldTriggerRoll}`);
             // --- End calculation ---
 
@@ -677,7 +472,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                 message: `${nextTeamName}'s Turn!`,
                 duration: 3000,
                 autoHide: true,
-                // Pass the updated boolean
+                // Pass the calculated boolean
                 triggerPowerupRoll: shouldTriggerRoll 
             });
             console.log("[MultipleChoiceGame] _handleAnswerSelected: AFTER await showTransition (turn).");
@@ -690,26 +485,31 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             console.log("[MultipleChoiceGame] _handleAnswerSelected: Calling _showQuestion() for next turn...");
             this._showQuestion();
             console.log("[MultipleChoiceGame] _handleAnswerSelected: AFTER _showQuestion() for next turn.");
-            this._setAnswerButtonsEnabled(true);
+            this.uiManager.setAnswerButtonsEnabled(true);
         }
-        // ------------------------
     }
     
     /**
      * Process a user's answer selection
      */
     private _processAnswerSelection(
-        question: QuestionData, 
-        selectedOption: { id: string; text: string; isCorrect: boolean }, 
-        generatedOptions: Array<{ id: string; text: string; isCorrect: boolean; length?: number }>
+        question: QuestionData,
+        selectedOption: AnswerOptionUIData,
+        generatedOptions: AnswerOptionUIData[]
     ): void {
         const isCorrect = !!selectedOption.isCorrect;
-        const currentTeamId = this.config.teams[this.getState().activeTeamIndex]?.id;
+        const currentTeamId = this.getState().activeTeam;
         console.log(`Answer selected: ${selectedOption.id}, Correct: ${isCorrect}, Team: ${currentTeamId}`);
 
-        // Get remaining time BEFORE emitting event and stopping timer
-        const remainingTimeMs = this.timerManager.getTimeRemaining(this.QUESTION_TIMER_ID);
-        console.log(`[MultipleChoiceGame] Remaining time: ${remainingTimeMs}ms`);
+        // --- Add Guard for Timer Check ---
+        let remainingTimeMs = 0; // Default to 0 if timer doesn't exist
+        if (this.timerManager && this.timerManager.getTimer(this.QUESTION_TIMER_ID)) {
+            remainingTimeMs = this.timerManager.getTimeRemaining(this.QUESTION_TIMER_ID);
+            console.log(`[MultipleChoiceGame] Remaining time: ${remainingTimeMs}ms`);
+        } else {
+            console.warn(`[MultipleChoiceGame._processAnswerSelection] Timer '${this.QUESTION_TIMER_ID}' not found when getting remaining time.`);
+        }
+        // --- End Guard ---
         
         // --- DEBUG: Check active powerups for the current team --- START ---
         if (currentTeamId) {
@@ -748,8 +548,8 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         // This is where the score multiplier would be applied.
         // For now, we just include it in the payload. Rules/ScoringManager should handle it.
 
-        // Show visual feedback
-        this._showAnswerFeedback(generatedOptions, selectedOption.id);
+        // Show visual feedback using theme
+        this.uiManager?.showAnswerFeedback(generatedOptions, selectedOption.id);
 
         // Emit event with the ID of the team that just answered AND remaining time
         const payload: AnswerSelectedPayload = {
@@ -757,55 +557,23 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             selectedOptionId: selectedOption.id,
             isCorrect,
             teamId: currentTeamId,
-            remainingTimeMs: remainingTimeMs, // Include remaining time
+            remainingTimeMs: remainingTimeMs,
             scoreMultiplier: scoreMultiplier
         };
-        console.log(`[MultipleChoiceGame._processAnswerSelection] Emitting ANSWER_SELECTED payload:`, payload); // DEBUG LOG
+        console.log(`[MultipleChoiceGame._processAnswerSelection] Emitting ANSWER_SELECTED payload:`, payload);
         this.emitEvent(GAME_EVENTS.ANSWER_SELECTED, payload);
 
-        // STOP/REMOVE the timer AFTER processing and emitting the event
-        this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
-        console.log(`[MultipleChoiceGame] Timer ${this.QUESTION_TIMER_ID} removed.`);
+        // --- Add Guard for Timer Removal ---
+        if (this.timerManager && this.timerManager.getTimer(this.QUESTION_TIMER_ID)) {
+            this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
+            console.log(`[MultipleChoiceGame] Timer ${this.QUESTION_TIMER_ID} removed.`);
+        } else {
+             console.warn(`[MultipleChoiceGame._processAnswerSelection] Timer '${this.QUESTION_TIMER_ID}' not found when attempting removal.`);
+        }
+        // --- End Guard ---
 
-        // Log that the next team calculation is deferred
         console.log(`[MultipleChoiceGame] _processAnswerSelection finished. Next team calculation deferred to handler.`);
     }
-
-    private _showAnswerFeedback(
-        generatedOptions: { id: string; text: string; isCorrect?: boolean }[],
-        selectedOptionId: string | null
-    ): void {
-         this.answerButtons.forEach((button, index) => {
-             if (index >= generatedOptions.length) return;
-             const option = generatedOptions[index];
-             const buttonView = button.view as PIXI.Graphics;
-
-             // Reset appearance first
-             buttonView.tint = 0xFFFFFF;
-             buttonView.alpha = 1.0;
-
-             if (option.isCorrect) {
-                 // Always highlight the correct answer green
-                 buttonView.tint = 0x90EE90;
-             } else {
-                 // If this incorrect option was the one selected
-                 if (option.id === selectedOptionId) {
-                     buttonView.tint = 0xFF8080; // Highlight selected incorrect answer (e.g., light red)
-                 } else {
-                     // Dim unselected incorrect answers
-                 buttonView.tint = 0xE0E0E0;
-                 buttonView.alpha = 0.7;
-                 }
-             }
-         });
-    }
-
-    private _setAnswerButtonsEnabled(enabled: boolean): void {
-         this.answerButtons.forEach(button => {
-             button.enabled = enabled;
-             button.view.alpha = enabled ? 1.0 : 0.6;
-         });
-     }
 
     private _triggerGameOver(): void {
         // Check if already triggered
@@ -827,7 +595,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         });
 
         console.log("Triggering Game Over (Emission/Cleanup)");
-        this._setAnswerButtonsEnabled(false);
+        this.uiManager?.setAnswerButtonsEnabled(false);
 
         // Emit game ended event
         this.emitEvent(GAME_STATE_EVENTS.GAME_ENDED);
@@ -837,10 +605,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         this.end();
 
         // Clear UI
-        if (this.questionScene) {
-            console.log("Clearing question scene content on game over trigger");
-            this.questionScene.clearAnswerOptions();
-        }
+        this.uiManager?.clearQuestionState();
     }
 
     private async _handleTimerComplete(payload: TimerEventPayload): Promise<void> {
@@ -876,7 +641,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         // Check 4: Disable buttons and handle time up visuals/event
         try {
             console.log(`[MultipleChoiceGame] _handleTimerComplete: Calling _setAnswerButtonsEnabled(false)...`); // Added log
-            this._setAnswerButtonsEnabled(false);
+            this.uiManager?.setAnswerButtonsEnabled(false);
             console.log(`[MultipleChoiceGame] _handleTimerComplete: Calling _handleTimeUp...`); // Added log
             this._handleTimeUp(); // This now includes logging inside it
             console.log(`[MultipleChoiceGame] _handleTimerComplete: Returned from _handleTimeUp.`); // Added log
@@ -887,7 +652,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
 
         // Determine if the sequence is finished using the sequencer
         // We check *before* getting the next question in this case
-        const isSequenceFinished = this._questionSequencer?.isFinished() ?? true; 
+        const isSequenceFinished = this.dataManager.isSequenceFinished(); 
         console.log(`[MultipleChoiceGame] _handleTimerComplete: Is sequence finished? ${isSequenceFinished}`);
 
         // --- Transition Logic --- 
@@ -925,11 +690,10 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
              console.log(`[MultipleChoiceGame] _handleTimerComplete: State updated BEFORE transition. New active team index: ${this.getState().activeTeamIndex}, New active team ID: ${this.getState().activeTeam}`); 
 
              // --- Calculate if power-up roll should trigger ---
-             const progressIndex = this._questionSequencer?.getCurrentProgressIndex() ?? 0;
+             const progressIndex = this.dataManager.getCurrentProgressIndex();
              const numTeams = this.config.teams.length;
-             // Trigger roll when the first round is complete (index >= numTeams)
-             // This means the roll starts just before Player 1's second turn.
-             const shouldTriggerRoll = progressIndex >= numTeams;
+             // Trigger roll only AFTER the first round is fully complete (progress index > num teams)
+             const shouldTriggerRoll = progressIndex > numTeams;
              console.log(`[MultipleChoiceGame] _handleTimerComplete: Checking power-up roll trigger. ProgressIndex: ${progressIndex}, NumTeams: ${numTeams}, ShouldTrigger: ${shouldTriggerRoll}`);
              // --- End calculation ---
 
@@ -939,7 +703,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                  message: `${nextTeamName}'s Turn!`, 
                  duration: 3000, 
                  autoHide: true,
-                 // Pass the updated boolean
+                 // Pass the calculated boolean
                  triggerPowerupRoll: shouldTriggerRoll
              });
              console.log("[MultipleChoiceGame] _handleTimerComplete: AFTER await showTransition (turn)."); 
@@ -953,14 +717,21 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
              this._showQuestion();
              console.log("[MultipleChoiceGame] _handleTimerComplete: AFTER _showQuestion() for next turn."); 
 
-             this._setAnswerButtonsEnabled(true);
+             this.uiManager.setAnswerButtonsEnabled(true);
              console.log("[MultipleChoiceGame] _handleTimerComplete: End of method."); 
         }
     }
     
     private _handleTimeUp(): void {
-        const question = this.questionsData[this.getState().currentQuestionIndex];
-        const currentTeamId = this.config.teams[this.getState().activeTeamIndex]?.id;
+        if (!this.dataManager || !this.uiManager) return;
+        // Get current question based on state index
+        const currentQuestionIndex = this.getState().currentQuestionIndex;
+        const allQuestions = this.dataManager.getAllQuestions();
+        const question = currentQuestionIndex >= 0 && currentQuestionIndex < allQuestions.length
+                          ? allQuestions[currentQuestionIndex]
+                          : undefined; // Find question safely
+
+        const currentTeamId = this.getState().activeTeam;
         
         console.log(`[MultipleChoiceGame] _handleTimeUp: Started for Team ID: ${currentTeamId} on Question ID: ${question?.id}`);
         
@@ -989,66 +760,9 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
     }
 
     private _showTimeUpFeedback(question: QuestionData): void {
-        const generatedOptions = (question.answers || []).map((answerText, i) => ({
-            id: `${question.id}-opt-${i}`,
-            text: answerText,
-            isCorrect: answerText === question.correctAnswer
-        }));
-
-        this._showAnswerFeedback(generatedOptions, null);
-    }
-
-    private _setupTimerDisplay(): void {
-        this.timerDisplay = new PIXI.Text({ text: '--:--', style: { fill: 0xffffff, fontSize: 24 }});
-        this._positionTimerDisplay();
-        this.view.addChild(this.timerDisplay);
-    }
-
-    private _handleTimerTick = (payload: TimerEventPayload): void => {
-        if (payload.timerId !== this.QUESTION_TIMER_ID) {
-            return;
-        }
-        if (this.timerDisplay && payload.remaining !== undefined) {
-            this.timerDisplay.text = this._formatTime(payload.remaining);
-        }
-    };
-
-    private _formatTime(ms: number): string {
-        const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    }
-
-    /**
-     * Placeholder method to handle skipping the current question.
-     * Triggering this would require a separate mechanism (button, power-up action).
-     */
-    private _skipCurrentQuestion(): void {
-        console.log("[MultipleChoiceGame] Skipping current question...");
-        
-        // 1. Stop the current timer immediately
-        this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
-        
-        // 2. Disable answer buttons
-        this._setAnswerButtonsEnabled(false);
-        
-        // 3. Optionally emit an event indicating a skip
-        // this.emitGameEvent('questionSkipped', { teamId: this.getState().activeTeam });
-        
-        // 4. Advance the sequencer (might already be handled if _showQuestion is called next)
-        
-        // 5. Trigger the next question logic (similar to end of _handleAnswerSelected/TimerComplete)
-        const isSequenceFinished = this._questionSequencer?.isFinished() ?? true; // Check if this was the last question
-        
-        if (isSequenceFinished) {
-            this._triggerGameOver();
-        } else {
-            // Show next question immediately or after a short delay/transition?
-            // For now, just show the next question directly
-            this._showQuestion(); 
-            this._setAnswerButtonsEnabled(true);
-        }
+        if (!this.uiManager) return;
+        const generatedOptions = this._createAnswerOptions(question);
+        this.uiManager.showAnswerFeedback(generatedOptions, null);
     }
 
     /**
@@ -1082,4 +796,28 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             console.warn(`[MultipleChoiceGame] Could not determine target team ID to activate selected power-up '${payload.selectedPowerupId}'. State activeTeam: ${this.getState().activeTeam}`);
         }
     }
+
+    // --- Add Pause/Resume Handlers for Game Logic ---
+    private _handleGamePaused(): void {
+        console.log("[MultipleChoiceGame] Received GAME_PAUSED. Attempting to pause question timer.");
+        // --- Add Guard Check ---
+        if (this.timerManager && this.timerManager.getTimer(this.QUESTION_TIMER_ID)) {
+             this.timerManager.pauseTimer(this.QUESTION_TIMER_ID);
+        } else {
+             console.warn(`[MultipleChoiceGame] Cannot pause timer: TimerManager or timer ID '${this.QUESTION_TIMER_ID}' not found.`);
+        }
+        // --- End Guard Check ---
+    }
+
+    private _handleGameResumed(): void {
+         console.log("[MultipleChoiceGame] Received GAME_RESUMED. Attempting to resume question timer.");
+         // --- Add Guard Check ---
+         if (this.timerManager && this.timerManager.getTimer(this.QUESTION_TIMER_ID)) {
+             this.timerManager.resumeTimer(this.QUESTION_TIMER_ID);
+         } else {
+             console.warn(`[MultipleChoiceGame] Cannot resume timer: TimerManager or timer ID '${this.QUESTION_TIMER_ID}' not found.`);
+         }
+         // --- End Guard Check ---
+    }
+    // --- End Add Handlers ---
 } 

@@ -14,7 +14,7 @@ import { BaseGame } from '../game/BaseGame';
 import { GameConfig } from '../config/GameConfig';
 import { AssetLoader } from '../assets/AssetLoader';
 import { getThemeConfig } from '../../themes';
-import { ENGINE_EVENTS, SETTINGS_EVENTS } from './EventTypes'; // Assuming ENGINE_EVENTS exists and contains ENGINE_READY_FOR_GAME
+import { ENGINE_EVENTS, SETTINGS_EVENTS, EngineResizedPayload } from './EventTypes'; // Assuming ENGINE_EVENTS exists and contains ENGINE_READY_FOR_GAME
 
 /**
  * Defines the structure for the object containing all core engine managers.
@@ -115,7 +115,7 @@ export class PixiEngine {
    */
   constructor(options: PixiEngineOptions = {}) {
     this.options = options;
-    this.app = new PixiApplication({...this.options, targetElement: options.targetElement });
+    this.app = new PixiApplication({...this.options, targetElement: options.targetElement, onResize: this.handleResize });
 
     // Initialize core managers that don't depend on GameConfig yet
     this.eventBus = new EventBus();
@@ -382,8 +382,8 @@ export class PixiEngine {
   };
 
    /**
-    * Handles the resize event from PixiApplication.
-    * Notifies the current game instance of the resize.
+    * Handles the resize event passed from PixiApplication.
+    * Emits the ENGINE_EVENTS.RESIZED event and notifies the current game instance.
     * @private
     * @param {number} width - The new width of the application.
     * @param {number} height - The new height of the application.
@@ -391,14 +391,16 @@ export class PixiEngine {
     private handleResize = (width: number, height: number): void => {
      if (!this.initialized) return;
      console.log(`PixiEngine: Resizing to ${width}x${height}`);
-     // TODO: Define 'engineResize' event in EventBus
-     // this.eventBus.emit('engineResize', { width, height });
+     
+     // --- EMIT THE EVENT ---
+     const payload: EngineResizedPayload = { width, height };
+     this.eventBus.emit(ENGINE_EVENTS.RESIZED, payload); 
+     // --- END EMIT ---
 
-     // Notify the current game
+     // Notify the current game directly (still useful for the game's own immediate resize logic)
      this.currentGame?.onResize(width, height);
 
-     // Notify managers if they need to know about resize
-     // TODO: Implement onResize(width, height) in ControlsManager if needed
+     // Notify managers if they need to know about resize (optional)
      // this.controlsManager?.onResize(width, height);
    };
 

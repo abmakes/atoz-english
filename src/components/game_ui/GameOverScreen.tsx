@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo } from 'react';
-import Image from 'next/image'; // For the crown image
+import Image from 'next/image'; // For the background image
 import PlayerScore, { PlayerScoreProps } from './PlayerScore';
 import NavMenu, { NavMenuProps } from './NavMenu';
 import styles from '@/styles/themes/themes.module.css';
@@ -9,7 +9,6 @@ import styles from '@/styles/themes/themes.module.css';
 interface GameOverScreenProps {
   finalScores: PlayerScoreProps[]; // Array of player data
   winnerName?: string; // Optional: if no winner (e.g., tie or manual exit)
-  backgroundUrl: string; // URL for the background GIF/Image/Video
   themeClassName?: string; // Pass the current theme class
   navMenuItems: NavMenuProps['items']; // Items for the NavMenu
   // Callbacks
@@ -21,22 +20,25 @@ interface GameOverScreenProps {
   onBackClick?: () => void; // 'Back' might function as 'Exit' here
 }
 
-// Example Crown Image Path (replace with actual path)
-// const CROWN_IMAGE_PATH = '/images/ui/crown.png'; // Make sure this exists in public/images/ui
+// --- Define Background Images ---
+const gameOverBackgroundImages = [
+    '/images/gameover/bg1.webp', // Replace with your actual image paths
+    '/images/gameover/bg2.webp',
+    '/images/gameover/bg3.webp',
+    '/images/gameover/bg4.webp',
+    '/images/gameover/bg5.webp',
+];
+// --- End Background Images ---
 
 const GameOverScreen: React.FC<GameOverScreenProps> = ({
   finalScores,
   winnerName,
-  backgroundUrl,
   themeClassName = styles.themeBasic, // Default theme if not provided
   navMenuItems,
   onPlayAgain,
   onExit,
-  // onSettingsClick,
-  // onMainMenuClick,
-  // onBackClick,
 }) => {
-  // --- Calculate Tie/Winner --- 
+  // --- Calculate Tie/Winner ---
   const { titleMessage, winningPlayerNames } = useMemo(() => {
     if (!finalScores || finalScores.length === 0) {
       return { titleMessage: 'Game Over!', winningPlayerNames: new Set<string>() };
@@ -70,15 +72,21 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({
     const audio = new Audio(victorySoundPath);
     audio.play().catch(error => {
       console.error('Error playing victory sound:', error);
-      // Handle error - e.g., user hasn't interacted with the page yet
     });
 
     // Optional: Cleanup function if needed, though unlikely for short sound
-    // return () => {
-    //   audio.pause();
-    //   audio.src = ''; 
-    // };
+    return () => {
+      audio.pause();
+      audio.src = ''; 
+    };
   }, []); // Empty dependency array ensures this runs only once on mount
+  // ---------------------------------
+
+  // --- Select Random Background Image ---
+  const backgroundImage = useMemo(() => {
+    const randomIndex = Math.floor(Math.random() * gameOverBackgroundImages.length);
+    return gameOverBackgroundImages[randomIndex];
+  }, []); // Empty dependency array ensures it's selected only once on mount
   // ---------------------------------
 
   // Prepare NavMenu items by potentially overriding the back handler
@@ -88,50 +96,65 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({
     // item.id === 'settings' ? {...item, onClick: onSettingsClick, disabled: true} : item
   );
 
-
   return (
-    <div className={`${styles.gameOverScreen} ${styles.themeWrapper} ${themeClassName}`}>
+    <div className={`${themeClassName} fixed inset-0 z-50 flex items-center justify-center flex-col overflow-hidden font-theme`}>
       {/* Background */}
-      <div className={styles.gameOverBackground}>
-        {/* Use img, video, or a styled div based on backgroundUrl type */}
-        <Image src={backgroundUrl} width={1600} height={900} alt="Game Over Background" />
+      <div className={`absolute inset-0 w-full h-full object-cover z-0`}>
+        {/* Use the randomly selected backgroundImage variable */}
+        <Image
+            src={backgroundImage}
+            layout="fill" // Use fill to cover the container
+            objectFit="cover" // Ensure image covers without distortion
+            alt="Game Over Background"
+            priority // Consider adding priority if this is the main visual element
+            unoptimized
+         />
       </div>
 
       {/* Player Scores Overlay */}
-      <div className={styles.gameOverPlayerScoresOverlay}>
+      <div className={`absolute flex flex-col gap-2 top-4 left-4 z-10`}>
         {finalScores.map((player) => (
           <PlayerScore
-            key={player.playerName} 
+            key={player.playerName}
             playerName={player.playerName}
             score={player.score}
-            // Highlight player if their name is in the set of winners
-            isActive={winningPlayerNames.has(player.playerName)} 
+            isActive={winningPlayerNames.has(player.playerName)}
           />
         ))}
       </div>
 
       {/* NavMenu Overlay */}
-      <div className={styles.gameOverNavMenuOverlay}>
+      <div className={`absolute top-6 right-6 z-10`}>
          <NavMenu
             items={gameOverNavItems}
-            orientation="horizontal"
-            // You might need to manage the dropdown states separately for this screen
-            // or pass handlers down if they should still function
-            // For simplicity, we might just show the buttons without dropdowns here
           />
           {/* TODO: Add logic to render GameSettingsPanel/MainMenuDropdown if needed */}
       </div>
 
       {/* Central Results Panel */}
-      <div className={styles.gameOverPanel}>
-        <h2 className={styles.gameOverTitle}>
+      <div className="
+          absolute
+          -bottom-16
+          z-10
+          font-[var(--font-theme)]
+          bg-[var(--panel-bg-theme)]
+          backdrop-blur-sm
+          rounded-[64px]
+          px-20 pt-12 pb-28
+          shadow-[var(--shadow-xl)]
+          border
+          border-[var(--panel-border)] 
+          text-center
+          max-w-[90%] 
+        ">
+        <h2 className={`titleXLarge grandstander font-bold`}>
           {titleMessage}
         </h2>
         <div className="w-full max-w-3xl mx-auto flex justify-center gap-6">
-          <button onClick={onPlayAgain} className={`w-96 ${styles.buttonXLarge}`}>
+          <button onClick={onPlayAgain} className={`w-96 buttonXLarge`}>
             Play Again
           </button>
-          <button onClick={onExit} className={`w-96 ${styles.buttonXLarge}`}>
+          <button onClick={onExit} className={`w-96 buttonXLarge`}>
             Exit
           </button>
         </div>

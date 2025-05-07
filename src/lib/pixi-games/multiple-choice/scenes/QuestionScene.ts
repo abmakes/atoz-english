@@ -6,6 +6,11 @@ import { EventBus } from '@/lib/pixi-engine/core/EventBus'; // Example manager
 // Assume AssetLoader provides a method like getDisplayObject
 import { AssetLoader } from '@/lib/pixi-engine/assets/AssetLoader';
 import { PixiApplication } from '@/lib/pixi-engine/core/PixiApplication'; // Import PixiApplication
+// Import the theme config type
+import type { PixiSpecificConfig } from '../../../themes'; // Use correct relative path
+import type { LayoutParameters } from '../managers/MultipleChoiceLayoutManager';
+// Remove ImageOptimizerCache import if not needed
+// import { ImageOptimizerCache } from 'next/dist/server/image-optimizer';
 
 // Remove type, AssetLoader handles creation now
 /*
@@ -16,39 +21,43 @@ type AnimatedResource = {
 */
 
 export class QuestionScene extends PIXI.Container {
+    private backgroundPanel: PIXI.Graphics;
     private questionText: PIXI.Text;
-    // Type remains the same, but creation is delegated
     private questionMedia: PIXI.Sprite | GifSprite | PIXI.AnimatedSprite | null = null;
     private answerOptionsContainer: PIXI.Container;
-    // Remove engineRef property
-    // private engineRef: PixiEngine;
-    // Add references to managers passed in constructor if needed
-    private eventBus: EventBus; // Example
-    // Keep AssetLoader reference, though not used directly here anymore
-    private assetLoader: AssetLoader;
-    private pixiApp: PixiApplication; // Store the PixiApplication instance
+    private readonly eventBus: EventBus;
+    private readonly assetLoader: AssetLoader;
+    private readonly pixiApp: PixiApplication;
+    private readonly pixiTheme: PixiSpecificConfig;
 
-    // Update constructor signature
-    constructor(pixiApp: PixiApplication, eventBus: EventBus, assetLoader: AssetLoader) {
+    constructor(
+        pixiApp: PixiApplication,
+        eventBus: EventBus,
+        assetLoader: AssetLoader,
+        pixiTheme: PixiSpecificConfig
+    ) {
         super();
-        this.pixiApp = pixiApp; // Store instance
+        this.pixiApp = pixiApp;
         this.eventBus = eventBus;
-        this.assetLoader = assetLoader; // Store reference even if not used directly in update
+        this.assetLoader = assetLoader;
+        this.pixiTheme = pixiTheme;
 
-        // Ensure the scene itself is interactive
         this.interactive = true;
-        this.interactiveChildren = true; // Allow events to reach children
+        this.interactiveChildren = true;
 
-        // Get initial screen dimensions from the instance
-        const { width: initialScreenWidth, height: initialScreenHeight } = this.pixiApp.getScreenSize();
+        // Create background panel
+        this.backgroundPanel = new PIXI.Graphics();
+        this.backgroundPanel.label = 'QuestionBackgroundPanel';
+        this.addChild(this.backgroundPanel);
 
+        // Create question text with initial style (will be updated by layout)
         const textStyle = new PIXI.TextStyle({
-            fontFamily: 'Grandstander',
+            fontFamily: this.pixiTheme.fontFamilyTheme,
             fontSize: 36,
-            fill: 0x111111,
+            fill: this.pixiTheme.questionTextColor,
             align: 'center',
             wordWrap: true,
-            wordWrapWidth: initialScreenWidth * 0.8 // <-- Use dynamic width
+            wordWrapWidth: 95
         });
 
         this.questionText = new PIXI.Text({ text: '', style: textStyle });
@@ -56,134 +65,150 @@ export class QuestionScene extends PIXI.Container {
         this.addChild(this.questionText);
 
         this.answerOptionsContainer = new PIXI.Container();
-        // Ensure the options container is interactive
         this.answerOptionsContainer.interactive = true;
-        this.answerOptionsContainer.interactiveChildren = true; // Allow events to reach buttons
+        this.answerOptionsContainer.interactiveChildren = true;
         this.addChild(this.answerOptionsContainer);
-
-        // Initial position with dynamic dimensions
-        this._positionElements(initialScreenWidth, initialScreenHeight);
     }
 
-    public updateQuestion(text: string, imageUrl?: string ): void {
-        console.log("--- QuestionSceneV2 updateQuestion START - Current media:", this.questionMedia ? "Exists" : "null");
-
+    public updateQuestion(text: string, imageUrl?: string): void {
+        console.log("--- QuestionSceneV2 updateQuestion START ---");
         // Cleanup existing media
         if (this.questionMedia) {
             console.log("Destroying previous questionMedia instance...");
             this.removeChild(this.questionMedia);
-            this.questionMedia.destroy(); 
+            this.questionMedia.destroy();
             this.questionMedia = null;
         }
 
         // Update text
         this.questionText.text = text;
-        // Get dimensions from the instance
-        const { width: currentScreenWidth, height: currentScreenHeight } = this.pixiApp.getScreenSize();
-
-        this.questionText.style.wordWrapWidth = currentScreenWidth * 0.8;
-        this._positionElements(currentScreenWidth, currentScreenHeight);
 
         // Get and add new media
         if (imageUrl) {
-            console.log(`Requesting display object from AssetLoader for: ${imageUrl}`); 
+            console.log(`Requesting display object from AssetLoader for: ${imageUrl}`);
             try {
-                // Use AssetLoader to get the correct display object
                 const displayObject = AssetLoader.getDisplayObject(imageUrl);
-
                 if (displayObject) {
-                    this.questionMedia = displayObject; // Assign the returned object
+                    this.questionMedia = displayObject;
                     this.questionMedia.anchor.set(0.5);
+                    this.questionMedia.visible = false; // Initially hide until positioned
                     this.addChild(this.questionMedia);
                     console.log(`Added media from AssetLoader: ${this.questionMedia.constructor.name}`);
 
-                    // Start playback if applicable
                     if (this.questionMedia instanceof PIXI.AnimatedSprite || this.questionMedia instanceof GifSprite) {
-                         if (!this.questionMedia.playing) {
-                            // Use setTimeout to ensure it plays after potential initial stutters/calculations
-                            setTimeout(() => { 
+                        if (!this.questionMedia.playing) {
+                            setTimeout(() => {
                                 if (this.questionMedia instanceof PIXI.AnimatedSprite || this.questionMedia instanceof GifSprite) {
-                                    if (!this.questionMedia.destroyed) { // Check destroyed status again in timeout
+                                    if (!this.questionMedia.destroyed) {
                                         this.questionMedia.play();
-                                    } 
+                                    }
                                 }
                             }, 50);
-                         }
+                        }
                     }
-                    
-                } else {
-                    // AssetLoader.getDisplayObject handles logging warnings for null/not found
-                    console.warn(`AssetLoader.getDisplayObject returned null for: ${imageUrl}.`);
                 }
-                
-                // Position elements *after* adding potential media
-                this._positionElements(currentScreenWidth, currentScreenHeight);
-
             } catch (error) {
-                 // Catch potential errors from getDisplayObject itself (though it has internal catch)
-                 console.error(`Error during AssetLoader.getDisplayObject for ${imageUrl}:`, error);
-                 // Ensure cleanup hasn't left broken state
-                 if (this.questionMedia && !this.questionMedia.parent) {
-                      this.questionMedia = null; // If it exists but wasn't added, nullify
-                 } else if (this.questionMedia?.parent !== this) {
-                      // If added somewhere else unexpectedly, attempt removal/destroy
-                      this.questionMedia?.parent?.removeChild(this.questionMedia);
-                      this.questionMedia?.destroy();
-                      this.questionMedia = null;
-                 }
-                 this._positionElements(currentScreenWidth, currentScreenHeight);
-             }
-        } else {
-             console.log("No imageUrl provided.");
-             // No need to call _positionElements again if text was already positioned
+                console.error(`Error during AssetLoader.getDisplayObject for ${imageUrl}:`, error);
+                if (this.questionMedia && !this.questionMedia.parent) {
+                    this.questionMedia = null;
+                } else if (this.questionMedia?.parent !== this) {
+                    this.questionMedia?.parent?.removeChild(this.questionMedia);
+                    this.questionMedia?.destroy();
+                    this.questionMedia = null;
+                }
+            }
         }
-        console.log("--- QuestionSceneV2 updateQuestion END - Current media:", this.questionMedia ? "Exists" : "null");
+        console.log("--- QuestionSceneV2 updateQuestion END ---");
     }
 
-    // Update method signature to accept dimensions
-    private _positionElements(screenWidth: number, screenHeight: number): void {
-        // Use passed dimensions instead of engineRef
-        const padding = 10;
+    public updateLayout(
+        textBounds: PIXI.Rectangle,
+        mediaBounds: PIXI.Rectangle | null, // Media might not always exist
+        params: LayoutParameters, // Still need params for font size etc.
+        screenWidth: number // May still need screen width for fallback/centering
+    ): void {
+        console.log("QuestionScene: Starting updateLayout with explicit bounds");
 
-        // Position question text
-        this.questionText.x = screenWidth / 2;
-        // Adjust y positioning based on screen height
-        this.questionText.y = screenHeight * 0.7 - this.questionText.height;
+        // Update text style using params
+        this.questionText.style.fontSize = params.questionFontSize;
+        // Set wrap width based on the provided text bounds width
+        this.questionText.style.wordWrapWidth = textBounds.width;
 
-        // Position media (if any)
-        if (this.questionMedia) {
-            const maxMediaWidth = screenWidth * 0.8;
-            // Adjust max height calculation based on new text position
-            const availableHeight = screenHeight * 0.6; // Space between text and answers
-            const maxMediaHeight = availableHeight - 2 * padding;
+        // Position elements using the provided bounds
+        this._positionElements(textBounds, mediaBounds, params, screenWidth);
+        console.log("QuestionScene: Finished updateLayout");
+    }
 
-            // Use const for dimensions if not reassigned later
-            const mediaWidth = this.questionMedia.width || 300;
-            const mediaHeight = this.questionMedia.height || 300;
-            
-            // Calculate scale based on the *display object's* current size
-            let scale = 1;
-            if (mediaWidth > maxMediaWidth) {
-                scale = maxMediaWidth / mediaWidth;
-            }
-            if (mediaHeight * scale > maxMediaHeight) {
-                scale = maxMediaHeight / mediaHeight;
-            }
-            // Important: Adjust scale *relative* to current scale if needed, or just set it
-            // Let's assume we just set the final desired scale
-            this.questionMedia.scale.set(scale);
+    private _positionElements(
+        textBounds: PIXI.Rectangle,
+        mediaBounds: PIXI.Rectangle | null,
+        params: LayoutParameters,
+        screenWidth: number
+    ): void {
+        console.log("QuestionScene: Starting _positionElements (Reverted Logic)");
 
-            // Recalculate position based on scaled dimensions
-            this.questionMedia.x = screenWidth / 2;
-            this.questionMedia.y = padding + (this.questionMedia.height / 2);
+        // --- Position question text (Revert to previous Y calculation) ---
+        const screenHeight = this.pixiApp.getScreenSize().height; // Need height here
+        this.questionText.style.wordWrapWidth = textBounds.width;
+        this.questionText.x = screenWidth / 2; // Center X is likely fine
+        // Use the formula that worked visually before:
+        this.questionText.y = screenHeight * params.questionYMultiplier; // Or screenHeight * 0.7 - 64 if preferred
+        console.log("QuestionScene: Text positioned (Reverted Y)", { x: this.questionText.x, y: this.questionText.y });
 
+        // --- Position media ---
+        const hasValidMediaBounds = mediaBounds && mediaBounds.width > 0 && mediaBounds.height > 0;
+
+        if (this.questionMedia && hasValidMediaBounds) {
+            // --- Positioning logic when media and bounds are valid ---
+            this.questionMedia.visible = true;
+            // ... (get dimensions, check dimensions > 0, calculate scale, check scale, set scale/position) ...
+            // (All the logic currently inside the main 'if (this.questionMedia && mediaBounds ...)' block)
+
+             const mediaOrigWidth = this.questionMedia.texture?.orig.width ?? this.questionMedia.width;
+             const mediaOrigHeight = this.questionMedia.texture?.orig.height ?? this.questionMedia.height;
+
+             if (mediaOrigWidth <= 0 || mediaOrigHeight <= 0) { /* ... hide and return ... */ return;}
+
+            // Use previous logic for available height (relative to text)
+            const imageTopBound = params.topPadding;
+            // Use the actual text position AFTER it's set above
+            const textTop = this.questionText.y - this.questionText.height * this.questionText.anchor.y;
+            const imageBottomBound = textTop - params.topPadding; // Use textTop now
+            let availableHeightForMedia = Math.max(10, imageBottomBound - imageTopBound);
+
+             // --- Reinstate your scaling logic ---
+             let scale = 1;
+             // scale down if media is larger than available height
+             if (mediaOrigHeight > availableHeightForMedia && availableHeightForMedia > 0) {
+                 scale = availableHeightForMedia / mediaOrigHeight;
+             }
+             // scale up if media is smaller than available height
+             if (mediaOrigHeight < availableHeightForMedia) {
+               scale = availableHeightForMedia / mediaOrigHeight;
+             }
+             // ---
+
+             // Optional: Reinstate width constraint check if needed
+             // const availableWidthForMedia = screenWidth - 2 * params.sidePadding;
+             // if (mediaOrigWidth * scale > availableWidthForMedia && availableWidthForMedia > 0) {
+             //     scale = Math.min(scale, availableWidthForMedia / mediaOrigWidth);
+             // }
+
+             if (scale <= 0 || !isFinite(scale)) { /* ... hide and return ... */ return; }
+
+             this.questionMedia.scale.set(scale);
+
+             // Position based on previous logic (centered X, top + half height Y)
+             this.questionMedia.x = screenWidth / 2;
+             this.questionMedia.y = imageTopBound + this.questionMedia.height / 2; // Use height *after* scaling
+
+             console.log("Final media position (Reverted):", { /* ... log details ... */ });
+
+        } else if (this.questionMedia) {
+             this.questionMedia.visible = false;
         }
 
-        // Position answer options container below media (or text if no media)
-        // const mediaBottom = this.questionMedia ? this.questionMedia.y + this.questionMedia.height / 2 : this.questionText.y + this.questionText.height / 2;
-        this.answerOptionsContainer.x = 0; // Center the container origin
-
-        this.answerOptionsContainer.y = screenHeight - this.answerOptionsContainer.height; // Position below media/text with padding
+        console.log("QuestionScene: Finished _positionElements (Reverted Logic)");
     }
 
     public getAnswerOptionContainer(): PIXI.Container {
@@ -210,4 +235,38 @@ export class QuestionScene extends PIXI.Container {
         // ... removed ...
     }
     */
+
+    // Add getter for questionText to access its position/dimensions if needed
+    public getQuestionText(): PIXI.Text {
+        return this.questionText;
+    }
+
+    // Add getter for questionMedia
+    public getQuestionMedia(): PIXI.Sprite | GifSprite | PIXI.AnimatedSprite | null {
+        return this.questionMedia;
+    }
+
+    public getQuestionTextBounds(): PIXI.Rectangle {
+        const bounds = this.questionText.getBounds();
+        return new PIXI.Rectangle(bounds.x, bounds.y, bounds.width, bounds.height);
+    }
+
+    // --- Add Method to Draw Background ---
+    /**
+     * Clears and redraws the background panel with specified dimensions and color.
+     * @param x X position of the panel
+     * @param y Y position of the panel
+     * @param width Width of the panel
+     * @param height Height of the panel
+     * @param color Fill color (string or number)
+     * @param radius Corner radius
+     */
+    public drawBackgroundPanel(x: number, y: number, width: number, height: number, color: PIXI.ColorSource, radius: number): void {
+        this.backgroundPanel.clear();
+        if (width > 0 && height > 0) {
+             this.backgroundPanel.roundRect(x, y, width, height, radius)
+                               .fill(color);
+        }
+    }
+    // --- End Add Method ---
 } 

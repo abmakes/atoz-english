@@ -285,6 +285,9 @@ export interface GameConfig {
 
   /** Optional question handling configuration */
   questionHandling?: QuestionHandlingConfig;
+
+  /** Optional: The identifier for the visual/audio theme to use (e.g., 'default', 'dark', 'forest'). Defaults to 'default'. */
+  theme?: string;
 }
 
 // --- Default Configurations ---
@@ -515,6 +518,7 @@ export function createGameConfig(
         // <<< END ADDED >>>
         initialMusicMuted: partialConfig.initialMusicMuted,
         initialSfxMuted: partialConfig.initialSfxMuted,
+        theme: partialConfig.theme,
     };
 
     // Validate the final configuration

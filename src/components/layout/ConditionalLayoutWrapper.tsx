@@ -60,8 +60,8 @@ export default function ConditionalLayoutWrapper({ children }: { children: React
 
           {/* Right: Buttons */}
           <div className="flex gap-4 w-44">
-            <Button variant="outline" className="rounded-full border-2 border-gray-400 shadow-[2px_4px_0_0_rgba(0,0,0,0.4)]">Login</Button>
-            <Button variant="outline" className="rounded-full border-2 bg-white text-[#114257] border-[#114257] shadow-[2px_4px_0_0_rgb(17,66,87,1)]">Sign up</Button> {/* Assuming default variant is primary */} 
+            <Button variant="solidAccent" className="grandstander pt-2">Login</Button>
+            <Button variant="solidAccent" className="grandstander pt-2">Sign up</Button> {/* Assuming default variant is primary */} 
           </div>
         </nav>
       )}

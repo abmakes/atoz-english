@@ -1,22 +1,24 @@
 'use client';
 
 import React from 'react';
-import styles from '@/styles/themes/themes.module.css'; // Import theme styles
+import { Button } from '@/components/ui/button';
 
 // Interface for individual menu items
 export interface NavMenuItemProps {
   id: string;
   label: string; // Used for aria-label and potentially tooltips
-  icon: React.ReactNode; // Expecting SVG or similar icon component
+  // Allow ReactNode for icons, enabling components like the dropdown trigger
+  icon: React.ReactNode; 
   onClick?: () => void;
   active?: boolean; // Optional active state for styling (e.g., toggles)
-  disabled?: boolean;
+  // Flag to indicate if the item itself handles interaction (like a dropdown trigger)
+  // If true, NavMenu won't attach its own onClick handler to the button element.
+  customInteraction?: boolean; 
 }
 
 // Interface for the NavMenu component itself
 export interface NavMenuProps {
   items: NavMenuItemProps[];
-  orientation?: 'horizontal' | 'vertical';
   expanded?: boolean; // Controls if labels are shown in vertical mode
   className?: string; // Allow passing additional classes
   ariaLabel?: string; // Accessibility label for the menu container
@@ -27,43 +29,36 @@ export interface NavMenuProps {
  */
 const NavMenu: React.FC<NavMenuProps> = ({
   items,
-  orientation = 'horizontal',
-  expanded = false, // Default to icons only for vertical unless expanded
-  className = '',
   ariaLabel = 'Navigation Menu',
 }) => {
 
-  const isVertical = orientation === 'vertical';
-
-  // Determine wrapper class based on orientation
-  const wrapperClasses = `
-    ${styles.navMenuWrapper}
-    ${isVertical ? styles.navMenuVertical : styles.navMenuHorizontal}
-    ${className}
-  `.trim();
-
-  // Determine item class based on orientation and expansion
-  const itemBaseClass = isVertical ? styles.navMenuItemVertical : styles.navMenuItem;
-
   return (
-    <nav className={wrapperClasses} aria-label={ariaLabel}>
-      {items.map((item) => (
-        <button
-          key={item.id}
-          className={`${itemBaseClass} ${item.active ? styles.buttonChoiceActive : ''}`} // Apply active style if needed
-          onClick={item.onClick}
-          disabled={item.disabled}
-          aria-label={item.label}
-          // Add aria-pressed for toggle buttons if 'active' state is meaningful
-          aria-pressed={item.active !== undefined ? item.active : undefined}
-        >
-          {item.icon}
-          {/* Show label only if vertical and expanded */}
-          {isVertical && expanded && (
-            <span className={styles.navMenuItemLabel}>{item.label}</span>
-          )}
-        </button>
-      ))}
+    <nav className={`flex flex-row items-center justify-center gap-2`} aria-label={ariaLabel}>
+      {items.map((item) => {
+        // If item has custom interaction, render the icon directly (assuming it's a component like DropdownMenuTrigger)
+        // Otherwise, wrap the icon in a button.
+        if (item.customInteraction) {
+          // Render the icon component directly. Apply styling classes if needed.
+          // Note: The GameControlDropdown itself needs to handle its className for styling/layout within the nav.
+          return React.isValidElement(item.icon) 
+            ? React.cloneElement(item.icon as React.ReactElement, { key: item.id }) 
+            : null; // Or render a placeholder/error
+        } else {
+          // Render as a standard button
+          return (
+            <Button
+              key={item.id}
+              variant="navIcon"
+              className={`bg-[var(--primary-accent)] text-[var(--text-color)] rounded-full flex items-center justify-center border-2 border-[var(--primary-accent)]`}
+              onClick={item.onClick}
+              aria-label={item.label}
+              aria-pressed={item.active !== undefined ? item.active : undefined}
+            >
+              {item.icon}
+            </Button>
+          );
+        }
+      })}
     </nav>
   );
 };

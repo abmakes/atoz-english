@@ -21,10 +21,11 @@ import { MultipleChoiceGame } from '@/lib/pixi-games/multiple-choice/MultipleCho
 import type { NavMenuItemProps } from './NavMenu';
 import { GAME_EVENTS, ENGINE_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
 import { PowerupConfig, STANDARD_SCORE_MODE_POWERUPS } from '@/lib/pixi-engine/config/PowerupConfig';
+import LoadingSpinner from '../loading_spinner';
 
 const GameplayView = dynamic(() => import('./GameplayView'), {
     ssr: false,
-    loading: () => <div className="min-h-screen flex items-center justify-center">Loading Game View...</div>
+    loading: () => <div className="min-h-screen flex items-center justify-center"><LoadingSpinner /></div>
 });
 
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>;
@@ -62,6 +63,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
   const [finalScores, setFinalScores] = useState<PlayerScoreData[]>([]);
   const [winnerName, setWinnerName] = useState<string | undefined>(undefined);
   const [themeClassName, setThemeClassName] = useState<string>(styles.themeBasic);
+  // const [isPaused, setIsPaused] = useState(false);
 
   const pixiMountPointRef = useRef<HTMLDivElement>(null);
 
@@ -273,16 +275,31 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
           // Pass initial mute states (inverted from settings toggles)
           initialMusicMuted: !setupData.settings.music,
           initialSfxMuted: !setupData.settings.sounds,
+          theme: setupData.theme, // Pass the theme fo pixiUI
       };
+
 
       console.log('Prepared full engine config:', fullEngineConfig);
       setGameConfig(fullEngineConfig);
 
+      // --- UPDATE THEME FOR  REACT COMPONENTS ---
+      let simpleThemeClass = ''; // Default: rely on :root styles
       switch (setupData.theme) {
-          case 'dark': setThemeClassName(styles.themeDark); break;
-          case 'forest': setThemeClassName(styles.themeForest); break;
-          case 'basic': default: setThemeClassName(styles.themeBasic); break;
+          case 'dark':
+              simpleThemeClass = 'dark'; // Use the global .dark class
+              break;
+          case 'forest':
+              simpleThemeClass = 'themeForest'; // Use the global .themeForest class
+              break;
+          case 'basic':
+          default:
+              simpleThemeClass = ''; // No extra class needed for default theme
+              break;
       }
+      console.log(`GameContainer: Setting theme class to: "${simpleThemeClass || '(default)'}"`);
+      setThemeClassName(simpleThemeClass); // Set state to the simple class name
+      // --- END UPDATE ---
+
       setCurrentView('playing');
   }, [quizId, gameSlug, router]);
 
@@ -307,7 +324,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
     setFinalScores([]);
     setWinnerName(undefined);
     router.push('/games');
-    setThemeClassName(styles.themeBasic);
+    setThemeClassName(''); // Reset theme class name to default (empty string)
   }, [router]);
 
   /**
@@ -332,7 +349,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
                 />;
       case 'playing':
         if (!gameConfig) {
-             return <div>Loading Game Config...</div>;
+             return <div className="min-h-screen w-screen flex items-center justify-center"><LoadingSpinner /></div>;
         }
         // When playing, render GameplayView and pass the ref for Pixi to mount into
         return (
@@ -354,7 +371,6 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
         return <GameOverScreen
                     finalScores={finalScores}
                     winnerName={winnerName}
-                    backgroundUrl={'/images/piggy.webp'}
                     themeClassName={themeClassName}
                     onPlayAgain={handlePlayAgain}
                     onExit={handleExit}

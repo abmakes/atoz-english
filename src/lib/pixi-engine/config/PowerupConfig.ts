@@ -49,7 +49,7 @@ export const STANDARD_SCORE_MODE_POWERUPS: PowerupDefinition[] = [
         id: 'time_extension',
         name: 'Time Extension',
         description: 'Adds extra time to the question timer.',
-        // No durationSeconds - instant effect
+        durationSeconds: 10,
         effectType: 'timer_modifier',
         effectParams: { amount: 5 }, // Adds 5 seconds
         assetKey: 'time-extension-icon' // Placeholder asset key
@@ -58,7 +58,7 @@ export const STANDARD_SCORE_MODE_POWERUPS: PowerupDefinition[] = [
         id: 'fifty_fifty',
         name: '50/50',
         description: 'Removes half of the incorrect answer options.',
-        // No durationSeconds - instant effect, consumed on use
+        durationSeconds: 10,
         effectType: 'answer_modifier',
         assetKey: 'fifty-fifty-icon' // Placeholder asset key
     },
@@ -67,6 +67,7 @@ export const STANDARD_SCORE_MODE_POWERUPS: PowerupDefinition[] = [
         name: 'Comeback',
         description: 'Gives bonus points for teams that are behind.',
         effectType: 'score_boost',
+        durationSeconds: 30,
         effectParams: { multiplier: 1.5, minPointsBehind: 20 },
         assetKey: 'comeback-icon' // Placeholder asset key
     }

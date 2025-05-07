@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import GameContainer from '@/components/game_ui/GameContainer';
+import LoadingSpinner from '@/components/loading_spinner';
 
 // Will import actual game components later
 // import { PixiGameWrapper } from '@/components/PixiGameWrapper';
@@ -29,7 +30,7 @@ export default function GamePage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Loading or Invalid Link...</h1>
+          <h1 className="text-2xl font-bold mb-4"><LoadingSpinner /></h1>
         </div>
       </div>
     );
