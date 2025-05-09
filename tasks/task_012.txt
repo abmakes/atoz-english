@@ -1,0 +1,11 @@
+# Task ID: 12
+# Title: Implement AI Generation API Endpoint
+# Status: pending
+# Dependencies: 10
+# Priority: medium
+# Description: Create a backend endpoint that takes AI parameters, calls the AI service, and structures the response as quiz questions/answers.
+# Details:
+Create a new tRPC procedure for AI quiz generation. Implement parameter validation. Call the AI service with formatted prompts based on user inputs. Parse the AI response into structured quiz data (questions, answers, correct flags). Implement error handling for AI service failures. Add rate limiting to prevent abuse. Log generation attempts and results for monitoring.
+
+# Test Strategy:
+Test the endpoint with various parameter combinations. Verify structured quiz data is correctly extracted from AI responses. Test error handling with simulated AI service failures. Verify rate limiting works correctly.

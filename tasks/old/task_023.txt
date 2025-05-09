@@ -1,0 +1,58 @@
+# Task ID: 23
+# Title: Implement Power-Up Effects System
+# Status: pending
+# Dependencies: 10, 19
+# Priority: low
+# Description: Create a system for power-up effects that interact with games and managers.
+# Details:
+Enhance PowerUpManager with effect implementation. Create a PowerUpEffect interface and standard implementations. Implement hooks in BaseGame for onPowerUpActivated/Deactivated. Create sample power-ups like score multipliers, extra time, and hint reveals.
+
+# Test Strategy:
+Test power-up activation, effect application, and deactivation. Verify effects interact correctly with games and other managers. Test duration tracking and cleanup.
+
+# Subtasks:
+## 1. Create PowerUpEffect Interface and Base Implementations [pending]
+### Dependencies: None
+### Description: Define the core interface for power-up effects and implement standard effect classes that will be used throughout the game
+### Details:
+1. Create a PowerUpEffect interface with methods like activate(), deactivate(), isActive(), and getDuration()
+2. Implement an AbstractPowerUpEffect class that handles common functionality like duration tracking and activation state
+3. Create concrete implementations for standard effects:
+   - ScoreMultiplierEffect: Multiplies score for actions during effect duration
+   - ExtraTimeEffect: Adds additional time to game timer
+   - HintRevealEffect: Reveals hints or solutions temporarily
+4. Each effect should store necessary parameters (e.g., multiplier value, time amount)
+5. Include unit tests for each effect implementation to verify correct behavior
+6. Test activation/deactivation logic and duration handling
+
+## 2. Enhance PowerUpManager with Effect Handling [pending]
+### Dependencies: 23.1
+### Description: Extend the PowerUpManager to manage the lifecycle of power-up effects and their interactions with the game
+### Details:
+1. Modify PowerUpManager to maintain a collection of active effects
+2. Implement methods to:
+   - activatePowerUp(PowerUpEffect effect): Add effect to active collection and call effect.activate()
+   - deactivatePowerUp(PowerUpEffect effect): Remove from active collection and call effect.deactivate()
+   - updateEffects(float deltaTime): Update all active effects, handle expired effects
+3. Add a method to check if a specific type of effect is active
+4. Implement effect stacking rules (e.g., whether multiple score multipliers stack or replace)
+5. Create a PowerUpFactory to instantiate different effect types
+6. Write tests for PowerUpManager that verify proper activation/deactivation of effects
+7. Test effect lifecycle management including expiration of timed effects
+
+## 3. Implement Game Hooks for Power-Up Integration [pending]
+### Dependencies: 23.1, 23.2
+### Description: Add hooks in the BaseGame class to respond to power-up events and modify game behavior accordingly
+### Details:
+1. Add onPowerUpActivated(PowerUpEffect effect) and onPowerUpDeactivated(PowerUpEffect effect) methods to BaseGame
+2. Modify relevant game systems to check for active effects:
+   - Update scoring system to check for ScoreMultiplierEffect
+   - Modify timer system to handle ExtraTimeEffect
+   - Enhance hint system to support HintRevealEffect
+3. Implement observer pattern to notify game components about power-up changes
+4. Create a UI indicator system to show active power-ups and their remaining duration
+5. Add sample power-up pickup objects in game levels
+6. Create integration tests that verify complete power-up workflow:
+   - Pickup → Activation → Effect application → Deactivation
+7. Test edge cases like activating effects during pause, effect cancellation, or game over states
+

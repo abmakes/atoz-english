@@ -1,0 +1,11 @@
+# Task ID: 22
+# Title: Implement Game Type Selection in UI
+# Status: pending
+# Dependencies: 21
+# Priority: low
+# Description: Update frontend to allow selection between different game types (MultipleChoiceGame, AppleCatcher).
+# Details:
+Add game type selection to the game setup UI. Update game configuration to include gameType. Modify PixiWrapper to instantiate the correct game type based on configuration. Update backend to store game type preference with quizzes. Create preview thumbnails for each game type. Add help text explaining the differences between game types.
+
+# Test Strategy:
+Test game type selection in the UI. Verify correct game instantiation based on selection. Test persistence of game type preference. Ensure previews accurately represent each game type.

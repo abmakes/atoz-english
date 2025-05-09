@@ -1,0 +1,11 @@
+# Task ID: 18
+# Title: Create Theme Configuration System
+# Status: pending
+# Dependencies: 9
+# Priority: medium
+# Description: Implement central THEMES mapping object in src/lib/themes.ts for consistent theme application.
+# Details:
+Create a themes.ts file with a THEMES mapping object. Define theme properties including CSS class, asset paths, color schemes, and PixiJS-specific configurations. Implement functions for retrieving theme properties by ID. Add default theme fallbacks. Create TypeScript interfaces for theme configuration. Document the theme structure and how to add new themes.
+
+# Test Strategy:
+Test theme retrieval with various theme IDs. Verify fallback to default theme when an unknown ID is provided. Test all theme property accessors. Ensure type safety with TypeScript interfaces.

@@ -1,0 +1,11 @@
+# Task ID: 19
+# Title: Update Asset Managers for Theme Support
+# Status: pending
+# Dependencies: 18
+# Priority: medium
+# Description: Modify AudioManager and AssetLoader to use themeId to load assets from correct theme-specific paths.
+# Details:
+Modify AssetLoader to accept themeId parameter and resolve asset paths using the theme configuration. Update AudioManager to load audio files from theme-specific directories. Implement fallback to default theme assets when theme-specific assets are not found. Add caching strategies that consider theme variations. Update asset preloading to handle theme-specific assets.
+
+# Test Strategy:
+Test asset loading with various theme IDs. Verify correct path resolution based on theme. Test fallback to default assets. Ensure caching works correctly with theme variations.

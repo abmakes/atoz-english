@@ -1,0 +1,11 @@
+# Task ID: 3
+# Title: Refine ControlsManager for Unified Input Handling
+# Status: done
+# Dependencies: 1
+# Priority: high
+# Description: Enhance the ControlsManager to handle keyboard, mouse, and touch inputs with standardized PLAYER_ACTION events
+# Details:
+Extend the existing ControlsManager to capture keyboard inputs ('A'/'L' keys), mouse clicks, and touch taps on PixiJS UI elements. Implement a mapping system to convert these inputs into standardized PLAYER_ACTION events. Create methods for registering interactive elements and binding actions to specific inputs. Support two distinct player actions that can be mapped to 'A'/'L' keys and on-screen buttons. Ensure the manager properly emits events through the EventBus when actions are triggered.
+
+# Test Strategy:
+Test keyboard input detection and mapping to PLAYER_ACTION events. Verify mouse/touch input on PixiJS elements triggers correct events. Test input binding and unbinding functionality. Validate cross-device compatibility with simulated touch events.

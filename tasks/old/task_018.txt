@@ -1,0 +1,87 @@
+# Task ID: 18
+# Title: Implement Engine Utility Functions
+# Status: pending
+# Dependencies: 1
+# Priority: medium
+# Description: Create utility functions for common engine operations.
+# Details:
+Implement utility functions in the /lib/pixi-engine/utils/ directory. Include functions for animation, math, object pooling, collision detection, and other common operations. Create type definitions and documentation for all utilities.
+
+# Test Strategy:
+Write unit tests for each utility function. Verify correct behavior with various inputs and edge cases.
+
+# Subtasks:
+## 1. Implement Math and Animation Utility Functions [pending]
+### Dependencies: None
+### Description: Create utility functions for mathematical operations and animations in the engine.
+### Details:
+Implementation steps:
+1. Create a `/lib/pixi-engine/utils/math.ts` file with functions for:
+   - Vector operations (add, subtract, multiply, normalize)
+   - Angle calculations (degrees/radians conversion, rotation)
+   - Random number generation with configurable ranges
+   - Interpolation functions (linear, cubic, etc.)
+2. Create a `/lib/pixi-engine/utils/animation.ts` file with functions for:
+   - Easing functions (ease-in, ease-out, etc.)
+   - Tweening helpers
+   - Animation sequence management
+   - Frame-based animation utilities
+3. Create TypeScript interfaces and type definitions for all functions
+4. Add JSDoc comments for all functions with parameters and return types
+5. Write unit tests for each utility function
+
+Testing approach:
+- Create test cases for edge cases in math functions
+- Test animation functions with different timing parameters
+- Verify correct behavior of interpolation and easing functions
+
+## 2. Implement Object Pooling and Resource Management Utilities [pending]
+### Dependencies: 18.1
+### Description: Create utility functions for object pooling and resource management to optimize performance.
+### Details:
+Implementation steps:
+1. Create a `/lib/pixi-engine/utils/object-pool.ts` file with:
+   - Generic object pool implementation
+   - Functions to create, get, and release objects
+   - Pool size management and expansion policies
+   - Memory usage optimization strategies
+2. Create a `/lib/pixi-engine/utils/resource-manager.ts` file with:
+   - Asset loading and caching utilities
+   - Resource reference counting
+   - Memory management helpers
+   - Texture and audio resource optimization
+3. Create TypeScript interfaces for pool configuration and resource management
+4. Add comprehensive documentation with usage examples
+5. Implement stress tests for object pools
+
+Testing approach:
+- Test object pool performance under high-frequency get/release operations
+- Verify memory usage patterns with different pool configurations
+- Test resource loading with various asset types and sizes
+- Ensure proper cleanup of resources when no longer needed
+
+## 3. Implement Collision Detection and Physics Utilities [pending]
+### Dependencies: 18.1
+### Description: Create utility functions for collision detection and basic physics calculations.
+### Details:
+Implementation steps:
+1. Create a `/lib/pixi-engine/utils/collision.ts` file with:
+   - AABB (Axis-Aligned Bounding Box) collision detection
+   - Circle collision detection
+   - Polygon collision detection
+   - Spatial partitioning helpers (quadtree, grid)
+2. Create a `/lib/pixi-engine/utils/physics.ts` file with:
+   - Velocity and acceleration calculations
+   - Basic physics simulation helpers
+   - Gravity and friction utilities
+   - Collision response functions
+3. Create an index.ts file that exports all utility functions
+4. Add detailed documentation with visual examples where appropriate
+5. Create integration tests showing how these utilities work together
+
+Testing approach:
+- Test collision detection with various object shapes and positions
+- Verify correct collision response in different scenarios
+- Test performance with large numbers of objects
+- Create visual tests to demonstrate collision detection working correctly
+

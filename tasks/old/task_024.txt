@@ -1,0 +1,53 @@
+# Task ID: 24
+# Title: Create Team Setup UI Component
+# Status: pending
+# Dependencies: 16
+# Priority: medium
+# Description: Implement a UI component for team/player setup before gameplay.
+# Details:
+Create a React component for team/player setup. Allow adding/removing teams, setting team names and colors. Generate appropriate TeamConfig for GameConfig. Support keyboard and gamepad assignment per team. Include validation and default options.
+
+# Test Strategy:
+Test UI interaction, team configuration, and integration with GameplayView. Verify the generated TeamConfig is correct and complete. Test validation and error handling.
+
+# Subtasks:
+## 1. Create Team Configuration Form Structure [pending]
+### Dependencies: None
+### Description: Implement the basic React component structure for team setup with add/remove functionality and form fields for team properties
+### Details:
+1. Create a new React component called `TeamSetupComponent` with state management for teams array
+2. Implement UI layout with a form container and team entry sections
+3. Add functionality to add new teams with a '+' button that appends a new team to the state
+4. Add functionality to remove teams with a '-' button next to each team
+5. Create input fields for team name and color picker for each team
+6. Implement basic styling for the component using CSS/SCSS
+7. Add a default team on initial render
+8. Test the component renders correctly and add/remove team functions work properly
+
+## 2. Implement Input Device Assignment [pending]
+### Dependencies: 24.1
+### Description: Add functionality to assign keyboard and gamepad inputs to each team with appropriate selection UI
+### Details:
+1. Extend the team configuration to include input device assignment
+2. Create a dropdown or selection component for each team to choose between keyboard or gamepad
+3. For keyboard selection, add key mapping options for essential game controls
+4. For gamepad selection, implement gamepad detection and display available gamepads
+5. Add visual indicators showing which input devices are assigned to which teams
+6. Implement logic to prevent duplicate assignments of input devices
+7. Add event listeners to detect connected/disconnected gamepads
+8. Test that input devices can be properly assigned and the UI updates accordingly
+
+## 3. Implement Validation and TeamConfig Generation [pending]
+### Dependencies: 24.1, 24.2
+### Description: Add validation for team setup and implement functionality to generate the final TeamConfig object for GameConfig
+### Details:
+1. Add validation to ensure each team has a unique name
+2. Validate that each team has a color selected
+3. Ensure each team has a valid input device assigned
+4. Create a function to transform the component state into the required TeamConfig format
+5. Add a 'Confirm' or 'Start Game' button that validates all inputs and generates the final configuration
+6. Implement error messaging for validation failures
+7. Add default options for teams if users want to quickly start
+8. Create a function to pass the generated TeamConfig to the parent component
+9. Test the validation logic and ensure the generated TeamConfig matches the expected format for GameConfig
+

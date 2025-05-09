@@ -1,0 +1,11 @@
+# Task ID: 21
+# Title: Develop New Game Type: Apple Catcher
+# Status: pending
+# Dependencies: 7, 9, 19
+# Priority: low
+# Description: Create a new game type implementing BaseGame interface with different mechanics than MultipleChoiceGame.
+# Details:
+Create AppleCatcher class implementing BaseGame interface. Implement falling objects (apples with questions/answers) that players must catch. Use sprite-based rendering with animations. Integrate with all engine managers (RuleEngine, AudioManager, ControlsManager, etc.). Implement theme support using the theme configuration system. Add appropriate sound effects and visual feedback. Create game-specific UI elements using the Button component.
+
+# Test Strategy:
+Test complete game flow from initialization to completion. Verify integration with all engine managers. Test with different themes to ensure correct asset loading. Ensure controls work properly for catching objects.

@@ -1,0 +1,11 @@
+# Task ID: 22
+# Title: Implement Lives Mode in ScoringManager
+# Status: pending
+# Dependencies: 7, 19
+# Priority: medium
+# Description: Enhance ScoringManager to fully support lives-based gameplay.
+# Details:
+Extend ScoringManager with comprehensive lives mode support. Implement methods for life loss, gain, and team elimination. Add configuration options for initial lives, max lives, and life recovery. Emit appropriate events for life changes and eliminations.
+
+# Test Strategy:
+Test life management, team elimination detection, and event emissions. Verify configuration options work correctly. Test edge cases like revival and maximum lives.

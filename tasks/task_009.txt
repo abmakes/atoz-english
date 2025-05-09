@@ -1,0 +1,11 @@
+# Task ID: 9
+# Title: Implement AI Quiz Generation Service
+# Status: pending
+# Dependencies: 8
+# Priority: low
+# Description: Create a service to generate quiz content using AI (Gemini API or similar)
+# Details:
+Develop an AI service integration in the backend to generate quiz content. Set up connection to Gemini API (or chosen provider) with proper authentication and error handling. Create a structured prompt template that guides the AI to generate well-formatted quiz questions and answers. Implement parsing logic to convert AI responses into the application's quiz data structure. Add rate limiting and caching to manage API usage. Create a backend endpoint that accepts generation parameters (topic, level, etc.) and returns formatted quiz content.
+
+# Test Strategy:
+Test API integration with various input parameters. Verify parsing logic correctly extracts questions and answers. Test error handling with API failures. Validate quality of generated content across different topics and difficulty levels.
