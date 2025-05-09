@@ -97,7 +97,6 @@ export function isPrismaError(error: unknown): error is PrismaError {
   const err = error as Partial<PrismaError>;
   return typeof err.code === 'string' && (
     // Check for common Prisma error name patterns
-    error.name.includes('Prisma') || 
-    error.name.includes('PrismaClient')
+    (error.name.includes('Prisma') || error.name.includes('PrismaClient'))
   );
 } 

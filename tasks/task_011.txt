@@ -1,0 +1,50 @@
+# Task ID: 11
+# Title: Implement Hybrid Scaling System with Logical Resolution Profiles in PixiJS
+# Status: pending
+# Dependencies: 8
+# Priority: medium
+# Description: Refactor the current PixiJS scaling/resizing logic to use a hybrid approach with predefined logical resolution profiles, applying a single scaleFactor to maintain aspect ratio while positioning UI elements using logical coordinates.
+# Details:
+This task involves replacing the current granular layout profile system with a more efficient hybrid scaling approach:
+
+1. Modify the LayoutManager to define 2-3 core logical resolutions (e.g., 16:9, 4:3, 21:9) as profiles.
+2. Implement a mechanism to select the best-matching logical profile when the window is resized.
+3. Calculate a single scaleFactor that fits the selected logical resolution within the window while preserving the aspect ratio.
+4. Apply this scaleFactor to app.stage.scale instead of recalculating individual element properties.
+5. Update the canvas CSS display size to match the scaled dimensions.
+6. Add logic to center the canvas in the window.
+7. Refactor UIManager to position UI elements using logical coordinates from the selected profile.
+8. Implement relative sizing parameters in the profiles that UI elements can reference.
+9. Remove all code related to the current system of recalculating individual element properties based on multiple granular layout profiles.
+10. Ensure smooth transitions between different logical resolutions when the window is resized.
+11. Add appropriate documentation for the new scaling system.
+
+The goal is to simplify the scaling logic while maintaining visual consistency across different screen sizes and aspect ratios.
+
+# Test Strategy:
+Testing should verify the new scaling system works correctly across various scenarios:
+
+1. Unit tests:
+   - Test profile selection logic with various window dimensions
+   - Verify scaleFactor calculation for different logical resolutions
+   - Test canvas centering calculations
+
+2. Integration tests:
+   - Verify UI elements position correctly using the logical coordinates
+   - Test transitions between different logical resolutions
+
+3. Visual regression tests:
+   - Compare screenshots before and after implementation at various resolutions
+   - Verify UI elements maintain proper proportions and positions
+
+4. Manual testing:
+   - Test on multiple devices with different aspect ratios (16:9, 4:3, 21:9)
+   - Verify performance during window resizing (should be smoother than previous implementation)
+   - Test extreme cases (very small windows, very large windows, unusual aspect ratios)
+   - Verify that all UI elements remain accessible and functional at all supported resolutions
+
+5. Browser compatibility:
+   - Test across Chrome, Firefox, Safari, and Edge
+   - Verify mobile browser compatibility
+
+Document any visual differences from the previous implementation and get stakeholder approval if the layout changes significantly.

@@ -1,0 +1,11 @@
+# Task ID: 20
+# Title: Implement Theme Propagation in Game Setup
+# Status: pending
+# Dependencies: 18, 19
+# Priority: medium
+# Description: Pass themeId from game setup through to the engine and ensure consistent application.
+# Details:
+Add theme selection to the game setup UI. Update game configuration to include themeId. Modify PixiWrapper to pass themeId to PixiEngine during initialization. Ensure themeId is accessible to all engine components. Update React components to apply theme-specific CSS classes. Implement theme switching without requiring full game restart.
+
+# Test Strategy:
+Test theme selection in the UI. Verify themeId is correctly passed to all components. Test theme application in both React and PixiJS layers. Ensure theme switching works correctly during gameplay.

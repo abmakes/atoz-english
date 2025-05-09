@@ -35,8 +35,7 @@ export default function ConditionalLayoutWrapper({ children }: { children: React
     // This outer div ensures relative positioning context and applies conditional background
     //'bg-[#E8F8FF]
     <div className={`relative min-h-screen ${showSpecialBackground ? 'bg-[#A5E4FF]/60' : 'bg-background'}`}>
-      
-      {/* Conditionally Render Navbar - Now with new structure & sticky */} 
+      {/* Conditionally Render Navbar - Now with new structure & sticky */}
       {showNavbar && (
         <nav className={`sticky top-0 ${navbarHeight} w-full z-30 bg-background/80 backdrop-blur-sm flex items-center justify-between px-6`}>
           {/* Left: Logo */}
@@ -65,8 +64,7 @@ export default function ConditionalLayoutWrapper({ children }: { children: React
           </div>
         </nav>
       )}
-
-      {/* Conditionally Render Background Waves - based on showSpecialBackground */} 
+      {/* Conditionally Render Background Waves - based on showSpecialBackground */}
       {showSpecialBackground && (
         <>
           {/* Top Wave Image Container - Sits above background (z-10) */}

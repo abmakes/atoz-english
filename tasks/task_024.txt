@@ -1,0 +1,11 @@
+# Task ID: 24
+# Title: Create Survival Mode Logic
+# Status: pending
+# Dependencies: 8, 21, 23
+# Priority: low
+# Description: Adapt game types for single-player survival mode with increasing difficulty.
+# Details:
+Implement a SurvivalModeManager that extends game sessions indefinitely with increasing difficulty. Modify RuleEngine to support dynamic difficulty adjustment. Update MultipleChoiceGame and AppleCatcher to work with survival mode. Implement progressive speed increases, shorter time limits, or other difficulty factors. Add scoring system specific to survival mode. Create UI for displaying current level/difficulty and high score.
+
+# Test Strategy:
+Test survival mode progression through multiple difficulty levels. Verify scoring works correctly for extended play. Test game-over conditions and score reporting. Ensure difficulty increases are challenging but fair.

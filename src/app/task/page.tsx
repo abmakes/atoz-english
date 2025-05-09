@@ -191,13 +191,12 @@ export default function TasksPage({
           </Link>
         </div>
       </div>
-    
       <main className="container mx-auto py-6 px-4 text-foreground">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold">Project Tasks</h1>
           
           <div className="flex gap-2">
-            <Link href="/task">
+            <Link href="/task" legacyBehavior>
               <Button 
                 variant={!statusFilter ? "default" : "outline"} 
                 className="text-sm"
@@ -206,7 +205,7 @@ export default function TasksPage({
               </Button>
             </Link>
             {allStatuses.map(status => (
-              <Link key={status} href={`/task?status=${status}`}>
+              <Link key={status} href={`/task?status=${status}`} legacyBehavior>
                 <Button 
                   variant={statusFilter === status ? "default" : "outline"} 
                   className="text-sm capitalize"

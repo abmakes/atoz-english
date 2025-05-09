@@ -1,0 +1,11 @@
+# Task ID: 6
+# Title: Implement Animation and Math Utilities
+# Status: done
+# Dependencies: 5
+# Priority: medium
+# Description: Create utility functions for animation, tweening, and common math operations
+# Details:
+Develop a set of animation utilities in /lib/pixi-engine/utils/ including: lerp functions for smooth transitions, easing functions (ease-in, ease-out, etc.), tweening helpers for sprite animation, and common math utilities (vector operations, collision detection, etc.). Create a simple animation system that works with the PixiJS ticker. Implement chainable animation sequences. Add utilities for common sprite manipulations (fade in/out, scale, rotate).
+
+# Test Strategy:
+Create unit tests for each utility function. Test animation sequences with different easing functions. Verify performance with multiple simultaneous animations. Test edge cases and boundary conditions for math utilities.

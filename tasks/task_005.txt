@@ -1,0 +1,11 @@
+# Task ID: 5
+# Title: Enhance AssetLoader with Spritesheet Support
+# Status: done
+# Dependencies: 2
+# Priority: medium
+# Description: Refine the AssetLoader to handle spritesheets and establish a default asset path structure
+# Details:
+Extend the AssetLoader to support loading and managing spritesheets. Implement methods for accessing individual sprites from loaded spritesheets. Establish a default asset path structure ('/public/images/default/') and conventions for organizing assets. Add support for different asset types (images, spritesheets, audio) with appropriate loading methods. Implement asset preloading and progress tracking. Ensure proper error handling for missing or corrupt assets.
+
+# Test Strategy:
+Test loading various asset types (images, spritesheets, audio). Verify sprite extraction from spritesheets. Test progress tracking during asset loading. Validate error handling with missing or invalid assets.

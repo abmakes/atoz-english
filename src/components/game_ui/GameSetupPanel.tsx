@@ -217,16 +217,14 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
       <div className={`backgroundOverlay`}>
         {/* Placeholder for cloud/theme background image/element */}
       </div>
-
       {/* Back Button */}
-       <button
-        onClick={handleBackClick}
-        className={`buttonIcon`}
-        aria-label="Back to Quiz Selection"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-      </button>
-
+      <button
+       onClick={handleBackClick}
+       className={`buttonIcon`}
+       aria-label="Back to Quiz Selection"
+     >
+       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+     </button>
       <div className={`relative max-w-4xl mx-auto bg-[var(--panel-bg)] filter-blur-sm rounded-[32px] p-8 border-2 border-[var(--border-dark)] shadow-solid z-10`}>
         {/* Remove display of selected quiz title */}
         {selectedQuizTitle && (

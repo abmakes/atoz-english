@@ -1,0 +1,50 @@
+# Task ID: 15
+# Title: Update PixiWrapper React Component
+# Status: pending
+# Dependencies: 13
+# Priority: high
+# Description: Update the PixiWrapper React component to initialize PixiEngine with GameConfig.
+# Details:
+Modify the existing PixiWrapper component to initialize the new PixiEngine with a complete GameConfig. Handle React props to PixiEngine communication. Set up event listeners for engine events that need to update React state. Implement proper cleanup on unmount.
+
+# Test Strategy:
+Test initialization with various configurations. Verify React-to-Engine and Engine-to-React communication works correctly. Test component lifecycle and cleanup.
+
+# Subtasks:
+## 1. Modify PixiWrapper to initialize PixiEngine with GameConfig [pending]
+### Dependencies: None
+### Description: Update the PixiWrapper component to accept GameConfig as props and initialize the PixiEngine instance with this configuration.
+### Details:
+1. Update the PixiWrapper component to accept GameConfig as a prop
+2. Create a reference to hold the PixiEngine instance using useRef
+3. In the useEffect hook, initialize the PixiEngine with the GameConfig prop
+4. Pass the container ref to the PixiEngine for mounting
+5. Test that the PixiEngine initializes correctly with different GameConfig values
+6. Ensure backward compatibility if GameConfig is not provided
+7. Add PropTypes validation for the GameConfig prop
+
+## 2. Implement React props to PixiEngine communication [pending]
+### Dependencies: 15.1
+### Description: Set up a system to pass React props to the PixiEngine and handle prop changes efficiently.
+### Details:
+1. Create a useEffect hook that watches for changes in relevant props
+2. Implement methods to update the PixiEngine when props change
+3. Add debouncing or throttling if needed for performance-sensitive props
+4. Create a mapping between React props and PixiEngine configuration
+5. Test that prop changes correctly update the PixiEngine state
+6. Handle edge cases like undefined props or props with special types
+7. Document which props can be updated after initialization and which require re-initialization
+
+## 3. Set up event listeners and implement cleanup [pending]
+### Dependencies: 15.1, 15.2
+### Description: Add event listeners for PixiEngine events that need to update React state and ensure proper cleanup on component unmount.
+### Details:
+1. Identify PixiEngine events that should trigger React state updates
+2. Implement event listeners in the useEffect hook
+3. Create state variables and update functions for each relevant engine event
+4. Implement a comprehensive cleanup function in the useEffect return callback
+5. Ensure all event listeners are removed on unmount
+6. Properly destroy the PixiEngine instance on unmount
+7. Test the component for memory leaks using React DevTools
+8. Verify that all resources are properly released when the component unmounts
+

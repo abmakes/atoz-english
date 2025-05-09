@@ -6,9 +6,7 @@ export default function HomePage() {
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden">
       {/* Navigation - REMOVED FROM HERE */}
-
       {/* Cloud layers */}
-      
       <div className="cloud-layer-1 absolute top-[5%] w-full h-20">
         {[...Array(8)].map((_, i) => (
           <div
@@ -22,7 +20,6 @@ export default function HomePage() {
           />
         ))}
       </div>
-
       <div className="cloud-layer-2 absolute top-[20%] w-full h-24">
         {[...Array(6)].map((_, i) => (
           <div
@@ -36,7 +33,6 @@ export default function HomePage() {
           />
         ))}
       </div>
-
       <div className="cloud-layer-3 absolute top-[40%] w-full h-32">
         {[...Array(5)].map((_, i) => (
           <div
@@ -50,7 +46,6 @@ export default function HomePage() {
           />
         ))}
       </div>
-
       <div className="cloud-layer-4 absolute top-[60%] w-full h-40">
         {[...Array(4)].map((_, i) => (
           <div
@@ -64,7 +59,6 @@ export default function HomePage() {
           />
         ))}
       </div>
-
       {/* Main content */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-center px-4">
         <h1 className="text-6xl font-bold mb-6 text-blue-900 font-[family-name:var(--font-grandstander)]">
@@ -79,7 +73,7 @@ export default function HomePage() {
               priority 
             />
         </div>
-         <Link href="/games">
+         <Link href="/games" legacyBehavior>
            <Button size="lg" className="bg-blue-500 hover:bg-blue-600 text-white text-xl px-8 py-6 rounded-full">
              Play Now
            </Button>

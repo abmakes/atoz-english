@@ -1,0 +1,65 @@
+# Task ID: 14
+# Title: Refactor MultipleChoiceGame to Use New Engine
+# Status: pending
+# Dependencies: 4, 13
+# Priority: high
+# Description: Adapt the existing MultipleChoiceGame to implement BaseGame and use the new engine managers.
+# Details:
+Create MultipleChoiceGame.ts implementing BaseGame. Remove extracted logic now handled by managers. Integrate with managers via events and direct method calls. Handle input via ControlsManager. Implement required BaseGame methods. Use EventBus for communication.
+
+# Test Strategy:
+Test game initialization, gameplay flow, and interaction with all managers. Verify all features from the original implementation still work correctly.
+
+# Subtasks:
+## 1. Create MultipleChoiceGame class implementing BaseGame interface [pending]
+### Dependencies: None
+### Description: Create a new MultipleChoiceGame class that implements the BaseGame interface with all required methods. Set up the basic structure and state management for the game.
+### Details:
+1. Create MultipleChoiceGame.ts file
+2. Import BaseGame interface and implement it
+3. Define class properties for game state (questions, current question, score, etc.)
+4. Implement required BaseGame methods:
+   - initialize(): Set up initial game state
+   - start(): Begin the game
+   - pause(): Pause gameplay
+   - resume(): Resume from pause
+   - end(): End the game and clean up
+   - reset(): Reset to initial state
+5. Create constructor that accepts configuration parameters
+6. Add basic logging for lifecycle methods
+7. Test by instantiating the class and verifying all methods can be called without errors
+
+## 2. Integrate MultipleChoiceGame with engine managers [pending]
+### Dependencies: 14.1
+### Description: Connect the MultipleChoiceGame with the engine's managers (StateManager, ResourceManager, etc.) by subscribing to events and making direct method calls.
+### Details:
+1. Import necessary managers (StateManager, ResourceManager, etc.)
+2. Set up EventBus subscriptions in initialize() method:
+   - Subscribe to relevant game events
+   - Define event handlers for each subscription
+3. Add methods to interact with managers:
+   - loadResources(): Use ResourceManager to load game assets
+   - updateGameState(): Use StateManager to update game state
+   - playSound(): Use AudioManager for sound effects
+4. Implement event emission for game state changes
+5. Remove any logic now handled by managers from the original implementation
+6. Test integration by verifying events are properly dispatched and received
+7. Ensure game state is correctly maintained through the StateManager
+
+## 3. Implement user input handling via ControlsManager [pending]
+### Dependencies: 14.1, 14.2
+### Description: Refactor the MultipleChoiceGame to handle all user input through the ControlsManager, including answer selection and navigation.
+### Details:
+1. Import ControlsManager
+2. Define input mappings for the game (e.g., selecting answers, navigation)
+3. Register input handlers with ControlsManager in initialize() method:
+   - Define callback functions for each input action
+   - Map keyboard/mouse/touch inputs to game actions
+4. Implement answer selection logic using ControlsManager events
+5. Add methods to handle user interactions:
+   - selectAnswer(): Process answer selection
+   - navigateQuestion(): Move between questions
+6. Remove direct DOM event listeners from original implementation
+7. Test input handling by simulating user interactions
+8. Verify that all game controls work correctly through the ControlsManager
+

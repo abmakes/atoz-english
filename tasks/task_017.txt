@@ -1,0 +1,11 @@
+# Task ID: 17
+# Title: Add Optimized Mode Option to Game Setup
+# Status: pending
+# Dependencies: 14, 15, 16
+# Priority: low
+# Description: Add an Optimized Mode checkbox to GameSetupPanel and modify managers to use lower-fidelity assets when enabled.
+# Details:
+Add an 'Optimized Mode' checkbox to the GameSetupPanel component. Store the selection in game configuration. Modify AssetLoader to load lower-fidelity assets when Optimized Mode is enabled. Update AudioManager to use compressed audio in Optimized Mode. Add visual indicators when running in Optimized Mode. Persist user preference for Optimized Mode in localStorage.
+
+# Test Strategy:
+Test UI rendering with Optimized Mode checkbox. Verify correct assets are loaded based on mode selection. Test persistence of the preference. Measure performance differences between normal and Optimized Mode.

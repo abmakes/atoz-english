@@ -1,0 +1,111 @@
+# Task ID: 19
+# Title: Integrate End-to-End Testing for Refactored Engine
+# Status: pending
+# Dependencies: 14, 16
+# Priority: high
+# Description: Create comprehensive tests for the refactored engine and MultipleChoiceGame.
+# Details:
+Implement end-to-end tests for the complete engine flow. Test MultipleChoiceGame with various configurations. Verify all managers interact correctly. Test game lifecycle, scoring, timers, and user input. Create test fixtures and mocks as needed.
+
+# Test Strategy:
+Use Jest and possibly Playwright for end-to-end testing. Create test scenarios covering the full game flow. Test with various configurations and edge cases.
+
+# Subtasks:
+## 1. Create Test Fixtures and Mock Data for Engine Testing [pending]
+### Dependencies: None
+### Description: Develop reusable test fixtures and mock data to support all end-to-end tests for the engine and MultipleChoiceGame
+### Details:
+Implementation details:
+1. Create mock question data with various formats and difficulty levels
+2. Develop mock player profiles with different settings
+3. Create test fixtures for game configurations (time limits, scoring rules, etc.)
+4. Implement mock implementations of external dependencies (e.g., storage, UI interfaces)
+5. Build helper functions to quickly set up test environments
+6. Document usage patterns for the test fixtures
+
+Testing approach: Verify that fixtures can be easily composed to create different test scenarios and that mock data accurately represents real-world usage patterns.
+
+## 2. Implement Game Initialization Tests [pending]
+### Dependencies: 19.1
+### Description: Create tests that verify the engine and MultipleChoiceGame initialize correctly with various configurations
+### Details:
+Implementation details:
+1. Test game initialization with default parameters
+2. Test initialization with custom time limits
+3. Test initialization with different scoring rules
+4. Test initialization with various question pools
+5. Verify all managers are properly instantiated
+6. Test error handling for invalid configurations
+
+Testing approach: Use the fixtures from subtask 1 to create different game configurations. Assert that all components are properly initialized and that the game state reflects the provided configuration.
+
+## 3. Develop Game Lifecycle Tests [pending]
+### Dependencies: 19.1, 19.2
+### Description: Create tests that verify the complete lifecycle of a game from start to finish
+### Details:
+Implementation details:
+1. Test game start sequence
+2. Test progression through multiple questions
+3. Test game completion scenarios (all questions answered, time expired)
+4. Test pause/resume functionality
+5. Test early termination of games
+6. Verify correct event emissions during lifecycle changes
+
+Testing approach: Simulate complete game sessions using programmatic inputs. Assert that the game progresses through expected states and that all lifecycle events are properly triggered.
+
+## 4. Implement User Input and Interaction Tests [pending]
+### Dependencies: 19.1, 19.3
+### Description: Create tests that verify the engine correctly processes and responds to user inputs
+### Details:
+Implementation details:
+1. Test answer submission with correct answers
+2. Test answer submission with incorrect answers
+3. Test answer submission with timing variations (early, late)
+4. Test input validation and error handling
+5. Test multiple consecutive inputs
+6. Verify appropriate state changes after inputs
+
+Testing approach: Simulate user interactions programmatically. Assert that the game state updates correctly in response to inputs and that appropriate feedback is generated.
+
+## 5. Create Scoring and Timer Tests [pending]
+### Dependencies: 19.1, 19.3, 19.4
+### Description: Develop tests that verify the scoring system and timer functionality work correctly
+### Details:
+Implementation details:
+1. Test basic scoring for correct/incorrect answers
+2. Test time-based scoring modifiers
+3. Test streak bonuses and other scoring rules
+4. Test timer initialization and countdown
+5. Test timer events (warnings, expiration)
+6. Test timer pause/resume functionality
+
+Testing approach: Create test scenarios with controlled timing and specific answer patterns. Assert that scores are calculated correctly and that timer events occur at the expected times.
+
+## 6. Implement Manager Integration Tests [pending]
+### Dependencies: 19.1, 19.2, 19.3
+### Description: Create tests that verify all managers interact correctly with each other and with the main engine
+### Details:
+Implementation details:
+1. Test QuestionManager integration with the engine
+2. Test ScoreManager integration with game events
+3. Test TimerManager interactions with game state
+4. Test StateManager transitions based on other managers
+5. Test event propagation between managers
+6. Verify no unexpected side effects between manager interactions
+
+Testing approach: Create test scenarios that require coordination between multiple managers. Assert that changes in one manager correctly trigger appropriate responses in other managers and that the overall system behavior is consistent.
+
+## 7. Develop End-to-End MultipleChoiceGame Configuration Tests [pending]
+### Dependencies: 19.1, 19.2, 19.3, 19.4, 19.5, 19.6
+### Description: Create comprehensive tests for different MultipleChoiceGame configurations and edge cases
+### Details:
+Implementation details:
+1. Test games with minimum/maximum question counts
+2. Test games with extreme time limits (very short, very long)
+3. Test games with special scoring rules
+4. Test games with different difficulty progressions
+5. Test error recovery scenarios
+6. Test performance with large question pools
+
+Testing approach: Create a suite of tests covering diverse game configurations and edge cases. Assert that the game behaves correctly in all scenarios and that performance remains acceptable even in extreme cases.
+

@@ -1,0 +1,49 @@
+# Task ID: 21
+# Title: Enhance ControlsManager with Gamepad Support
+# Status: pending
+# Dependencies: 9, 19
+# Priority: medium
+# Description: Extend ControlsManager to support gamepad input.
+# Details:
+Add gamepad support to ControlsManager. Implement gamepad detection, button/axis mapping, and input normalization. Support multiple simultaneous gamepads. Map gamepad inputs to the same PLAYER_ACTION events as keyboard. Handle connection/disconnection events.
+
+# Test Strategy:
+Test gamepad detection, button mapping, and event emission. Verify multiple gamepads work correctly. Test with various gamepad models if possible.
+
+# Subtasks:
+## 1. Implement Gamepad Detection and Connection Management [pending]
+### Dependencies: None
+### Description: Create a system to detect connected gamepads and handle connection/disconnection events
+### Details:
+1. Add a gamepad detection mechanism using the Gamepad API (navigator.getGamepads())
+2. Create a method to scan for connected gamepads at regular intervals
+3. Implement event handlers for gamepad connection and disconnection events
+4. Store connected gamepads in a Map or Array with unique identifiers
+5. Add methods to query connected gamepads and their status
+6. Create a simple testing UI element that shows connected gamepad information
+7. Test by connecting/disconnecting various gamepads and verifying proper detection
+
+## 2. Implement Gamepad Button and Axis Mapping [pending]
+### Dependencies: 21.1
+### Description: Create a mapping system to translate gamepad inputs to standardized actions
+### Details:
+1. Define a standard mapping structure for different gamepad types (Xbox, PlayStation, generic)
+2. Create a configuration object that maps gamepad buttons/axes to PLAYER_ACTION events
+3. Implement functions to read raw gamepad button states and axis values
+4. Add input normalization for analog sticks (dead zones, sensitivity curves)
+5. Create helper methods to convert raw inputs to normalized values
+6. Implement a system to handle different gamepad layouts/types
+7. Test mapping with different gamepad types, ensuring buttons/axes are correctly identified
+
+## 3. Integrate Gamepad Input with Existing Control System [pending]
+### Dependencies: 21.1, 21.2
+### Description: Connect gamepad input processing to the existing control system and event dispatching
+### Details:
+1. Modify the ControlsManager update loop to poll for gamepad inputs
+2. Implement state tracking to detect button press/release events
+3. Extend the existing event system to dispatch gamepad events using the same PLAYER_ACTION format
+4. Add support for simultaneous input from multiple gamepads (player 1, player 2, etc.)
+5. Implement priority handling when both keyboard and gamepad inputs occur
+6. Create a configuration UI or method to allow remapping of gamepad controls
+7. Test the complete system with various games/interactions to ensure gamepad inputs trigger the same actions as keyboard inputs
+

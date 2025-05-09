@@ -48,13 +48,13 @@ export default async function GamesPage() {
       
       
       return (
-          // Apply theme background
-          <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
-              <div className="container mx-auto text-center">
-                  <h1 className="text-2xl font-bold mb-4 grandstander text-[--secondary]">Could not load quizzes.</h1>
-                  <p className="text-muted-foreground">Please try again later.</p>
-              </div>
+        // Apply theme background
+        <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
+          <div className="container mx-auto text-center">
+              <h1 className="text-2xl font-bold mb-4 grandstander text-[--secondary]">Could not load quizzes.</h1>
+              <p className="text-muted-foreground">Please try again later.</p>
           </div>
+        </div>
       );
   }
 
@@ -78,10 +78,9 @@ export default async function GamesPage() {
               key={quiz.id}
               href={`/games/${quiz.id}/multiple-choice`}
               passHref
-              legacyBehavior
             >
               {/* Outer link acting as group for hover */}
-              <a className="block group cursor-pointer">
+              <div className="block group cursor-pointer">
                 {/* 1. Image Container (The actual "Card") */}
                 <div className="relative overflow-hidden rounded-[32px] border-2 border-[#1E5167] bg-card shadow-[3px_6px_0px_0px_#1E5167] mb-3 transition duration-300 ease-in-out group-hover:shadow-[3px_6px_0px_0px_#1E5167]">
                   {/* Image */}
@@ -126,7 +125,7 @@ export default async function GamesPage() {
                         <span className="mt-2 inline-block rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700 grandstander">{quiz.level}</span>
                     )}
                 </div>
-              </a>
+              </div>
             </Link>
           ))}
         </div>

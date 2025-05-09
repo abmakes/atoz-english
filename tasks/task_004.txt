@@ -1,0 +1,11 @@
+# Task ID: 4
+# Title: Create Reusable PixiJS UI Button Component
+# Status: done
+# Dependencies: 3
+# Priority: medium
+# Description: Develop a reusable Button component for PixiJS that integrates with the ControlsManager
+# Details:
+Create a Button class in the /lib/pixi-engine/ui/ directory that extends PixiJS Container. Implement customizable appearance (background, text, hover/active states). Add support for different button states (normal, hover, pressed, disabled). Integrate with ControlsManager to emit PLAYER_ACTION events when clicked/tapped. Include accessibility features (keyboard focus, ARIA attributes). Support theming through configurable styles. Implement proper event cleanup on button destruction.
+
+# Test Strategy:
+Test button rendering, state changes (hover, press, disable), and event emission. Verify integration with ControlsManager by confirming PLAYER_ACTION events are emitted on interaction. Test accessibility features and keyboard navigation.
