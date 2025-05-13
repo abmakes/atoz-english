@@ -89,6 +89,7 @@ export default function ConditionalLayoutWrapper({ children }: { children: React
               fill={true}
               style={{ objectFit: 'fill', opacity: 1}}
               aria-hidden="true"
+              priority
             />
           </div>
         </>

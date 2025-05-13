@@ -75,13 +75,12 @@ export default async function GamesPage() {
         <div className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {quizzes.map((quiz) => (
             <Link
+              className="block group cursor-pointer"
               key={quiz.id}
               href={`/games/${quiz.id}/multiple-choice`}
               passHref
-              legacyBehavior
             >
               {/* Outer link acting as group for hover */}
-              <a className="block group cursor-pointer">
                 {/* 1. Image Container (The actual "Card") */}
                 <div className="relative overflow-hidden rounded-[32px] border-2 border-[#1E5167] bg-card shadow-[3px_6px_0px_0px_#1E5167] mb-3 transition duration-300 ease-in-out group-hover:shadow-[3px_6px_0px_0px_#1E5167]">
                   {/* Image */}
@@ -126,7 +125,6 @@ export default async function GamesPage() {
                         <span className="mt-2 inline-block rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700 grandstander">{quiz.level}</span>
                     )}
                 </div>
-              </a>
             </Link>
           ))}
         </div>
