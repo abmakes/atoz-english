@@ -2,6 +2,7 @@ import * as PIXI from 'pixi.js';
 import { Button } from '@pixi/ui';
 import { QuestionScene } from '../scenes/QuestionScene';
 import { PixiApplication } from '@/lib/pixi-engine/core/PixiApplication';
+import { PixiApplicationAdapter } from '../adapters/PixiApplicationAdapter';
 import { AssetLoader } from '@/lib/pixi-engine/assets/AssetLoader';
 import { EventBus } from '@/lib/pixi-engine/core/EventBus';
 import { PixiSpecificConfig } from '@/lib/themes';
@@ -18,6 +19,10 @@ export interface AnswerOptionUIData {
     length: number;      // For potential styling adjustments
 }
 
+// Add a type that allows either the deprecated PixiApplication or our new adapter
+// This helps during the transition phase
+type PixiAppType = PixiApplication | PixiApplicationAdapter;
+
 export class MultipleChoiceUIManager {
     private scene: QuestionScene;
     private pixiTimerInstance: PixiTimer;
@@ -26,7 +31,7 @@ export class MultipleChoiceUIManager {
     private readonly themeConfig: PixiSpecificConfig;
 
     constructor(
-        private readonly pixiApp: PixiApplication,
+        private readonly pixiApp: PixiAppType,
         private readonly eventBus: EventBus,
         private readonly assetLoader: typeof AssetLoader,
         themeConfig: PixiSpecificConfig,
@@ -128,7 +133,7 @@ export class MultipleChoiceUIManager {
         const sidePad = params.sidePadding;
         const bottomPad = params.bottomPadding;
         const contentWidth = screenWidth - 2 * sidePad;
-        const buttonContainerHeight = params.answerButtonHeightMultiplier * screenHeight;
+        const buttonContainerHeight = params.answerButtonHeight * screenHeight;
         const buttonContainerY = screenHeight - bottomPad - buttonContainerHeight;
         const buttonContainerBounds = new PIXI.Rectangle(sidePad, buttonContainerY, contentWidth, buttonContainerHeight);
         // ---
@@ -466,7 +471,7 @@ export class MultipleChoiceUIManager {
         const { width: screenWidth, height: screenHeight } = this.pixiApp.getScreenSize();
 
         // 1. Get Layout Parameters
-        this.layoutManager.updateLayout(screenWidth, screenHeight);
+        this.layoutManager.updateScreenDimensions(screenWidth, screenHeight);
         const params = this.layoutManager.getLayoutParams();
         console.log("UIManager: Got layout params:", params);
 
@@ -477,7 +482,7 @@ export class MultipleChoiceUIManager {
         const contentWidth = screenWidth - 2 * sidePad;
 
         // -- Button Container Bounds --
-        const buttonContainerHeight = params.answerButtonHeightMultiplier * screenHeight; // Approx height based on params
+        const buttonContainerHeight = params.answerButtonHeight * screenHeight; // Approx height based on params
         const buttonContainerY = screenHeight - bottomPad - buttonContainerHeight;
         const buttonContainerBounds = new PIXI.Rectangle(
             sidePad,
@@ -488,8 +493,8 @@ export class MultipleChoiceUIManager {
         console.log("UIManager: Calculated Button Container Bounds:", buttonContainerBounds);
 
         // -- Text Bounds --
-        const textY = screenHeight * params.questionYMultiplier;
-        const textWidth = contentWidth * params.questionWrapMultiplier; // Apply wrap multiplier
+        const textY = screenHeight * params.questionY;
+        const textWidth = contentWidth * params.questionWrapWidth; // Apply wrap multiplier
         const textX = (screenWidth - textWidth) / 2; // Center the wrapping box
         // Height is difficult to pre-calculate accurately due to wrapping.
         // We'll define a generous max height for now, scene will handle actual text height.

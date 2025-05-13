@@ -115,9 +115,37 @@ export class TransitionScreen extends PIXI.Container {
   }
 
   private _updatePanelDimensions(): void {
-    // Make it full screen
-    this.panelWidth = this.app.screen.width;
-    this.panelHeight = this.app.screen.height;
+    // Default fallback dimensions
+    let calculatedWidth = 800; 
+    let calculatedHeight = 600;
+    
+    // Priority 1: Try to get dimensions from app.screen
+    if (this.app && this.app.screen) {
+      if (typeof this.app.screen.width === 'number' && typeof this.app.screen.height === 'number') {
+        calculatedWidth = this.app.screen.width;
+        calculatedHeight = this.app.screen.height;
+        // Check if dimensions are valid
+        if (calculatedWidth === 0 || calculatedHeight === 0) {
+          console.warn("[TransitionScreen] PIXI App.screen dimensions are 0x0. Falling back.");
+          calculatedWidth = 0;
+          calculatedHeight = 0;
+        } else {
+          console.log(`[TransitionScreen] Using app.screen dimensions: ${calculatedWidth}x${calculatedHeight}`);
+        }
+      } else {
+        console.warn("[TransitionScreen] app.screen exists but width/height are not numbers. Falling back.");
+      }
+    } else {
+      console.warn("[TransitionScreen] PIXI App or App.screen not available. Falling back.");
+    }
+    // Fallback: If still zero, use hardcoded defaults
+    if (calculatedWidth === 0 || calculatedHeight === 0) {
+      calculatedWidth = 800;
+      calculatedHeight = 600;
+      console.warn(`[TransitionScreen] Using hardcoded default panel dimensions: ${calculatedWidth}x${calculatedHeight}`);
+    }
+    this.panelWidth = calculatedWidth;
+    this.panelHeight = calculatedHeight;
   }
 
   private _drawPanelBackground(): void {
@@ -135,22 +163,38 @@ export class TransitionScreen extends PIXI.Container {
 
   private _centerMessageText(): void {
       // Position main message higher
-      this.messageText.style.wordWrapWidth = this.panelWidth * 0.9;
-      this.messageText.position.set(this.app.screen.width / 2, this.app.screen.height / 2 - 80); // Adjusted Y
+      const screen = this.app && this.app.screen;
+      const screenWidth = screen ? screen.width : 800;
+      const screenHeight = screen ? screen.height : 600;
+      if (!screen) {
+        console.warn("[TransitionScreen] PIXI App.screen not available for message text centering.");
+      }
+      this.messageText.style.wordWrapWidth = this.panelWidth * 0.9; // panelWidth should be set by _updatePanelDimensions
+      this.messageText.position.set(screenWidth / 2, screenHeight / 2 - 80); // Adjusted Y
   }
 
   private _centerGetReadyText(): void {
       // Position "Get ready!" below the main message
+      const screen = this.app && this.app.screen;
+      const screenWidth = screen ? screen.width : 800;
+      if (!screen) {
+        console.warn("[TransitionScreen] PIXI App.screen not available for get ready text centering.");
+      }
       this.getReadyText.position.set(
-          this.app.screen.width / 2,
+          screenWidth / 2,
           this.messageText.y + this.messageText.height / 2 + 30 // Add padding
       );
   }
 
   private _centerPowerupText(): void {
       // Position power-up text below "Get ready!" text
+      const screen = this.app && this.app.screen;
+      const screenWidth = screen ? screen.width : 800;
+      if (!screen) {
+        console.warn("[TransitionScreen] PIXI App.screen not available for powerup text centering.");
+      }
       this.powerupTextDisplay.position.set(
-          this.app.screen.width / 2,
+          screenWidth / 2,
           this.getReadyText.y + this.getReadyText.height / 2 + 50 // Add padding
       );
   }
@@ -287,11 +331,15 @@ export class TransitionScreen extends PIXI.Container {
    * Adjusts layout when the screen resizes.
    */
   public onResize(): void { // Now doesn't need parameters
-    this._updatePanelDimensions();
+    if (!this.visible) return;
+    console.log("[TransitionScreen] onResize triggered.");
+
+    // Recalculate dimensions and redraw based on the current app screen size
+    this._updatePanelDimensions(); // This will use this.app.screen with checks
     this._drawPanelBackground();
     this._centerPanel();
     this._centerMessageText();
-    this._centerGetReadyText(); // Also reposition this text
+    this._centerGetReadyText();
     this._centerPowerupText();
   }
 

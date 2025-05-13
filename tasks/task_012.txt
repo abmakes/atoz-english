@@ -1,11 +1,53 @@
 # Task ID: 12
-# Title: Implement AI Generation API Endpoint
+# Title: Implement Zustand Store for Game Managers with React Integration
 # Status: pending
-# Dependencies: 10
-# Priority: medium
-# Description: Create a backend endpoint that takes AI parameters, calls the AI service, and structures the response as quiz questions/answers.
+# Dependencies: 8
+# Priority: high
+# Description: Create a Zustand store to manage game manager instances and integrate it with the React component lifecycle, ensuring proper initialization and cleanup of manager resources.
 # Details:
-Create a new tRPC procedure for AI quiz generation. Implement parameter validation. Call the AI service with formatted prompts based on user inputs. Parse the AI response into structured quiz data (questions, answers, correct flags). Implement error handling for AI service failures. Add rate limiting to prevent abuse. Log generation attempts and results for monitoring.
+This task focuses on implementing the `useManagersStore.ts` Zustand store which will serve as the central access point for all game manager instances:
+
+1. Create `src/lib/stores/useManagersStore.ts` with the following structure:
+   - Define a `ManagersState` interface that includes properties for all core managers (e.g., `eventBus`, `assetManager`, `soundManager`) and game-specific managers (e.g., `questionManager`, `teamManager`)
+   - Implement the store using Zustand's create function with methods for:
+     - `setManager(key, instance)`: Add or update a manager instance
+     - `getManager(key)`: Retrieve a specific manager
+     - `clearManagers()`: Reset all managers (for cleanup)
+
+2. Update the initialization flow in `GameplayView.tsx`:
+   - Import the new store
+   - In a useEffect with empty dependency array, initialize the PixiEngine
+   - Store all manager instances in the Zustand store as they're created
+   - Return a cleanup function that calls `clearManagers()` and properly destroys the engine
+
+3. Create a custom hook `useGameManager<T>(managerKey)` that:
+   - Returns a typed manager instance from the store
+   - Throws a helpful error if the requested manager isn't available
+   - Includes TypeScript generics for type safety
+
+4. Add middleware to the store that logs manager creation and access in development mode
+
+5. Document the manager lifecycle and access patterns in comments at the top of the store file
+
+6. Ensure the store is properly integrated with React's component lifecycle to prevent memory leaks
 
 # Test Strategy:
-Test the endpoint with various parameter combinations. Verify structured quiz data is correctly extracted from AI responses. Test error handling with simulated AI service failures. Verify rate limiting works correctly.
+1. Unit Tests:
+   - Test store initialization with empty state
+   - Verify `setManager` correctly adds a new manager instance
+   - Verify `getManager` retrieves the correct manager
+   - Confirm `clearManagers` properly resets the store
+   - Test error handling when requesting non-existent managers
+
+2. Integration Tests:
+   - Create a test component that initializes the engine and managers
+   - Verify all expected managers are available in the store after initialization
+   - Test component unmounting to ensure proper cleanup occurs
+   - Verify no memory leaks by checking that all managers are properly destroyed
+
+3. Manual Testing:
+   - In the browser, initialize the game and use React DevTools to inspect the Zustand store
+   - Verify managers are accessible from different components
+   - Test a full game session and confirm no console errors related to managers
+   - Check memory usage in Chrome DevTools to ensure no memory leaks after multiple game sessions
+   - Verify that navigating away from the game view properly cleans up all resources

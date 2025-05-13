@@ -1,6 +1,6 @@
 # Task ID: 8
 # Title: Update MultipleChoiceGame to Use New Components
-# Status: pending
+# Status: done
 # Dependencies: 7
 # Priority: high
 # Description: Refactor the MultipleChoiceGame to leverage all the enhanced engine components

@@ -146,7 +146,7 @@
       "id": 8,
       "title": "Update MultipleChoiceGame to Use New Components",
       "description": "Refactor the MultipleChoiceGame to leverage all the enhanced engine components",
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         7
       ],
@@ -271,6 +271,66 @@
         8
       ],
       "priority": "medium"
+    },
+    {
+      "id": 12,
+      "title": "Implement Zustand Store for Game Managers with React Integration",
+      "description": "Create a Zustand store to manage game manager instances and integrate it with the React component lifecycle, ensuring proper initialization and cleanup of manager resources.",
+      "details": "This task focuses on implementing the `useManagersStore.ts` Zustand store which will serve as the central access point for all game manager instances:\n\n1. Create `src/lib/stores/useManagersStore.ts` with the following structure:\n   - Define a `ManagersState` interface that includes properties for all core managers (e.g., `eventBus`, `assetManager`, `soundManager`) and game-specific managers (e.g., `questionManager`, `teamManager`)\n   - Implement the store using Zustand's create function with methods for:\n     - `setManager(key, instance)`: Add or update a manager instance\n     - `getManager(key)`: Retrieve a specific manager\n     - `clearManagers()`: Reset all managers (for cleanup)\n\n2. Update the initialization flow in `GameplayView.tsx`:\n   - Import the new store\n   - In a useEffect with empty dependency array, initialize the PixiEngine\n   - Store all manager instances in the Zustand store as they're created\n   - Return a cleanup function that calls `clearManagers()` and properly destroys the engine\n\n3. Create a custom hook `useGameManager<T>(managerKey)` that:\n   - Returns a typed manager instance from the store\n   - Throws a helpful error if the requested manager isn't available\n   - Includes TypeScript generics for type safety\n\n4. Add middleware to the store that logs manager creation and access in development mode\n\n5. Document the manager lifecycle and access patterns in comments at the top of the store file\n\n6. Ensure the store is properly integrated with React's component lifecycle to prevent memory leaks",
+      "testStrategy": "1. Unit Tests:\n   - Test store initialization with empty state\n   - Verify `setManager` correctly adds a new manager instance\n   - Verify `getManager` retrieves the correct manager\n   - Confirm `clearManagers` properly resets the store\n   - Test error handling when requesting non-existent managers\n\n2. Integration Tests:\n   - Create a test component that initializes the engine and managers\n   - Verify all expected managers are available in the store after initialization\n   - Test component unmounting to ensure proper cleanup occurs\n   - Verify no memory leaks by checking that all managers are properly destroyed\n\n3. Manual Testing:\n   - In the browser, initialize the game and use React DevTools to inspect the Zustand store\n   - Verify managers are accessible from different components\n   - Test a full game session and confirm no console errors related to managers\n   - Check memory usage in Chrome DevTools to ensure no memory leaks after multiple game sessions\n   - Verify that navigating away from the game view properly cleans up all resources",
+      "status": "pending",
+      "dependencies": [
+        8
+      ],
+      "priority": "high"
+    },
+    {
+      "id": 13,
+      "title": "Execute PixiEngine Refactor for @pixi/react and Zustand Integration",
+      "description": "Implement a comprehensive, phased refactoring plan to integrate @pixi/react for rendering and Zustand for global state management, replacing the current imperative PixiJS implementation.",
+      "details": "This task covers the entire refactoring effort described in scripts/refactor_prd.md, divided into four phases:\n\nPhase 1 (Setup & Background):\n- Install and configure @pixi/react and Zustand dependencies\n- Create initial Zustand store structure for game state\n- Set up project architecture for component-based rendering\n- Establish patterns for React component lifecycle integration with game logic\n\nPhase 2 (Timer & Game Logic Refinement):\n- Refactor timer functionality to use Zustand for state management\n- Convert game logic to work with the reactive state model\n- Implement hooks for accessing game state and dispatching actions\n- Ensure game loop and timing mechanisms work correctly with React's rendering cycle\n\nPhase 3 (Core Question Scene):\n- Refactor the main question scene using @pixi/react components\n- Convert all visual elements to declarative React components\n- Implement state-driven animations and transitions\n- Ensure interaction handlers work properly with the new component structure\n\nPhase 4 (Final Integration & Cleanup):\n- Complete migration of all remaining game scenes and components\n- Refine global state architecture and optimize performance\n- Remove legacy imperative code and cleanup technical debt\n- Document the new architecture and component patterns\n\nThis architectural change is critical for future app development, providing a more maintainable and declarative approach to game development.",
+      "testStrategy": "Testing will be conducted at each phase with the following approach:\n\nPhase 1:\n- Verify correct installation and configuration of dependencies\n- Test basic Zustand store operations with Jest unit tests\n- Confirm React component rendering of simple PixiJS elements\n- Validate project structure meets architectural requirements\n\nPhase 2:\n- Test timer accuracy and consistency under various conditions\n- Verify game state transitions work correctly through the Zustand store\n- Conduct performance testing to ensure no degradation from the refactor\n- Create integration tests for game logic with the new state management\n\nPhase 3:\n- Perform visual regression testing on the question scene\n- Test all user interactions and verify correct behavior\n- Validate animations and transitions match original implementation\n- Test across different screen sizes and device capabilities\n\nPhase 4:\n- Conduct end-to-end testing of the complete game flow\n- Verify all features function identically to pre-refactor version\n- Performance profiling to identify and address any bottlenecks\n- Cross-browser testing to ensure compatibility\n\nOverall success criteria: All existing game functionality is preserved or enhanced, developer experience is improved with more intuitive state management and component structure, and the codebase is more maintainable for future development.",
+      "status": "pending",
+      "dependencies": [],
+      "priority": "high",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Phase 1: Setup Zustand, Bridge Engine to React, Convert Background",
+          "description": "Establish the @pixi/react rendering environment, create foundational Zustand stores for global access to configuration and managers, and convert the simplest visual piece (GameBackground) to validate the setup. This phase focuses on reading data from Zustand.",
+          "details": "Steps:\n1. Dependencies: Install pixi.js, @pixi/react, zustand.\n2. @pixi/react Setup in GameplayView.tsx: Import and render <Application /> from @pixi/react inside the pixiMountPointRef div. Pass necessary props (width, height, etc.). Call extend (from @pixi/react) for common PIXI classes.\n3. PixiEngine Adaptation: Modify PixiEngine.init to not create its own PixiApplication. Ensure destroy still cleans up managers.\n4. Zustand Stores (Foundation): Create useGameConfigStore (holds GameConfig), useManagersStore (holds manager instances), useGameDisplayStateStore (reflecting store with EventBus listeners for PHASE_CHANGED, ACTIVE_TEAM_CHANGED, SCORE_UPDATED).\n5. GameplayView.tsx Adaptation: Use useEffect for PixiEngine init and Zustand population. Source overlay state from useGameDisplayStateStore.\n6. Refactor Background: Create GameBackground.tsx. Use stores for data/theme. Use <pixiSprite> or <pixiGraphics>. Render inside <Application />. Remove GameBackgroundManager.ts.\n7. Address \"State in Two Places\": Explicitly acknowledge that managers remain the source of truth; Zustand stores reflect this state for UI consumption via events.",
+          "status": "pending",
+          "dependencies": [],
+          "parentTaskId": 13
+        },
+        {
+          "id": 2,
+          "title": "Phase 2: Convert Timer Display and Refine MultipleChoiceGame Logic",
+          "description": "Convert another UI element (TimerDisplay) to React-Pixi, ensuring it reacts to state changes originating from a core manager (TimerManager) via Zustand. Begin simplifying the MultipleChoiceGame by removing its direct UI update responsibilities.",
+          "details": "Steps:\n1. Refactor Timer Display: Create TimerDisplay.tsx. Use <pixiGraphics />/<pixiText />. Add currentTimeRemaining, initialDuration to useGameDisplayStateStore (listens to TIMER_EVENTS.TIMER_TICK). TimerDisplay subscribes to store and gets layout from LayoutManager (via useManagersStore). Render inside <Application />. Remove timer rendering from MultipleChoiceUIManager/QuestionScene. MultipleChoiceGame still uses TimerManager for logic.\n2. Refine MultipleChoiceGame.ts: Review _handleTimerComplete, _processAnswerSelection. Remove direct UI calls. Focus on game logic, state changes, events. Keep transition logic for now.",
+          "status": "pending",
+          "dependencies": [],
+          "parentTaskId": 13
+        },
+        {
+          "id": 3,
+          "title": "Phase 3: Tackle the Core Question Scene and Answer Interaction",
+          "description": "Replace the most complex part of the imperative rendering (QuestionScene, MultipleChoiceUIManager) with a hierarchy of React-Pixi components driven by a dedicated Zustand store for the current question state. Handle user interaction (answer selection) via Zustand actions.",
+          "details": "Steps:\n1. Create React-Pixi Scene Components: Build QuestionText.tsx, QuestionMedia.tsx, AnswerButton.tsx, AnswerOptionsPanel.tsx, and CurrentQuestionDisplayScene.tsx. Get data/theme/layout via Zustand hooks.\n2. Create useCurrentQuestionStore: State (currentQuestionData, currentAnswerOptions, isAnswerSubmitted). Action (fetchAndSetQuestion: accesses multipleChoiceDataManager, gets next question, handles 50/50 power-up, updates store). Action (submitAnswer: sets isAnswerSubmitted, emits GAME_EVENTS.ANSWER_SELECTED via eventBus).\n3. Trigger Question Updates: Modify MultipleChoiceGame._showQuestion to trigger fetchAndSetQuestion action (e.g., via NEW_QUESTION_READY event).\n4. Integrate Scene Component: Render <CurrentQuestionDisplayScene /> inside <Application />. It subscribes to useCurrentQuestionStore. AnswerButton onClick calls store's submitAnswer.\n5. Deprecate/Remove Old Managers: Remove MultipleChoiceUIManager.ts and QuestionScene.ts.",
+          "status": "pending",
+          "dependencies": [],
+          "parentTaskId": 13
+        },
+        {
+          "id": 4,
+          "title": "Phase 4: Final Integration & Cleanup",
+          "description": "Ensure all remaining React UI overlays use Zustand, finalize the slimming down of MultipleChoiceGame, and review the overall architecture.",
+          "details": "Steps:\n1. Connect UI Overlays: Ensure PlayerScore.tsx, NavMenu.tsx, GameControlDropdown.tsx read state from and write changes via Zustand stores/actions (e.g., audio settings changes trigger Zustand actions -> emit SETTINGS_EVENTS).\n2. Finalize MultipleChoiceGame.ts: Remove any residual rendering logic. Confirm its focus is on data/sequence management, handling core logic events, and phase orchestration.\n3. Review BaseGame.ts & PixiEngine.ts: Ensure abstractions are clean and roles align with the new architecture (bootstrapping, manager hosting).",
+          "status": "pending",
+          "dependencies": [],
+          "parentTaskId": 13
+        }
+      ]
     }
   ],
   "metadata": {

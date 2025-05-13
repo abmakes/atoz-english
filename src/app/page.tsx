@@ -73,7 +73,7 @@ export default function HomePage() {
               priority 
             />
         </div>
-         <Link href="/games" legacyBehavior>
+         <Link href="/games">
            <Button size="lg" className="bg-blue-500 hover:bg-blue-600 text-white text-xl px-8 py-6 rounded-full">
              Play Now
            </Button>

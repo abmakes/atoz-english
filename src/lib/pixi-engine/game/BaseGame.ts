@@ -30,6 +30,8 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import * as PIXI from 'pixi.js';
 import { TransitionScreen, TransitionScreenConfig } from '../ui/TransitionScreen';
+import { usePixiAppStore } from '@/lib/stores/usePixiAppStore'; // Import the store
+
 
 // Extend GameConfig with missing properties used in this class
 declare module '../config/GameConfig' {
@@ -198,7 +200,16 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    * A read-only reference to the specific PixiJS theme configuration 
    * loaded based on the game config's theme ID.
    */
-  protected readonly themeConfig: PixiThemeConfig;
+  protected readonly themeConfig: Readonly<PixiThemeConfig>;
+
+  /**
+   * Initial dimensions that can be used by games when app.screen is not yet available.
+   * These are passed from the mount point via PixiEngine.
+   */
+  protected readonly initialDimensions: {
+    initialWidth: number;
+    initialHeight: number;
+  };
 
   // Manager references
   /** Provides access to the central event bus for emitting and subscribing to engine events. */
@@ -211,8 +222,6 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
   protected readonly timerManager: TimerManager;
   /** Provides access to the asset loader for retrieving loaded assets. */
   protected readonly assetLoader: typeof AssetLoader;
-  /** Provides access to the application instance for screen size, etc. */
-  protected readonly pixiApp: PixiEngineManagers['pixiApp']; // Use indexed access for type safety
   /** Provides access to the controls manager for handling player input. */
   protected readonly controlsManager: ControlsManager;
   /** Provides access to the game state manager for overall game state management. */
@@ -280,32 +289,34 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    * Creates an instance of BaseGame.
    * @param config The specific game configuration object.
    * @param managers An object containing references to all required engine managers, provided by PixiEngine.
+   * @param initialDimensions Optional initial dimensions that can be used when app.screen isn't available yet.
    */
   constructor(
     config: GameConfig,
-    managers: PixiEngineManagers
+    managers: PixiEngineManagers,
+    initialDimensions?: { initialWidth: number; initialHeight: number }
   ) {
-    // Validate the incoming configuration first
-    const validationErrors = validateGameConfig(config);
-    // Check if the validation returned any errors
+    const validationErrors: string[] = validateGameConfig(config);
     if (validationErrors.length > 0) {
-      console.error("Invalid GameConfig provided:", validationErrors);
-      // Throw an error to prevent initialization with bad config
-      throw new Error(`Invalid GameConfig: ${validationErrors.join(', ')}`);
+      validationErrors.forEach((err: string) => console.error(`GameConfig validation error: ${err}`));
+      throw new Error(`Invalid GameConfig: ${validationErrors.join('; ')}`);
     }
-    this.config = Object.freeze({ ...config }); // Store validated config
+    this.config = Object.freeze({...config});
 
-    // Load and store the corresponding theme configuration using the optional theme property
-    this.themeConfig = getThemeConfig(this.config.theme);
+    // Initialize initialDimensions with defaults if not provided
+    this.initialDimensions = initialDimensions || {
+      initialWidth: 0,
+      initialHeight: 0
+    };
+    if (initialDimensions) {
+      console.log(`[BaseGame] Received initial dimensions: ${initialDimensions.initialWidth}x${initialDimensions.initialHeight}`);
+    }
 
-    // Assign managers
     this.eventBus = managers.eventBus;
     this.storageManager = managers.storageManager;
     this.scoringManager = managers.scoringManager;
     this.timerManager = managers.timerManager;
     this.assetLoader = managers.assetLoader;
-    this.pixiApp = managers.pixiApp;
-    // Assign other managers
     this.controlsManager = managers.controlsManager;
     this.gameStateManager = managers.gameStateManager;
     this.ruleEngine = managers.ruleEngine;
@@ -313,26 +324,48 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     this.audioManager = managers.audioManager;
 
     this.view = new Container();
-    this.view.label = `GameView-${this.constructor.name}`;
+    this.view.label = `${this.constructor.name} View`;
+    this.view.sortableChildren = true;
 
-    // Initialize fixed timestep value from config or use default
-    this.FIXED_TIMESTEP_MS = 1000 / (config.fixedUpdateFPS || 60);
+    try {
+      this.themeConfig = Object.freeze(getThemeConfig(this.config.theme || 'default'));
+    } catch (error) {
+      console.warn(`Failed to load theme '${this.config.theme}'. Using default theme. Error: ${error}`);
+      this.themeConfig = Object.freeze(getThemeConfig('default'));
+    }
 
-    // Initialize game state immediately using the subclass implementation
+    this.FIXED_TIMESTEP_MS = 1000 / (this.config.fixedUpdateFPS || 60);
     this._gameState = this.createInitialState();
+    this.addStateToHistory(this._gameState);
 
-    // Create and add the transition screen early in the BaseGame constructor
-    // Pass the necessary managers including the powerUpManager
-    this.transitionScreen = new TransitionScreen(
-        this.pixiApp.getApp(), // Pass the actual PIXI.Application instance
+    const appForTransition = this.getPixiApp();
+    if (appForTransition) {
+      this.transitionScreen = new TransitionScreen(
+        appForTransition, 
         this.eventBus, 
-        this.powerUpManager // Pass powerUpManager here
-    );
-    // Add to the highest UI layer
-    this.addToLayer(this.transitionScreen, RenderLayer.UI_FOREGROUND);
+        this.powerUpManager
+      );
+    } else {
+      console.warn("[BaseGame Constructor] PIXI Application not available from store for TransitionScreen initialization.");
+    }
 
-    // Add listener for the new power-up selection event
+    this.registerEventListener(TRANSITION_EVENTS.START, this._handleTransitionStart.bind(this));
+    this.registerEventListener(TRANSITION_EVENTS.END, this._handleTransitionEnd.bind(this));
     this.registerEventListener(TRANSITION_EVENTS.POWERUP_SELECTED, this._handlePowerupSelected.bind(this));
+    console.log(`${this.constructor.name} constructed. Initial state:`, this._gameState);
+  }
+
+  protected getPixiApp(): PIXI.Application | null {
+    const appInstanceFromStore = usePixiAppStore.getState().app;
+    if (!appInstanceFromStore) {
+      console.warn("[BaseGame.getPixiApp] PIXI Application instance not found in store.");
+      return null;
+    }
+    if (appInstanceFromStore && typeof appInstanceFromStore.stage === 'object' && typeof appInstanceFromStore.renderer === 'object') {
+      return appInstanceFromStore;
+    }
+    console.warn("[BaseGame.getPixiApp] Instance in store doesn't appear to be a PIXI.Application directly.");
+    return null;
   }
 
   /**
@@ -341,19 +374,42 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    * @returns A promise that resolves when game initialization is complete.
    */
   async init(engineAssetsPromise: Promise<unknown>): Promise<void> {
-    // Store the promise
+    if (this.isInitialized) {
+      console.warn(`${this.constructor.name} is already initialized.`);
+      return;
+    }
+    this.gameState = GameState.INITIALIZED; // Set state before async operations
     this.engineAssetsPromise = engineAssetsPromise;
 
-    // Emit game starting event
-    this.emitEvent(GAME_STATE_EVENTS.GAME_STARTING);
-    
-    // Initialize the game (abstract method implemented by subclasses), passing the promise
-    await this.initImplementation(this.engineAssetsPromise);
-    
-    // Set game state and emit game started event
-    this.gameState = GameState.INITIALIZED;
-    this.isInitialized = true;
-    this.emitEvent(GAME_STATE_EVENTS.GAME_STARTED);
+    console.log(`[${this.constructor.name}] init: Starting initialization...`);
+    try {
+      await this.initImplementation(this.engineAssetsPromise);
+      this.isInitialized = true;
+      console.log(`[${this.constructor.name}] init: Initialization implementation complete.`);
+
+      const app = this.getPixiApp();
+      if (app && app.stage) {
+        app.stage.addChild(this.view);
+        console.log(`[BaseGame] Game view for ${this.constructor.name} added to PIXI stage.`);
+      } else {
+        console.error(`[BaseGame] Could not add game view to stage: PIXI Application or stage not available.`);
+      }
+      // Use a robust way to get an identifier - trying gameMode.name or id
+      const gameIdentifier = this.config.gameMode?.name || (this.config as any).id || 'UnknownGame';
+      // Make the emit call compliant with "Expected 1 arguments"
+      this.eventBus.emit(ENGINE_EVENTS.INITIALIZED); 
+      // If gameId is needed, EventTypes.ts EngineEvents for INITIALIZED must be updated to accept a payload.
+      // For now, also logging the identifier if it was meant to be passed.
+      if (gameIdentifier !== 'UnknownGame') {
+          console.log(`[BaseGame] Game initialized with identifier: ${gameIdentifier}`);
+      }
+
+      console.log(`[${this.constructor.name}] init: Game initialized successfully.`);
+    } catch (error) {
+      console.error(`[${this.constructor.name}] init: Error during initialization:`, error);
+      this.gameState = GameState.NOT_INITIALIZED; // Revert state on error
+      throw error; 
+    }
   }
   
   /**
@@ -516,12 +572,26 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    * @param width - The new width of the rendering area.
    * @param height - The new height of the rendering area.
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public onResize(width: number, height: number): void {
-    console.log(`${this.constructor.name}: onResize (${width}x${height})`);
-    // Resize transition screen if it exists (no arguments needed)
-    this.transitionScreen?.onResize();
-    // Subclasses implement layout adjustments here.
+    console.log(`[${this.constructor.name}] onResize: Resizing to ${width}x${height}`);
+    const app = this.getPixiApp();
+    if (app && app.renderer) {
+        app.renderer.resize(width, height);
+        console.log(`[BaseGame] PIXI renderer resized to ${width}x${height}.`);
+    }
+    this._layerContainers.forEach(container => {
+        if (typeof (container as any).onResize === 'function') {
+             (container as any).onResize(width, height);
+        }
+    });
+    if (this.transitionScreen && this.transitionScreen.visible) {
+        this.transitionScreen.onResize();
+    }
+  }
+
+  /**
+    // Optionally, re-calculate and apply viewport if game uses one
+    // this._updateViewport();
   }
 
   /**
@@ -1409,34 +1479,26 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    * 5. Post-render operations and events
    */
   protected renderPipeline(): void {
-    // Skip rendering if game is not visible
     if (!this.isVisible()) return;
-
     try {
-      // Pre-render phase - fix by not passing empty objects to event with no parameters
       this.emitEvent(ENGINE_EVENTS.BEFORE_RENDER);
-      
-      // Clear the viewport if configured to do so
       if (this.config.clearBeforeRender) {
-        // Use getApp() to access the renderer
-        this.pixiApp.getApp().renderer.clear();
+        this.getPixiApp()?.renderer.clear();
       }
-      
-      // Execute all custom renderers in priority order
       for (const customRenderer of this._customRenderers) {
         try {
-          // Use getApp() to access the renderer
-          customRenderer.renderer(this.pixiApp.getApp().renderer);
+          const appRenderer = this.getPixiApp()?.renderer;
+          if (appRenderer) {
+            customRenderer.renderer(appRenderer);
+          } else {
+            console.warn("[BaseGame] Cannot execute custom renderer: PIXI Renderer not available.");
+          }
         } catch (error) {
           console.error(`[BaseGame] Error in custom renderer (ID: ${customRenderer.id}):`, error);
         }
       }
-      
-      // Main render phase - call the game's implementation - fix event parameter
       this.emitEvent(ENGINE_EVENTS.RENDER);
       this.render();
-      
-      // Post-render phase - fix event parameter
       this.emitEvent(ENGINE_EVENTS.AFTER_RENDER);
     } catch (error) {
       console.error('[BaseGame] Error in render pipeline:', error);
@@ -1855,5 +1917,16 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     // }
     
     // Default implementation does nothing further.
+  }
+
+  // Add stub methods for transition handlers
+  protected _handleTransitionStart(payload: TransitionStartPayload): void {
+    console.log('[BaseGame] Transition Started:', payload.type, payload.message);
+    // Base implementation can be empty or log. Subclasses can override.
+  }
+
+  protected _handleTransitionEnd(payload: TransitionEndPayload): void {
+    console.log('[BaseGame] Transition Ended:', payload.type);
+    // Base implementation can be empty or log. Subclasses can override.
   }
 }

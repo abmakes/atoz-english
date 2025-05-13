@@ -12,6 +12,33 @@ import { BaseGame } from '@/lib/pixi-engine/game/BaseGame';
 import { Settings, ArrowLeft } from 'lucide-react';
 import { SETTINGS_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
 // import type { EventBus } from '@/lib/pixi-engine/core/EventBus';
+import { 
+  Application, 
+  useApplication, 
+  extend, 
+  useTick ,
+  
+} from '@pixi/react';
+import { TextStyle, Text, Container, Graphics as PixiGraphics, Sprite as PixiSprite } from 'pixi.js';
+// --- @pixi/react and PIXI imports ---
+import * as PIXI from 'pixi.js';
+
+// --- Zustand Store Imports ---
+import { useGameConfigStore } from '@/lib/stores/useGameConfigStore';
+import { useManagersStore } from '@/lib/stores/useManagersStore';
+import { useGameDisplayStateStore } from '@/lib/stores/useGameDisplayStateStore'; // Removed PlayerScoreState alias, it's exported directly
+import { usePixiAppStore } from '@/lib/stores/usePixiAppStore'; // Import the new store
+
+// --- Custom React-Pixi Component Imports ---
+import { GameBackground } from '@/lib/pixi-games/multiple-choice/react-components/GameBackground';
+import { TimerDisplay } from '@/lib/pixi-games/multiple-choice/react-components/TimerDisplay';
+import { CurrentQuestionDisplayScene } from '@/lib/pixi-games/multiple-choice/react-components/CurrentQuestionDisplayScene';
+import PixiDevtoolsInitializer from './PixiDevtoolsInitializer'; // Import the devtools initializer
+
+// Extend specific PIXI classes for JSX usage
+// These will be available as <Container />, <Sprite />, <Graphics />, <Text /> in JSX
+extend({ Text, Container, Graphics: PixiGraphics, Sprite: PixiSprite });
+// --- End @pixi/react imports ---
 
 // Update state structure to include teamId
 interface PlayerScoreState extends PlayerScoreData {
@@ -33,7 +60,7 @@ interface GameplayViewProps {
   /** React ref pointing to the DOM element where the PixiJS canvas should be mounted. */
   pixiMountPointRef: React.RefObject<HTMLDivElement>;
   /** Factory function to create the specific game instance. */
-  gameFactory: (config: GameConfig, managers: PixiEngineManagers) => BaseGame;
+  gameFactory: (config: GameConfig, managers: PixiEngineManagers, initialDimensions?: { initialWidth: number; initialHeight: number }) => BaseGame;
 }
 
 /**
@@ -67,6 +94,67 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   // --- Refs for internal engine/managers ---
   const engineInstanceRef = useRef<PixiEngine | null>(null);
   const managersRef = useRef<PixiEngineManagers | null>(null);
+  // Store initial dimensions from the mount point
+  const initialDimensionsRef = useRef<{width: number, height: number} | null>(null);
+
+  // --- @pixi/react Application options ---
+  // appWidth and appHeight are now managed by resizeTo
+  const appResolution = typeof window !== 'undefined' ? window.devicePixelRatio : 1;
+  const appBackgroundColor = 0x1099bb; // Placeholder color
+  // --- End @pixi/react Application options ---
+
+  // --- Get Pixi App from Store ---
+  const pixiAppFromStore = usePixiAppStore(state => state.app);
+  // --- End Get Pixi App from Store ---
+
+  // Effect to capture initial dimensions from mount point
+  useEffect(() => {
+    if (pixiMountPointRef.current && !initialDimensionsRef.current) {
+      const width = pixiMountPointRef.current.clientWidth || 1280;
+      const height = pixiMountPointRef.current.clientHeight || 720;
+      initialDimensionsRef.current = { width, height };
+      console.log(`GameplayView: Captured initial dimensions from mount point: ${width}x${height}`);
+    }
+  }, [pixiMountPointRef]);
+
+  // Component to update the Zustand stores with React state and instances
+  const StoreUpdater = () => {
+    const app = useApplication();
+    const setPixiApp = usePixiAppStore(state => state.setApp);
+    const setGameConfig = useGameConfigStore(state => state.setConfig);
+    const setManagers = useManagersStore(state => state.setAllEngineManagers);
+    const setEventBus = useGameDisplayStateStore(state => state.setEventBus);
+    const initScores = useGameDisplayStateStore(state => state.initScores);
+
+    useEffect(() => {
+      if (app?.app) {
+        console.log("GameplayView: Setting PIXI.Application instance in store:", app.app);
+        setPixiApp(app.app);
+      }
+    }, [app, setPixiApp]);
+
+    useEffect(() => {
+      if (config) {
+        console.log("GameplayView: Setting GameConfig in store:", config);
+        setGameConfig(config);
+        // Initialize scores based on team config
+        initScores(config.teams);
+      }
+    }, [config, setGameConfig, initScores]);
+
+    useEffect(() => {
+      if (managersRef.current) {
+        console.log("GameplayView: Setting managers in store:", managersRef.current);
+        setManagers(managersRef.current);
+        // Set the EventBus instance in the display state store
+        if (managersRef.current.eventBus) {
+          setEventBus(managersRef.current.eventBus);
+        }
+      }
+    }, [managersRef.current, setManagers, setEventBus]);
+
+    return null; // This component doesn't render anything
+  };
 
   console.log(config, 'AS GAME Confing form container !!!!!!!!!!!')
 
@@ -135,20 +223,35 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   useEffect(() => {
       let engine: PixiEngine | null = null;
       
-      if (config && gameFactory && pixiMountPointRef.current && !engineInstanceRef.current) {
-          console.log("GameplayView: Initializing PixiEngine...");
-          engine = new PixiEngine({ targetElement: pixiMountPointRef.current });
+      // Ensure PixiApp is available in the store before initializing the engine
+      if (config && gameFactory && pixiMountPointRef.current && !engineInstanceRef.current && pixiAppFromStore) {
+          console.log("GameplayView: Initializing PixiEngine (PixiApp is available in store)...");
+          
+          // Pass initial dimensions to PixiEngine
+          const initialOptions = {
+            debug: process.env.NODE_ENV === 'development',
+            width: initialDimensionsRef.current?.width,
+            height: initialDimensionsRef.current?.height,
+          };
+          
+          engine = new PixiEngine(initialOptions);
           engineInstanceRef.current = engine;
 
           engine.init(config, gameFactory)
               .then(() => {
                   console.log("GameplayView: PixiEngine initialized successfully.");
-                  console.log(config, 'ENGINE !!!!!!!!!!!')
                   const currentManagers = engine?.getManagers();
                   managersRef.current = currentManagers ?? null;
 
-                  // Attach listeners ONLY after managers are confirmed
                   if (currentManagers) {
+                       // --- Populate Zustand Stores ---
+                       useGameConfigStore.getState().setConfig(config);
+                       useManagersStore.getState().setAllEngineManagers(currentManagers);
+                       useGameDisplayStateStore.getState().setEventBus(currentManagers.eventBus);
+                       useGameDisplayStateStore.getState().initScores(config.teams);
+                       console.log("GameplayView: Zustand stores populated.");
+                       // --- End Zustand Population ---
+
                        console.log("GameplayView: Attaching event listeners post-init...");
                       currentManagers.eventBus.on(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
                       currentManagers.eventBus.on(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
@@ -163,6 +266,9 @@ const GameplayView: React.FC<GameplayViewProps> = ({
                   engineInstanceRef.current = null; // Clear ref on error
                   managersRef.current = null;
               });
+      }
+      else if (pixiAppFromStore === null && config && gameFactory && pixiMountPointRef.current && !engineInstanceRef.current) {
+        console.log("GameplayView: Waiting for PixiApplication to be available in store before initializing PixiEngine...");
       }
 
       // --- Cleanup function ---
@@ -179,6 +285,11 @@ const GameplayView: React.FC<GameplayViewProps> = ({
                   currentManagers.eventBus.off(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
                   currentManagers.eventBus.off(GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED, handlePixiActiveTeamChanged);
               }
+              // --- Cleanup Zustand Store Listeners ---
+              useGameDisplayStateStore.getState().cleanupListeners();
+              console.log("GameplayView: Zustand store listeners cleaned up.");
+              // --- End Store Cleanup ---
+
               engineToDestroy.destroy();
               engineInstanceRef.current = null;
               managersRef.current = null;
@@ -188,7 +299,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
       };
       // Dependencies: config and factory trigger re-init if they change.
       // Ref changes don't trigger effects, but we check .current inside.
-  }, [config, gameFactory, pixiMountPointRef, handlePixiGameOver, handlePixiScoreUpdate, handlePixiActiveTeamChanged]);
+  }, [config, gameFactory, pixiMountPointRef, handlePixiGameOver, handlePixiScoreUpdate, handlePixiActiveTeamChanged, pixiAppFromStore]);
   // ------------------------------------------------------
 
   // --- Settings/Audio Handlers (Connect to EventBus/AudioManager) ---
@@ -299,7 +410,34 @@ const GameplayView: React.FC<GameplayViewProps> = ({
         </div>
 
       {/* Render the mount point div for PixiJS canvas */}
-      <div ref={pixiMountPointRef} className={`${themeClassName} pixiCanvasContainer`}></div>
+      <div ref={pixiMountPointRef} className={`${themeClassName} pixiCanvasContainer`}>
+        {/* @pixi/react Application component will render its canvas here */}
+        <Application
+          resizeTo={pixiMountPointRef}
+          resolution={appResolution}
+          background={appBackgroundColor}
+        >
+          {/* Helper to set app instance in Zustand store */}
+          <StoreUpdater /> 
+
+          {/* GameBackground will be the first thing rendered in the Pixi app */}
+          <GameBackground />
+          {/* <TimerDisplay /> // Removed: Timer is now part of CurrentQuestionDisplayScene */}
+          {/* Add CurrentQuestionDisplayScene component */}
+          <CurrentQuestionDisplayScene />
+
+          {/* Basic Container component as a root child. */}
+          <pixiContainer>
+            {/* Example: A placeholder text to verify @pixi/react is working */}
+            <pixiText text="Hello @pixi/react!" x={50} y={50} />
+          </pixiContainer>
+
+          {/* Add PixiDevtoolsInitializer component only in development mode */}
+          {process.env.NODE_ENV === 'development' && (
+            <PixiDevtoolsInitializer />
+          )}
+        </Application>
+      </div>
 
     </div>
   );

@@ -46,10 +46,16 @@ interface GameContainerProps {
  * Factory function to create a specific game instance.
  * @param config - The game configuration object.
  * @param managers - The core PixiEngine managers.
+ * @param initialDimensions - Optional initial dimensions that can be used when app.screen isn't available yet.
  * @returns An instance of the game controller (e.g., MultipleChoiceGame).
  */
-const gameFactory = (config: GameConfig, managers: PixiEngineManagers): MultipleChoiceGame => {
-    return new MultipleChoiceGame(config, managers);
+const gameFactory = (
+  config: GameConfig, 
+  managers: PixiEngineManagers,
+  initialDimensions?: { initialWidth: number; initialHeight: number }
+): MultipleChoiceGame => {
+    console.log(`GameContainer: Creating game instance${initialDimensions ? ` with initial dimensions ${initialDimensions.initialWidth}x${initialDimensions.initialHeight}` : ''}`);
+    return new MultipleChoiceGame(config, managers, initialDimensions);
 };
 
 /**
@@ -353,16 +359,16 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
         }
         // When playing, render GameplayView and pass the ref for Pixi to mount into
         return (
-            <>
-                <GameplayView
-                    config={gameConfig}
-                    themeClassName={themeClassName}
-                    onGameOver={handleGameOver}
-                    onExit={handleExit}
-                    pixiMountPointRef={pixiMountPointRef as React.RefObject<HTMLDivElement>}
-                    gameFactory={gameFactory}
-                />
-            </>
+          <>
+            <GameplayView
+                config={gameConfig}
+                themeClassName={themeClassName}
+                onGameOver={handleGameOver}
+                onExit={handleExit}
+                pixiMountPointRef={pixiMountPointRef as React.RefObject<HTMLDivElement>}
+                gameFactory={gameFactory}
+            />
+          </>
         );
       case 'gameover':
         const gameOverNavItems: NavMenuItemProps[] = [

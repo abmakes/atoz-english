@@ -88,7 +88,7 @@ export class TimerManager {
       };
       this.timers.set(id, newTimer);
       this._saveTimers();
-      this.eventBus.emit(TIMER_EVENTS.TIMER_STARTED, { timerId: id });
+      this.eventBus.emit(TIMER_EVENTS.TIMER_STARTED, { timerId: id, duration: newTimer.duration });
       return { ...newTimer }; // Return a copy
   }
 
@@ -260,7 +260,7 @@ export class TimerManager {
       timer.pauseTime = 0; // Clear pause time
       this._saveTimers();
       this._startGlobalTick(); // Ensure the global tick loop is running
-      this.eventBus.emit(TIMER_EVENTS.TIMER_STARTED, { timerId: id });
+      this.eventBus.emit(TIMER_EVENTS.TIMER_STARTED, { timerId: id, duration: timer.duration });
       console.debug(`TimerManager: Started timer '${id}'.`);
   }
 

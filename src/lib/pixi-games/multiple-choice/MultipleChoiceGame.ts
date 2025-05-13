@@ -8,8 +8,9 @@ import { QuestionData } from '@/types';
 import { GifAsset } from 'pixi.js/gif';
 import { MultipleChoiceDataManager } from './managers/MultipleChoiceDataManager';
 import { MultipleChoiceUIManager, AnswerOptionUIData } from './managers/MultipleChoiceUIManager';
-import { GameBackgroundManager } from './managers/GameBackgroundManager';
-import { MultipleChoiceLayoutManager } from './managers/MultipleChoiceLayoutManager';
+import { MultipleChoiceLayoutManager } from '@/lib/pixi-games/multiple-choice/managers/MultipleChoiceLayoutManager';
+import { useApplication } from '@pixi/react';
+import { PixiApplicationAdapter } from './adapters/PixiApplicationAdapter';
 
 async function ensureFontIsLoaded(fontFamily: string, descriptor: string = '28px'): Promise<void> {
     const fontCheckString = `${descriptor} "${fontFamily}"`;
@@ -46,14 +47,20 @@ interface MultipleChoiceGameState extends BaseGameState {
 export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
     private dataManager!: MultipleChoiceDataManager;
     private uiManager!: MultipleChoiceUIManager;
-    private backgroundManager!: GameBackgroundManager;
     private layoutManager!: MultipleChoiceLayoutManager;
     private readonly QUESTION_TIMER_ID = 'multipleChoiceQuestionTimer';
     
-    constructor(config: GameConfig, managers: PixiEngineManagers) {
-        super(config, managers);
+    constructor(
+        config: GameConfig, 
+        managers: PixiEngineManagers,
+        initialDimensions?: { initialWidth: number; initialHeight: number }
+    ) {
+        super(config, managers, initialDimensions);
 
         console.log("MultipleChoiceGame constructor - Config received:", this.config);
+        if (initialDimensions) {
+            console.log(`MultipleChoiceGame constructor - Initial dimensions received: ${initialDimensions.initialWidth}x${initialDimensions.initialHeight}`);
+        }
 
         if (typeof GifAsset !== 'undefined') {
             console.log("GIF Asset handler registered.");
@@ -86,15 +93,53 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         try {
             console.log("[MultipleChoiceGame] initImplementation: Starting...");
             
-            // Show initial loading transition (non-auto-hiding)
-            console.log("[MultipleChoiceGame] initImplementation: Calling showTransition (loading)...'"); 
             await this.showTransition({ type: 'loading', message: 'Getting Ready...', autoHide: false });
             console.log("[MultipleChoiceGame] initImplementation: AFTER await showTransition (loading) - Screen is visible.");
 
-            // Initialize Layout Manager first (it has no dependencies)
-            const { width, height } = this.pixiApp.getScreenSize();
+            const app = this.getPixiApp(); // Get app instance using the new method
+            
+            // First try to get dimensions from app.screen
+            let width = 0; // Initialize to 0 to trigger fallbacks
+            let height = 0;
+            
+            if (app && app.screen) { 
+                // Attempt 1: Use app.screen if available and dimensions are valid
+                if (typeof app.screen.width === 'number' && typeof app.screen.height === 'number') {
+                    width = app.screen.width;
+                    height = app.screen.height;
+                    if (width === 0 || height === 0) {
+                        console.warn(`[MultipleChoiceGame] PIXI App.screen dimensions are 0x0. Falling back.`);
+                        width = 0;
+                        height = 0; // Reset to trigger the next fallback
+                    } else {
+                        console.log(`[MultipleChoiceGame] Using app.screen dimensions: ${width}x${height}`);
+                    }
+                } else {
+                    console.warn(`[MultipleChoiceGame] app.screen exists but width/height are not numbers. Falling back.`);
+                }
+            } else {
+                console.warn(`[MultipleChoiceGame] PIXI App or App.screen not available. Falling back.`);
+            }
+            
+            // Attempt 2: Use initialDimensions if app.screen didn't provide valid dimensions
+            if (width === 0 || height === 0) {
+                if (this.initialDimensions && this.initialDimensions.initialWidth > 0 && this.initialDimensions.initialHeight > 0) {
+                    width = this.initialDimensions.initialWidth;
+                    height = this.initialDimensions.initialHeight;
+                    console.log(`[MultipleChoiceGame] Using initialDimensions from constructor: ${width}x${height}`);
+                } else {
+                    // Attempt 3: Fall back to hardcoded logical defaults
+                    width = 1280;
+                    height = 720;
+                    console.warn(`[MultipleChoiceGame] Using hardcoded default logical dimensions: ${width}x${height}`);
+                }
+            }
+
+            // Use the new logical-resolution-based layout manager
             this.layoutManager = new MultipleChoiceLayoutManager(width, height);
-            console.log("[MultipleChoiceGame] Layout Manager initialized with screen size:", width, "x", height);
+            // After app is available, always update to actual screen size
+            this.layoutManager.updateScreenDimensions(width, height);
+            console.log("[MultipleChoiceGame] Layout Manager initialized with logical screen size:", width, "x", height);
 
             // --- Instantiate and Load Data Manager ---
             console.log("[MultipleChoiceGame] Config check before DataManager:", { 
@@ -142,18 +187,6 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             await ensureFontIsLoaded('Grandstander');
             console.log("[MultipleChoiceGame] initImplementation: Setting up UI...");
 
-            // --- Instantiate Background Manager ---
-            console.log("[MultipleChoiceGame] Instantiating GameBackgroundManager...");
-            this.backgroundManager = new GameBackgroundManager(
-                this.pixiApp,
-                this.themeConfig, // Pass the full themeConfig (PixiThemeConfig type)
-                this.eventBus
-            );
-            // Add its view BEHIND everything else (at index 0)
-            this.view.addChildAt(this.backgroundManager.getView(), 0);
-            console.log("[MultipleChoiceGame] GameBackgroundManager instantiated and view added.");
-            // --- End Background Manager Init ---
-
             // --- Instantiate UI Manager ---
             console.log("[MultipleChoiceGame] Instantiating UIManager...");
             // Define the gameRef object with necessary callbacks/getters
@@ -168,8 +201,16 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                  getPowerUpTargetId: () => this.getState()?.activeTeam,
                  powerUpManager: this.powerUpManager
              };
+            const currentPixiApp = this.getPixiApp();
+            if (!currentPixiApp) {
+                throw new Error("[MultipleChoiceGame] Cannot initialize UIManager: PIXI Application not available from store.");
+            }
+
+            // Create an adapter that implements the PixiApplication interface
+            const pixiAppAdapter = new PixiApplicationAdapter(currentPixiApp);
+
             this.uiManager = new MultipleChoiceUIManager(
-                this.pixiApp,
+                pixiAppAdapter, // Pass the adapter instead of PixiApplication
                 this.eventBus,
                 this.assetLoader,
                 this.themeConfig.pixiConfig, // Pass the Pixi-specific theme part
@@ -206,7 +247,6 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             this._unbindGameEvents();
             // Ensure UIManager is destroyed if init fails after its creation
             this.uiManager?.destroy();
-            this.backgroundManager?.destroy();
             throw error; // Re-throw error after cleanup attempt
         }
     }
@@ -299,27 +339,21 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
      * Clean up all resources during game destruction
      */
     protected destroyImplementation(): void {
-        console.log(`[!!! MultipleChoiceGame !!!] Entering destroyImplementation`);
         console.log(`${this.constructor.name}: Destroying...`);
         this._unbindGameEvents();
 
-         // --- Add Guard for Timer Removal ---
-         if (this.timerManager && this.timerManager.getTimer(this.QUESTION_TIMER_ID)) {
-             this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
-             console.log(`[MultipleChoiceGame.destroyImplementation] Timer ${this.QUESTION_TIMER_ID} removed.`);
-         } else {
-            // This might be expected if destroy is called due to init failure
+        if (this.timerManager && this.timerManager.getTimer(this.QUESTION_TIMER_ID)) {
+            this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
+            console.log(`[MultipleChoiceGame.destroyImplementation] Timer ${this.QUESTION_TIMER_ID} removed.`);
+        } else {
             console.log(`[MultipleChoiceGame.destroyImplementation] Timer '${this.QUESTION_TIMER_ID}' not found during destroy (might be expected).`);
-         }
-         // --- End Guard ---
+        }
 
-        // Check if uiManager exists right before calling destroy
-        console.log(`[!!! MultipleChoiceGame !!!] uiManager exists?`, !!this.uiManager);
-        // Delegate UI destruction to the UI Manager
-        this.uiManager?.destroy();
-        this.backgroundManager?.destroy();
-        // @ts-expect-error - uiManager is intentionally set to null after destruction for cleanup.
-        this.uiManager = null;
+        if (this.uiManager) {
+            this.uiManager.destroy();
+            // @ts-expect-error - Allow setting to null
+            this.uiManager = null;
+        }
 
         this.view.removeChildren(); // Clear game's main view
         console.log(`${this.constructor.name}: Destroy complete.`);
@@ -344,20 +378,23 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             return;
         }
         
-        // UI Manager handles clearing old state
-        this.uiManager.clearQuestionState();
+        // UI Manager handles clearing old state -- THIS WILL BECOME REDUNDANT OR REMOVED
+        // this.uiManager.clearQuestionState();
 
-        // UI Manager handles displaying the new question content
-        this.uiManager.updateQuestionContent(question);
+        // UI Manager handles displaying the new question content -- THIS WILL BE REPLACED BY EVENT EMISSION
+        // this.uiManager.updateQuestionContent(question);
 
-        // Game logic creates the answer options data structure
-        const generatedOptions = this._createAnswerOptions(question);
+        // Game logic creates the answer options data structure -- THIS LOGIC MIGHT MOVE TO THE STORE OR BE PASSED IN EVENT
+        // const generatedOptions = this._createAnswerOptions(question);
 
-        // UI Manager handles creating and displaying buttons
-        this.uiManager.setupAnswerButtons(question.id, generatedOptions);
+        // UI Manager handles creating and displaying buttons -- THIS WILL BE REPLACED BY REACT COMPONENTS VIA STORE
+        // this.uiManager.setupAnswerButtons(question.id, generatedOptions);
+
+        // Emit an event with the new question data
+        this.emitEvent(GAME_EVENTS.NEW_QUESTION_READY, { question });
 
         // Start the timer (Engine Manager)
-        this._startQuestionTimer(); // This also updates the UI via UIManager's listener
+        this._startQuestionTimer(); // This also updates the UI via UIManager's listener -- TIMER PART ALREADY REFACTORED
 
         // Update state
         this.setState({ 
@@ -392,9 +429,6 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         this.timerManager.startTimer(this.QUESTION_TIMER_ID);
 
         console.log(`Created and started timer ${this.QUESTION_TIMER_ID} for ${questionDuration}ms`);
-
-        // Update initial display via UIManager
-        this.uiManager?.updateTimerDisplay(questionDuration);
     }
 
     /**

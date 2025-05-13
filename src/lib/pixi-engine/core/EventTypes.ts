@@ -1,3 +1,5 @@
+import { QuestionData } from "@/types";
+
 /**
  * Defines the standard event types and their associated payload interfaces
  * used throughout the PixiJS engine EventBus.
@@ -209,10 +211,24 @@ export interface AnswerSelectedPayload {
   scoreMultiplier?: number;
 }
 
+/** Payload for when a question has changed */
+export interface QuestionChangedPayload {
+  /** The question data that is now active */
+  question: QuestionData;
+}
+
+// --- Payload for NEW_QUESTION_READY ---
+export interface NewQuestionReadyPayload {
+  question: QuestionData;
+}
+
 // Add other game-specific payloads here...
 
 export const GAME_EVENTS = {
     ANSWER_SELECTED: 'game:answerSelected',
+    QUESTION_CHANGED: 'game:questionChanged',
+    NEW_QUESTION_READY: 'game:newQuestionReady',
+    TRANSITION_POWERUP_SELECTED: 'game:transitionPowerupSelected',
     // Add other common game actions here (e.g., ITEM_COLLECTED, LEVEL_START)
 } as const;
 
@@ -221,6 +237,7 @@ export const SETTINGS_EVENTS = {
   SET_GLOBAL_VOLUME: 'settings:setGlobalVolume',
   SET_MUSIC_MUTED: 'settings:setMusicMuted',
   SET_SFX_MUTED: 'settings:setSfxMuted',
+  SETTINGS_AUDIO_LOADED: 'settings:audioLoaded',
 } as const;
 
 /**
@@ -286,10 +303,31 @@ export interface EngineEvents {
 
   // Add Game Specific Events
   [GAME_EVENTS.ANSWER_SELECTED]: (payload: AnswerSelectedPayload) => void;
+  [GAME_EVENTS.QUESTION_CHANGED]: (payload: QuestionChangedPayload) => void;
+  [GAME_EVENTS.NEW_QUESTION_READY]: (payload: NewQuestionReadyPayload) => void;
+  [GAME_EVENTS.TRANSITION_POWERUP_SELECTED]: (payload: TransitionPowerupSelectedPayload) => void;
   // Add other game events here...
 
   // Add Settings Events
   [SETTINGS_EVENTS.SET_GLOBAL_VOLUME]: (volume: number) => void;
   [SETTINGS_EVENTS.SET_MUSIC_MUTED]: (muted: boolean) => void;
   [SETTINGS_EVENTS.SET_SFX_MUTED]: (muted: boolean) => void;
+  [SETTINGS_EVENTS.SETTINGS_AUDIO_LOADED]: (payload: { audioId: string }) => void;
+}
+
+// --- Event Payloads Mapping ---
+export interface AllEventPayloads extends EngineEventPayloads, SettingsEventPayloads, ScoringEventPayloads, TimerEventPayloads {
+  [GAME_STATE_EVENTS.GAME_STARTED]: undefined;
+  [GAME_STATE_EVENTS.GAME_PAUSED]: undefined;
+  [GAME_STATE_EVENTS.GAME_RESUMED]: undefined;
+  [GAME_STATE_EVENTS.GAME_ENDED]: undefined;
+  [GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED]: (payload: GameStateActiveTeamChangedPayload) => void;
+  [GAME_STATE_EVENTS.PHASE_CHANGED]: (payload: GameStatePhaseChangedPayload) => void;
+
+  [GAME_EVENTS.ANSWER_SELECTED]: (payload: AnswerSelectedPayload) => void;
+  [GAME_EVENTS.QUESTION_CHANGED]: (payload: QuestionChangedPayload) => void;
+  [GAME_EVENTS.NEW_QUESTION_READY]: (payload: NewQuestionReadyPayload) => void;
+  [GAME_EVENTS.TRANSITION_POWERUP_SELECTED]: (payload: TransitionPowerupSelectedPayload) => void;
+
+  // Add other game events here...
 } 

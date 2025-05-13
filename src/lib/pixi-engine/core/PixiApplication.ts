@@ -1,3 +1,5 @@
+// DEPRECATED: This file is deprecated as of the @pixi/react refactor. All application lifecycle and rendering is now managed by @pixi/react's <Application /> component and React components. See scripts/refactor_prd.md for details.
+// This file will be removed once all usages are eliminated.
 import * as PIXI from 'pixi.js';
 import { Application, ApplicationOptions, Container, Graphics, Text } from 'pixi.js';
 // import { EventEmitter } from 'eventemitter3';

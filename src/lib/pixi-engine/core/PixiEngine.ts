@@ -1,5 +1,5 @@
 import { Ticker, Assets } from 'pixi.js';
-import { PixiApplication, PixiApplicationOptions } from './PixiApplication';
+import * as PIXI from 'pixi.js';
 import { initDevtools } from '@pixi/devtools';
 import { EventBus } from './EventBus';
 import { GameStateManager } from './GameStateManager';
@@ -41,17 +41,21 @@ export interface PixiEngineManagers {
   powerUpManager: PowerUpManager;
   /** Static class responsible for loading and managing game assets. */
   assetLoader: typeof AssetLoader;
-  /** The core PixiApplication instance managing the canvas and rendering. */
-  pixiApp: PixiApplication;
+  // pixiApp: PixiApplication; // Removed as @pixi/react handles the PIXI.Application instance
 }
 
 /**
  * Type definition for the factory function used to create a specific game instance.
  * @param config - The configuration object for the game.
  * @param managers - An object containing all the initialized engine managers.
+ * @param initialDimensions - Optional object with initialWidth and initialHeight from the mount point.
  * @returns An instance of a class extending BaseGame.
  */
-export type GameFactory = (config: GameConfig, managers: PixiEngineManagers) => BaseGame;
+export type GameFactory = (
+  config: GameConfig, 
+  managers: PixiEngineManagers, 
+  initialDimensions?: { initialWidth: number; initialHeight: number }
+) => BaseGame;
 
 /**
  * Simple interface defining width and height properties.
@@ -65,20 +69,21 @@ interface ISize {
  * Configuration options for initializing the PixiEngine.
  * Extends PixiApplicationOptions for base canvas/renderer settings.
  */
-export type PixiEngineOptions = PixiApplicationOptions & {
+export type PixiEngineOptions = { // Simplified options
   /** Enable Pixi Devtools integration. Defaults to false. */
   debug?: boolean;
-  /** Optional target DOM element to mount the Pixi canvas into. */
-    targetElement?: HTMLDivElement | null; // Optional target element
-  };
+  /** Optional target DOM element to mount the Pixi canvas into. (No longer used by PixiEngine directly) */
+  // targetElement?: HTMLDivElement | null; // Removed as @pixi/react handles mounting
+  // Add other engine-specific options if needed, separate from PixiApplicationOptions
+  width?: number; // Example: if engine needs to know default width/height for logic unrelated to canvas
+  height?: number;
+};
 
 /**
  * Orchestrates the Pixi.js application, core managers, and the active game instance.
  * Provides lifecycle management (init, destroy) and access to managers.
  */
 export class PixiEngine {
-  /** The underlying PixiApplication instance. */
-  private app: PixiApplication;
   /** Initial configuration options provided to the constructor. */
   private options: PixiEngineOptions;
   /** Flag indicating if the engine has been successfully initialized. */
@@ -115,7 +120,7 @@ export class PixiEngine {
    */
   constructor(options: PixiEngineOptions = {}) {
     this.options = options;
-    this.app = new PixiApplication({...this.options, targetElement: options.targetElement, onResize: this.handleResize });
+    // this.app = new PixiApplication({...this.options, targetElement: options.targetElement, onResize: this.handleResize }); // Removed
 
     // Initialize core managers that don't depend on GameConfig yet
     this.eventBus = new EventBus();
@@ -135,7 +140,8 @@ export class PixiEngine {
     // Managers requiring GameConfig (powerUpManager, ruleEngine) are initialized in init()
 
     if (options.debug) {
-       initDevtools({ app: this.app.getApp() });
+      // We handle Pixi Devtools init in the React component, see PixiDevtoolsInitializer.tsx
+      console.log("Pixi Devtools initialization will be handled by React component PixiDevtoolsInitializer");
     }
   }
 
@@ -158,12 +164,13 @@ export class PixiEngine {
     
     try {
       // --- Initialize the core PixiApplication FIRST ---
-      await this.app.init();
-      console.log('PixiApplication core initialized.');
+      // await this.app.init(); // Removed
+      // console.log('PixiApplication core initialized.');
       // -------------------------------------------------
 
       // --- Initialize PixiJS Assets EARLY (Requires PixiApplication) ---
       console.log('Initializing PixiJS Assets...');
+      
       let bundleLoadPromise: Promise<unknown> = Promise.resolve(); 
       if (this.config.assets) {
          const manifest = { bundles: this.config.assets.bundles };
@@ -254,7 +261,7 @@ export class PixiEngine {
       });
       // --- End Manager Init ---
 
-      // --- Emit Engine Ready Event ---
+      // --- Emit Engine Ready Event --- // Moved slightly earlier as it doesn't depend on currentGame view
       console.log('PixiEngine: Emitting ENGINE_READY_FOR_GAME');
       this.eventBus.emit(ENGINE_EVENTS.ENGINE_READY_FOR_GAME);
       // ----------------------------
@@ -263,8 +270,13 @@ export class PixiEngine {
       console.log('Creating game instance...');
       // Now create managers object AFTER all managers are initialized
       const managers = this.getAllManagers(); 
-      this.currentGame = gameFactory(this.config, managers);
-      this.app.getStage().addChild(this.currentGame.view);
+      // Pass the initialWidth and initialHeight from options to the game factory
+      const initialWidth = this.options.width || 0;
+      const initialHeight = this.options.height || 0;
+      console.log(`PixiEngine: Using initial dimensions for game: ${initialWidth}x${initialHeight}`);
+      
+      this.currentGame = gameFactory(this.config, managers, { initialWidth, initialHeight });
+      // this.app.getStage().addChild(this.currentGame.view); // Removed, game view managed by @pixi/react
 
       console.log('Initializing game...');
       // Pass the bundle loading promise 
@@ -273,12 +285,12 @@ export class PixiEngine {
       // ---------------------------------------
 
       // Add update listener with null check
-      const ticker = this.app.getTicker();
-      if (ticker) {
-          ticker.add(this.handleUpdate);
-      } else {
-          console.warn('PixiEngine: Ticker not available, update loop not started.');
-      }
+      // const ticker = this.app.getTicker(); // Removed
+      // if (ticker) { // Removed
+      //     ticker.add(this.handleUpdate); // Removed
+      // } else { // Removed
+      //     console.warn('PixiEngine: Ticker not available, update loop not started.'); // Removed
+      // }
 
       this.initialized = true;
       console.log('PixiEngine initialization complete.');
@@ -312,7 +324,7 @@ export class PixiEngine {
           timerManager: this.timerManager,
           powerUpManager: this.powerUpManager,
           assetLoader: AssetLoader,
-          pixiApp: this.app // this.app should be valid now
+          // pixiApp: this.app // Removed
       };
   }
 
@@ -337,13 +349,13 @@ export class PixiEngine {
    * @private
    * @param {Ticker} ticker - The Pixi Ticker instance providing delta time.
    */
-  private handleUpdate = (ticker: Ticker): void => {
+  // private handleUpdate = (ticker: Ticker): void => { // Removed
     // Pixi Ticker v8 uses Ticker.deltaMS
-    const deltaTimeMs = ticker.deltaMS;
+    // const deltaTimeMs = ticker.deltaMS;
     // Convert to seconds if needed by downstream update methods, or pass ms directly
     // const deltaTimeSeconds = deltaTimeMs / 1000;
-    this.update(deltaTimeMs); // Passing milliseconds
-  };
+    // this.update(deltaTimeMs); // Passing milliseconds
+  // };
 
   /**
    * Main update loop, called each frame by the ticker handler.
@@ -388,21 +400,21 @@ export class PixiEngine {
     * @param {number} width - The new width of the application.
     * @param {number} height - The new height of the application.
     */
-    private handleResize = (width: number, height: number): void => {
-     if (!this.initialized) return;
-     console.log(`PixiEngine: Resizing to ${width}x${height}`);
-     
-     // --- EMIT THE EVENT ---
-     const payload: EngineResizedPayload = { width, height };
-     this.eventBus.emit(ENGINE_EVENTS.RESIZED, payload); 
-     // --- END EMIT ---
+    // private handleResize = (width: number, height: number): void => { // Removed
+    //  if (!this.initialized) return;
+    //  console.log(`PixiEngine: Resizing to ${width}x${height}`);
+    //  
+    //  // --- EMIT THE EVENT ---
+    //  const payload: EngineResizedPayload = { width, height };
+    //  this.eventBus.emit(ENGINE_EVENTS.RESIZED, payload); 
+    //  // --- END EMIT ---
 
-     // Notify the current game directly (still useful for the game's own immediate resize logic)
-     this.currentGame?.onResize(width, height);
+    //  // Notify the current game directly (still useful for the game's own immediate resize logic)
+    //  this.currentGame?.onResize(width, height);
 
-     // Notify managers if they need to know about resize (optional)
-     // this.controlsManager?.onResize(width, height);
-   };
+    //  // Notify managers if they need to know about resize (optional)
+    //  // this.controlsManager?.onResize(width, height);
+    // };
 
   /**
    * Cleans up resources, stops the ticker, destroys the Pixi application and current game.
@@ -411,7 +423,7 @@ export class PixiEngine {
    * @returns {Promise<void>} A promise that resolves when destruction is complete.
    */
   public async destroy(): Promise<void> {
-    if (!this.initialized && !this.app) {
+    if (!this.initialized && !this.currentGame) {
         console.warn("PixiEngine already destroyed or never initialized.");
         return;
     }
@@ -423,16 +435,16 @@ export class PixiEngine {
         // this.eventBus.emit('engineDestroyStart');
 
         // Remove ticker listener first
-        if (this.app?.getApp()?.ticker) {
-            this.app.getApp().ticker.remove(this.handleUpdate);
-        }
+        // if (this.app?.getApp()?.ticker) { // Removed
+        //     this.app.getApp().ticker.remove(this.handleUpdate); // Removed
+        // }
          // Remove resize listener - Handled by app.destroy()
-        // this.app?.offResize(this.handleResize);
+        // this.app?.offResize(this.handleResize); // Removed
 
         // Destroy the current game
         if (this.currentGame) {
             console.log("Destroying current game...");
-            this.app?.getStage()?.removeChild(this.currentGame.view);
+            // this.app?.getStage()?.removeChild(this.currentGame.view); // Removed
             this.currentGame.destroy(); // Assumes BaseGame has destroy()
             this.currentGame = null;
         }
@@ -455,12 +467,12 @@ export class PixiEngine {
 
 
         // Destroy the PixiApplication
-        if (this.app) {
-             console.log("Destroying PixiApplication...");
-             await this.app.destroy();
-             // @ts-expect-error - Allow setting app to null after destroy
-             this.app = null;
-        }
+        // if (this.app) { // Removed
+        //      console.log("Destroying PixiApplication..."); // Removed
+        //      await this.app.destroy(); // Removed
+        //      // @ts-expect-error - Allow setting app to null after destroy
+        //      this.app = null; // Removed
+        // }
 
         this.config = null;
 
@@ -491,19 +503,8 @@ export class PixiEngine {
         // TODO: Define 'engineError' event in EventBus
         // this.eventBus?.emit('engineError', { type: 'destruction', error });
         // Ensure app reference is cleared even on error
-        // @ts-expect-error - Allow setting app to null after destroy
-        this.app = null;
+        this.currentGame = null;
     }
-  }
-
-  /**
-   * Gets the underlying PixiApplication instance.
-   * @public
-   * @returns {PixiApplication} The PixiApplication instance.
-   */
-  public getApp(): PixiApplication {
-    if (!this.app) throw new Error("PixiApplication is not available.");
-    return this.app;
   }
 
   /**
@@ -606,14 +607,14 @@ export class PixiEngine {
   /**
    * Get the screen size of the PixiApplication
    */
-  public getScreenSize(): ISize {
-    if (!this.app) {
-      console.warn("PixiEngine.getScreenSize: PixiApplication not initialized yet.");
-      // Return default or configured size
-      return { width: this.options.width ?? 800, height: this.options.height ?? 600 };
-    }
-    return this.app.getScreenSize();
-  }
+  // public getScreenSize(): ISize { // Removed
+  //   if (!this.app) { // Removed
+  //     console.warn("PixiEngine.getScreenSize: PixiApplication not initialized yet."); // Removed
+  //     // Return default or configured size
+  //     return { width: this.options.width ?? 800, height: this.options.height ?? 600 }; // Removed
+  //   }
+  //   return this.app.getScreenSize(); // Removed
+  // }
 }
 
 // Keep export {} if needed for module context, otherwise remove

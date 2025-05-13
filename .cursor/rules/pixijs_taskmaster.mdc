@@ -1,11 +1,14 @@
 ---
 description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
 - **Reference Latest PixiJS v8 Documentation:**
     - Always consult the official PixiJS v8 documentation for the most current API usage, best practices, and class structures: [https://pixijs.download/release/docs/index.html](mdc:https:/pixijs.download/release/docs/index.html)
     - Pay attention to core classes like `Application`, `Assets`, `Container`, `Sprite`, `Graphics`, `Text`, `Ticker`, and the `events` system.
+
+- **Pixi-react problem solving:**
+    - To solve probelms with pixi react always consult the [pixi-react-docs.md](mdc:project_docs/pixi-react-docs.md) and [refactor_prd.md](mdc:scripts/refactor_prd.md)
 
 - **Taskmaster Context:**
     - When working on a Taskmaster task involving PixiJS (`tasks.json` or task markdown files):
@@ -23,4 +26,24 @@ alwaysApply: false
     - **Asset Loading:** Use the `Assets` class for loading textures, fonts, sounds, etc. ([PixiJS Assets Docs](mdc:https:/pixijs.download/release/docs/assets.html)).
     - **Event Handling:** Use the `EventSystem` and `FederatedEvent` objects for user interactions ([PixiJS Events Docs](mdc:https:/pixijs.download/release/docs/events.html)).
     - **Application Lifecycle:** Understand the `Application` setup and the `Ticker` for updates ([PixiJS App Docs](mdc:https:/pixijs.download/release/docs/app.html), [PixiJS Ticker Docs](mdc:https:/pixijs.download/release/docs/ticker.Ticker.html)).
-    - **Rendering Objects:** Correctly use `Sprite`, `Graphics`, `Text`, `Container`, etc., for drawing ([PixiJS Sprite Docs](mdc:https:/pixijs.download/release/docs/sprite.Sprite.html)). 
+    - **Rendering Objects:** Correctly use `Sprite`, `Graphics`, `Text`, `Container`, etc., for drawing ([PixiJS Sprite Docs](mdc:https:/pixijs.download/release/docs/sprite.Sprite.html)).
+
+- **Using with @pixi/react and TypeScript:**
+    - When using `@pixi/react` with TypeScript, ensure PIXI components are correctly extended and made available to JSX.
+    - **Preferred `extend` Pattern:** Import PIXI classes, potentially with aliases, and then use these in the `extend` call. For example:
+      ```typescript
+      // At the top of your .tsx file
+      import { extend } from '@pixi/react';
+      import { Text as PixiText, Container as PixiContainer } from 'pixi.js';
+
+      extend({ Text: PixiText, Container: PixiContainer });
+
+      // Then, in your JSX, you can use:
+      // <Text text="Hello" />
+      // <pixiContainer />
+      //or
+        ```return <pixiGraphics draw={draw} />;```
+
+      ```
+    - This pattern helps TypeScript correctly recognize the extended components as valid JSX elements.
+    - If unprefixed elements (e.g., `<Container />`) still cause type errors after `extend`, consider using the `pixi` prefixed versions (`<pixiContainer />`) which might have more readily available default types, or ensure your `tsconfig.json` and potentially a `global.d.ts` file are correctly set up to augment the JSX namespace as per `@pixi/react` documentation for advanced TypeScript scenarios. 

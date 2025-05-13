@@ -6,6 +6,7 @@ import { EventBus } from '@/lib/pixi-engine/core/EventBus'; // Example manager
 // Assume AssetLoader provides a method like getDisplayObject
 import { AssetLoader } from '@/lib/pixi-engine/assets/AssetLoader';
 import { PixiApplication } from '@/lib/pixi-engine/core/PixiApplication'; // Import PixiApplication
+import { PixiApplicationAdapter } from '../adapters/PixiApplicationAdapter'; // Import the adapter
 // Import the theme config type
 import type { PixiSpecificConfig } from '../../../themes'; // Use correct relative path
 import type { LayoutParameters } from '../managers/MultipleChoiceLayoutManager';
@@ -20,6 +21,9 @@ type AnimatedResource = {
 } | PIXI.Texture;
 */
 
+// Define a type that allows both old PixiApplication and our adapter
+type PixiAppType = PixiApplication | PixiApplicationAdapter;
+
 export class QuestionScene extends PIXI.Container {
     private backgroundPanel: PIXI.Graphics;
     private questionText: PIXI.Text;
@@ -27,11 +31,11 @@ export class QuestionScene extends PIXI.Container {
     private answerOptionsContainer: PIXI.Container;
     private readonly eventBus: EventBus;
     private readonly assetLoader: AssetLoader;
-    private readonly pixiApp: PixiApplication;
+    private readonly pixiApp: PixiAppType; // Changed from PixiApplication to PixiAppType
     private readonly pixiTheme: PixiSpecificConfig;
 
     constructor(
-        pixiApp: PixiApplication,
+        pixiApp: PixiAppType, // Changed from PixiApplication to PixiAppType
         eventBus: EventBus,
         assetLoader: AssetLoader,
         pixiTheme: PixiSpecificConfig
@@ -131,8 +135,8 @@ export class QuestionScene extends PIXI.Container {
 
         // Update text style using params
         this.questionText.style.fontSize = params.questionFontSize;
-        // Set wrap width based on the provided text bounds width
-        this.questionText.style.wordWrapWidth = textBounds.width;
+        // Set wrap width based on the provided text bounds width or params
+        this.questionText.style.wordWrapWidth = params.questionWrapWidth;
 
         // Position elements using the provided bounds
         this._positionElements(textBounds, mediaBounds, params, screenWidth);
@@ -145,70 +149,44 @@ export class QuestionScene extends PIXI.Container {
         params: LayoutParameters,
         screenWidth: number
     ): void {
-        console.log("QuestionScene: Starting _positionElements (Reverted Logic)");
+        console.log("QuestionScene: Starting _positionElements (Refactored Logic)");
 
-        // --- Position question text (Revert to previous Y calculation) ---
-        const screenHeight = this.pixiApp.getScreenSize().height; // Need height here
-        this.questionText.style.wordWrapWidth = textBounds.width;
-        this.questionText.x = screenWidth / 2; // Center X is likely fine
-        // Use the formula that worked visually before:
-        this.questionText.y = screenHeight * params.questionYMultiplier; // Or screenHeight * 0.7 - 64 if preferred
-        console.log("QuestionScene: Text positioned (Reverted Y)", { x: this.questionText.x, y: this.questionText.y });
+        // --- Position question text ---
+        const screenHeight = this.pixiApp.getScreenSize().height;
+        this.questionText.style.wordWrapWidth = params.questionWrapWidth;
+        this.questionText.x = screenWidth / 2; // Center X
+        this.questionText.y = params.questionY; // Use absolute logical Y from params
+        console.log("QuestionScene: Text positioned (Refactored Y)", { x: this.questionText.x, y: this.questionText.y });
 
         // --- Position media ---
         const hasValidMediaBounds = mediaBounds && mediaBounds.width > 0 && mediaBounds.height > 0;
 
         if (this.questionMedia && hasValidMediaBounds) {
-            // --- Positioning logic when media and bounds are valid ---
             this.questionMedia.visible = true;
-            // ... (get dimensions, check dimensions > 0, calculate scale, check scale, set scale/position) ...
-            // (All the logic currently inside the main 'if (this.questionMedia && mediaBounds ...)' block)
+            const mediaOrigWidth = this.questionMedia.texture?.orig.width ?? this.questionMedia.width;
+            const mediaOrigHeight = this.questionMedia.texture?.orig.height ?? this.questionMedia.height;
 
-             const mediaOrigWidth = this.questionMedia.texture?.orig.width ?? this.questionMedia.width;
-             const mediaOrigHeight = this.questionMedia.texture?.orig.height ?? this.questionMedia.height;
+            if (mediaOrigWidth <= 0 || mediaOrigHeight <= 0) { return; }
 
-             if (mediaOrigWidth <= 0 || mediaOrigHeight <= 0) { /* ... hide and return ... */ return;}
+            // Use params.imageY and params.imageMaxHeight for positioning and scaling
+            let scale = 1;
+            if (mediaOrigHeight > params.imageMaxHeight && params.imageMaxHeight > 0) {
+                scale = params.imageMaxHeight / mediaOrigHeight;
+            }
+            if (mediaOrigHeight < params.imageMaxHeight) {
+                scale = params.imageMaxHeight / mediaOrigHeight;
+            }
+            if (scale <= 0 || !isFinite(scale)) { return; }
 
-            // Use previous logic for available height (relative to text)
-            const imageTopBound = params.topPadding;
-            // Use the actual text position AFTER it's set above
-            const textTop = this.questionText.y - this.questionText.height * this.questionText.anchor.y;
-            const imageBottomBound = textTop - params.topPadding; // Use textTop now
-            let availableHeightForMedia = Math.max(10, imageBottomBound - imageTopBound);
-
-             // --- Reinstate your scaling logic ---
-             let scale = 1;
-             // scale down if media is larger than available height
-             if (mediaOrigHeight > availableHeightForMedia && availableHeightForMedia > 0) {
-                 scale = availableHeightForMedia / mediaOrigHeight;
-             }
-             // scale up if media is smaller than available height
-             if (mediaOrigHeight < availableHeightForMedia) {
-               scale = availableHeightForMedia / mediaOrigHeight;
-             }
-             // ---
-
-             // Optional: Reinstate width constraint check if needed
-             // const availableWidthForMedia = screenWidth - 2 * params.sidePadding;
-             // if (mediaOrigWidth * scale > availableWidthForMedia && availableWidthForMedia > 0) {
-             //     scale = Math.min(scale, availableWidthForMedia / mediaOrigWidth);
-             // }
-
-             if (scale <= 0 || !isFinite(scale)) { /* ... hide and return ... */ return; }
-
-             this.questionMedia.scale.set(scale);
-
-             // Position based on previous logic (centered X, top + half height Y)
-             this.questionMedia.x = screenWidth / 2;
-             this.questionMedia.y = imageTopBound + this.questionMedia.height / 2; // Use height *after* scaling
-
-             console.log("Final media position (Reverted):", { /* ... log details ... */ });
-
+            this.questionMedia.scale.set(scale);
+            this.questionMedia.x = screenWidth / 2;
+            this.questionMedia.y = params.imageY + this.questionMedia.height / 2;
+            console.log("Final media position (Refactored):", { x: this.questionMedia.x, y: this.questionMedia.y, scale });
         } else if (this.questionMedia) {
-             this.questionMedia.visible = false;
+            this.questionMedia.visible = false;
         }
 
-        console.log("QuestionScene: Finished _positionElements (Reverted Logic)");
+        console.log("QuestionScene: Finished _positionElements (Refactored Logic)");
     }
 
     public getAnswerOptionContainer(): PIXI.Container {
