@@ -312,7 +312,7 @@
 
 @font-face {
   font-family: 'InclusiveSans';
-  src: url('/fonts/InclusiveSans-Regular.ttf') format('truetype'); /* From styles/globals */
+  src: url('/fonts/InclusiveSansVF.ttf') format('truetype'); /* From styles/globals */
   font-weight: 100 900; /* Maybe adjust weight range? */
   font-style: normal;
   font-display: swap;

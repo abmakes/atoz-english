@@ -422,7 +422,7 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
   public pause(): void {
     // State validation
     if (this.gameState !== GameState.STARTED) {
-      console.warn(`Cannot pause game that is not started`);
+      console.warn(`Cannot pause game that is not in STARTED state. Current state: ${this.gameState}`);
       return;
     }
     
@@ -431,6 +431,7 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     
     // Emit event for external components
     this.emitEvent(GAME_STATE_EVENTS.GAME_PAUSED);
+    console.log(`[BaseGame] Game paused. State: ${this.gameState}`);
   }
 
   /**
@@ -454,7 +455,7 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    */
   public resume(): void {
     if (this.gameState !== GameState.PAUSED) {
-      console.warn(`${this.constructor.name}: Cannot resume game that is not paused`);
+      console.warn(`${this.constructor.name}: Cannot resume game that is not in PAUSED state. Current state: ${this.gameState}`);
       return;
     }
     
@@ -462,6 +463,7 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     
     // Emit event for external components
     this.emitEvent(GAME_STATE_EVENTS.GAME_RESUMED);
+    console.log(`[BaseGame] Game resumed. State: ${this.gameState}`);
   }
 
   /**
@@ -1309,6 +1311,31 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     const deltaTimeMs = delta;
     const deltaTimeSec = deltaTimeMs / 1000;
     
+    // --- Add check for paused state ---
+    if (this.gameState === GameState.PAUSED) {
+      // If paused, we still want to track FPS but not advance game time or accumulators
+      this._fpsUpdateTime += deltaTimeSec; // Use unscaled delta for FPS calculation consistency
+      this._frameCount++;
+      if (this._fpsUpdateTime >= 1.0) {
+        this._currentFPS = this._frameCount / this._fpsUpdateTime;
+        this._frameCount = 0;
+        this._fpsUpdateTime = 0;
+        this.emitEvent(EXTENDED_ENGINE_EVENTS.FPS_UPDATED, {
+          fps: this._currentFPS,
+          targetFPS: this.config.targetFPS || 60
+        });
+      }
+      // Return a timing object that reflects no progression for game logic
+      return {
+        deltaTime: 0, // No progression
+        scaledDeltaTime: 0, // No progression
+        timeScale: this._gameSpeed, // Keep current timeScale for reference
+        elapsedTime: this._elapsedTime, // Elapsed time doesn't advance
+        fixedTimeAccumulator: this._frameTimeAccumulator, // Accumulator doesn't advance
+      };
+    }
+    // --- End check for paused state ---
+
     // Apply FPS limiting if enabled
     let finalDeltaTime = deltaTimeSec;
     const maxFPS = this.config.maxFPS || 0;
@@ -1355,6 +1382,12 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    * @param timing Frame timing information from processFrameTiming()
    */
   protected updateWithFixedTimestep(timing: FrameTiming): void {
+    // --- Add check for paused state ---
+    if (this.gameState === GameState.PAUSED || timing.deltaTime === 0) {
+      return; // Do not perform fixed updates if paused or if delta time is zero
+    }
+    // --- End check for paused state ---
+
     const fixedUpdateFPS = this.config.fixedUpdateFPS || 60;
     const fixedDeltaTime = 1 / fixedUpdateFPS;
     

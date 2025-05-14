@@ -359,7 +359,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
                     themeClassName={themeClassName}
                     onGameOver={handleGameOver}
                     onExit={handleExit}
-                    pixiMountPointRef={pixiMountPointRef}
+                    pixiMountPointRef={pixiMountPointRef as React.RefObject<HTMLDivElement>}
                     gameFactory={gameFactory}
                 />
             </>

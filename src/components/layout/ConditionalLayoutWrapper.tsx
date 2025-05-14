@@ -55,7 +55,7 @@ export default function ConditionalLayoutWrapper({ children }: { children: React
           <div className="flex gap-6 grandstander text-lg">
             <Link href="/games" className="font-regular text-foreground hover:text-primary transition-colors hover:font-bold">Games</Link>
             <Link href="/create" className="font-regular text-foreground hover:text-primary transition-colors hover:font-bold">Create</Link>
-            <Link href="/dashboard" className="font-regular text-foreground hover:text-primary transition-colors hover:font-bold">Dashboard</Link>
+            <Link href="/task" className="font-regular text-foreground hover:text-primary transition-colors hover:font-bold">Tasks</Link>
           </div>
 
           {/* Right: Buttons */}

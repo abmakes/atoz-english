@@ -1,4 +1,5 @@
 import React from 'react';
+import styles from "@/styles/LoadingSpinner.module.css"
 
 interface LoadingSpinnerProps {
   /** Optional additional className to apply to the spinner container */
@@ -26,7 +27,7 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
   return (
     <div
-      className={`${className}`} // Combine module class with any passed className
+      className={`${styles.loader} ${className}`} // Combine module class with any passed className
       style={combinedStyle}
       aria-label="Loading..." // Accessibility
       role="status" // Accessibility

@@ -8,7 +8,7 @@ import { AssetLoader } from '@/lib/pixi-engine/assets/AssetLoader';
 import { PixiApplication } from '@/lib/pixi-engine/core/PixiApplication'; // Import PixiApplication
 // Import the theme config type
 import type { PixiSpecificConfig } from '../../../themes'; // Use correct relative path
-import type { LayoutParameters } from '../managers/MultipleChoiceLayoutManager';
+import type { LayoutProfile } from '../managers/MultipleChoiceLayoutManager';
 // Remove ImageOptimizerCache import if not needed
 // import { ImageOptimizerCache } from 'next/dist/server/image-optimizer';
 
@@ -124,7 +124,7 @@ export class QuestionScene extends PIXI.Container {
     public updateLayout(
         textBounds: PIXI.Rectangle,
         mediaBounds: PIXI.Rectangle | null, // Media might not always exist
-        params: LayoutParameters, // Still need params for font size etc.
+        params: LayoutProfile, // Changed from LayoutParameters
         screenWidth: number // May still need screen width for fallback/centering
     ): void {
         console.log("QuestionScene: Starting updateLayout with explicit bounds");
@@ -142,7 +142,7 @@ export class QuestionScene extends PIXI.Container {
     private _positionElements(
         textBounds: PIXI.Rectangle,
         mediaBounds: PIXI.Rectangle | null,
-        params: LayoutParameters,
+        params: LayoutProfile, // Changed from LayoutParameters
         screenWidth: number
     ): void {
         console.log("QuestionScene: Starting _positionElements (Reverted Logic)");

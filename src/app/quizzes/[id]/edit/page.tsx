@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Image from 'next/image'
 import { Trash2 } from 'lucide-react'
-import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
+import LoadingSpinner from '@/components/loading_spinner'
 import ImageSelectModal from '@/components/management_ui/ImageSelectModal'
 import { QuestionFormMatching } from '@/components/management_ui/forms/QuestionFormMatching'
 import { QuestionFormSorting } from '@/components/management_ui/forms/QuestionFormSorting'
-import { QuestionType } from '@/types/quiz'
+import { QuestionType } from '@/types/question_types'
 
 interface Question {
   id?: string

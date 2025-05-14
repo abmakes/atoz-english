@@ -7,7 +7,7 @@ import { EventBus } from '@/lib/pixi-engine/core/EventBus';
 import { PixiSpecificConfig } from '@/lib/themes';
 import { QuestionData } from '@/types';
 import { TimerEventPayload, TIMER_EVENTS, ENGINE_EVENTS, GAME_STATE_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
-import { MultipleChoiceLayoutManager, LayoutParameters } from './MultipleChoiceLayoutManager';
+import { MultipleChoiceLayoutManager } from './MultipleChoiceLayoutManager';
 import { PixiTimer } from '../ui/PixiTimer';
 
 // Define the structure for answer options data used by the UI manager
@@ -24,6 +24,9 @@ export class MultipleChoiceUIManager {
     private initialDurationMs: number = 0;
     private answerButtons: Button[] = [];
     private readonly themeConfig: PixiSpecificConfig;
+    private currentQuestionId: string | null = null;
+    private currentGeneratedOptions: AnswerOptionUIData[] = [];
+    private backgroundPanelDrawRafId: number | null = null;
 
     constructor(
         private readonly pixiApp: PixiApplication,
@@ -94,6 +97,8 @@ export class MultipleChoiceUIManager {
     public clearQuestionState(): void {
         this.scene.clearAnswerOptions();
         this.answerButtons = []; // Clear internal button array
+        this.currentQuestionId = null;
+        this.currentGeneratedOptions = [];
     }
 
     public updateQuestionContent(question: QuestionData): void {
@@ -119,6 +124,16 @@ export class MultipleChoiceUIManager {
             return; // Exit the function to prevent the error
         }
         // --- END GUARD CLAUSE ---
+
+        // +++ Store questionId and options +++
+        this.currentQuestionId = questionId;
+        // Ensure to store a copy if generatedOptions might be mutated by 50/50 logic later in this function
+        // and you want to preserve the original set for potential re-setup.
+        // If 50/50 logic always takes the original `generatedOptions` and returns a new list for `optionsToDisplay`,
+        // then storing `generatedOptions` as is, is fine.
+        // Let's assume `generatedOptions` is the full list and `optionsToDisplay` is derived.
+        this.currentGeneratedOptions = [...generatedOptions]; // Store a copy of the full set
+        // +++ End store +++
 
         // We need layout params *now*
         const params = this.layoutManager.getLayoutParams();
@@ -271,83 +286,79 @@ export class MultipleChoiceUIManager {
     }
 
     public drawBackgroundPanel(
-        textBounds: PIXI.Rectangle | null,
-        mediaBounds: PIXI.Rectangle | null,
-        buttonContainerBounds: PIXI.Rectangle | null
+        textBoundsConfigFromLayout: PIXI.Rectangle | null, // Config for text area
+        mediaBounds: PIXI.Rectangle | null, // Not directly used in this simplified version for bg panel geometry
+        buttonContainerBounds: PIXI.Rectangle | null // Config for button area
     ): void {
-        console.log("UIManager: Drawing background panel with bounds:", { textBounds, mediaBounds, buttonContainerBounds });
-        const padding = 20; // Use a consistent padding
+        console.log("UIManager: Drawing simplified background panel with config bounds:", { textBoundsConfigFromLayout, buttonContainerBounds });
+        const padding = 20;
         const borderRadius = 20;
         const bgColor = this.themeConfig.panelBg;
 
-        // Need at least text or buttons to draw a background
-        if (!textBounds && !buttonContainerBounds) {
-             console.warn("UIManager: Cannot draw background panel without text or button bounds.");
-             this.scene.drawBackgroundPanel(0, 0, 0, 0, 0, 0); // Clear if invalid
-             return;
-         }
-
-        // Determine the overall bounding box - initialize safely
-        let minX = 0, minY = 0, maxX = 0, maxY = 0 ;
-        let hasContent = false; // Flag to check if any valid bounds were found
-
-        // --- Get bounds from text, respecting its anchor ---
-        if (textBounds) {
-             // Get actual visual bounds after text might have wrapped/resized
-             const actualTextBounds = this.scene.getQuestionTextBounds();
-             console.log("UIManager: Actual Text Bounds:", actualTextBounds);
-             if (actualTextBounds.width > 0 || actualTextBounds.height > 0) { // Use actual bounds if valid
-                 minX = actualTextBounds.x;
-                 minY = actualTextBounds.y;
-                 maxX = actualTextBounds.x + actualTextBounds.width;
-                 maxY = actualTextBounds.y + actualTextBounds.height;
-                 hasContent = true;
-             }
-         }
-
-        let optionsWidth = 0;
-        // --- Get bounds from button container ---
-        if (buttonContainerBounds) {
-             // Use the container's position and calculated size
-             const optionsContainer = this.scene.getAnswerOptionContainer();
-             optionsWidth = optionsContainer.width; // Get current width after buttons added
-             const optionsHeight = optionsContainer.height; // Get current height
-             if (optionsWidth > 0 || optionsHeight > 0) {
-                minX = Math.min(minX, buttonContainerBounds.x);
-                minY = Math.min(minY, buttonContainerBounds.y);
-                maxX = Math.max(maxX, buttonContainerBounds.x + optionsWidth); // Use actual width
-                maxY = Math.max(maxY, buttonContainerBounds.y + optionsHeight); // Use actual height
-                hasContent = true;
-             }
+        if (!this.scene) {
+            console.warn("UIManager.drawBackgroundPanel: Scene is not available.");
+            return;
         }
 
-        // Check if we actually got valid bounds
-        if (!hasContent) {
-             console.warn("UIManager: Could not determine valid bounds for background panel from components.");
-             this.scene.drawBackgroundPanel(0, 0, 0, 0, 0, 0); // Clear
-             return;
+        const screenWidth = this.pixiApp.getScreenSize().width;
+        let bgX = 0, bgY = 0, bgWidth = 0, bgHeight = 0;
+
+        const optionsContainer = this.scene.getAnswerOptionContainer();
+        const actualButtonGridWidth = (optionsContainer && optionsContainer.width > 0) ? optionsContainer.width : 0;
+
+        const actualTextBounds = this.scene.getQuestionTextBounds();
+        const actualTextWidth = (actualTextBounds && actualTextBounds.width > 0) ? actualTextBounds.width : 0;
+
+        // 1. Calculate bgWidth
+        if (actualButtonGridWidth > 0) {
+            bgWidth = actualButtonGridWidth + (2 * padding);
+        } else if (actualTextWidth > 0) {
+            bgWidth = actualTextWidth + (2 * padding);
+        } else {
+            // No content to determine width, so clear/don't draw panel
+            this.scene.drawBackgroundPanel(0, 0, 0, 0, 0, 0);
+            console.warn("UIManager.drawBackgroundPanel: No content (text or buttons) to determine panel width.");
+            return;
         }
 
-        // BACKGROUND PANEL BOUNDS ALIGNMENT //
-        // Apply padding 
-        let bgX = 0; 
-        let bgY = 0;
-        let bgWidth = 0;
-        let bgHeight = 0;
-     
-        if (textBounds) {
-            bgX = textBounds.x - 2 * padding;
-            bgY = textBounds.y - 3 * padding;
-            bgWidth = (optionsWidth + 3 * padding);
-            bgHeight = (maxY + padding);
+        // 2. Calculate bgX (Center panel horizontally on screen)
+        bgX = (screenWidth - bgWidth) / 2;
+
+        // 3. Calculate bgY and bgHeight (to vertically encompass text and buttons)
+        let overallMinY = Infinity, overallMaxY = -Infinity;
+        let hasVerticalContent = false;
+
+        if (actualTextBounds && actualTextBounds.width > 0 && actualTextBounds.height > 0) {
+            overallMinY = Math.min(overallMinY, actualTextBounds.y);
+            overallMaxY = Math.max(overallMaxY, actualTextBounds.y + actualTextBounds.height);
+            hasVerticalContent = true;
         }
 
-        console.log("UIManager: Background panel calculated:", { bgX, bgY, bgWidth, bgHeight });
+        if (buttonContainerBounds && optionsContainer && optionsContainer.height > 0) {
+            // Use buttonContainerBounds.y for the top of the button area,
+            // and add optionsContainer.height (actual height of buttons) for the bottom.
+            overallMinY = Math.min(overallMinY, buttonContainerBounds.y);
+            overallMaxY = Math.max(overallMaxY, buttonContainerBounds.y + optionsContainer.height);
+            hasVerticalContent = true;
+        }
 
-        if (bgWidth > 0 && bgHeight > 0) {
+        if (hasVerticalContent) {
+            bgY = overallMinY - padding;
+            bgHeight = (overallMaxY - overallMinY) + (2 * padding);
+        } else {
+            // No vertical content, clear/don't draw
+            this.scene.drawBackgroundPanel(0, 0, 0, 0, 0, 0);
+            console.warn("UIManager.drawBackgroundPanel: No vertical content (text or buttons) to determine panel height.");
+            return;
+        }
+        
+        console.log("UIManager: Simplified Background panel calculated:", { bgX, bgY, bgWidth, bgHeight });
+
+        // Ensure sensible dimensions before drawing
+        if (bgWidth > padding && bgHeight > padding) { 
             this.scene.drawBackgroundPanel(bgX, bgY, bgWidth, bgHeight, bgColor, borderRadius);
         } else {
-            console.warn("UIManager: Could not draw background panel, invalid dimensions after padding.");
+            console.warn("UIManager.drawBackgroundPanel: Calculated panel dimensions are too small or invalid.", { bgWidth, bgHeight });
             this.scene.drawBackgroundPanel(0, 0, 0, 0, 0, 0); // Clear if invalid
         }
     }
@@ -487,28 +498,25 @@ export class MultipleChoiceUIManager {
         );
         console.log("UIManager: Calculated Button Container Bounds:", buttonContainerBounds);
 
-        // -- Text Bounds --
+        // -- Text Bounds (Configuration for the scene) -- Renamed to textBoundsConfig
         const textY = screenHeight * params.questionYMultiplier;
-        const textWidth = contentWidth * params.questionWrapMultiplier; // Apply wrap multiplier
-        const textX = (screenWidth - textWidth) / 2; // Center the wrapping box
-        // Height is difficult to pre-calculate accurately due to wrapping.
-        // We'll define a generous max height for now, scene will handle actual text height.
-        const approxMaxTextHeight = buttonContainerY - textY - topPad; // Max space between Y pos and button container top
-        const textBounds = new PIXI.Rectangle(
+        const textWidth = contentWidth * params.questionWrapMultiplier;
+        const textX = (screenWidth - textWidth) / 2;
+        const approxMaxTextHeight = buttonContainerY - textY - topPad;
+        const textBoundsConfig = new PIXI.Rectangle(
             textX,
             textY,
             textWidth,
-            Math.max(50, approxMaxTextHeight) // Ensure some minimum height
+            Math.max(50, approxMaxTextHeight)
         );
-         console.log("UIManager: Calculated Text Bounds:", textBounds);
+         console.log("UIManager: Calculated Text Bounds Config:", textBoundsConfig);
 
         // -- Media Bounds (Space between top and text) --
         let mediaBounds: PIXI.Rectangle | null = null;
         const mediaTop = topPad;
-        const mediaBottom = textBounds.y - topPad; // Space above text bounds
+        const mediaBottom = textBoundsConfig.y - topPad; // Use config Y
         const mediaHeight = Math.max(10, mediaBottom - mediaTop);
-        if (mediaHeight > 10) { // Only create bounds if there's reasonable space
-             // Use full contentWidth, scene will scale media to fit preserving aspect ratio
+        if (mediaHeight > 10) { 
             mediaBounds = new PIXI.Rectangle(
                 sidePad,
                 mediaTop,
@@ -521,28 +529,35 @@ export class MultipleChoiceUIManager {
         }
 
 
-        // 3. Update Scene Layout (passing bounds)
+        // 3. Update Scene Layout (passing textBoundsConfig)
         console.log("UIManager: Updating scene layout");
-        this.scene.updateLayout(textBounds, mediaBounds, params, screenWidth);
+        this.scene.updateLayout(textBoundsConfig, mediaBounds, params, screenWidth);
 
-        // 4. Update Timer Position (uses the modified _positionTimerElements)
+        // 4. Update Timer Position
         this._positionTimerElements();
 
         // 5. Update Answer Buttons (passing bounds)
-        if (this.answerButtons.length > 0) {
-             // We need the current options to fully re-setup, this might be simpler
-             // Option 1: Just reposition container (if button size doesn't change drastically)
-             this._repositionAnswerButtonsContainer(buttonContainerBounds);
-             // Option 2: Store current options and re-run full setup (safer if button size changes)
-             // this.setupAnswerButtons(currentQuestionId, currentOptions); // Requires storing these
+        if (this.answerButtons.length > 0 && this.currentQuestionId && this.currentGeneratedOptions.length > 0) {
+            console.log("UIManager: Re-setting up answer buttons due to layout update using stored data.");
+            // Pass the stored question ID and a copy of the stored options
+            // The `setupAnswerButtons` method will use the latest layout params internally.
+            this.setupAnswerButtons(this.currentQuestionId, [...this.currentGeneratedOptions]);
+        } else if (this.answerButtons.length > 0) {
+            // This might be a fallback if, for some reason, currentQuestionId/Options are not set
+            // but buttons exist. This case should ideally not happen if state is managed correctly.
+            console.log("UIManager: Only repositioning answer buttons container (fallback, full re-setup preferred).");
+            this._repositionAnswerButtonsContainer(buttonContainerBounds);
         }
         // If setupAnswerButtons is called later, it will use the new bounds.
 
-        // 6. Redraw Background Panel (passing calculated bounds)
+        // 6. Redraw Background Panel (passing textBoundsConfig)
         console.log("UIManager: Scheduling background panel draw");
-        requestAnimationFrame(() => {
-             // Pass the calculated bounds directly again
-             this.drawBackgroundPanel(textBounds, mediaBounds, buttonContainerBounds);
+        if (this.backgroundPanelDrawRafId) {
+            cancelAnimationFrame(this.backgroundPanelDrawRafId);
+        }
+        this.backgroundPanelDrawRafId = requestAnimationFrame(() => {
+            this.drawBackgroundPanel(textBoundsConfig, mediaBounds, buttonContainerBounds);
+            this.backgroundPanelDrawRafId = null;
         });
 
         console.log("UIManager: Finished _updateAndApplyLayout");
@@ -612,6 +627,11 @@ export class MultipleChoiceUIManager {
         // --- Comment out old timer destruction ---
         // this.timerContainer.destroy({ children: true });
         this.answerButtons = [];
+
+        if (this.backgroundPanelDrawRafId) {
+            cancelAnimationFrame(this.backgroundPanelDrawRafId);
+            this.backgroundPanelDrawRafId = null;
+        }
 
         console.log("UIManager: Destroy complete.");
     }
