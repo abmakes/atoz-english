@@ -1,5 +1,3 @@
-import * as PIXI from 'pixi.js'; // May not be needed if just calculating
-
 export interface LayoutProfile {
     questionFontSize: number;
     questionWrapMultiplier: number;

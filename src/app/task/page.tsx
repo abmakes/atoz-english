@@ -61,10 +61,10 @@ const getTextColorForBackground = (hexColor: string): string => {
     }
 };
 
-export default function TasksPage({
-  searchParams,
-}: {
-  searchParams: { status?: string };
+export default function Page({ 
+  searchParams 
+}: { 
+  searchParams: { status?: string } 
 }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);

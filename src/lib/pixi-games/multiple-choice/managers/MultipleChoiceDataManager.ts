@@ -94,6 +94,7 @@ export class MultipleChoiceDataManager {
              }
 
              const quizData = await response.json();
+             console.log("MINIMAL TEST - quizData:", quizData);
              const potentialQuestions = quizData?.data?.questions ?? quizData?.questions;
 
              if (!potentialQuestions || !Array.isArray(potentialQuestions)) {

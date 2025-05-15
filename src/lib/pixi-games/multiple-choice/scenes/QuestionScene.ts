@@ -174,7 +174,7 @@ export class QuestionScene extends PIXI.Container {
             // Use the actual text position AFTER it's set above
             const textTop = this.questionText.y - this.questionText.height * this.questionText.anchor.y;
             const imageBottomBound = textTop - params.topPadding; // Use textTop now
-            let availableHeightForMedia = Math.max(10, imageBottomBound - imageTopBound);
+            const availableHeightForMedia = Math.max(10, imageBottomBound - imageTopBound);
 
              // --- Reinstate your scaling logic ---
              let scale = 1;

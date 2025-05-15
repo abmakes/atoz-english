@@ -8,7 +8,7 @@ import Image from 'next/image'
 import ImageSelectModal from '@/components/management_ui/ImageSelectModal'
 import { QuestionFormMatching } from "./QuestionFormMatching";
 import { QuestionFormSorting } from "./QuestionFormSorting";
-import { QuestionType } from "@/types/quiz";
+import { QuestionType } from "@/types/question_types";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 

@@ -1,0 +1,65 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "app/generated/prisma/client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+model Quiz {
+  id        String     @id @default(cuid())
+  title     String
+  imageUrl  String?
+  questions Question[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Question {
+  id            String       @id @default(cuid())
+  question      String
+  imageUrl      String?
+  answers       String[]
+  correctAnswer String
+  type          QuestionType @default(MULTIPLE_CHOICE)
+  tags          Tag[]
+  quiz          Quiz?        @relation(fields: [quizId], references: [id])
+  quizId        String?
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  SHORT_ANSWER
+  SORTING
+  MATCHING
+  FILL_IN_THE_BLANK
+  TWO_OPTIONS
+  OPEN_ENDED
+  // Add more types as needed
+}
+
+enum Level {
+  PRE_A1
+  A1
+  A2
+  B1
+  B2
+  C1
+  C2
+  // Add more types as needed
+}
+
+model Tag {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  questions Question[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}

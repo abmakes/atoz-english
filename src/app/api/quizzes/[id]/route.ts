@@ -22,11 +22,10 @@ interface QuestionData {
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    const { id } = params;
-
     // First, delete all questions associated with the quiz
     await prisma.question.deleteMany({
       where: { quizId: id },
@@ -49,7 +48,7 @@ export async function DELETE(
 
     return successResponse({ message: 'Quiz and associated questions deleted successfully' });
   } catch (error) {
-    return handleApiError(error, `DELETE /api/quizzes/${params.id}`);
+    return handleApiError(error, `DELETE /api/quizzes/${id}`);
   } finally {
     await prisma.$disconnect();
   }
@@ -63,11 +62,12 @@ export async function DELETE(
  */
 export async function GET(
   request: Request, 
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const quiz = await prisma.quiz.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         questions: {
           include: {
@@ -78,14 +78,14 @@ export async function GET(
     });
 
     if (!quiz) {
-      return errorResponse('Quiz not found', { id: params.id }, 404);
+      return errorResponse('Quiz not found', { id: id }, 404);
     }
 
     // console.log("Raw Quiz Data from Prisma:", JSON.stringify(quiz, null, 2));
 
     return successResponse(quiz);
   } catch (error) {
-    return handleApiError(error, `GET /api/quizzes/${params.id}`);
+    return handleApiError(error, `GET /api/quizzes/${id}`);
   } finally {
     await prisma.$disconnect();
   }
@@ -101,15 +101,16 @@ export async function GET(
  */
 export async function PUT(
   request: Request, 
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const formData = await request.formData();
     const title = formData.get('title') as string;
     const questions: QuestionData[] = JSON.parse(formData.get('questions') as string);
 
     // Handle image uploads first
-    const quizImageUrl = await handleQuizImageUpload(formData, params.id);
+    const quizImageUrl = await handleQuizImageUpload(formData, id);
     const updatedQuestions = await handleQuestionImageUploads(questions, formData);
 
     // Optimized update flow
@@ -118,7 +119,7 @@ export async function PUT(
 
     // Update quiz metadata first
     const updatedQuiz = await prisma.quiz.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         title,
         imageUrl: quizImageUrl,
@@ -127,7 +128,7 @@ export async function PUT(
 
     // Batch process questions
     const existingQuestions = await prisma.question.findMany({
-      where: { quizId: params.id },
+      where: { quizId: id },
       select: { id: true }
     });
 
@@ -155,7 +156,7 @@ export async function PUT(
         correctAnswer: q.correctAnswer,
         imageUrl: q.imageUrl,
         type: q.type || QuestionType.MULTIPLE_CHOICE,
-        quizId: params.id
+        quizId: id
       }
     }));
 
@@ -175,7 +176,7 @@ export async function PUT(
       questions: updatedQuestionData
     });
   } catch (error) {
-    return handleApiError(error, `PUT /api/quizzes/${params.id}`);
+    return handleApiError(error, `PUT /api/quizzes/${id}`);
   } finally {
     await prisma.$disconnect();
   }

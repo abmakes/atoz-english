@@ -246,12 +246,15 @@ export async function POST(request: Request) {
 }
 
 // NOTE: This PUT handler needs significant work to implement the update logic correctly.
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
-    const quizId = params.id
-    console.log(`PUT /api/quizzes/${quizId}`)
+export async function PUT(
+  request: Request, 
+  { params }: { params: Promise<{ id: string }> }
+) {
+    const { id } = await params;
+    console.log(`PUT /api/quizzes/${id}`)
 
     try {
-        if (!quizId) {
+        if (!id) {
              return NextResponse.json({ error: "Quiz ID is required" }, { status: 400 })
         }
         if (isDatabaseIdle()) await warmupDatabase() // Warmup if needed
@@ -360,7 +363,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         }));
 
         // --- Use the legacy updateQuiz function --- 
-        const updatedQuiz = await updateQuiz(quizId, {
+        const updatedQuiz = await updateQuiz(id, {
           title,
           imageUrl: finalQuizImageUrl ?? undefined,
           questions: questionDataForUpdate
@@ -368,7 +371,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
         // --- Handle potential null result from updateQuiz --- 
         if (!updatedQuiz) {
-            return NextResponse.json({ error: `Quiz with ID ${quizId} not found or update failed.` }, { status: 404 });
+            return NextResponse.json({ error: `Quiz with ID ${id} not found or update failed.` }, { status: 404 });
         }
 
         // --- Transform result --- 
@@ -391,7 +394,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         return NextResponse.json({ data: updatedQuizForApi });
 
     } catch (error) {
-        console.error(`Failed to update quiz ${quizId}:`, error)
+        console.error(`Failed to update quiz ${id}:`, error)
         
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: "Invalid data structure after parsing.", details: error.flatten() }, { status: 400 })
@@ -401,7 +404,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         if (error instanceof Error && error.name === 'PrismaClientKnownRequestError' && isPrismaError(error)) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
             if ((error as any).code === 'P2025') {
-                return NextResponse.json({ error: `Quiz with ID ${quizId} not found.` }, { status: 404 })
+                return NextResponse.json({ error: `Quiz with ID ${id} not found.` }, { status: 404 })
             }
         }
         
