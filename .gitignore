@@ -63,10 +63,4 @@ node_modules/
 
 README-task-master.md
 .env.example
-
-# Works in progress
-src/app/quizzes/
-src/components/management_ui/
-src/app/task/
-src/app/task/
 src/lib/tasks.ts
