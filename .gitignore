@@ -64,3 +64,6 @@ node_modules/
 README-task-master.md
 .env.example
 src/lib/tasks.ts
+src/app/task/
+src/app/quizzes/
+src/components/management_ui/
