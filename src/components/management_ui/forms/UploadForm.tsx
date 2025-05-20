@@ -2,9 +2,25 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { QuestionType } from '@/types/question_types'
 
-export default function UploadForm() {
-  const [title, setTitle] = useState('')
+interface UploadFormProps {
+  quizTitle: string;
+  quizDescription?: string;
+  quizCoverImageUrl?: string;
+  quizOverallType: QuestionType;
+  quizTags?: string[];
+  className?: string;
+}
+
+export default function UploadForm({
+  quizTitle,
+  quizDescription,
+  quizCoverImageUrl,
+  quizOverallType,
+  quizTags,
+  className
+}: UploadFormProps) {
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -16,13 +32,12 @@ export default function UploadForm() {
     let timeoutId: NodeJS.Timeout;
     if (success) {
       timeoutId = setTimeout(() => {
-        router.push('/') // Redirect to home page after showing success message
-      }, 3000) // Wait for 3 seconds before redirecting
+        router.push('/quizzes')
+      }, 3000)
     }
     return () => clearTimeout(timeoutId)
   }, [success, router])
 
-  // Function to warm up the database
   const warmupDatabase = async () => {
     try {
       console.log('Warming up database...');
@@ -43,8 +58,8 @@ export default function UploadForm() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!file || !title) {
-      setError('Please provide both a title and a CSV file.')
+    if (!file) {
+      setError('Please provide a CSV file.')
       return
     }
 
@@ -52,12 +67,21 @@ export default function UploadForm() {
     setError(null)
 
     try {
-      // First, attempt to warm up the database
       await warmupDatabase();
       
-      // Now proceed with the upload
       const formData = new FormData()
-      formData.append('title', title)
+      formData.append('title', quizTitle)
+      if (quizDescription) {
+        formData.append('description', quizDescription)
+      }
+      if (quizCoverImageUrl) {
+        formData.append('quizCoverImageUrl', quizCoverImageUrl)
+      }
+      formData.append('quizType', quizOverallType)
+      if (quizTags && quizTags.length > 0) {
+        quizTags.forEach(tag => formData.append('tags[]', tag))
+      }
+      
       formData.append('csv', file)
 
       const response = await fetch('/api/upload-quiz', {
@@ -71,9 +95,8 @@ export default function UploadForm() {
       }
 
       const result = await response.json()
-      console.log(result)
+      console.log('Upload successful, result:', result)
       setSuccess(true)
-      // Note: We're not immediately redirecting here anymore
     } catch (error) {
       console.error(error)
       setError(error instanceof Error ? error.message : 'Failed to upload quiz. Please try again.')
@@ -83,52 +106,46 @@ export default function UploadForm() {
   }
 
   return (
-    <div className='flex flex-col w-full gap-4 items-center align-middle max-w-4xl'>
+    <div className={`flex flex-col w-full gap-4 items-center align-middle max-w-4xl ${className ? className : ''}`}>
+      <h2 className="text-xl font-semibold mb-2">Uploading CSV for: {quizTitle}</h2>
+      <p className="text-sm text-gray-600 mb-1">Quiz Type: {quizOverallType.replace('_', ' ')}</p>
+      {quizDescription && <p className="text-sm text-gray-600 mb-1">Description: {quizDescription}</p>}
+      {quizTags && quizTags.length > 0 && (
+        <p className="text-sm text-gray-600 mb-4">Tags: {quizTags.join(', ')}</p>
+      )}
       {success ? (
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4 " role="alert">
           <strong className="font-bold">Success!</strong>
-          <span className="block sm:inline"> Your quiz has been uploaded. Redirecting to home page...</span>
+          <span className="block sm:inline"> Your quiz &quot;{quizTitle}&quot; has been uploaded. Redirecting...</span>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6 p-4 border rounded-lg shadow">
           <div>
-            <label htmlFor="title" className="block text-md font-medium text-black">
-              Quiz Title
-            </label>
-            <input
-              type="text"
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="mt-1 block text-md p-2 w-full max-w-[700px] rounded-md border border-gray-400 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="csv" className="block text-sm font-medium text-gray-700">
-              CSV File
+            <label htmlFor="csv" className="block text-md font-medium text-gray-800">
+              Select CSV File to Upload
             </label>
             <input
               type="file"
               id="csv"
               accept=".csv"
               onChange={(e) => setFile(e.target.files?.[0] || null)}
-              className="mt-1 block w-full text-sm text-gray-500
+              className="mt-2 block w-full text-sm text-gray-600
                 file:mr-4 file:py-2 file:px-4
-                file:rounded-full file:border-0
+                file:rounded-lg file:border-0
                 file:text-sm file:font-semibold
-                file:bg-violet-50 file:text-violet-700
-                hover:file:bg-violet-100"
+                file:bg-violet-100 file:text-violet-700
+                hover:file:bg-violet-200 transition-colors cursor-pointer"
               required
             />
+            <p className="mt-1 text-xs text-gray-500">Ensure your CSV format is correct (e.g., Question,Answer1,Answer2,...,CorrectAnswer,ImageType,ImageURL).</p>
           </div>
-          {error && <p className="text-red-500">{error}</p>}
+          {error && <p className="text-red-500 text-sm mt-2">Error: {error}</p>}
           <button
             type="submit"
-            disabled={loading || success || warmingUp}
-            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md shadow-solid text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            disabled={loading || success || warmingUp || !file}
+            className="w-full inline-flex justify-center py-2.5 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-300 transition-colors"
           >
-            {loading ? 'Uploading...' : warmingUp ? 'Preparing Database...' : 'Upload Quiz'}
+            {loading ? 'Uploading...' : warmingUp ? 'Preparing Database...' : 'Upload Quiz CSV'}
           </button>
         </form>
       )}

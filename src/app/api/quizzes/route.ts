@@ -14,12 +14,14 @@ const QuestionSchema = z.object({
     type: z.nativeEnum(QuestionType).default(QuestionType.MULTIPLE_CHOICE),
 })
 
-// Define Zod Schema for the POST request data (after parsing FormData)
+// Updated Zod Schema for the POST request data (after parsing FormData)
 const QuizCreateSchema = z.object({
     title: z.string().min(1, "Quiz title cannot be empty"),
+    description: z.string().optional(),
     quizImageUrl: z.string().optional(),
     quizImageFile: z.any().optional(),
-    defaultQuestionType: z.nativeEnum(QuestionType).default(QuestionType.MULTIPLE_CHOICE),
+    quizType: z.nativeEnum(QuestionType).default(QuestionType.MULTIPLE_CHOICE),
+    tags: z.array(z.string()).optional(),
     questions: z.array(QuestionSchema).min(1, "Quiz must have at least one question"),
 })
 
@@ -32,18 +34,33 @@ type ParsedQuestionData = z.infer<typeof QuestionSchema>
 // Helper type for parsed quiz data before validation
 type ParsedQuizData = z.infer<typeof QuizCreateSchema>
 
+// Define a more specific type for question objects returned by Prisma, for use in .map
+interface PrismaQuestion {
+  id: string;
+  question: string;
+  answers: string[];
+  correctAnswer: string;
+  imageUrl: string | null;
+  type: QuestionType;
+  // Add other fields if selected
+}
+
 // Add route segment config if needed for dynamic operations like reading request body
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   console.log('GET /api/quizzes')
   try {
+    // NOTE: Assumes Prisma Quiz model has been updated with description, quizType, tags
     const quizzes = await withDatabaseRetry(() =>
       prisma.quiz.findMany({
         select: {
           id: true,
           title: true,
           imageUrl: true,
+          description: true,
+          quizType: true,
+          tags: true,
           questions: {
             select: {
               id: true,
@@ -57,12 +74,10 @@ export async function GET() {
         }
       }), 'Fetching quizzes')
 
-    // No transformation needed if GET output matches desired structure (no tags)
-    // Add placeholder mapping if necessary
     const quizzesForApi = quizzes.map(quiz => ({
         ...quiz,
         imageUrl: quiz.imageUrl ?? PLACEHOLDER_IMAGE,
-        questions: quiz.questions.map(q => ({
+        questions: quiz.questions.map((q: PrismaQuestion) => ({
             ...q,
             imageUrl: q.imageUrl ?? PLACEHOLDER_IMAGE
         }))
@@ -88,15 +103,21 @@ export async function POST(request: Request) {
 
     // --- Parse FormData into structured object ---
     parsedData.title = formData.get('title') as string
+    parsedData.description = formData.get('description') as string || undefined
     parsedData.quizImageFile = formData.get('quizImage') as File || undefined
     parsedData.quizImageUrl = formData.get('quizImageUrl') as string || undefined
     
-    // Convert string to enum value
-    const questionTypeFromForm = formData.get('questionType') as string;
-    // Handle the case when questionTypeFromForm is either not provided or invalid
-    parsedData.defaultQuestionType = questionTypeFromForm in QuestionType 
-      ? (questionTypeFromForm as QuestionType) 
-      : QuestionType.MULTIPLE_CHOICE;
+    const quizTypeFromForm = formData.get('quizType') as string
+    parsedData.quizType = quizTypeFromForm in QuestionType 
+      ? (quizTypeFromForm as QuestionType) 
+      : QuestionType.MULTIPLE_CHOICE
+
+    const tagsFromForm = formData.getAll('tags[]')
+    if (tagsFromForm && tagsFromForm.length > 0 && (tagsFromForm[0] !== 'undefined')) {
+        parsedData.tags = tagsFromForm.map(tag => String(tag))
+    } else {
+        parsedData.tags = undefined
+    }
 
     for (let i = 0; ; i++) {
         const questionKey = `questions[${i}][question]`
@@ -107,14 +128,14 @@ export async function POST(request: Request) {
         }
         questionData.question = formData.get(questionKey) as string
         questionData.correctAnswer = formData.get(`questions[${i}][correctAnswer]`) as string
-        questionData.imageFile = formData.get(`questions[${i}][image]`) as File || undefined
+        questionData.imageFile = formData.get(`questions[${i}][imageFile]`) as File || undefined
         questionData.imageUrl = formData.get(`questions[${i}][imageUrl]`) as string || undefined
         
         // Convert string to enum value safely
         const typeFromForm = formData.get(`questions[${i}][type]`) as string;
         questionData.type = typeFromForm in QuestionType 
             ? (typeFromForm as QuestionType) 
-            : parsedData.defaultQuestionType;
+            : parsedData.quizType;
 
         // Collect answers
         const answers: string[] = [];
@@ -138,7 +159,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid input data", details: validationResult.error.flatten() }, { status: 400 })
     }
 
-    const { title, quizImageFile, questions } = validationResult.data
+    const { title, description, quizImageFile, questions, quizType, tags } = validationResult.data
     let finalQuizImageUrl = validationResult.data.quizImageUrl || PLACEHOLDER_IMAGE
 
     // --- Handle Quiz Image Upload ---
@@ -185,7 +206,10 @@ export async function POST(request: Request) {
       prisma.quiz.create({
         data: {
           title,
+          description,
           imageUrl: finalQuizImageUrl,
+          quizType,
+          tags,
           questions: {
             create: questionsToCreate,
           },
@@ -205,11 +229,14 @@ export async function POST(request: Request) {
       }), 'Creating quiz')
 
     console.log('Created quiz:', createdQuiz.id)
-     // Add placeholder mapping if necessary
+    
     const createdQuizForApi = {
         ...createdQuiz,
+        description: (createdQuiz as any).description || undefined,
+        quizType: (createdQuiz as any).quizType,
+        tags: (createdQuiz as any).tags || [],
         imageUrl: createdQuiz.imageUrl ?? PLACEHOLDER_IMAGE,
-        questions: createdQuiz.questions.map(q => ({
+        questions: createdQuiz.questions.map((q: PrismaQuestion) => ({
             ...q,
             imageUrl: q.imageUrl ?? PLACEHOLDER_IMAGE
         }))

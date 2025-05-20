@@ -16,7 +16,7 @@ interface ApiQuestionData {
   type: QuestionType;
 }
 
-// Interface for the structure of Quiz data expected by QuizForm's initialData
+// Interface for the structure of Quiz data expected by QuizForm's initialQuestions prop
 interface QuestionDataForForm {
   id?: string; // id is part of QuestionDataForForm, used by QuizForm
   question: string;
@@ -26,18 +26,23 @@ interface QuestionDataForForm {
   type: QuestionType;
 }
 
-interface QuizDataForForm {
+// Expanded interface for the Quiz data fetched and managed on this page
+interface QuizDataForEditPage {
   id: string;
   title: string;
+  description?: string; // Added
   imageUrl: string;
+  quizType: QuestionType; // Added - overall quiz type
+  tags?: string[];      // Added
   questions: QuestionDataForForm[];
+  // coverImageFile?: File | null; // To track if user picks a new file in this form context (QuizForm handles its own submission file)
 }
 
 export default function EditQuizPage() {
   const params = useParams(); // Get route params
   const quizId = params.id as string; // Assuming id is always a string
 
-  const [quizData, setQuizData] = useState<QuizDataForForm | null>(null);
+  const [quizData, setQuizData] = useState<QuizDataForEditPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,22 +53,27 @@ export default function EditQuizPage() {
       setLoading(true);
       setError(null);
       try {
+        // USER NOTE: Ensure GET /api/quizzes/[id] returns description, quizType, tags
         const response = await fetch(`/api/quizzes/${quizId}`);
         if (response.ok) {
           const apiResponse = await response.json(); // Expecting { data: { id, title, ... } }
           const rawQuizData = apiResponse.data;
 
-          const transformedData: QuizDataForForm = {
+          // Transform API data to the structure needed by the page and QuizForm
+          const transformedData: QuizDataForEditPage = {
             id: rawQuizData.id,
             title: rawQuizData.title,
+            description: rawQuizData.description, // Added
             imageUrl: rawQuizData.imageUrl || '/images/placeholder.webp',
+            quizType: rawQuizData.quizType || QuestionType.MULTIPLE_CHOICE, // Added, provide default
+            tags: rawQuizData.tags || [], // Added, provide default
             questions: rawQuizData.questions.map((q: ApiQuestionData) => ({ // Use ApiQuestionData here
               id: q.id,
               question: q.question,
               answers: q.answers,
               correctAnswer: q.correctAnswer,
               imageUrl: q.imageUrl || '/images/placeholder.webp',
-              type: q.type,
+              type: q.type, // Assuming question type from API is already QuestionType enum
             })),
           };
           setQuizData(transformedData);
@@ -83,6 +93,20 @@ export default function EditQuizPage() {
     fetchQuiz();
   }, [quizId]);
 
+  // Callback for QuizForm if it changes the quiz cover image
+  // This updates the local state for consistency if other UI elements on this page were to use it.
+  // QuizForm itself handles the image file for submission using its internal state.
+  const handleQuizCoverImageChange = (newImageUrl: string /*, newImageFile?: File | null */) => {
+    setQuizData(prevData => {
+      if (!prevData) return null;
+      return {
+        ...prevData,
+        imageUrl: newImageUrl,
+        // coverImageFile: newImageFile || null, // Not strictly needed here if QuizForm manages its own file for submission
+      };
+    });
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto p-4 flex justify-center items-center min-h-screen">
@@ -96,7 +120,6 @@ export default function EditQuizPage() {
       <div className="container mx-auto p-4 text-center">
         <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
         <p>{error}</p>
-        {/* Optionally, add a button to retry or go back */}
       </div>
     );
   }
@@ -114,7 +137,17 @@ export default function EditQuizPage() {
       <h1 className="text-3xl font-bold mb-6 text-center grandstander">
         Edit Quiz: {quizData.title}
       </h1>
-      <QuizForm quizId={quizData.id} initialData={quizData} />
+      <QuizForm
+        quizId={quizData.id}
+        // Pass all required props from the fetched and transformed quizData
+        quizTitle={quizData.title}
+        quizDescription={quizData.description}
+        quizCoverImageUrl={quizData.imageUrl}
+        quizOverallType={quizData.quizType}
+        quizTags={quizData.tags}
+        initialQuestions={quizData.questions}
+        onQuizCoverImageChange={handleQuizCoverImageChange}
+      />
     </div>
   );
 }

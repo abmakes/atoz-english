@@ -6,6 +6,15 @@ import { updateQuiz } from '@/lib/db'
 import { QuestionType } from '@/types/question_types'
 import { Question, Quiz } from "@prisma/client"
 
+// Define an interface for the Quiz object that includes the new fields
+// This is for type assertion until Prisma schema is updated and client regenerated
+interface QuizWithDetails extends Quiz {
+  description?: string | null;
+  quizType?: QuestionType | null; // Assuming QuestionType or string based on your Prisma schema decision
+  tags?: string[] | null;
+  questions: Question[]; // Assuming Prisma's Question type has all selected fields, including `type` as QuestionType
+}
+
 // Define Zod Schema for a Question (used in POST/PUT)
 const QuestionSchema = z.object({
     id: z.string().optional(), // Optional ID for PUT requests
@@ -103,7 +112,7 @@ export async function GET(
 ) {
   const { id } = params;
   try {
-    const quiz = await prisma.quiz.findUnique({
+    const quizFromDb = await prisma.quiz.findUnique({
       where: { id: id },
       include: {
         questions: {
@@ -113,23 +122,28 @@ export async function GET(
             answers: true,
             correctAnswer: true,
             imageUrl: true,
-            type: true,
+            type: true, 
           }
-        }
+        },
       }
     });
 
-    if (!quiz) {
+    if (!quizFromDb) {
       return NextResponse.json({ error: 'Quiz not found', details: { id } }, { status: 404 });
     }
     
-    // Transform to ensure PLACEHOLDER_IMAGE is used
+    const quiz = quizFromDb as QuizWithDetails;
+
     const quizForApi = {
         ...quiz,
+        description: quiz.description ?? undefined, 
+        quizType: quiz.quizType ?? QuestionType.MULTIPLE_CHOICE, 
+        tags: quiz.tags ?? [], 
         imageUrl: quiz.imageUrl ?? PLACEHOLDER_IMAGE,
         questions: quiz.questions.map(q => ({
-            ...q,
+            ...q, // q is already of type Question, which includes id, question, answers, correctAnswer, imageUrl, type
             imageUrl: q.imageUrl ?? PLACEHOLDER_IMAGE
+            // No need to explicitly map q.type if it's part of ...q and correctly typed
         }))
     };
 

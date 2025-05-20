@@ -19,7 +19,10 @@ export const questionBaseSchema = z.object({
 export const quizBaseSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(1, "Quiz title cannot be empty"),
+  description: z.string().optional(),
   imageUrl: z.string().optional(),
+  quizType: z.nativeEnum(QuestionType).default(QuestionType.MULTIPLE_CHOICE),
+  tags: z.array(z.string()).optional(),
 });
 
 // Schema for API input validation (includes file uploads)
@@ -31,7 +34,6 @@ export const questionInputSchema = questionBaseSchema.extend({
 
 export const quizInputSchema = quizBaseSchema.extend({
   quizImageFile: z.any().optional(),
-  defaultQuestionType: z.nativeEnum(QuestionType).default(QuestionType.MULTIPLE_CHOICE),
   questions: z.array(questionInputSchema).min(1, "Quiz must have at least one question"),
 });
 
@@ -55,6 +57,10 @@ export const apiResponseSchema = z.object({
 // CSV upload schema
 export const csvUploadSchema = z.object({
   title: z.string().min(1, "Quiz title is required"),
+  description: z.string().optional(),
+  quizCoverImageUrl: z.string().optional(),
+  quizType: z.nativeEnum(QuestionType).optional(),
+  tags: z.array(z.string()).optional(),
   csv: z.any().refine(
     (file) => file && typeof file.name === 'string' && file.name.endsWith('.csv'),
     { message: "File must be a CSV" }
@@ -69,6 +75,8 @@ export const csvRowSchema = z.object({
   answer3: z.string().min(1, "Answer 3 cannot be empty"),
   answer4: z.string().min(1, "Answer 4 cannot be empty"),
   correctAnswer: z.string().min(1, "Correct answer cannot be empty"),
+  type: z.string().optional(),
+  imageUrl: z.string().optional(),
 });
 
 export type CsvUploadInput = z.infer<typeof csvUploadSchema>;
