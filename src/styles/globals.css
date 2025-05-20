@@ -19,6 +19,7 @@
     --popover: #ffffff;
     --popover-foreground: #111827;
     --primary: #49c8ff; /* Maps to primary-accent */
+    --primary-light: #98e0ff; /* Maps to primary-accent */
     --primary-foreground: #0a0a0a;
     --secondary: #114257; /* Maps to text-color */
     --secondary-foreground: #fafafa;
@@ -289,8 +290,10 @@
     @apply bg-background text-foreground; /* Uses base vars */
   }
 }
-
-
+/* 
+* {
+  border: 1px solid red;
+} */
 
 /* Grandstander font class */
 .grandstander {
