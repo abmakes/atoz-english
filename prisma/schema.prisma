@@ -19,6 +19,9 @@ model Quiz {
   imageUrl  String?
   quizType  QuestionType @default(MULTIPLE_CHOICE)
   tags      String[]
+  statistics Json?     // Added: To store quiz statistics like playCount, favoritesCount
+  defaultSettings Json? // Added: To store default game settings for this quiz
+  authorId  String     @default("admin")
   questions Question[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt

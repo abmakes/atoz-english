@@ -232,9 +232,9 @@ export async function POST(request: Request) {
     
     const createdQuizForApi = {
         ...createdQuiz,
-        description: (createdQuiz as any).description || undefined,
-        quizType: (createdQuiz as any).quizType,
-        tags: (createdQuiz as any).tags || [],
+        description: (createdQuiz as unknown as { description: string }).description || undefined,
+        quizType: (createdQuiz as unknown as { quizType: QuestionType }).quizType,
+        tags: (createdQuiz as unknown as { tags: string[] }).tags || [],
         imageUrl: createdQuiz.imageUrl ?? PLACEHOLDER_IMAGE,
         questions: createdQuiz.questions.map((q: PrismaQuestion) => ({
             ...q,

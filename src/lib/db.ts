@@ -21,7 +21,6 @@ interface QuestionUpdateData {
   imageUrl?: string;
   answers: string[];
   correctAnswer: string;
-  tags?: string[];
   type?: QuestionType;
 }
 
@@ -102,6 +101,9 @@ export async function createQuestion(data: {
 // Legacy function signature adapted for the new codebase
 export async function updateQuiz(id: string, data: {
   title: string;
+  description?: string;
+  quizType?: QuestionType;
+  tags?: string[];
   imageUrl?: string;
   questions: QuestionUpdateData[];
 }) {
@@ -113,6 +115,9 @@ export async function updateQuiz(id: string, data: {
       where: { id },
       data: {
         title: data.title,
+        description: data.description,
+        quizType: data.quizType,
+        tags: data.tags,
         imageUrl: data.imageUrl,
       },
     });
@@ -152,14 +157,6 @@ export async function updateQuiz(id: string, data: {
                 answers: q.answers,
                 correctAnswer: q.correctAnswer,
                 type: q.type,
-                tags: q.tags && q.tags.length > 0 ? {
-                  // Clear existing tags then add new ones
-                  set: [],
-                  connectOrCreate: q.tags.map((tag: string) => ({
-                    where: { name: tag },
-                    create: { name: tag },
-                  })),
-                } : undefined,
               }
             });
           }))
@@ -176,12 +173,6 @@ export async function updateQuiz(id: string, data: {
                 correctAnswer: q.correctAnswer,
                 type: q.type,
                 quiz: { connect: { id } },
-                tags: q.tags && q.tags.length > 0 ? {
-                  connectOrCreate: q.tags.map((tag: string) => ({
-                    where: { name: tag },
-                    create: { name: tag },
-                  })),
-                } : undefined,
               }
             });
           }))
@@ -196,11 +187,7 @@ export async function updateQuiz(id: string, data: {
     return prisma.quiz.findUnique({
       where: { id },
       include: {
-        questions: {
-          include: {
-            tags: true
-          }
-        }
+        questions: true,
       },
     });
   }, `Updating quiz ${id}`);

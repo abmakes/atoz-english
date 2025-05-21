@@ -30,9 +30,11 @@ const QuestionSchema = z.object({
 // QuizCreateSchema is used as a base for QuizUpdateSchema
 const QuizCreateSchema = z.object({
     title: z.string().min(1, "Quiz title cannot be empty"),
+    description: z.string().optional(),
     quizImageUrl: z.string().optional(),
     quizImageFile: z.any().optional(),
-    defaultQuestionType: z.nativeEnum(QuestionType).default(QuestionType.MULTIPLE_CHOICE),
+    quizType: z.nativeEnum(QuestionType).default(QuestionType.MULTIPLE_CHOICE),
+    tags: z.array(z.string()).optional(),
     questions: z.array(QuestionSchema).min(1, "Quiz must have at least one question"),
 })
 
@@ -45,8 +47,8 @@ const PLACEHOLDER_IMAGE = '/images/placeholder.webp'
 // Helper type for parsed question data before validation
 type ParsedQuestionData = z.infer<typeof QuestionSchema>
 
-// Helper type for parsed quiz data before validation
-type ParsedQuizData = z.infer<typeof QuizCreateSchema>
+// Helper type for parsed quiz data before validation - REMOVED AS UNUSED IN THIS FILE
+// type ParsedQuizData = z.infer<typeof QuizCreateSchema>
 
 // Define a type for the payload expected by the updateQuiz function's questions array
 type QuestionPayloadForUpdate = {
@@ -69,9 +71,9 @@ export const dynamic = 'force-dynamic';
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await params;
   try {
     // First, delete all questions associated with the quiz
     await prisma.question.deleteMany({
@@ -108,9 +110,9 @@ export async function DELETE(
  */
 export async function GET(
   request: Request, 
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await params;
   try {
     const quizFromDb = await prisma.quiz.findUnique({
       where: { id: id },
@@ -165,9 +167,9 @@ export async function GET(
  */
 export async function PUT(
   request: Request, 
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-    const { id } = params;
+    const { id } = await params;
     console.log(`PUT /api/quizzes/${id} - Request received in [id]/route.ts`);
 
     try {
@@ -180,7 +182,7 @@ export async function PUT(
         const formData = await request.formData();
         console.log('PUT /api/quizzes/[id] - FormData received');
 
-        const parsedData: Partial<ParsedQuizData> & { questions: Array<Partial<ParsedQuestionData>> } = { 
+        const parsedData: Partial<z.infer<typeof QuizCreateSchema>> & { questions: Array<Partial<ParsedQuestionData>> } = { 
           questions: [] 
         };
         
@@ -191,11 +193,19 @@ export async function PUT(
         console.log("------------------------");
 
         parsedData.title = formData.get('title') as string;
+        parsedData.description = formData.get('description') as string || undefined;
         parsedData.quizImageFile = formData.get('quizImage') as File || undefined;
         parsedData.quizImageUrl = formData.get('quizImageUrl') as string || undefined;
         
-        const questionTypeFromForm = formData.get('questionType') as string;
-        parsedData.defaultQuestionType = (questionTypeFromForm as QuestionType) || QuestionType.MULTIPLE_CHOICE;
+        const quizTypeFromForm = formData.get('quizType') as string;
+        parsedData.quizType = (quizTypeFromForm as QuestionType) || QuestionType.MULTIPLE_CHOICE;
+
+        const tagsFromForm = formData.getAll('tags[]');
+        if (tagsFromForm && tagsFromForm.length > 0 && (tagsFromForm[0] !== 'undefined')) {
+            parsedData.tags = tagsFromForm.map(tag => String(tag));
+        } else {
+            parsedData.tags = undefined;
+        }
 
         let i = 0;
         while (formData.has(`questions[${i}][question]`)) {
@@ -212,7 +222,7 @@ export async function PUT(
             const typeFromForm = formData.get(`questions[${i}][type]`) as string;
             questionData.type = typeFromForm in QuestionType 
                 ? (typeFromForm as QuestionType) 
-                : parsedData.defaultQuestionType;
+                : parsedData.quizType;
 
             const answers: string[] = [];
             let j = 0;
@@ -237,8 +247,15 @@ export async function PUT(
         }
         console.log('PUT /api/quizzes/[id] - Zod validation successful. Validated data:', JSON.stringify(validationResult.data, null, 2));
 
-        const { title: validatedTitle, quizImageFile: validatedQuizImageFile, questions: incomingQuestions } = validationResult.data;
-        let finalQuizImageUrl = validationResult.data.quizImageUrl; // This could be existing URL or undefined
+        const { 
+            title: validatedTitle, 
+            description: validatedDescription,
+            quizImageFile: validatedQuizImageFile, 
+            quizType: validatedQuizType,
+            tags: validatedTags,
+            questions: incomingQuestions 
+        } = validationResult.data;
+        let finalQuizImageUrl = validationResult.data.quizImageUrl;
 
         if (validatedQuizImageFile && validatedQuizImageFile instanceof File && validatedQuizImageFile.size > 0) {
             console.log('PUT /api/quizzes/[id] - Uploading updated quiz image file:', validatedQuizImageFile.name);
@@ -255,7 +272,6 @@ export async function PUT(
         } else {
              console.log('PUT /api/quizzes/[id] - No new quiz image file to upload. Current quizImageUrl:', finalQuizImageUrl);
         }
-
 
         console.log('PUT /api/quizzes/[id] - Processing question images. Incoming questions:', JSON.stringify(incomingQuestions, null, 2));
         if (!incomingQuestions || !Array.isArray(incomingQuestions)) {
@@ -308,7 +324,10 @@ export async function PUT(
 
         const updatedQuizFromDbFunction = await updateQuiz(id, {
           title: validatedTitle,
-          imageUrl: finalQuizImageUrl ?? undefined, // Ensure undefined if placeholder was intent
+          description: validatedDescription,
+          quizType: validatedQuizType,
+          tags: validatedTags,
+          imageUrl: finalQuizImageUrl ?? undefined,
           questions: questionDataForUpdate
         });
         console.log('PUT /api/quizzes/[id] - updateQuiz function successfully returned.');
@@ -318,9 +337,12 @@ export async function PUT(
             return NextResponse.json({ error: `Quiz with ID ${id} not found or update failed.` }, { status: 404 });
         }
 
-        const finalUpdatedQuiz = updatedQuizFromDbFunction as (Quiz & { questions: Question[] });
+        const finalUpdatedQuiz = updatedQuizFromDbFunction as (Quiz & { questions: Question[], description?: string, quizType?: QuestionType, tags?: string[] });
         const updatedQuizForApi = {
             ...finalUpdatedQuiz,
+            description: finalUpdatedQuiz.description ?? undefined,
+            quizType: finalUpdatedQuiz.quizType ?? QuestionType.MULTIPLE_CHOICE,
+            tags: finalUpdatedQuiz.tags ?? [],
             imageUrl: finalUpdatedQuiz.imageUrl ?? PLACEHOLDER_IMAGE,
             questions: (finalUpdatedQuiz.questions || []).map((q: Question) => ({
                 id: q.id,

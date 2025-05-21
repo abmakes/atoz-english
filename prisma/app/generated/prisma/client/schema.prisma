@@ -13,12 +13,18 @@ datasource db {
 }
 
 model Quiz {
-  id        String     @id @default(cuid())
-  title     String
-  imageUrl  String?
-  questions Question[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id              String       @id @default(cuid())
+  title           String
+  description     String?
+  imageUrl        String?
+  quizType        QuestionType @default(MULTIPLE_CHOICE)
+  tags            String[]
+  statistics      Json? // Added: To store quiz statistics like playCount, favoritesCount
+  defaultSettings Json? // Added: To store default game settings for this quiz
+  authorId        String       @default("admin")
+  questions       Question[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 }
 
 model Question {
@@ -28,7 +34,6 @@ model Question {
   answers       String[]
   correctAnswer String
   type          QuestionType @default(MULTIPLE_CHOICE)
-  tags          Tag[]
   quiz          Quiz?        @relation(fields: [quizId], references: [id])
   quizId        String?
 }
@@ -57,9 +62,8 @@ enum Level {
 }
 
 model Tag {
-  id        String     @id @default(cuid())
-  name      String     @unique
-  questions Question[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -1,0 +1,8 @@
+-- CreateEnum
+CREATE TYPE "QuestionType" AS ENUM ('MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER', 'SORTING', 'MATCHING', 'FILL_IN_THE_BLANK', 'TWO_OPTIONS', 'OPEN_ENDED');
+
+-- CreateEnum
+CREATE TYPE "Level" AS ENUM ('PRE_A1', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2');
+
+-- AlterTable
+ALTER TABLE "Question" ADD COLUMN     "type" "QuestionType" NOT NULL DEFAULT 'MULTIPLE_CHOICE';
