@@ -23,13 +23,15 @@ export const quizBaseSchema = z.object({
   imageUrl: z.string().optional(),
   quizType: z.nativeEnum(QuestionType).default(QuestionType.MULTIPLE_CHOICE),
   tags: z.array(z.string()).optional(),
+  statistics: z.any().optional(),
+  defaultSettings: z.any().optional(),
+  authorId: z.string().optional(),
 });
 
 // Schema for API input validation (includes file uploads)
 export const questionInputSchema = questionBaseSchema.extend({
   imageFile: z.any().optional(),
   tagsString: z.string().optional(),
-  tags: z.array(z.string()).optional(),
 });
 
 export const quizInputSchema = quizBaseSchema.extend({
@@ -40,7 +42,6 @@ export const quizInputSchema = quizBaseSchema.extend({
 // Schema for database operations
 export const questionDbSchema = questionBaseSchema.extend({
   quizId: z.string().optional(),
-  tags: z.array(tagSchema).optional(),
 });
 
 export const quizDbSchema = quizBaseSchema.extend({
@@ -61,6 +62,9 @@ export const csvUploadSchema = z.object({
   quizCoverImageUrl: z.string().optional(),
   quizType: z.nativeEnum(QuestionType).optional(),
   tags: z.array(z.string()).optional(),
+  authorId: z.string().optional(),
+  statistics: z.any().optional(),
+  defaultSettings: z.any().optional(),
   csv: z.any().refine(
     (file) => file && typeof file.name === 'string' && file.name.endsWith('.csv'),
     { message: "File must be a CSV" }

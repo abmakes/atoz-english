@@ -3,7 +3,8 @@ import { z } from 'zod'
 import { prisma, withDatabaseRetry, warmupDatabase, isDatabaseIdle } from '@/lib/prisma'
 import { put } from '@vercel/blob'
 import { QuestionType } from '@/types/question_types'
-
+import { Quiz as ITQuiz, Question as ITQuestion } from '@/types'
+import { Prisma } from '../../../../prisma/app/generated/prisma/client'
 // Define Zod Schema for a Question (used in POST)
 const QuestionSchema = z.object({
     question: z.string().min(1, "Question text cannot be empty"),
@@ -23,6 +24,9 @@ const QuizCreateSchema = z.object({
     quizType: z.nativeEnum(QuestionType).default(QuestionType.MULTIPLE_CHOICE),
     tags: z.array(z.string()).optional(),
     questions: z.array(QuestionSchema).min(1, "Quiz must have at least one question"),
+    statistics: z.any().optional(),
+    defaultSettings: z.any().optional(),
+    authorId: z.string().default("admin"),
 })
 
 // Placeholder image URL
@@ -34,54 +38,55 @@ type ParsedQuestionData = z.infer<typeof QuestionSchema>
 // Helper type for parsed quiz data before validation
 type ParsedQuizData = z.infer<typeof QuizCreateSchema>
 
-// Define a more specific type for question objects returned by Prisma, for use in .map
-interface PrismaQuestion {
-  id: string;
-  question: string;
-  answers: string[];
-  correctAnswer: string;
-  imageUrl: string | null;
-  type: QuestionType;
-  // Add other fields if selected
-}
-
 // Add route segment config if needed for dynamic operations like reading request body
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   console.log('GET /api/quizzes')
   try {
-    // NOTE: Assumes Prisma Quiz model has been updated with description, quizType, tags
-    const quizzes = await withDatabaseRetry(() =>
-      prisma.quiz.findMany({
-        select: {
-          id: true,
-          title: true,
-          imageUrl: true,
-          description: true,
-          quizType: true,
-          tags: true,
-          questions: {
-            select: {
-              id: true,
-              question: true,
-              answers: true,
-              correctAnswer: true,
-              imageUrl: true,
-              type: true,
-            }
+    const selectArgs: Prisma.QuizSelect = {
+        id: true,
+        title: true,
+        description: true,
+        imageUrl: true,
+        quizType: true,
+        tags: true,
+        statistics: true,
+        defaultSettings: true,
+        authorId: true,
+        questions: {
+          select: {
+            id: true,
+            question: true,
+            answers: true,
+            correctAnswer: true,
+            imageUrl: true,
+            type: true,
+            quizId: true,
           }
-        }
+        },
+        createdAt: true,
+        updatedAt: true,
+    };
+    const quizzesFromDb = await withDatabaseRetry(() =>
+      prisma.quiz.findMany({
+        select: selectArgs
       }), 'Fetching quizzes')
 
-    const quizzesForApi = quizzes.map(quiz => ({
-        ...quiz,
-        imageUrl: quiz.imageUrl ?? PLACEHOLDER_IMAGE,
-        questions: quiz.questions.map((q: PrismaQuestion) => ({
+    const quizzesForApi: ITQuiz[] = quizzesFromDb.map(quiz => {
+        const currentQuiz = quiz as unknown as ITQuiz; 
+        return {
+          ...currentQuiz,
+          imageUrl: currentQuiz.imageUrl ?? PLACEHOLDER_IMAGE,
+          statistics: currentQuiz.statistics ?? { favoritesCount: 0, playsCount: 0, likes: 0 },
+          tags: currentQuiz.tags ?? [],
+          authorId: currentQuiz.authorId ?? "admin",
+          createdAt: currentQuiz.createdAt ?? new Date(),
+          questions: (currentQuiz.questions || []).map(q => ({
             ...q,
             imageUrl: q.imageUrl ?? PLACEHOLDER_IMAGE
         }))
-    }))
+    }})
 
     return NextResponse.json({ data: quizzesForApi })
   } catch (error) {
@@ -94,17 +99,16 @@ export async function GET() {
 export async function POST(request: Request) {
   console.log('POST /api/quizzes')
   try {
-    if (isDatabaseIdle()) await warmupDatabase() // Warmup if needed
+    if (isDatabaseIdle()) await warmupDatabase() 
 
     const formData = await request.formData()
     const parsedData: Partial<ParsedQuizData> & { questions: Array<Partial<ParsedQuestionData>> } = { 
       questions: [] 
     }
 
-    // --- Parse FormData into structured object ---
     parsedData.title = formData.get('title') as string
     parsedData.description = formData.get('description') as string || undefined
-    parsedData.quizImageFile = formData.get('quizImage') as File || undefined
+    parsedData.quizImageFile = formData.get('quizImageFile') as File || undefined
     parsedData.quizImageUrl = formData.get('quizImageUrl') as string || undefined
     
     const quizTypeFromForm = formData.get('quizType') as string
@@ -112,32 +116,56 @@ export async function POST(request: Request) {
       ? (quizTypeFromForm as QuestionType) 
       : QuestionType.MULTIPLE_CHOICE
 
+    parsedData.authorId = formData.get('authorId') as string || "admin";
+    
+    const statisticsString = formData.get('statistics') as string;
+    if (statisticsString) {
+      try {
+        parsedData.statistics = JSON.parse(statisticsString);
+      } catch (e) {
+        console.warn('Failed to parse statistics JSON string from FormData', e);
+        parsedData.statistics = undefined;
+      }
+    } else {
+      parsedData.statistics = undefined;
+    }
+
+    const defaultSettingsString = formData.get('defaultSettings') as string;
+    if (defaultSettingsString) {
+      try {
+        parsedData.defaultSettings = JSON.parse(defaultSettingsString);
+      } catch (e) {
+        console.warn('Failed to parse defaultSettings JSON string from FormData', e);
+        parsedData.defaultSettings = undefined;
+      }
+    } else {
+      parsedData.defaultSettings = undefined;
+    }
+
     const tagsFromForm = formData.getAll('tags[]')
     if (tagsFromForm && tagsFromForm.length > 0 && (tagsFromForm[0] !== 'undefined')) {
         parsedData.tags = tagsFromForm.map(tag => String(tag))
     } else {
-        parsedData.tags = undefined
+        parsedData.tags = [] 
     }
 
     for (let i = 0; ; i++) {
         const questionKey = `questions[${i}][question]`
-        if (!formData.has(questionKey)) break // Exit loop when no more questions
+        if (!formData.has(questionKey)) break 
 
         const questionData: Partial<ParsedQuestionData> = {
-          answers: [] // Initialize answers array
+          answers: [] 
         }
         questionData.question = formData.get(questionKey) as string
         questionData.correctAnswer = formData.get(`questions[${i}][correctAnswer]`) as string
         questionData.imageFile = formData.get(`questions[${i}][imageFile]`) as File || undefined
         questionData.imageUrl = formData.get(`questions[${i}][imageUrl]`) as string || undefined
         
-        // Convert string to enum value safely
         const typeFromForm = formData.get(`questions[${i}][type]`) as string;
         questionData.type = typeFromForm in QuestionType 
             ? (typeFromForm as QuestionType) 
             : parsedData.quizType;
 
-        // Collect answers
         const answers: string[] = [];
         for (let j = 0; ; j++) {
             const answerKey = `questions[${i}][answers][${j}]`
@@ -152,21 +180,19 @@ export async function POST(request: Request) {
         parsedData.questions.push(questionData as ParsedQuestionData)
     }
 
-    // --- Validate the parsed object with Zod ---
     const validationResult = QuizCreateSchema.safeParse(parsedData)
     if (!validationResult.success) {
       console.error("Validation Errors:", validationResult.error.errors)
       return NextResponse.json({ error: "Invalid input data", details: validationResult.error.flatten() }, { status: 400 })
     }
 
-    const { title, description, quizImageFile, questions, quizType, tags } = validationResult.data
-    let finalQuizImageUrl = validationResult.data.quizImageUrl || PLACEHOLDER_IMAGE
+    const validatedData = validationResult.data as ParsedQuizData; 
+    let finalQuizImageUrl = validatedData.quizImageUrl || PLACEHOLDER_IMAGE;
 
-    // --- Handle Quiz Image Upload ---
-    if (quizImageFile && quizImageFile instanceof File && quizImageFile.size > 0) {
-        console.log('Uploading quiz image file:', quizImageFile.name)
+    if (validatedData.quizImageFile && validatedData.quizImageFile instanceof File && validatedData.quizImageFile.size > 0) {
+        console.log('Uploading quiz image file:', validatedData.quizImageFile.name)
         try {
-            const blob = await put(`quiz-images/${Date.now()}-${quizImageFile.name}`, quizImageFile, { access: 'public' })
+            const blob = await put(`quiz-images/${Date.now()}-${validatedData.quizImageFile.name}`, validatedData.quizImageFile, { access: 'public' })
             finalQuizImageUrl = blob.url
             console.log('Uploaded quiz image URL:', finalQuizImageUrl)
         } catch (uploadError) {
@@ -175,8 +201,7 @@ export async function POST(request: Request) {
         }
     }
 
-    // --- Handle Question Image Uploads and Prepare Prisma Data ---
-    const questionsToCreate = await Promise.all(questions.map(async (q: ParsedQuestionData) => {
+    const questionsToCreate = await Promise.all(validatedData.questions.map(async (q: ParsedQuestionData) => {
         let finalQuestionImageUrl = q.imageUrl || PLACEHOLDER_IMAGE
         
         if (q.imageFile && q.imageFile instanceof File && q.imageFile.size > 0) {
@@ -190,8 +215,6 @@ export async function POST(request: Request) {
                 finalQuestionImageUrl = PLACEHOLDER_IMAGE
             }
         }
-
-        // Ensure tags are NOT prepared for Prisma create
         return {
             question: q.question,
             answers: q.answers,
@@ -201,20 +224,24 @@ export async function POST(request: Request) {
         }
     }))
 
-    // --- Create Quiz in Database ---
+    const createData: Prisma.QuizCreateInput = {
+        title: validatedData.title,
+        description: validatedData.description || null,
+        imageUrl: finalQuizImageUrl,
+        quizType: validatedData.quizType,
+        tags: validatedData.tags || [],
+        statistics: validatedData.statistics || Prisma.JsonNull,
+        defaultSettings: validatedData.defaultSettings || Prisma.JsonNull,
+        authorId: validatedData.authorId, // authorId has a default in Zod schema
+        questions: {
+          create: questionsToCreate,
+        },
+    };
+
     const createdQuiz = await withDatabaseRetry(async () =>
       prisma.quiz.create({
-        data: {
-          title,
-          description,
-          imageUrl: finalQuizImageUrl,
-          quizType,
-          tags,
-          questions: {
-            create: questionsToCreate,
-          },
-        },
-        include: {
+        data: createData,
+        include: { 
             questions: {
                 select: {
                     id: true,
@@ -222,7 +249,8 @@ export async function POST(request: Request) {
                     answers: true,
                     correctAnswer: true,
                     imageUrl: true,
-                    type: true
+                    type: true,
+                    quizId: true,
                 }
             }
         },
@@ -230,13 +258,11 @@ export async function POST(request: Request) {
 
     console.log('Created quiz:', createdQuiz.id)
     
-    const createdQuizForApi = {
-        ...createdQuiz,
-        description: (createdQuiz as unknown as { description: string }).description || undefined,
-        quizType: (createdQuiz as unknown as { quizType: QuestionType }).quizType,
-        tags: (createdQuiz as unknown as { tags: string[] }).tags || [],
-        imageUrl: createdQuiz.imageUrl ?? PLACEHOLDER_IMAGE,
-        questions: createdQuiz.questions.map((q: PrismaQuestion) => ({
+    const createdQuizTyped = createdQuiz as unknown as ITQuiz; 
+    const createdQuizForApi: ITQuiz = {
+        ...createdQuizTyped,
+        imageUrl: createdQuizTyped.imageUrl ?? PLACEHOLDER_IMAGE,
+        questions: (createdQuizTyped.questions || []).map((q: ITQuestion) => ({ 
             ...q,
             imageUrl: q.imageUrl ?? PLACEHOLDER_IMAGE
         }))

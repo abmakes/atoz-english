@@ -4,6 +4,7 @@
 // Import only what's needed
 import { prisma, withDatabaseRetry } from './prisma';
 import { QuestionType } from '@/types/question_types';
+import { Prisma } from '@prisma/client';
 
 // Helper function to split array into chunks (for batched operations)
 function chunkArray<T>(array: T[], size: number): T[][] {
@@ -35,7 +36,6 @@ export async function getQuestions() {
   return withDatabaseRetry(async () => {
     return prisma.question.findMany({
       include: {
-        tags: true,
         quiz: {
           select: {
             id: true,
@@ -90,9 +90,6 @@ export async function createQuestion(data: {
             connectOrCreate: tagsToConnectOrCreate
           }
         } : {})
-      },
-      include: {
-        tags: true
       }
     });
   }, 'Creating question');
@@ -105,6 +102,9 @@ export async function updateQuiz(id: string, data: {
   quizType?: QuestionType;
   tags?: string[];
   imageUrl?: string;
+  statistics?: Prisma.InputJsonObject | null;
+  defaultSettings?: Prisma.InputJsonObject | null;
+  authorId?: string | null;
   questions: QuestionUpdateData[];
 }) {
   console.log(`Starting quiz update for quiz ${id} with ${data.questions.length} questions`);
@@ -119,6 +119,9 @@ export async function updateQuiz(id: string, data: {
         quizType: data.quizType,
         tags: data.tags,
         imageUrl: data.imageUrl,
+        statistics: data.statistics ? data.statistics as Prisma.InputJsonValue : undefined,
+        defaultSettings: data.defaultSettings ? data.defaultSettings as Prisma.InputJsonValue : undefined,
+        authorId: data.authorId || undefined,
       },
     });
     

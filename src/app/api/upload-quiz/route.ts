@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { parse } from 'csv-parse/sync';
+import { Prisma } from '../../../../prisma/app/generated/prisma/client';
 import { prisma, withDatabaseRetry, updateLastAccessTime } from '@/lib/prisma';
 import { errorResponse, handleApiError, successResponse } from '@/lib/api-utils';
 import { parseFormData } from '@/lib/formDataUtils';
@@ -17,6 +18,9 @@ interface ExpectedCsvUploadData {
   quizCoverImageUrl?: string;
   quizType?: QuestionType | string; // From FormData, could be string before enum conversion
   tags?: string[];
+  authorId?: string;
+  statistics?: Record<string, unknown> | undefined;
+  defaultSettings?: Record<string, unknown> | undefined;
   // Include other fields from original csvUploadSchema if any (e.g., from Zod effects)
 }
 
@@ -42,7 +46,10 @@ export async function POST(request: NextRequest) {
       description, 
       quizCoverImageUrl, 
       quizType,     
-      tags              
+      tags,              
+      authorId,
+      statistics,
+      defaultSettings
     } = formDataResult.data as ExpectedCsvUploadData;
 
     // Convert file to CSV string
@@ -118,10 +125,13 @@ export async function POST(request: NextRequest) {
       return prisma.quiz.create({
         data: {
           title,
-          description,
+          description: description || null,
           imageUrl: quizCoverImageUrl || PLACEHOLDER_IMAGE,
           quizType: actualQuizType,
-          tags,
+          tags: tags || [],
+          authorId: authorId,
+          statistics: statistics ? statistics as Prisma.InputJsonObject : undefined,
+          defaultSettings: defaultSettings ? defaultSettings as Prisma.InputJsonObject : undefined,
           questions: {
             create: questions,
           },

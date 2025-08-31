@@ -133,61 +133,58 @@ const GameplayView: React.FC<GameplayViewProps> = ({
    * Attaches necessary event listeners and handles cleanup on unmount.
    */
   useEffect(() => {
-      let engine: PixiEngine | null = null;
+    // Check if we should initialize. If there's already an engine, do nothing.
+    if (!config || !gameFactory || !pixiMountPointRef.current || engineInstanceRef.current) {
+      return;
+    }
+
+    console.log("GameplayView: Initializing PixiEngine...");
+    const engine = new PixiEngine({ targetElement: pixiMountPointRef.current });
+    engineInstanceRef.current = engine;
+
+    engine.init(config, gameFactory)
+      .then(() => {
+        console.log("GameplayView: PixiEngine initialized successfully.");
+        const currentManagers = engine.getManagers();
+        managersRef.current = currentManagers;
+
+        // Attach listeners ONLY after managers are confirmed
+        if (currentManagers) {
+          console.log("GameplayView: Attaching event listeners post-init...");
+          currentManagers.eventBus.on(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
+          currentManagers.eventBus.on(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
+          currentManagers.eventBus.on(GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED, handlePixiActiveTeamChanged);
+        } else {
+          console.error("GameplayView: Managers are null after engine init!");
+        }
+      })
+      .catch(error => {
+        console.error("GameplayView: Failed to initialize PixiEngine:", error);
+        engineInstanceRef.current = null;
+        managersRef.current = null;
+      });
+
+    // --- Cleanup function ---
+    // This cleanup function closes over the `engine` instance created in this effect.
+    return () => {
+      console.log("GameplayView: Cleanup effect running...");
       
-      if (config && gameFactory && pixiMountPointRef.current && !engineInstanceRef.current) {
-          console.log("GameplayView: Initializing PixiEngine...");
-          engine = new PixiEngine({ targetElement: pixiMountPointRef.current });
-          engineInstanceRef.current = engine;
-
-          engine.init(config, gameFactory)
-              .then(() => {
-                  console.log("GameplayView: PixiEngine initialized successfully.");
-                  console.log(config, 'ENGINE !!!!!!!!!!!')
-                  const currentManagers = engine?.getManagers();
-                  managersRef.current = currentManagers ?? null;
-
-                  // Attach listeners ONLY after managers are confirmed
-                  if (currentManagers) {
-                       console.log("GameplayView: Attaching event listeners post-init...");
-                      currentManagers.eventBus.on(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
-                      currentManagers.eventBus.on(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
-                      currentManagers.eventBus.on(GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED, handlePixiActiveTeamChanged);
-                  } else {
-                      console.error("GameplayView: Managers are null after engine init!");
-                  }
-              })
-              .catch(error => {
-                  console.error("GameplayView: Failed to initialize PixiEngine:", error);
-                  // Handle initialization error (e.g., show message, call onExit?)
-                  engineInstanceRef.current = null; // Clear ref on error
-                  managersRef.current = null;
-              });
+      // Check managersRef.current. This ref is only set AFTER init succeeds,
+      // which safely prevents us from trying to access the event bus before it's ready.
+      const currentManagers = managersRef.current;
+      if (currentManagers) {
+        console.log("GameplayView: Detaching listeners during cleanup...");
+        currentManagers.eventBus.off(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
+        currentManagers.eventBus.off(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
+        currentManagers.eventBus.off(GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED, handlePixiActiveTeamChanged);
       }
-
-      // --- Cleanup function ---
-      return () => {
-          console.log("GameplayView: Cleanup effect running...");
-          const engineToDestroy = engineInstanceRef.current;
-          if (engineToDestroy) {
-              console.log("GameplayView: Destroying PixiEngine instance.");
-              const currentManagers = managersRef.current;
-              // Detach listeners before destroying
-              if (currentManagers) {
-                  console.log("GameplayView: Detaching listeners during cleanup...");
-                  currentManagers.eventBus.off(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
-                  currentManagers.eventBus.off(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
-                  currentManagers.eventBus.off(GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED, handlePixiActiveTeamChanged);
-              }
-              engineToDestroy.destroy();
-              engineInstanceRef.current = null;
-              managersRef.current = null;
-          } else {
-              console.log("GameplayView Cleanup: No engine instance found to destroy.");
-          }
-      };
-      // Dependencies: config and factory trigger re-init if they change.
-      // Ref changes don't trigger effects, but we check .current inside.
+      
+      console.log("GameplayView: Destroying PixiEngine instance.");
+      engine.destroy();
+      
+      engineInstanceRef.current = null;
+      managersRef.current = null;
+    };
   }, [config, gameFactory, pixiMountPointRef, handlePixiGameOver, handlePixiScoreUpdate, handlePixiActiveTeamChanged]);
   // ------------------------------------------------------
 

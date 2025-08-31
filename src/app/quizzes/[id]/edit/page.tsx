@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import QuizForm from '@/components/management_ui/forms/QuizForm'
 import LoadingSpinner from '@/components/loading_spinner'
 import { QuestionType } from '@/types/question_types'
+import Image from 'next/image'
 
 // Interface for the raw question structure from the API response
 interface ApiQuestionData {
@@ -24,6 +25,7 @@ interface QuestionDataForForm {
   correctAnswer: string;
   imageUrl: string; // QuizForm expects a string, handles placeholder
   type: QuestionType;
+  imageFile?: File | null; // Ensure imageFile is part of the Question definition used by QuizForm and EditPage
 }
 
 // Expanded interface for the Quiz data fetched and managed on this page
@@ -107,6 +109,17 @@ export default function EditQuizPage() {
     });
   };
 
+  // Define the handleQuestionsChange function
+  const handleQuestionsChange = (updatedQuestions: QuestionDataForForm[]) => {
+    setQuizData(prevData => {
+      if (!prevData) return null;
+      return {
+        ...prevData,
+        questions: updatedQuestions,
+      };
+    });
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto p-4 flex justify-center items-center min-h-screen">
@@ -133,21 +146,45 @@ export default function EditQuizPage() {
   }
 
   return (
-    <div className="container mx-auto p-4 flex flex-col items-center">
-      <h1 className="text-3xl font-bold mb-6 text-center grandstander">
-        Edit Quiz: {quizData.title}
-      </h1>
-      <QuizForm
+    <div className="container max-w-display-xl w-full mx-auto gap-4 flex">
+      <div className='basis-1/4 h-full grandstander text-center text-[--text-color] bg-white rounded-lg p-4 flex flex-col gap-2 border border-[--border-color] shadow-[4px_4px_0px_0px_var(--border-dark)]'>
+        <h1 className='text-3xl font-bold mb-6 text-center grandstander'>
+          {quizData.title}
+        </h1>
+        <Image src={quizData.imageUrl} 
+          alt={quizData.title} 
+          width={100} 
+          height={100} 
+          className='rounded-lg w-full h-full object-cover'
+        />
+        <div className='flex flex-col gap-2 text-[--text-color]'>
+          <span>{quizData.description}</span>
+          <span>{quizData.quizType}</span>
+          <span>{quizData.tags?.join(', ')}</span> {/* Added join for tags array */}
+        </div>
+      </div>
+
+      {/* MAIN - Quiz Form */}
+      <div className='basis-3/4 w-full h-full bg-white rounded-lg p-4 flex flex-col gap-2 border border-[--border-color] shadow-[4px_4px_0px_0px_var(--border-dark)]'>
+        <QuizForm
+        className='w-full h-full flex flex-col border-none p-0 gap-2'
         quizId={quizData.id}
         // Pass all required props from the fetched and transformed quizData
-        quizTitle={quizData.title}
-        quizDescription={quizData.description}
-        quizCoverImageUrl={quizData.imageUrl}
+        // quizTitle={quizData.title}
+        // quizDescription={quizData.description}
+        // quizCoverImageUrl={quizData.imageUrl}
         quizOverallType={quizData.quizType}
-        quizTags={quizData.tags}
-        initialQuestions={quizData.questions}
+        // quizTags={quizData.tags}
+        initialQuestions={quizData.questions.map(q => ({
+          ...q,
+          // imageFile is not directly fetched. QuizForm handles its own new imageFile selections.
+          // If an image URL exists, imageFile should be null initially for editing.
+          imageFile: null 
+        }))}
+        onQuestionsChange={handleQuestionsChange} // Now correctly passed
         onQuizCoverImageChange={handleQuizCoverImageChange}
-      />
+        />
+      </div>
     </div>
   );
 }

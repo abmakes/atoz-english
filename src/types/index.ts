@@ -1,11 +1,14 @@
 import { QuestionType } from "./question_types";
+import { Prisma } from "@prisma/client";
 
 export interface Question {
+  id: string;
   question: string;
-  imageUrl: string;
+  imageUrl?: string | null;
   answers: string[];
   correctAnswer: string;
-  type?: QuestionType;
+  type: QuestionType;
+  quizId?: string | null;
 }
 
 export interface Player {
@@ -27,8 +30,16 @@ export interface QuestionData {
 }
 
 export interface Quiz {
-  id: string
-  title: string
-  imageUrl: string
-  questions: Question[]
+  id: string;
+  title: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  quizType: QuestionType;
+  tags: string[];
+  statistics?: Prisma.JsonValue | null;
+  defaultSettings?: Prisma.JsonValue | null;
+  authorId: string;
+  questions: Question[];
+  createdAt?: Date;
+  updatedAt?: Date;
 }

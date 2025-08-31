@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { Prisma } from '../../../../../prisma/app/generated/prisma/client'
 import { prisma } from '@/lib/prisma'
 import { put } from '@vercel/blob'
 import { updateQuiz } from '@/lib/db'
@@ -12,6 +13,9 @@ interface QuizWithDetails extends Quiz {
   description?: string | null;
   quizType?: QuestionType | null; // Assuming QuestionType or string based on your Prisma schema decision
   tags?: string[] | null;
+  statistics?: Record<string, unknown> | null;
+  defaultSettings?: Record<string, unknown> | null;
+  authorId?: string | null;
   questions: Question[]; // Assuming Prisma's Question type has all selected fields, including `type` as QuestionType
 }
 
@@ -36,6 +40,9 @@ const QuizCreateSchema = z.object({
     quizType: z.nativeEnum(QuestionType).default(QuestionType.MULTIPLE_CHOICE),
     tags: z.array(z.string()).optional(),
     questions: z.array(QuestionSchema).min(1, "Quiz must have at least one question"),
+    statistics: z.any().optional(),
+    defaultSettings: z.any().optional(),
+    authorId: z.string().optional(),
 })
 
 // Define Zod Schema for the PUT request data (after parsing FormData)
@@ -116,7 +123,16 @@ export async function GET(
   try {
     const quizFromDb = await prisma.quiz.findUnique({
       where: { id: id },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        imageUrl: true,
+        quizType: true,
+        tags: true,
+        statistics: true,
+        defaultSettings: true,
+        authorId: true,
         questions: {
           select: {
             id: true,
@@ -141,6 +157,9 @@ export async function GET(
         description: quiz.description ?? undefined, 
         quizType: quiz.quizType ?? QuestionType.MULTIPLE_CHOICE, 
         tags: quiz.tags ?? [], 
+        statistics: quiz.statistics,
+        defaultSettings: quiz.defaultSettings,
+        authorId: quiz.authorId,
         imageUrl: quiz.imageUrl ?? PLACEHOLDER_IMAGE,
         questions: quiz.questions.map(q => ({
             ...q, // q is already of type Question, which includes id, question, answers, correctAnswer, imageUrl, type
@@ -247,15 +266,19 @@ export async function PUT(
         }
         console.log('PUT /api/quizzes/[id] - Zod validation successful. Validated data:', JSON.stringify(validationResult.data, null, 2));
 
+        const validatedData = validationResult.data;
         const { 
             title: validatedTitle, 
             description: validatedDescription,
             quizImageFile: validatedQuizImageFile, 
             quizType: validatedQuizType,
             tags: validatedTags,
+            statistics: validatedStatistics, 
+            defaultSettings: validatedDefaultSettings, 
+            authorId: validatedAuthorId, 
             questions: incomingQuestions 
-        } = validationResult.data;
-        let finalQuizImageUrl = validationResult.data.quizImageUrl;
+        } = validatedData;
+        let finalQuizImageUrl = validatedData.quizImageUrl;
 
         if (validatedQuizImageFile && validatedQuizImageFile instanceof File && validatedQuizImageFile.size > 0) {
             console.log('PUT /api/quizzes/[id] - Uploading updated quiz image file:', validatedQuizImageFile.name);
@@ -328,6 +351,9 @@ export async function PUT(
           quizType: validatedQuizType,
           tags: validatedTags,
           imageUrl: finalQuizImageUrl ?? undefined,
+          statistics: validatedStatistics ? validatedStatistics as Prisma.InputJsonObject : undefined,
+          defaultSettings: validatedDefaultSettings ? validatedDefaultSettings as Prisma.InputJsonObject : undefined,
+          authorId: validatedAuthorId,
           questions: questionDataForUpdate
         });
         console.log('PUT /api/quizzes/[id] - updateQuiz function successfully returned.');
@@ -337,12 +363,15 @@ export async function PUT(
             return NextResponse.json({ error: `Quiz with ID ${id} not found or update failed.` }, { status: 404 });
         }
 
-        const finalUpdatedQuiz = updatedQuizFromDbFunction as (Quiz & { questions: Question[], description?: string, quizType?: QuestionType, tags?: string[] });
+        const finalUpdatedQuiz = updatedQuizFromDbFunction as QuizWithDetails;
         const updatedQuizForApi = {
             ...finalUpdatedQuiz,
             description: finalUpdatedQuiz.description ?? undefined,
             quizType: finalUpdatedQuiz.quizType ?? QuestionType.MULTIPLE_CHOICE,
             tags: finalUpdatedQuiz.tags ?? [],
+            statistics: finalUpdatedQuiz.statistics,
+            defaultSettings: finalUpdatedQuiz.defaultSettings,
+            authorId: finalUpdatedQuiz.authorId,
             imageUrl: finalUpdatedQuiz.imageUrl ?? PLACEHOLDER_IMAGE,
             questions: (finalUpdatedQuiz.questions || []).map((q: Question) => ({
                 id: q.id,

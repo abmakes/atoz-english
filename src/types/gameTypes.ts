@@ -3,9 +3,24 @@ export interface QuizListItem {
   title: string;
   description: string;
   imageUrl: string;
-  questionCount: number;
+  statistics: {
+    favoritesCount: number;
+    playsCount: number;
+    likes: number;
+  };
+  tags: string[];
+  authorId: string;
+  createdAt: Date;
+  questions: Question[];
   likes: number;
   level?: string;
+}
+
+export interface Question {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: string;
 }
 
 export interface TeamData {

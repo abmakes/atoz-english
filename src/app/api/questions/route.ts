@@ -6,7 +6,6 @@ import { questionBaseSchema } from '@/lib/schemas'
 
 // Schema for question creation through API
 const questionCreateSchema = questionBaseSchema.extend({
-  tags: z.array(z.string()).optional(),
   quizId: z.string().optional(),
 })
 

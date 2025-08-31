@@ -29,7 +29,7 @@ export default function ConditionalLayoutWrapper({ children }: { children: React
   // Define heights for the wave images
   const topWaveHeight = 'h-[180px]'; // Adjust as needed
   const middleWaveHeight = 'h-[650px]'; // Adjust as needed
-  const navbarHeight = 'h-16'; // Define navbar height for padding calculation (adjust if needed)
+  const navbarHeight = 'h-14'; // Define navbar height for padding calculation (adjust if needed)
 
   return (
     // This outer div ensures relative positioning context and applies conditional background
@@ -38,7 +38,7 @@ export default function ConditionalLayoutWrapper({ children }: { children: React
       
       {/* Conditionally Render Navbar - Now with new structure & sticky */} 
       {showNavbar && (
-        <nav className={`sticky top-0 ${navbarHeight} w-full z-30 bg-background/80 backdrop-blur-sm flex items-center justify-between px-6`}>
+        <nav className={`sticky top-0 ${navbarHeight} w-full z-30 bg-white/50 backdrop-blur-sm flex items-center justify-between px-6`}>
           {/* Left: Logo */}
           <Link href="/" className="flex items-center w-44">
             <h1 className="text-4xl font-bold grandstander text-[#114257] p-2">PlaytoZ</h1>
@@ -52,16 +52,18 @@ export default function ConditionalLayoutWrapper({ children }: { children: React
           </Link>
 
           {/* Middle: Links */}
-          <div className="flex gap-6 grandstander text-lg">
-            <Link href="/games" className="font-regular text-foreground hover:text-primary transition-colors hover:font-bold">Games</Link>
-            <Link href="/create" className="font-regular text-foreground hover:text-primary transition-colors hover:font-bold">Create</Link>
-            <Link href="/task" className="font-regular text-foreground hover:text-primary transition-colors hover:font-bold">Tasks</Link>
-          </div>
+
 
           {/* Right: Buttons */}
-          <div className="flex gap-4 w-44">
-            <Button variant="solidAccent" className="grandstander pt-2">Login</Button>
-            <Button variant="solidAccent" className="grandstander pt-2">Sign up</Button> {/* Assuming default variant is primary */} 
+          <div className="flex text-base h-full gap-4 items-center">
+            <div className="flex gap-6 h-full items-center grandstander">
+              <Link href="/games" className="text-[--text-color] transition-colors hover:font-semibold">Games</Link>
+              <Link href="/create" className="text-[--text-color] transition-colors hover:font-semibold">Create</Link>
+              {/* <Link href="/task" className="text-[--text-color] transition-colors hover:font-semibold">Tasks</Link> */}
+              <Link href="/quizzes" className="text-violet-500 transition-colors hover:font-semibold">Profile</Link>
+            </div>
+            <Button variant="outline" className="grandstander text-base h-8 px-6 border-2 border-gray-300 shadow-[2px_2px_0px_0px_#d1d5db]">Login</Button>
+            {/* <Button variant="solidAccent" className="grandstander pt-2">Sign up</Button> {/* Assuming default variant is primary */}  
           </div>
         </nav>
       )}
@@ -95,7 +97,7 @@ export default function ConditionalLayoutWrapper({ children }: { children: React
         </>
       )}
       {/* Main Content: Needs higher z-index (z-20) to be above waves */}
-      <div className={`relative z-20 ${showNavbar ? 'pt-6' : ''}`}> 
+      <div className={`relative z-20 ${showNavbar ? 'pt-2' : ''}`}> 
         {children}
       </div>
     </div>

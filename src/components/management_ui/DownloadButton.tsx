@@ -1,5 +1,6 @@
 "use client"
 import React from 'react';
+import { DownloadIcon } from 'lucide-react';
 
 const DownloadButton: React.FC = () => {
   const handleDownload = async () => {
@@ -22,9 +23,9 @@ const DownloadButton: React.FC = () => {
   };
 
   return (
-    <button onClick={handleDownload} className="inline-flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md shadow-solid text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+    <button onClick={handleDownload} className="inline-flex justify-center py-2 px-4 border-2 border-transparent text-base font-medium rounded-md bg-violet-200 text-[--text-color]  border-violet-200 shadow-[4px_4px_0px_0px_#6366f1] hover:bg-white transition-colors"
     >
-      Download Quiz Template
+     <DownloadIcon className='w-6 h-6 mr-2' /> Download Quiz Template
     </button>
   );
 };

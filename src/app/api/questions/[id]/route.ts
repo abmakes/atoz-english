@@ -14,7 +14,6 @@ export async function GET(
     const question = await withDatabaseRetry(() =>
       prisma.question.findUnique({
         where: { id: id },
-        include: { tags: true },
       }), `Fetching question ${id}`
     );
 
@@ -102,9 +101,7 @@ export async function PUT(
       const updatedQuestion = await withDatabaseRetry(() =>
          prisma.question.update({
             where: { id: id },
-            data: {
-            },
-            include: { tags: true }
+            data: data,
          }), `Updating question ${id}`
       );
 

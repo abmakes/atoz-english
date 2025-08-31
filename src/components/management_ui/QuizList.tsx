@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
+// import { Button } from '@/components/ui/button' // Removed unused import
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
   AlertDialog,
@@ -15,18 +15,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import Image from 'next/image'
-
-interface Question {
-  id: string
-  type: string
-}
-
-interface Quiz {
-  id: string
-  title: string
-  imageUrl: string | null
-  questions: Question[]
-}
+import { Edit, Play, Trash } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Question, Quiz } from '@/types'
+import { useCustomToast } from '@/components/ui/CustomToast'
 
 interface QuizListProps {
   initialQuizzes: Quiz[]
@@ -54,6 +46,9 @@ export default function QuizList({ initialQuizzes }: QuizListProps) {
   const [quizzes, setQuizzes] = useState<Quiz[]>(initialQuizzes)
   const [deleteQuizId, setDeleteQuizId] = useState<string | null>(null)
   const router = useRouter()
+  const { addToast } = useCustomToast()
+
+  console.log(quizzes)
 
   const handleEdit = (id: string) => {
     router.push(`/quizzes/${id}/edit`)
@@ -73,60 +68,94 @@ export default function QuizList({ initialQuizzes }: QuizListProps) {
           setQuizzes(quizzes.filter(quiz => quiz.id !== deleteQuizId))
           setDeleteQuizId(null)
           router.refresh()  // Refresh the page to update server-side data
+          addToast('Quiz deleted successfully.', { variant: 'success', position: 'top-center' });
         } else {
           console.error('Failed to delete quiz')
+          addToast('Failed to delete quiz. Please try again.', { variant: 'error', position: 'top-center' });
         }
       } catch (error) {
         console.error('Error deleting quiz:', error)
+        addToast('Failed to delete quiz. Please try again.', { variant: 'error', position: 'top-center' });
       }
     }
   }
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2">
         {quizzes.map(quiz => (
-          <Card key={quiz.id} className="hover:shadow-pink-500 transition-shadow duration-300 flex flex-col">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="line-clamp-1">{quiz.title}</CardTitle>
-                  <CardDescription className="mt-2 flex flex-wrap gap-2">
-                    <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-pink-100 text-pink-800">
-                      {quiz.questions.length} {quiz.questions.length === 1 ? 'question' : 'questions'}
-                    </span>
-                    <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800">
-                      {getQuizTypeLabel(quiz.questions)}
-                    </span>
+          <Card key={quiz.id} className="bg-white border-2 border-[#1E5167] shadow-[4px_4px_0px_0px_#1E5167] transition-shadow duration-300 flex flex-row overflow-hidden">
+            {quiz.imageUrl && (
+              <div className="w-1/3 relative flex-shrink-0">
+                <Image 
+                  src={quiz.imageUrl} 
+                  alt={quiz.title} 
+                  layout="fill"
+                  objectFit="cover"
+                  className=""
+                  unoptimized
+                />
+              </div>
+            )}
+            {!quiz.imageUrl && (
+              <div className="w-1/3 relative flex-shrink-0 bg-slate-100 flex items-center justify-center">
+                <span className="text-slate-400 text-sm">No Image</span>
+              </div>
+            )}
+
+            <div className={`flex flex-col justify-between p-4 ${quiz.imageUrl ? 'w-2/3' : 'w-full'}`}>
+              <div>
+                <CardHeader className="p-0 mb-2">
+                  <CardTitle className="line-clamp-2 text-lg font-semibold grandstander">{quiz.title}</CardTitle>
+                  <p className="mt-1 text-xs text-gray-600 line-clamp-2 inclusive-sans">{quiz.description}</p>
+                  <CardDescription className="mt-2 flex flex-wrap gap-1 text-xs">
+
                   </CardDescription>
+                  {quiz.tags && quiz.tags.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {quiz.tags.slice(0, 3).map(tag => (
+                        <Badge key={tag} variant="outline" className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-700 border-gray-300">{tag}</Badge>
+                      ))}
+                      {quiz.tags.length > 3 && (
+                        <Badge variant="outline" className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-700 border-gray-300">...</Badge>
+                      )}
+                    </div>
+                  )}
+                </CardHeader>
+              </div>
+
+              <CardContent className="p-0 flex justify-between">
+                 <div className="flex flex-wrap gap-1 text-xs">
+                  <span className="inline-flex items-center rounded-full border px-2 py-0.5 font-semibold bg-pink-100 text-pink-800">
+                    {quiz.questions.length} {quiz.questions.length === 1 ? 'question' : 'questions'}
+                  </span>
+                  <span className="inline-flex items-center rounded-full border px-2 py-0.5 font-semibold bg-blue-100 text-blue-800">
+                    {getQuizTypeLabel(quiz.questions)}
+                  </span>
                 </div>
-                {quiz.imageUrl && (
-                  <div className="w-16 h-16 overflow-hidden rounded-md">
-                    <Image 
-                      src={quiz.imageUrl} 
-                      alt={quiz.title} 
-                      width={64} 
-                      height={64} 
-                      className="object-cover"
-                      unoptimized
-                    />
+
+                <div className="flex justify-end space-x-3">
+                  <div className="text-sm grandstander flex items-center gap-1 font-semibold text-green-700 cursor-pointer" onClick={() => handlePlay(quiz.id)}>
+                    <Play className="h-5 w-5 stroke-green-700 fill-green-700" /> 
+                    Play
                   </div>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="mt-auto">
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => handlePlay(quiz.id)}>Play</Button>
-                <Button onClick={() => handleEdit(quiz.id)}>Edit</Button>
-                <Button variant="destructive" onClick={() => setDeleteQuizId(quiz.id)}>Delete</Button>
-              </div>
-            </CardContent>
+                  <div className="text-sm grandstander flex items-center gap-1 font-semibold text-blue-700 cursor-pointer" onClick={() => handleEdit(quiz.id)}>
+                    <Edit className="h-5 w-5 stroke-blue-700" />
+                    Edit
+                  </div>
+                  <div className="text-sm grandstander flex items-center gap-1 font-semibold text-red-700 cursor-pointer" onClick={() => setDeleteQuizId(quiz.id)}>
+                    <Trash className="h-5 w-5 stroke-red-700" />
+                    Delete
+                  </div>
+                </div>
+              </CardContent>
+            </div>
           </Card>
         ))}
       </div>
 
-      <AlertDialog open={!!deleteQuizId} onOpenChange={() => setDeleteQuizId(null)}>
-        <AlertDialogContent>
+      <AlertDialog open={!!deleteQuizId} onOpenChange={() => setDeleteQuizId(null)} >
+        <AlertDialogContent className="bg-white border-2 border-[#1E5167] shadow-[4px_4px_0px_0px_#1E5167] text-[--text-color] grandstander">
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure you want to delete this quiz?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -134,8 +163,8 @@ export default function QuizList({ initialQuizzes }: QuizListProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+            <AlertDialogCancel className="text-gray-500 border-none">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-500 hover:bg-red-600 text-white">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

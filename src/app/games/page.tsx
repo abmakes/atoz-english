@@ -1,90 +1,191 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart } from 'lucide-react';
+import { Heart, Play, SlidersHorizontal, X as XIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import type { QuizListItem } from '@/types/gameTypes';
+import { useState, useEffect, useMemo } from 'react';
+import { TagDrawer, type TagCategory } from '@/components/management_ui/TagDrawer';
+import { ALL_TAG_CATEGORIES } from '@/lib/tags';
 
-// Function to fetch quizzes (server-side)
-async function getQuizzes(): Promise<QuizListItem[]> {
-    // Use the full URL for server-side fetch if necessary, or environment variable
-    // Assuming the API route is accessible at this path relative to the server
-    // In production, use process.env.NEXT_PUBLIC_API_URL or similar
-    const apiUrl = `https://atoz-english.vercel.app/api/quizzes`
-
+// Function to fetch quizzes (can remain outside or be moved inside if preferred)
+async function getQuizzesClient(): Promise<QuizListItem[]> {
+    const apiUrl = `/api/quizzes`; // Use relative path for client-side fetch
     try {
         const res = await fetch(apiUrl, {
-            cache: 'no-store', // Or 'force-cache', 'default' depending on needs
+            cache: 'no-store',
         });
-
         if (!res.ok) {
             throw new Error(`Failed to fetch quizzes: ${res.statusText}`);
         }
-
         const data = await res.json();
-
-        // Corrected Check: Expect { data: QuizListItem[] } based on logs
         if (!data || !Array.isArray(data.data)) {
              console.warn("API response format unexpected (expected { data: [...] }):", data);
-             return []; // Return empty array on format mismatch
+             return [];
         }
-
-        // Return the correct array
         return data.data;
     } catch (error) {
         console.error("Error fetching quizzes:", error);
-        // Return empty array or re-throw error depending on desired behavior
         return [];
     }
 }
 
-// Make the page component async
-export default async function GamesPage() {
-  const quizzes = await getQuizzes();
+export default function GamesPage() {
+  const [allQuizzes, setAllQuizzes] = useState<QuizListItem[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isTagDrawerOpen, setIsTagDrawerOpen] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
-  // Handle the case where fetching fails or returns no quizzes
-  if (!quizzes || quizzes.length === 0) {
-      // Add quiz data to local storage
-      
-      
+  useEffect(() => {
+    async function loadQuizzes() {
+      setIsLoading(true);
+      const fetchedQuizzes = await getQuizzesClient();
+      setAllQuizzes(fetchedQuizzes);
+      setIsLoading(false);
+
+      // Log searchable content for each quiz
+      console.log("Searchable content for fetched quizzes:");
+      fetchedQuizzes.forEach((quiz, index) => {
+        console.log(`Quiz ${index + 1} (ID: ${quiz.id}):`);
+        console.log(`  Title: ${quiz.title}`);
+        console.log(`  Description: ${quiz.description}`);
+        console.log(`  Tags: ${quiz.tags ? quiz.tags.join(', ') : 'N/A'}`);
+      });
+    }
+    loadQuizzes();
+  }, []);
+
+  const handleTagToggle = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const filteredQuizzes = useMemo(() => {
+    let quizzesToFilter = allQuizzes;
+
+    // Filter by selected tags first (AND logic for multiple tags)
+    if (selectedTags.length > 0) {
+      quizzesToFilter = quizzesToFilter.filter(quiz => 
+        selectedTags.every(selectedTag => 
+          quiz.tags && quiz.tags.some(quizTag => quizTag.toLowerCase() === selectedTag.toLowerCase())
+        )
+      );
+    }
+
+    // Then filter by search term
+    if (!searchTerm) {
+      return quizzesToFilter;
+    }
+    return quizzesToFilter.filter(quiz => {
+      const term = searchTerm.toLowerCase();
+      const titleMatch = quiz.title.toLowerCase().includes(term);
+      const descriptionMatch = quiz.description ? quiz.description.toLowerCase().includes(term) : false;
+      // Search term can also match tags, in addition to selectedTags filter
+      const searchTagMatch = (quiz.tags && quiz.tags.length > 0) ? quiz.tags.some(tag => tag.toLowerCase().includes(term)) : false;
+      return titleMatch || descriptionMatch || searchTagMatch;
+    });
+  }, [allQuizzes, searchTerm, selectedTags]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8 flex justify-center items-center">
+        <p className="text-xl grandstander text-[--secondary]">Loading quizzes...</p>
+        {/* You can add a spinner here */}
+      </div>
+    );
+  }
+
+  if (!isLoading && (!allQuizzes || allQuizzes.length === 0)) {
       return (
-          // Apply theme background
           <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
               <div className="container mx-auto text-center">
-                  <h1 className="text-2xl font-bold mb-4 grandstander text-[--secondary]">Could not load quizzes.</h1>
-                  <p className="text-muted-foreground">Please try again later.</p>
+                  <h1 className="text-2xl font-bold mb-4 grandstander text-[--secondary]">No quizzes available.</h1>
+                  <p className="text-muted-foreground">Please try again later or create a new quiz.</p>
               </div>
           </div>
       );
   }
 
   return (
-    // Apply theme background
     <div className="min-h-screen text-[#114257] px-4 sm:px-6 lg:px-8 flex flex-col items-center">
-      <div className="container x-auto flex flex-col items-center">
-        {/* Header Row: Search, Title, Filter - Consider making filter/search client components for interactivity */}
-        <div className="mb-12 flex w-96 p-2 border-2 shadow-solid bg-white border-[#1E5167] rounded-full">
-           {/* Search Input */}
-           <div className="flex w-96 items-center gap-2 md:w-auto md:flex-1">
-             <Input type="text" placeholder="Search for a quiz" className="border-none rounded-full" />
-             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" strokeLinecap="round" strokeMiterlimit="10" strokeWidth="1.5" d="M21.25 12H8.895m-4.361 0H2.75m18.5 6.607h-5.748m-4.361 0H2.75m18.5-13.214h-3.105m-4.361 0H2.75m13.214 2.18a2.18 2.18 0 1 0 0-4.36a2.18 2.18 0 0 0 0 4.36Zm-9.25 6.607a2.18 2.18 0 1 0 0-4.36a2.18 2.18 0 0 0 0 4.36Zm6.607 6.608a2.18 2.18 0 1 0 0-4.361a2.18 2.18 0 0 0 0 4.36Z"/></svg>
+      <div className="x-auto flex flex-col items-center">
+        <div className="sticky top-14 z-20 flex w-full max-w-[700px] p-2 border-2 shadow-solid bg-white border-[#1E5167] rounded-full mt-4 mb-8 items-center gap-2">
+           {/* Selected Tags Display */}
+           {selectedTags.length > 0 && (
+            <div className="flex flex-shrink-0 flex-wrap gap-1 p-2 pl-1 max-w-[250px] overflow-x-auto scrollbar-thin">
+              {selectedTags.map(tag => (
+                <Badge 
+                  key={tag} 
+                  variant="outline"
+                  onClick={() => handleTagToggle(tag)} 
+                  className="text-xs pt-1 bg-white text-[--text-color] border-[--primary-accent] shadow-[3px_3px_0px_0px_var(--primary-accent-hover)] cursor-pointer"
+                >
+                   {tag} <XIcon size={12} className="ml-1 stroke-[--text-color]" />
+                </Badge>
+              ))}
+            </div>
+           )}
+
+           {/* Search Input with Clear Button */}
+           <div className="relative flex-grow flex items-center">
+             <Input 
+               type="text" 
+               placeholder="Search quizzes..." 
+               className={`border-none rounded-full flex-grow focus:ring-0 ${searchTerm ? 'pr-8' : ''}`} 
+               value={searchTerm}
+               onChange={(e) => setSearchTerm(e.target.value)}
+             />
+             {searchTerm && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setSearchTerm('')} 
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 text-gray-500 hover:text-gray-700 rounded-full p-1"
+                >
+                  <XIcon size={16} />
+                </Button>
+             )}
            </div>
 
+           {/* Tag Drawer Trigger */}
+           <TagDrawer
+              allTags={ALL_TAG_CATEGORIES}
+              selectedTags={selectedTags}
+              onTagToggle={handleTagToggle}
+              triggerElement={
+                <Button variant="ghost" size="icon" className="p-2 text-[#1E5167] hover:bg-gray-200 rounded-full flex-shrink-0">
+                  <SlidersHorizontal size={20} />
+                </Button>
+              }
+              title="Filter by Tags"
+              description="Select tags to narrow down your quiz results."
+            />
         </div>
-        {/* Grid - Updated Card Structure */} 
+        
+        {(filteredQuizzes.length === 0 && !isLoading) && (
+          <div className="text-center py-10">
+            <p className="text-xl text-gray-500 mb-4">No quizzes match your search or selected tags.</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {quizzes.map((quiz) => (
+          {filteredQuizzes.map((quiz) => (
             <Link
               className="block group cursor-pointer"
               key={quiz.id}
               href={`/games/${quiz.id}/multiple-choice`}
               passHref
             >
-              {/* Outer link acting as group for hover */}
                 {/* 1. Image Container (The actual "Card") */}
                 <div className="relative overflow-hidden rounded-[32px] border-2 border-[#1E5167] bg-card shadow-[3px_6px_0px_0px_#1E5167] mb-3 transition duration-300 ease-in-out group-hover:shadow-[3px_6px_0px_0px_#1E5167]">
+                  
                   {/* Image */}
-                  <div className="relative h-48 w-full">
+                  <div className="relative h-48 w-full min-w-72">
                     <Image
                       src={quiz.imageUrl || '/placeholder.webp'}
                       alt={quiz.title}
@@ -96,15 +197,28 @@ export default async function GamesPage() {
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                     />
                   </div>
+                  
                   {/* Hover Overlay */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/30 p-4 text-[#114257]  opacity-0 transition-opacity duration-300 group-hover:opacity-100 grandstander">
-                      <span className="text-xl font-bold">{quiz.questionCount} questions</span>
-                      <div className="flex items-center gap-1 mb-2">
-                      <Heart className="h-5 w-5 fill-red-500 stroke-red-500" /> 
-                      <span className="text-base">{quiz.likes} likes</span>
+                    <span className="text-xl font-bold">{quiz.questions.length} questions</span> 
+                    <div className="flex items-center gap-1">
+                      <span><Heart className="h-5 w-5 fill-red-500 stroke-red-500" /></span>
+                      <span className="text-base pt-1 ml-1">{quiz.statistics?.likes || 0} likes</span>
                     </div>
-                    {/* Plays - Placeholder or omit */}
-                    <span className="text-base mb-2">0 plays</span>
+                    <div className="flex items-center gap-1">
+                      <span><Play className="h-5 w-5 fill-[--text-color] stroke-[--text-color]" /></span>
+                      <span className="text-base pt-1 ml-1">{quiz.statistics?.playsCount || 0} plays</span>
+                    </div>
+
+                    {quiz.tags.length > 0 && (
+                      <div className='text-center'>
+                        <div className="flex flex-wrap justify-center gap-2 mt-1">
+                          {quiz.tags.map((tag, index) => (
+                            <Badge key={index} variant="outline" className="text-xs pt-1 bg-white text-[--text-color] border-[--primary-accent] shadow-[3px_3px_0px_0px_var(--primary-accent-hover)]">{tag}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -113,12 +227,16 @@ export default async function GamesPage() {
                    {/* Title and Heart */}
                    <div className="flex items-start justify-between gap-2 mb-1">
                       <h3 className="text-xl font-semibold grandstander text-[#114257] px-2 leading-tight">{quiz.title}</h3>
+
                       {/* Original Heart moved here, adjust styling if needed */}
-                      {/* <Heart className="h-4 w-4 fill-primary stroke-primary mt-1 shrink-0" /> */}
+                      <div className="flex items-center gap-1">
+                        <Heart className="h-4 w-4 stroke-primary shrink-0 fill-[--primary-accent]" />
+                        <span className="text-base font-semibold">{quiz.statistics?.favoritesCount || 0}</span>
+                      </div>
                       {/* Figma seems to only show heart on hover overlay */} 
                    </div>
                    {/* Description */}
-                   <p className="text-sm font-sans text-[#114257] line-clamp-2 inclusive-sans px-2">{quiz.description} Placeholder Lorem ipsum dolor sit amet, consectetur adipiscing
+                   <p className="text-sm font-sans text-[#114257] line-clamp-2 inclusive-sans px-2">{quiz.description}
                    </p>
                    {/* Level Tag - Can remain here */} 
                    {quiz.level && (

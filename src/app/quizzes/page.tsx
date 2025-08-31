@@ -2,27 +2,62 @@ import QuizList from "@/components/management_ui/QuizList";
 import { prisma } from "@/lib/prisma"; // Assuming prisma client is at this path
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import type { Quiz, Question } from "@/types"; // Assuming Quiz type is here
+import { QuestionType as AppQuestionType } from "@/types/question_types"; // Assuming app's QuestionType is here
 
-async function getQuizzes() {
-  // Adjust the Prisma query as needed to match the Quiz interface in QuizList
-  const quizzes = await prisma.quiz.findMany({
+async function getQuizzes(): Promise<Quiz[]> { // Return type is now Quiz[]
+  const quizzesFromDb = await prisma.quiz.findMany({
     select: {
       id: true,
       title: true,
       imageUrl: true,
-      questions: {
+      description: true,
+      tags: true,
+      quizType: true, // This is Prisma.$Enums.QuestionType
+      authorId: true, // Keep if needed by Quiz type, otherwise remove from select
+      statistics: true, // Added to match Quiz type
+      defaultSettings: true, // Added to match Quiz type
+      createdAt: true, // Added to match Quiz type
+      updatedAt: true, // Added to match Quiz type
+      questions: { // Keep if needed by Quiz type, otherwise remove from select
         select: {
           id: true,
-          type: true, // Ensure QuestionType enum matches string values if needed by getQuizTypeLabel
+          question: true, // Added
+          imageUrl: true,  // Added
+          answers: true,   // Added
+          correctAnswer: true, // Added
+          type: true, 
+          quizId: true, // Added
         }
-      }
+      },
     }
   });
+
+  // Map Prisma quizzes to your application's Quiz type
+  const quizzes: Quiz[] = quizzesFromDb.map(quizFromDb => ({
+    ...quizFromDb,
+    description: quizFromDb.description ?? '', // Handle null description
+    quizType: quizFromDb.quizType as AppQuestionType, // Cast Prisma enum to app enum
+    questions: quizFromDb.questions.map((q): Question => ({
+      id: q.id,
+      question: q.question,
+      imageUrl: q.imageUrl,
+      answers: q.answers, // Assuming Prisma returns string[]
+      correctAnswer: q.correctAnswer,
+      type: q.type as AppQuestionType, 
+      quizId: q.quizId,
+    })),
+    // statistics and defaultSettings are Prisma.JsonValue, should be fine directly
+    // createdAt and updatedAt are Date, should be fine directly
+  }));
+
   return quizzes;
 }
 
 export default async function QuizzesPage() {
   const quizzes = await getQuizzes();
+
+  console.log(quizzes)
 
   return (
     <div className="container mx-auto p-4">

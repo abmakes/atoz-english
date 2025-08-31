@@ -404,5 +404,6 @@ export class AudioManager {
     this.currentMusicPlayingId = null;
     console.log('AudioManager destroyed.');
     // No need to reset Howler global volume here, as it persists across instances
+    Howler.unload();
   }
 } 
