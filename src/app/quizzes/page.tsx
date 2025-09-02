@@ -50,7 +50,7 @@ async function getQuizzes(): Promise<Quiz[]> { // Return type is now Quiz[]
     // statistics and defaultSettings are Prisma.JsonValue, should be fine directly
     // createdAt and updatedAt are Date, should be fine directly
   }));
-
+  console.log(quizzes[0])
   return quizzes;
 }
 

@@ -5,6 +5,18 @@ import { put } from '@vercel/blob'
 import { QuestionType } from '@/types/question_types'
 import { Quiz as ITQuiz, Question as ITQuestion } from '@/types'
 import { Prisma } from '../../../../prisma/app/generated/prisma/client'
+// Add the centralized schemas to help with validation
+
+// Define a specific schema for the settings object to ensure validation
+const QuizSettingsSchema = z.object({
+  theme: z.string().optional(),
+  powerUps: z.array(z.string()).optional(),
+  gameMode: z.enum(['basic', 'boosted']).optional(),
+  guessOptions: z.enum(['single', 'multiple_3', 'multiple_5']).optional(),
+  music: z.boolean().optional(),
+  soundEffects: z.boolean().optional(),
+});
+
 // Define Zod Schema for a Question (used in POST)
 const QuestionSchema = z.object({
     question: z.string().min(1, "Question text cannot be empty"),
@@ -25,7 +37,7 @@ const QuizCreateSchema = z.object({
     tags: z.array(z.string()).optional(),
     questions: z.array(QuestionSchema).min(1, "Quiz must have at least one question"),
     statistics: z.any().optional(),
-    defaultSettings: z.any().optional(),
+    defaultSettings: QuizSettingsSchema.optional(), // Use the specific schema here
     authorId: z.string().default("admin"),
 })
 
@@ -130,10 +142,13 @@ export async function POST(request: Request) {
       parsedData.statistics = undefined;
     }
 
+    // Correctly parse the defaultSettings JSON string
     const defaultSettingsString = formData.get('defaultSettings') as string;
     if (defaultSettingsString) {
       try {
-        parsedData.defaultSettings = JSON.parse(defaultSettingsString);
+        const parsedSettings = JSON.parse(defaultSettingsString);
+        console.log("API Route: Parsed defaultSettings:", parsedSettings); // For debugging
+        parsedData.defaultSettings = parsedSettings;
       } catch (e) {
         console.warn('Failed to parse defaultSettings JSON string from FormData', e);
         parsedData.defaultSettings = undefined;
@@ -142,11 +157,17 @@ export async function POST(request: Request) {
       parsedData.defaultSettings = undefined;
     }
 
-    const tagsFromForm = formData.getAll('tags[]')
-    if (tagsFromForm && tagsFromForm.length > 0 && (tagsFromForm[0] !== 'undefined')) {
-        parsedData.tags = tagsFromForm.map(tag => String(tag))
+    // Correctly parse the tags JSON string
+    const tagsString = formData.get('tags') as string;
+    if (tagsString) {
+      try {
+        parsedData.tags = JSON.parse(tagsString);
+      } catch (e) {
+        console.warn('Failed to parse tags JSON string from FormData', e);
+        parsedData.tags = [];
+      }
     } else {
-        parsedData.tags = [] 
+      parsedData.tags = [];
     }
 
     for (let i = 0; ; i++) {
@@ -166,16 +187,18 @@ export async function POST(request: Request) {
             ? (typeFromForm as QuestionType) 
             : parsedData.quizType;
 
-        const answers: string[] = [];
-        for (let j = 0; ; j++) {
-            const answerKey = `questions[${i}][answers][${j}]`
-            if (!formData.has(answerKey)) break
-            const answer = formData.get(answerKey) as string
-            if (answer) {
-                answers.push(answer)
+        // Correctly parse the answers JSON string
+        const answersString = formData.get(`questions[${i}][answers]`) as string;
+        if (answersString) {
+            try {
+                questionData.answers = JSON.parse(answersString);
+            } catch (e) {
+                console.warn(`Failed to parse answers for question ${i}`, e);
+                questionData.answers = [];
             }
+        } else {
+            questionData.answers = [];
         }
-        questionData.answers = answers;
         
         parsedData.questions.push(questionData as ParsedQuestionData)
     }

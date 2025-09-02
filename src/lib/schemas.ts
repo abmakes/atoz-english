@@ -24,9 +24,20 @@ export const quizBaseSchema = z.object({
   quizType: z.nativeEnum(QuestionType).default(QuestionType.MULTIPLE_CHOICE),
   tags: z.array(z.string()).optional(),
   statistics: z.any().optional(),
-  defaultSettings: z.any().optional(),
+  defaultSettings: z.any().optional(), // This will be updated by the input schema
   authorId: z.string().optional(),
 });
+
+// Define a specific schema for the settings object
+export const quizSettingsSchema = z.object({
+  theme: z.string().optional(),
+  powerUps: z.array(z.string()).optional(),
+  gameMode: z.enum(['basic', 'boosted']).optional(),
+  guessOptions: z.enum(['single', 'multiple_3', 'multiple_5']).optional(),
+  music: z.boolean().optional(),
+  soundEffects: z.boolean().optional(),
+});
+
 
 // Schema for API input validation (includes file uploads)
 export const questionInputSchema = questionBaseSchema.extend({
@@ -37,6 +48,17 @@ export const questionInputSchema = questionBaseSchema.extend({
 export const quizInputSchema = quizBaseSchema.extend({
   quizImageFile: z.any().optional(),
   questions: z.array(questionInputSchema).min(1, "Quiz must have at least one question"),
+  // Override defaultSettings to parse from a string
+  defaultSettings: z.string().optional().transform((str, ctx) => {
+    if (!str) return undefined;
+    try {
+      return quizSettingsSchema.parse(JSON.parse(str));
+    } catch (e) {
+      console.error("Error parsing defaultSettings:", e);
+      ctx.addIssue({ code: 'custom', message: 'Invalid JSON in defaultSettings' });
+      return z.NEVER;
+    }
+  }),
 });
 
 // Schema for database operations

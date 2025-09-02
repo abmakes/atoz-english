@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import GameSetupPanel from './GameSetupPanel';
@@ -22,6 +22,7 @@ import type { NavMenuItemProps } from './NavMenu';
 import { GAME_EVENTS, ENGINE_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
 import { PowerupConfig, STANDARD_SCORE_MODE_POWERUPS } from '@/lib/pixi-engine/config/PowerupConfig';
 import LoadingSpinner from '../loading_spinner';
+import { useGameStore } from '@/stores/useGameStore'; // Import the store
 
 const GameplayView = dynamic(() => import('./GameplayView'), {
     ssr: false,
@@ -64,8 +65,13 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
   const [winnerName, setWinnerName] = useState<string | undefined>(undefined);
   const [themeClassName, setThemeClassName] = useState<string>(styles.themeBasic);
   // const [isPaused, setIsPaused] = useState(false);
-
+  
   const pixiMountPointRef = useRef<HTMLDivElement>(null);
+  const setSelectedQuiz = useGameStore((state) => state.setSelectedQuiz);
+
+  useEffect(() => {
+      setSelectedQuiz(quizId);
+  }, [quizId, setSelectedQuiz]);
 
   /**
    * Callback triggered when the user confirms settings and starts the game.

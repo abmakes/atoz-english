@@ -7,6 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 import type { QuizSetupData, Question, QuizSettingsData } from '@/app/create/page';
 import { useCustomToast } from '@/components/ui/CustomToast';
@@ -50,6 +53,10 @@ export default function QuizFinalizeForm({
   const { addToast } = useCustomToast();
   const [currentTheme, setCurrentTheme] = useState<string | undefined>(initialQuizSettings.theme);
   const [selectedPowerUps, setSelectedPowerUps] = useState<string[]>(initialQuizSettings.powerUps || []);
+  const [gameMode, setGameMode] = useState<QuizSettingsData['gameMode']>(initialQuizSettings.gameMode ?? 'basic');
+  const [guessOptions, setGuessOptions] = useState<QuizSettingsData['guessOptions']>(initialQuizSettings.guessOptions ?? 'single');
+  const [music, setMusic] = useState<boolean>(initialQuizSettings.music ?? true);
+  const [soundEffects, setSoundEffects] = useState<boolean>(initialQuizSettings.soundEffects ?? true);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [currentPreviewQuestionIndex, setCurrentPreviewQuestionIndex] = useState(0);
 
@@ -72,6 +79,10 @@ export default function QuizFinalizeForm({
         settings: {
           theme: currentTheme,
           powerUps: selectedPowerUps,
+          gameMode: gameMode,
+          guessOptions: guessOptions,
+          music: music,
+          soundEffects: soundEffects,
         },
       });
 
@@ -253,6 +264,62 @@ export default function QuizFinalizeForm({
           </div>
       </CardContent>  
       
+      {/* Game Mechanics Section */}
+      <CardContent className="grandstander p-4">
+        <h3 className="text-lg font-semibold text-[--text-color]">Game Mechanics</h3>
+        <p className="text-sm text-gray-600 mb-4">Set the default rules for how the game is played.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Game Mode */}
+          <div>
+            <Label className="text-md font-semibold text-[--text-color] mb-2 block">Game Mode</Label>
+            <RadioGroup value={gameMode} onValueChange={(val) => setGameMode(val as QuizSettingsData['gameMode'])} className="flex flex-col gap-2">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="basic" id="basic" />
+                <Label htmlFor="basic">Basic Scoring</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="boosted" id="boosted" />
+                <Label htmlFor="boosted">Boosted (Time-based Scoring)</Label>
+              </div>
+            </RadioGroup>
+          </div>
+          
+          {/* Guess Options */}
+          <div>
+            <Label className="text-md font-semibold text-[--text-color] mb-2 block">Number of Guesses</Label>
+            <RadioGroup value={guessOptions} onValueChange={(val) => setGuessOptions(val as NonNullable<QuizSettingsData['guessOptions']>)} className="flex flex-col gap-2">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="single" id="single" />
+                <Label htmlFor="single">Single Guess</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="multiple_3" id="multiple_3" />
+                <Label htmlFor="multiple_3">Up to 3 Guesses</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="multiple_5" id="multiple_5" />
+                <Label htmlFor="multiple_5">Up to 5 Guesses</Label>
+              </div>
+            </RadioGroup>
+          </div>
+          
+          {/* Audio Options */}
+          <div>
+            <Label className="text-md font-semibold text-[--text-color] mb-3 block">Audio Settings</Label>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center space-x-3">
+                <Switch id="music-mode" checked={music} onCheckedChange={setMusic} />
+                <Label htmlFor="music-mode">Music (On/Off)</Label>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Switch id="sfx-mode" checked={soundEffects} onCheckedChange={setSoundEffects} />
+                <Label htmlFor="sfx-mode">Sound Effects (On/Off)</Label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+
       {/* Power-ups Selection Section */}
       <CardContent className="grandstander p-4">
         <h3 className="text-lg font-semibold text-[--text-color]">Select Power-ups</h3>

@@ -38,7 +38,7 @@ type LocalConfig = Omit<GameSetupData, 'quizId' | 'gameSlug'>;
  */
 const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }) => {
   // Remove Zustand usage
-  const selectedQuizTitle = useGameStore((state) => state.selectedQuizTitle);
+  const selectedQuiz = useGameStore((state) => state.selectedQuiz);
 
   // --- State ---
   const [teams, setTeams] = useState<LocalTeam[]>([
@@ -227,9 +227,9 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
 
       <div className={`max-w-4xl mx-auto bg-[var(--panel-bg)] filter-blur-sm rounded-[32px] p-8 border-2 border-[var(--border-dark)] shadow-solid z-20`}>
         {/* Remove display of selected quiz title */}
-        {selectedQuizTitle && (
+        {selectedQuiz && (
             <h2 className={`text-center mb-4`}>
-                Configure: {selectedQuizTitle}
+                Configure: {selectedQuiz.title}
             </h2>
         )}
 

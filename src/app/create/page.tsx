@@ -38,6 +38,10 @@ export interface QuizSettingsData {
   theme?: string; // Example setting
   // Add other settings as needed
   powerUps?: string[]; // For selected power-up IDs
+  gameMode?: 'basic' | 'boosted';
+  guessOptions?: 'single' | 'multiple_3' | 'multiple_5';
+  music?: boolean;
+  soundEffects?: boolean;
 }
 
 export default function CreatePage() {
@@ -155,6 +159,7 @@ export default function CreatePage() {
             }
           }
         } catch (e) {
+          console.error("Error parsing correct answer for matching question:", e);
           addToast(`Correct answer format for matching question ${i + 1} is invalid.`, { variant: 'error', position: 'top-center' });
           return;
         }
@@ -183,52 +188,58 @@ export default function CreatePage() {
   };
 
   // Placeholder for final submission
-  const handleFinalQuizSubmit = async (finalQuizData: {
+  const handleFinalQuizSubmit = async (finalizedData: {
     quizSetup: QuizSetupData;
     questions: Question[];
     settings: QuizSettingsData;
   }) => {
-    console.log("Submitting quiz...");
-    console.log("Quiz Setup Data:", finalQuizData.quizSetup);
-    console.log("Questions List:", finalQuizData.questions);
-    console.log("Quiz Settings:", finalQuizData.settings);
+    addToast("Publishing your quiz...", { variant: 'info', position: 'top-center' });
 
+    const { quizSetup, questions, settings } = finalizedData;
+    setQuizSettings(settings);
+    
     const formData = new FormData();
-    formData.append('title', finalQuizData.quizSetup.title);
-    formData.append('description', finalQuizData.quizSetup.description);
-
-    if (finalQuizData.quizSetup.coverImageFile) {
-      formData.append('quizImageFile', finalQuizData.quizSetup.coverImageFile);
-    } else {
-      formData.append('quizImageUrl', finalQuizData.quizSetup.coverImageUrl);
+    formData.append('title', quizSetup.title);
+    formData.append('description', quizSetup.description || '');
+    formData.append('quizType', quizSetup.quizType);
+    
+    if (quizSetup.tags.length > 0) {
+      formData.append('tags', JSON.stringify(quizSetup.tags));
     }
-    formData.append('quizType', finalQuizData.quizSetup.quizType);
-    finalQuizData.quizSetup.tags.forEach(tag => formData.append('tags[]', tag));
 
-    finalQuizData.questions.forEach((q, index) => {
+    if (quizSetup.coverImageFile) {
+      formData.append('quizImageFile', quizSetup.coverImageFile);
+    } else {
+      formData.append('imageUrl', quizSetup.coverImageUrl);
+    }
+
+    // Append questions and their potential image files
+    questions.forEach((q, index) => {
       formData.append(`questions[${index}][question]`, q.question);
       formData.append(`questions[${index}][correctAnswer]`, q.correctAnswer);
       formData.append(`questions[${index}][type]`, q.type);
-      q.answers.forEach((ans, ansIndex) => {
-        formData.append(`questions[${index}][answers][${ansIndex}]`, ans);
-      });
+      formData.append(`questions[${index}][answers]`, JSON.stringify(q.answers));
+      
       if (q.imageFile) {
         formData.append(`questions[${index}][imageFile]`, q.imageFile);
-      } else if (q.imageUrl && q.imageUrl !== '/images/placeholder.webp') {
+      } else if (q.imageUrl) {
         formData.append(`questions[${index}][imageUrl]`, q.imageUrl);
       }
     });
 
-    if (finalQuizData.settings.theme) {
-      formData.append('settings[theme]', finalQuizData.settings.theme);
-    }
-    if (finalQuizData.settings.powerUps && finalQuizData.settings.powerUps.length > 0) {
-      finalQuizData.settings.powerUps.forEach(powerUpId => formData.append('settings[powerUps][]', powerUpId));
-    }
-    // Add other settings as needed from finalQuizData.settings
+    // Structure and append the defaultSettings JSON object
+    const defaultSettings = {
+      theme: settings.theme ?? 'default',
+      powerUps: settings.powerUps ?? [],
+      gameMode: settings.gameMode ?? 'basic',
+      guessOptions: settings.guessOptions ?? 'single',
+      music: settings.music ?? true,
+      soundEffects: settings.soundEffects ?? true,
+    };
+    formData.append('defaultSettings', JSON.stringify(defaultSettings));
 
     try {
-      const response = await fetch('/api/quizzes', { 
+      const response = await fetch('/api/quizzes', {
         method: 'POST',
         body: formData,
       });

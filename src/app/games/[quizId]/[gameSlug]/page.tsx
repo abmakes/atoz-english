@@ -23,7 +23,7 @@ export default function GamePage() {
     } else {
       setIsValidParams(false);
       console.error("Invalid route params: ", params);
-    }
+    }  
   }, [quizId, gameSlug, params]);
 
   if (!isValidParams) {

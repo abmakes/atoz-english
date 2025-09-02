@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { QuizListItem } from '@/types/gameTypes';
 import { useState, useEffect, useMemo } from 'react';
-import { TagDrawer, type TagCategory } from '@/components/management_ui/TagDrawer';
+import { useGameStore } from '@/stores/useGameStore'; // Import the store
+import { TagDrawer } from '@/components/management_ui/TagDrawer';
 import { ALL_TAG_CATEGORIES } from '@/lib/tags';
 
 // Function to fetch quizzes (can remain outside or be moved inside if preferred)
@@ -37,27 +38,29 @@ export default function GamesPage() {
   const [allQuizzes, setAllQuizzes] = useState<QuizListItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [isTagDrawerOpen, setIsTagDrawerOpen] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const setQuizzes = useGameStore((state) => state.setQuizzes); // Get the action
 
   useEffect(() => {
     async function loadQuizzes() {
       setIsLoading(true);
       const fetchedQuizzes = await getQuizzesClient();
       setAllQuizzes(fetchedQuizzes);
+      setQuizzes(fetchedQuizzes); // Add quizzes to the global store
       setIsLoading(false);
 
+      console.log(fetchedQuizzes[0])
       // Log searchable content for each quiz
-      console.log("Searchable content for fetched quizzes:");
-      fetchedQuizzes.forEach((quiz, index) => {
-        console.log(`Quiz ${index + 1} (ID: ${quiz.id}):`);
-        console.log(`  Title: ${quiz.title}`);
-        console.log(`  Description: ${quiz.description}`);
-        console.log(`  Tags: ${quiz.tags ? quiz.tags.join(', ') : 'N/A'}`);
-      });
+      // console.log("Searchable content for fetched quizzes:");
+      // fetchedQuizzes.forEach((quiz, index) => {
+      //   console.log(`Quiz ${index + 1} (ID: ${quiz.id}):`);
+      //   console.log(`  Title: ${quiz.title}`);
+      //   console.log(`  Description: ${quiz.description}`);
+      //   console.log(`  Tags: ${quiz.tags ? quiz.tags.join(', ') : 'N/A'}`);
+      // });
     }
     loadQuizzes();
-  }, []);
+  }, [setQuizzes]);
 
   const handleTagToggle = (tag: string) => {
     setSelectedTags(prev => 
@@ -112,7 +115,7 @@ export default function GamesPage() {
   }
 
   return (
-    <div className="min-h-screen text-[#114257] px-4 sm:px-6 lg:px-8 flex flex-col items-center">
+    <div className="min-h-screen max-w-[1500px] mx-auto text-[#114257] px-4 sm:px-6 lg:px-8 flex flex-col items-center">
       <div className="x-auto flex flex-col items-center">
         <div className="sticky top-14 z-20 flex w-full max-w-[700px] p-2 border-2 shadow-solid bg-white border-[#1E5167] rounded-full mt-4 mb-8 items-center gap-2">
            {/* Selected Tags Display */}
