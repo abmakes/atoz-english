@@ -14,6 +14,7 @@ export interface QuizListItem {
   questions: Question[];
   likes: number;
   level?: string;
+  defaultSettings?: QuizDefaultSettings; // Quiz default settings
 }
 
 export interface Question {
@@ -39,6 +40,16 @@ export interface PowerupsData {
     doublePoints: boolean;
     timeExtension: boolean;
     comeback: boolean;
+}
+
+export interface QuizDefaultSettings {
+  theme: string;
+  powerUps: string[];
+  gameMode: string;
+  guessOptions: string;
+  timeLimit: string;
+  music: boolean;
+  soundEffects: boolean;
 }
 
 export interface GameSetupData {

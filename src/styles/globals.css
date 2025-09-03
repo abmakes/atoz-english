@@ -145,7 +145,7 @@
     --chart-5: #fafafa;
 
     /* Sidebar colors from src/styles/globals.css dark */
-    --sidebar: #051014;
+    --sidebar: #051014; 
     --sidebar-foreground: #fafafa;
     --sidebar-primary: #49c8ff;
     --sidebar-primary-foreground: #0a0a0a;
@@ -156,13 +156,14 @@
 
     /* Variables from themes.module.css .themeDark (Prioritized) */
     --primary-bg: #1f2937;
-    --secondary-bg: #111827;
+    --secondary-bg: #ffffff;
     --panel-bg: rgba(55, 65, 81, 0.85);
-    --panel-border: #4b5563;
-    --theme-background-image: url('/images/default/bg_image_dark.png'); /* Assuming dark version */
+    --panel-border: #5c687a;
+    --theme-background-image: url('/images/dark/bg_image.png'); /* Assuming dark version */
     --text-color: #d1d5db; /* Overrides --foreground */
-    --text-light: #9ca3af; /* Overrides --muted-foreground */
-    --heading-color: #f3f4f6;
+    --text-light: #ebebeb; /* Overrides --muted-foreground */
+    --text-dark: #0b232d;
+    --heading-color: #114257;
     --primary-accent-600: #49C8FF; /* Different from light theme */
     --primary-accent: #49C8FF; /* Overrides --primary, --accent */
     --primary-accent-hover: #2DA4D8;
@@ -345,7 +346,7 @@
 .buttonXLarge {
   composes: button;
   background-color:white;
-  color: var(--button-text-dark);
+  color: var(--heading-color);
   border-radius: var(--border-radius-full);
   border: 6px solid var(--primary-accent-600);
   padding: 0.75rem 4rem 0.75rem 4rem; /* Tailwind px-16 py-3 */

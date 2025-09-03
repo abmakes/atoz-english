@@ -72,7 +72,7 @@ export class GameBackgroundManager {
         if (this.backgroundSprite) {
             this.backgroundSprite.label = 'StaticBackgroundSprite';
             this.backgroundSprite.anchor.set(0.5);
-            this.backgroundSprite.alpha = 0.5;
+            this.backgroundSprite.alpha = 0.9;
             this.view.addChild(this.backgroundSprite);
             this._handleResize();
             console.log("GameBackgroundManager: Background sprite created and added.");

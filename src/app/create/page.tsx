@@ -39,7 +39,8 @@ export interface QuizSettingsData {
   // Add other settings as needed
   powerUps?: string[]; // For selected power-up IDs
   gameMode?: 'basic' | 'boosted';
-  guessOptions?: 'single' | 'multiple_3' | 'multiple_5';
+  guessOptions?: string;
+  timeLimit?: string;
   music?: boolean;
   soundEffects?: boolean;
 }
@@ -232,13 +233,14 @@ export default function CreatePage() {
       theme: settings.theme ?? 'default',
       powerUps: settings.powerUps ?? [],
       gameMode: settings.gameMode ?? 'basic',
-      guessOptions: settings.guessOptions ?? 'single',
+      guessOptions: settings.guessOptions ?? 'zero',
+      timeLimit: settings.timeLimit ?? 'ten',
       music: settings.music ?? true,
       soundEffects: settings.soundEffects ?? true,
     };
     formData.append('defaultSettings', JSON.stringify(defaultSettings));
 
-    try {
+     try {
       const response = await fetch('/api/quizzes', {
         method: 'POST',
         body: formData,

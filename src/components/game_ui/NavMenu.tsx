@@ -49,7 +49,7 @@ const NavMenu: React.FC<NavMenuProps> = ({
             <Button
               key={item.id}
               variant="navIcon"
-              className={`bg-[var(--primary-accent)] text-[var(--text-color)] rounded-full flex items-center justify-center border-2 border-[var(--primary-accent)]`}
+              className={`bg-[var(--secondary-bg)] text-[var(--text-color)] rounded-full flex items-center justify-center border-2 border-[var(--primary-accent)]`}
               onClick={item.onClick}
               aria-label={item.label}
               aria-pressed={item.active !== undefined ? item.active : undefined}
@@ -63,4 +63,4 @@ const NavMenu: React.FC<NavMenuProps> = ({
   );
 };
 
-export default NavMenu; 
+export default NavMenu;

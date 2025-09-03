@@ -5,17 +5,8 @@ import { put } from '@vercel/blob'
 import { QuestionType } from '@/types/question_types'
 import { Quiz as ITQuiz, Question as ITQuestion } from '@/types'
 import { Prisma } from '../../../../prisma/app/generated/prisma/client'
-// Add the centralized schemas to help with validation
-
-// Define a specific schema for the settings object to ensure validation
-const QuizSettingsSchema = z.object({
-  theme: z.string().optional(),
-  powerUps: z.array(z.string()).optional(),
-  gameMode: z.enum(['basic', 'boosted']).optional(),
-  guessOptions: z.enum(['single', 'multiple_3', 'multiple_5']).optional(),
-  music: z.boolean().optional(),
-  soundEffects: z.boolean().optional(),
-});
+// Use the centralized schemas for consistency
+import { quizSettingsSchema } from '@/lib/schemas'
 
 // Define Zod Schema for a Question (used in POST)
 const QuestionSchema = z.object({
@@ -37,7 +28,7 @@ const QuizCreateSchema = z.object({
     tags: z.array(z.string()).optional(),
     questions: z.array(QuestionSchema).min(1, "Quiz must have at least one question"),
     statistics: z.any().optional(),
-    defaultSettings: QuizSettingsSchema.optional(), // Use the specific schema here
+    defaultSettings: quizSettingsSchema.optional(), // Use the centralized schema
     authorId: z.string().default("admin"),
 })
 

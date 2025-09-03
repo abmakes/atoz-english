@@ -84,27 +84,27 @@ export const THEMES: Record<string, PixiThemeConfig> = {
           primaryBg: '#1f2937',           // gray-800
           secondaryBg: '#111827',         // gray-900
           panelBg: '#374151',           // gray-700
-          textColor: '#d1d5db',           // gray-300
-          textLight: '#9ca3af',          // gray-400
+          textColor: '#ffffff',           // gray-300
+          textLight: '#ebebeb',          // gray-400
           headingColor: '#f3f4f6',         // gray-100
           primaryAccent: '#49C8FF',       // blue-400
           primaryAccentHover: '#2DA4D8',   // blue-500 custom
           inputBg: '#374151',           // gray-700
           inputBorder: '#4b5563',         // gray-600
-          buttonTextLight: '#111827',     // Dark text
-          buttonTextDark: '#d1d5db',      // Light text
+          buttonTextLight: '#ffffff',     // Dark text
+          buttonTextDark: '#ffffff',      // Light text
           fontFamily: 'Poppins',
           fontFamilyTheme: 'Grandstander',
           timerColor: '#d1d5db',
-          questionTextColor: '#d1d5db',
+          questionTextColor: '#ffffff',
           buttonFillColor: '#4b5563',
-          buttonTextColor: '#d1d5db',
+          buttonTextColor: '#ffffff',
           buttonBorderColor: '#556170',
       },
   },
   forest: {
-      soundsBasePath: '/audio/default/',
-      imagesBasePath: '/images/default/',
+      soundsBasePath: '/audio/forest/',
+      imagesBasePath: '/images/forest/',
       cssModuleClass: 'themeForest',
       pixiConfig: {
           primaryBg: '#d4e9d7',

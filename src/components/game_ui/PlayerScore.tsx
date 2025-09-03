@@ -45,9 +45,9 @@ const PlayerScore: React.FC<PlayerScoreProps> = ({
           grandstander
           px-4 py-2 text-center
           ${isActive
-            ? 'bg-[var(--primary-accent)] text-[var(--text-color)] font-bold' // Active: Blue bg, light text, bold
+            ? 'bg-[var(--secondary-bg)] text-[var(--text-dark)] font-bold border-2 border-[var(--primary-accent-hover)]' // Active: Blue bg, light text, bold
             : 
-            'bg-[var(--inactive-button-bg)] text-[var(--text-color)] font-semibold border-4 border-gray-300' // Inactive: White bg, dark text, semibold
+            'bg-[var(--inactive-button-bg)] text-[var(--text-dark)] font-semibold border-4 border-gray-300' // Inactive: White bg, dark text, semibold
           }
           rounded-[var(--border-radius-xl)]
           -mb-5
@@ -65,8 +65,8 @@ const PlayerScore: React.FC<PlayerScoreProps> = ({
           mx-2 py-2 text-center
           font-[var(--font-theme)]
           ${isActive
-            ? 'bg-[var(--primary-accent-hover)] text-[var(--text-color)] font-bold' // Active: Darker blue bg, light text, bold
-            : 'bg-[var(--box-bg)] text-[var(--text-color)] font-semibold bg-gray-300' // Inactive: Grey bg, dark text, semibold
+            ? 'bg-[var(--primary-accent-hover)] text-[var(--text-dark)] font-bold' // Active: Darker blue bg, light text, bold
+            : 'bg-[var(--box-bg)] text-[var(--text-dark)] font-semibold bg-gray-300' // Inactive: Grey bg, dark text, semibold
           }
           rounded-[var(--border-radius-xl)]
           text-4xl

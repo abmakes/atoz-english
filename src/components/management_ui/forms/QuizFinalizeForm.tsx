@@ -25,10 +25,10 @@ interface PowerUp {
 
 // Placeholder power-up data
 const AVAILABLE_POWER_UPS: PowerUp[] = [
-  { id: 'pu1', name: '50/50', description: 'Removes two incorrect answers.', icon: '❓' },
-  { id: 'pu2', name: 'Extra Time', description: 'Adds 30 seconds to the timer.', icon: '⏱️' },
-  { id: 'pu3', name: 'Skip Question', description: 'Move to the next question without penalty.', icon: '⏭️' },
-  { id: 'pu4', name: 'Audience Poll', description: 'Shows what others answered.', icon: '📊' },
+  { id: 'fiftyFifty', name: '50/50', description: 'Removes two incorrect answers.', icon: '❓' },
+  { id: 'doublePoints', name: 'Double Points', description: 'Doubles points earned for this question.', icon: '2️✖️' },
+  { id: 'timeExtension', name: 'Extra Time', description: 'Adds 30 seconds to the timer.', icon: '⏱️' },
+  { id: 'comeback', name: 'Comeback', description: 'Bonus points for the team that is behind for one minute.', icon: '⏭️' },
 ];
 
 interface QuizFinalizeFormProps {
@@ -54,11 +54,12 @@ export default function QuizFinalizeForm({
   const [currentTheme, setCurrentTheme] = useState<string | undefined>(initialQuizSettings.theme);
   const [selectedPowerUps, setSelectedPowerUps] = useState<string[]>(initialQuizSettings.powerUps || []);
   const [gameMode, setGameMode] = useState<QuizSettingsData['gameMode']>(initialQuizSettings.gameMode ?? 'basic');
-  const [guessOptions, setGuessOptions] = useState<QuizSettingsData['guessOptions']>(initialQuizSettings.guessOptions ?? 'single');
+  const [guessOptions, setGuessOptions] = useState<string>(initialQuizSettings.guessOptions ?? 'zero');
   const [music, setMusic] = useState<boolean>(initialQuizSettings.music ?? true);
   const [soundEffects, setSoundEffects] = useState<boolean>(initialQuizSettings.soundEffects ?? true);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [currentPreviewQuestionIndex, setCurrentPreviewQuestionIndex] = useState(0);
+  const [timeLimit, setTimeLimit] = useState<string>(initialQuizSettings.timeLimit ?? 'ten');
 
 
   const handleThemeChange = (theme: string) => {
@@ -81,6 +82,7 @@ export default function QuizFinalizeForm({
           powerUps: selectedPowerUps,
           gameMode: gameMode,
           guessOptions: guessOptions,
+          timeLimit: timeLimit,
           music: music,
           soundEffects: soundEffects,
         },
@@ -283,22 +285,45 @@ export default function QuizFinalizeForm({
               </div>
             </RadioGroup>
           </div>
+
+          {/* Time Limit */}
+          <div>
+            <Label className="text-md font-semibold text-[--text-color] mb-2 block">Time Limit</Label>
+            <RadioGroup value={timeLimit} onValueChange={(val) => setTimeLimit(val)} className="flex flex-col gap-2">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="ten" id="ten" />
+                <Label htmlFor="10">10 Seconds</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="fifteen" id="15" />
+                <Label htmlFor="15">15 Seconds</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="twenty" id="20" />
+                <Label htmlFor="20">20 Seconds</Label>
+              </div>
+            </RadioGroup>
+          </div>
           
           {/* Guess Options */}
           <div>
-            <Label className="text-md font-semibold text-[--text-color] mb-2 block">Number of Guesses</Label>
-            <RadioGroup value={guessOptions} onValueChange={(val) => setGuessOptions(val as NonNullable<QuizSettingsData['guessOptions']>)} className="flex flex-col gap-2">
+            <Label className="text-md font-semibold text-[--text-color] mb-2 block">Limited Guesses</Label>
+            <RadioGroup value={guessOptions} onValueChange={(val) => setGuessOptions(val)} className="flex flex-col gap-2">
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="single" id="single" />
-                <Label htmlFor="single">Single Guess</Label>
+                <RadioGroupItem value="zero" id="0" />
+                <Label htmlFor="0">Unlimited Guesses</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="multiple_3" id="multiple_3" />
-                <Label htmlFor="multiple_3">Up to 3 Guesses</Label>
+                <RadioGroupItem value="one" id="1" />
+                <Label htmlFor="1">One</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="multiple_5" id="multiple_5" />
-                <Label htmlFor="multiple_5">Up to 5 Guesses</Label>
+                <RadioGroupItem value="three" id="3" />
+                <Label htmlFor="3">Three</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="five" id="5" />
+                <Label htmlFor="5">Five</Label>
               </div>
             </RadioGroup>
           </div>

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import styles from '@/styles/themes/themes.module.css'; // Assuming '@/' alias is set up for src
 // Remove Zustand import
 import { useGameStore } from '@/stores/useGameStore';
 // Import only necessary types from central location
@@ -30,6 +29,60 @@ type LocalPowerups = PowerupsData;
 
 // Define the type for the config object created locally
 type LocalConfig = Omit<GameSetupData, 'quizId' | 'gameSlug'>;
+
+// Define types for quiz settings (matching schema)
+interface QuizDefaultSettings {
+  theme?: string;
+  powerUps?: string[];
+  gameMode?: 'basic' | 'boosted';
+  guessOptions?: 'zero' | 'one' | 'three' | 'five';
+  timeLimit?: 'ten' | 'fifteen' | 'twenty';
+  music?: boolean;
+  soundEffects?: boolean;
+}
+
+// Mapping functions to convert between different naming conventions
+const mapQuizSettingsToGameSetup = (quizSettings: QuizDefaultSettings) => {
+  const mapped = {
+    theme: quizSettings.theme || 'basic',
+    gameFeatures: quizSettings.gameMode || 'basic',
+    intensityTimeLimit: mapTimeLimit(quizSettings.timeLimit),
+    limitedGuesses: mapGuessOptions(quizSettings.guessOptions),
+    music: quizSettings.music ?? true,
+    sounds: quizSettings.soundEffects ?? true,
+    powerups: mapPowerUpsArrayToObject(quizSettings.powerUps || [])
+  };
+  console.log('Mapped quiz settings:', mapped);
+  return mapped;
+};
+
+const mapTimeLimit = (timeLimit?: string): number => {
+  switch (timeLimit) {
+    case 'ten': return 10;
+    case 'fifteen': return 15;
+    case 'twenty': return 20;
+    default: return 15; // default
+  }
+};
+
+const mapGuessOptions = (guessOptions?: string): number | null => {
+  switch (guessOptions) {
+    case 'zero': return null; // unlimited
+    case 'one': return 1;
+    case 'three': return 3;
+    case 'five': return 5;
+    default: return 3; // default
+  }
+};
+
+const mapPowerUpsArrayToObject = (powerUpsArray: string[]): LocalPowerups => {
+  return {
+    fiftyFifty: powerUpsArray.includes('fiftyFifty'),
+    doublePoints: powerUpsArray.includes('doublePoints'),
+    timeExtension: powerUpsArray.includes('timeExtension'),
+    comeback: powerUpsArray.includes('comeback')
+  };
+};
 
 // --- Component ---
 /**
@@ -70,14 +123,17 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
   useEffect(() => {
     switch (selectedTheme) {
       case 'dark':
-        setThemeClassName(styles.themeDark);
+        // Use the global class name 'dark' directly
+        setThemeClassName('dark');
         break;
       case 'forest':
-        setThemeClassName(styles.themeForest);
+        // Use the global class name 'themeForest' directly
+        setThemeClassName('themeForest');
         break;
       case 'basic':
       default:
-        setThemeClassName(styles.themeBasic);
+        // The default theme (from :root) doesn't need a class
+        setThemeClassName(''); 
         break;
     }
     // Optionally: Add class to body or html element for global styles if needed
@@ -107,6 +163,61 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
     }
   }, []); // Empty dependency array ensures this runs only once on mount
 
+  // Effect to load quiz default settings with priority system
+  useEffect(() => {
+    if (!selectedQuiz?.defaultSettings) {
+      console.log('GameSetupPanel: No quiz defaultSettings found, using component defaults');
+      return;
+    }
+
+    try {
+      const quizDefaults = selectedQuiz.defaultSettings as QuizDefaultSettings;
+      console.log('GameSetupPanel: Found quiz defaultSettings:', quizDefaults);
+
+      // 1. Start with quiz defaults
+      const mappedDefaults = mapQuizSettingsToGameSetup(quizDefaults);
+
+      // 2. Check for per-quiz localStorage settings
+      const quizSpecificStorageKey = `pixi-engine/quiz-settings-${selectedQuiz.id}`;
+      const storedQuizSettings = localStorage.getItem(quizSpecificStorageKey);
+      
+      let finalSettings = { ...mappedDefaults };
+      
+      if (storedQuizSettings) {
+        try {
+          const parsedQuizSettings = JSON.parse(storedQuizSettings);
+          console.log('GameSetupPanel: Found stored quiz-specific settings:', parsedQuizSettings);
+          
+          // Override quiz defaults with stored settings
+          finalSettings = {
+            ...finalSettings,
+            ...parsedQuizSettings
+          };
+        } catch (error) {
+          console.error('Error parsing stored quiz settings:', error);
+        }
+      }
+
+      // 3. Apply final settings to component state
+      console.log('GameSetupPanel: Applying final settings:', finalSettings);
+      
+      setSelectedTheme(finalSettings.theme);
+      setSelectedGameFeatures(finalSettings.gameFeatures);
+      setIntensityTimeLimit(finalSettings.intensityTimeLimit);
+      setLimitedGuesses(finalSettings.limitedGuesses);
+      setPowerups(finalSettings.powerups);
+      
+      // Update audio settings (merge with existing localStorage logic)
+      setSettings(prev => ({
+        ...prev,
+        music: finalSettings.music,
+        sounds: finalSettings.sounds
+      }));
+
+    } catch (error) {
+      console.error('Error processing quiz defaultSettings:', error);
+    }
+  }, [selectedQuiz?.id, selectedQuiz?.defaultSettings]); // Re-run when quiz changes
 
   // --- Handlers (Placeholders) ---
   const handleAddTeam = () => {
@@ -127,10 +238,32 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
     setTeams(teams.filter(team => team.id !== id));
   };
 
+  // Helper function to save quiz-specific settings to localStorage
+  const saveQuizSettings = (updatedSettings: Record<string, unknown>) => {
+    if (!selectedQuiz?.id) return;
+    
+    try {
+      const quizSpecificStorageKey = `pixi-engine/quiz-settings-${selectedQuiz.id}`;
+      const existingSettings = localStorage.getItem(quizSpecificStorageKey);
+      const currentSettings = existingSettings ? JSON.parse(existingSettings) : {};
+      
+      const newSettings = { ...currentSettings, ...updatedSettings };
+      localStorage.setItem(quizSpecificStorageKey, JSON.stringify(newSettings));
+      console.log(`GameSetupPanel: Saved quiz-specific settings for ${selectedQuiz.id}:`, newSettings);
+    } catch (error) {
+      console.error('Error saving quiz-specific settings:', error);
+    }
+  };
+
   const handleSettingToggle = (setting: keyof LocalGameSettings) => {
     setSettings(prev => {
         const newState = !prev[setting];
-        // Also update localStorage to persist this choice for next session's initial state
+        
+        // Save to quiz-specific localStorage
+        const settingUpdate = setting === 'music' ? { music: newState } : { sounds: newState };
+        saveQuizSettings(settingUpdate);
+        
+        // Also update global localStorage for backward compatibility
         try {
             const STORAGE_KEY = 'pixi-engine/audio_settings';
             const storedSettingsRaw = localStorage.getItem(STORAGE_KEY);
@@ -161,23 +294,34 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
   };
 
   const handleThemeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedTheme(event.target.value);
+    const newTheme = event.target.value;
+    setSelectedTheme(newTheme);
+    saveQuizSettings({ theme: newTheme });
   };
 
   const handleGameFeaturesChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedGameFeatures(event.target.value);
+    const newGameFeatures = event.target.value;
+    setSelectedGameFeatures(newGameFeatures);
+    saveQuizSettings({ gameFeatures: newGameFeatures });
   };
 
   const handleIntensityClick = (value: number) => {
     setIntensityTimeLimit(value);
+    saveQuizSettings({ intensityTimeLimit: value });
   };
 
   const handleGuessesClick = (value: number) => {
-    setLimitedGuesses(prev => (prev === value ? null : value));
+    const newValue = limitedGuesses === value ? null : value;
+    setLimitedGuesses(newValue);
+    saveQuizSettings({ limitedGuesses: newValue });
   };
 
   const handlePowerupToggle = (powerup: keyof LocalPowerups) => {
-    setPowerups(prev => ({ ...prev, [powerup]: !prev[powerup] }));
+    setPowerups(prev => {
+      const newPowerups = { ...prev, [powerup]: !prev[powerup] };
+      saveQuizSettings({ powerups: newPowerups });
+      return newPowerups;
+    });
   };
 
   /**
@@ -226,24 +370,22 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
       </button>
 
       <div className={`max-w-4xl mx-auto bg-[var(--panel-bg)] filter-blur-sm rounded-[32px] p-8 border-2 border-[var(--border-dark)] shadow-solid z-20`}>
-        {/* Remove display of selected quiz title */}
-        {selectedQuiz && (
-            <h2 className={`text-center mb-4`}>
-                Configure: {selectedQuiz.title}
-            </h2>
-        )}
 
-        {/* Play Button */}
         <div className={`text-center mb-4 flex flex-col justify-center items-center`}>
           <button onClick={handlePlayGame} className={`grandstander buttonXLarge w-72`}>
             Play
           </button>
         </div>
 
+        {selectedQuiz && (
+            <h2 className={`grandstander text-2xl font-semibold text-[var(--text-color)] mb-2`}>
+                Configure: {selectedQuiz.title}
+            </h2>
+        )}
         {/* Teams Section */}
 
         <div className={"mb-4 flex flex-col justify-center items-center"}>
-          <h2 className={`grandstander text-2xl font-semibold text-[var(--text-color)] mb-2 pt-2`}>Teams:</h2>
+          {/* <h2 className={`grandstander text-2xl font-semibold text-[var(--text-color)] mb-2 pt-2`}>Teams:</h2> */}
           <ul className={`flex flex-row flex-wrap gap-2 justify-center items-center mb-3 text-3xl`}>
             {teams.map((team, index) => (
               <li key={team.id} className={`flex flex-row justify-center items-center`}>
@@ -252,7 +394,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
                   type="text"
                   value={team.name}
                   onChange={(e) => handleTeamNameChange(team.id, e.target.value)}
-                  className={`py-2 px-6 ml-3 mr-1 rounded-[12px] text-lg border-2 border-[var(--input-border)] inputfield`}
+                  className={`py-2 px-6 ml-3 mr-1 rounded-[12px] text-lg border-2 border-[var(--input-border)] inputfield text-[var(--heading-color)]`}
                   aria-label={`Team ${index + 1} name`}
                 />
                  <button onClick={() => handleRemoveTeam(team.id)} className={`buttonRemoveTeam`} aria-label={`Remove team ${team.name}`}>&times;</button>
@@ -301,7 +443,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
           <div className={"flex flex-row gap-4 items-center"}>
           {/* Theme Selection */}
             <div className={`flex flex-row gap-4 items-center mb-4 justify-center`}>
-              <label htmlFor="theme-select" className={`textLabel`}>Theme:</label>
+              <label htmlFor="theme-select" className={'text-[var(--text-color)]'}>Theme:</label>
               <select
                 id="theme-select"
                 value={selectedTheme}
@@ -317,7 +459,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
 
             {/* Game Features Selection */}
             <div className={`flex flex-row gap-4 items-center mb-4 justify-center`}>
-              <label htmlFor="features-select" className={`textLabel`}>Game Mode:</label>
+              <label htmlFor="features-select" className={`text-[var(--text-color)]`}>Game Mode:</label>
               <select
                 id="features-select"
                 value={selectedGameFeatures}

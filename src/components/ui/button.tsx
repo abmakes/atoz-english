@@ -18,7 +18,7 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        navIcon: "bg-[var(--primary-accent)] text-[var(--text-color)] rounded-full border-2 border-[var(--primary-accent)] hover:bg-transparent hover:border-[var(--primary-accent)] hover:text-[var(--primary-accent)]",
+        navIcon: "bg-[var(--primary-accent)] text-[var(--text-color)] rounded-full border-2 border-[var(--primary-accent)] hover:bg-[var(--primary-accent)] hover:border-[var(--primary-accent)] hover:text-white",
         solidAccent: "bg-white  text-[var(--text-color)] rounded-full border-2 border-[var(--primary-accent)] shadow-[4px_4px_0_0_var(--primary-accent-hover)] hover:bg-[var(--primary-accent)] hover:border-[var(--primary-accent-hover)] hover:text-white",
       },
       size: {

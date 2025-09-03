@@ -33,7 +33,8 @@ export const quizSettingsSchema = z.object({
   theme: z.string().optional(),
   powerUps: z.array(z.string()).optional(),
   gameMode: z.enum(['basic', 'boosted']).optional(),
-  guessOptions: z.enum(['single', 'multiple_3', 'multiple_5']).optional(),
+  guessOptions: z.enum(['zero', 'one', 'three', 'five']).optional(),
+  timeLimit: z.enum(['ten', 'fifteen', 'twenty']).optional(),
   music: z.boolean().optional(),
   soundEffects: z.boolean().optional(),
 });
