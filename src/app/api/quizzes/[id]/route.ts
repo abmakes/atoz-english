@@ -19,7 +19,7 @@ const QuestionSchema = z.object({
     answers: z.array(z.string().min(1, "Answer text cannot be empty")).min(2, "Must have at least two answers"),
     correctAnswer: z.string().min(1, "Correct answer cannot be empty"),
     imageUrl: z.string().optional(), // URL after potential upload
-    imageFile: z.any().optional(),
+    imageFile: z.unknown().optional(),
     type: z.nativeEnum(QuestionType).default(QuestionType.MULTIPLE_CHOICE),
 })
 
@@ -29,12 +29,12 @@ const QuizCreateSchema = z.object({
     title: z.string().min(1, "Quiz title cannot be empty"),
     description: z.string().optional(),
     quizImageUrl: z.string().optional(),
-    quizImageFile: z.any().optional(),
+    quizImageFile: z.unknown().optional(),
     quizType: z.nativeEnum(QuestionType).default(QuestionType.MULTIPLE_CHOICE),
     tags: z.array(z.string()).optional(),
     questions: z.array(QuestionSchema).min(1, "Quiz must have at least one question"),
-    statistics: z.any().optional(),
-    defaultSettings: z.any().optional(),
+    statistics: z.record(z.unknown()).optional(),
+    defaultSettings: z.record(z.unknown()).optional(),
     authorId: z.string().optional(),
 })
 
