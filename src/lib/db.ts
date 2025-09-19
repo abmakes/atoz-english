@@ -102,8 +102,8 @@ export async function updateQuiz(id: string, data: {
   quizType?: QuestionType;
   tags?: string[];
   imageUrl?: string;
-  statistics?: Prisma.JsonValue | null;
-  defaultSettings?: Prisma.JsonValue | null;
+  statistics?: any | null;
+  defaultSettings?: any | null;
   authorId?: string | null;
   questions: QuestionUpdateData[];
 }) {
