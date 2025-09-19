@@ -1,6 +1,11 @@
 import { clerkMiddleware } from '@clerk/nextjs/server'
 
-export default clerkMiddleware()
+// Only use Clerk middleware if environment variables are available
+const middleware = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY 
+  ? clerkMiddleware()
+  : undefined
+
+export default middleware
 
 export const config = {
   matcher: [

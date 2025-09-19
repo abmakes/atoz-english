@@ -14,8 +14,25 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  
+  // If Clerk key is not available, render without ClerkProvider
+  if (!clerkPublishableKey) {
+    return (
+      <html lang="en">
+        <body className="">
+          <CustomToastProvider>
+            <ConditionalLayoutWrapper>
+              {children}
+            </ConditionalLayoutWrapper>
+          </CustomToastProvider>
+        </body>
+      </html>
+    );
+  }
+
   return (
-    <ClerkProvider>
+    <ClerkProvider publishableKey={clerkPublishableKey}>
       <html lang="en">
         <body className="">
           <CustomToastProvider>
