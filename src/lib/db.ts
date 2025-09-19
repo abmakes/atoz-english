@@ -102,8 +102,8 @@ export async function updateQuiz(id: string, data: {
   quizType?: QuestionType;
   tags?: string[];
   imageUrl?: string;
-  statistics?: any | null;
-  defaultSettings?: any | null;
+  statistics?: Record<string, unknown> | null;
+  defaultSettings?: Record<string, unknown> | null;
   authorId?: string | null;
   questions: QuestionUpdateData[];
 }) {
