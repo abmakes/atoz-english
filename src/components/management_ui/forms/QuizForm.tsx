@@ -19,16 +19,10 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 
-interface Question {
-  id?: string
-  tempId: string
-  question: string
-  answers: string[]
-  correctAnswer: string
-  imageUrl: string
-  imageFile: File | null
-  type: QuestionType
-}
+import type { Question as BaseQuestion } from '@/components/management_ui/QuizEditor';
+
+// Extend Question type to include tempId for local state management
+type Question = BaseQuestion & { tempId?: string };
 
 interface QuizFormProps {
   quizId?: string;
@@ -80,7 +74,10 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
 
   const mode = quizId ? 'edit' : 'create';
   
-  const [questions, setQuestionsState] = useState<Question[]>(initialQuestions.map(ensureTempId));
+  const [questions, setQuestionsState] = useState<Question[]>(() => {
+    const initialQuestionsWithTempId = initialQuestions.map(ensureTempId);
+    return initialQuestionsWithTempId;
+  });
   
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
@@ -89,12 +86,14 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
     const processedQuestions = initialQuestions.map(ensureTempId);
     setQuestionsState(processedQuestions);
     if (mode === 'create' && processedQuestions.length > 0) {
-        setOpenAccordionItems([processedQuestions[processedQuestions.length - 1].tempId]);
+        setOpenAccordionItems([processedQuestions[processedQuestions.length - 1].tempId!]);
     } else if (processedQuestions.length > 0 && processedQuestions[0]?.tempId) {
         // Optionally open the first one in edit mode, or none
         // setOpenAccordionItems([processedQuestions[0].tempId]); 
     }
   }, [initialQuestions, mode]);
+
+
 
   const updateQuestionsAndNotifyParent = (newQuestions: Question[]) => {
     setQuestionsState(newQuestions);
@@ -120,16 +119,27 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
     setIsImageModalOpen(true);
   };
 
-  const handleImageSelect = (imageUrl: string, file?: File | null) => {
+  const handleImageSelect = (imageUrl: string, metadata?: {
+    pixabayId: number;
+    pixabayUser: string;
+    tags: string[];
+    searchTerm: string;
+    width: number;
+    height: number;
+  }) => {
     if (activeImageIndex !== null) {
       const newQuestions = [...questions];
       newQuestions[activeImageIndex].imageUrl = imageUrl;
-      newQuestions[activeImageIndex].imageFile = file || null;
+      newQuestions[activeImageIndex].imageFile = null; // File uploads are handled separately
+      // Store the metadata if it's a Pixabay image
+      if (metadata && metadata.pixabayId) {
+        newQuestions[activeImageIndex].imageMetadata = metadata;
+      }
       updateQuestionsAndNotifyParent(newQuestions);
     } else {
       // setCurrentQuizCoverImageUrl(imageUrl); // Removed
       // setCurrentQuizCoverImageFile(file || null); // Removed
-      onQuizCoverImageChange(imageUrl, file || null);
+      onQuizCoverImageChange(imageUrl, null);
     }
     setIsImageModalOpen(false);
   };
@@ -187,7 +197,7 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
     
     const finalNewQuestion = newQuestionData as Question; 
     updateQuestionsAndNotifyParent([...questions, finalNewQuestion]);
-    setOpenAccordionItems([finalNewQuestion.tempId]); 
+    setOpenAccordionItems([finalNewQuestion.tempId!]); 
     addToast(questionToDuplicate ? 'Question duplicated.' : 'Question added.', { variant: 'success', position: 'top-center' });
   };
 
@@ -200,13 +210,27 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
     const question = questions[questionIndex];
     
     // Local state for each answer input to avoid lag
-    const [localAnswers, setLocalAnswers] = useState<string[]>(question.answers);
+    const [localAnswers, setLocalAnswers] = useState<string[]>(() => {
+      // Ensure we have at least 4 answer slots for multiple choice
+      const answers = question.answers || [];
+      while (answers.length < 4) {
+        answers.push('');
+      }
+      return answers;
+    });
 
     useEffect(() => {
       // Sync localAnswers if the question.answers prop changes from parent
       // This might happen if questions are reordered, added, or overall type changes.
-      setLocalAnswers(question.answers);
-    }, [question.answers]);
+      // Ensure we always have at least 4 answer slots for multiple choice
+      const answers = question.answers || [];
+      const paddedAnswers = [...answers];
+      while (paddedAnswers.length < 4) {
+        paddedAnswers.push('');
+      }
+      
+      setLocalAnswers(paddedAnswers);
+    }, [question.answers, questionIndex, question.tempId]);
 
     const handleLocalAnswerChange = (aIndex: number, value: string) => {
       const updatedLocalAnswers = [...localAnswers];
@@ -216,10 +240,17 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
 
     const saveAnswerTextOnBlur = (aIndex: number) => {
       const value = localAnswers[aIndex];
-      const currentGlobalAnswers = questions[questionIndex].answers;
+      const currentGlobalAnswers = questions[questionIndex].answers || [];
+      
+      // Ensure we have a proper answers array with at least 4 slots
+      const newAnswers = [...currentGlobalAnswers];
+      while (newAnswers.length < 4) {
+        newAnswers.push('');
+      }
+      
       // Only update global state if the value actually changed from what's in global state
-      if (value !== currentGlobalAnswers[aIndex]) {
-        const newAnswers = currentGlobalAnswers.map((ans, i) => i === aIndex ? value : ans);
+      if (value !== newAnswers[aIndex]) {
+        newAnswers[aIndex] = value;
         let newCorrectAnswer = question.correctAnswer;
         // If the edited answer was the correct one, update the correctAnswer string as well
         if (currentGlobalAnswers[aIndex] === question.correctAnswer) {
@@ -251,6 +282,12 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
                 value={localAnswer} // Use local state for value
                 onChange={(e) => handleLocalAnswerChange(aIndex, e.target.value)} // Update local state on change
                 onBlur={() => saveAnswerTextOnBlur(aIndex)} // Update global state on blur
+                onKeyDown={(e) => {
+                  // Also save on Enter key for better UX
+                  if (e.key === 'Enter') {
+                    saveAnswerTextOnBlur(aIndex);
+                  }
+                }}
                 placeholder={`Answer ${aIndex + 1}`}
                 required
               />
@@ -367,9 +404,31 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
     addToast('Question deleted.', { variant: 'error', position: 'top-center' })
   };
 
+  // Function to sync all local answers to global state before submission
+  const syncAllAnswersToGlobalState = () => {
+    // Force blur on all active textarea elements to trigger saveAnswerTextOnBlur
+    const activeElement = document.activeElement;
+    if (activeElement && activeElement.tagName === 'TEXTAREA') {
+      (activeElement as HTMLElement).blur();
+    }
+    
+    // Force blur on all answer textareas for multiple choice questions
+    questions.forEach((question) => {
+      if (question.type === QuestionType.MULTIPLE_CHOICE) {
+        const answerTextareas = document.querySelectorAll(`textarea[name*="question-${question.tempId}-answer"]`);
+        answerTextareas.forEach((textarea) => {
+          (textarea as HTMLElement).blur();
+        });
+      }
+    });
+  };
+
   // Expose triggerSubmit function using useImperativeHandle
   useImperativeHandle(ref, () => ({
     triggerSubmit: () => {
+      // Sync all answers to global state before submission
+      syncAllAnswersToGlobalState();
+      
       // This directly calls the onConfirmQuestions prop if it exists,
       // which in CreatePage is handleQuestionsConfirmed (validation + step change)
       if (onConfirmQuestions) {
@@ -409,7 +468,7 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
                       />
                     </div>
                     <h2 className="text-xl flex  pt-1 font-semibold text-[--text-color] text-left">
-                      {openAccordionItems.includes(question.tempId) ? <></> : <> 
+                      {openAccordionItems.includes(question.tempId || '') ? <></> : <> 
                         <div className="flex text-lg items-center gap-2">
                           <span className="text-lg">Question {index + 1}</span>
                           {question.question ? <span>- {question.question.substring(0,50)}{question.question.length > 50 ? '...' : ''}</span> : ''}

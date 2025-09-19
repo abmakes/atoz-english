@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@clerk/nextjs": "^6.31.8",
     "@giphy/js-fetch-api": "^5.6.0",
     "@giphy/js-types": "^5.1.0",
     "@giphy/react-components": "^10.0.1",
@@ -84,8 +85,6 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
-    "@stagewise-plugins/react": "^0.4.8",
-    "@stagewise/toolbar-next": "^0.4.8",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",

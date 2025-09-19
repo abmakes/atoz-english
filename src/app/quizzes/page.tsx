@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import type { Quiz, Question } from "@/types"; // Assuming Quiz type is here
 import { QuestionType as AppQuestionType } from "@/types/question_types"; // Assuming app's QuestionType is here
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 async function getQuizzes(): Promise<Quiz[]> { // Return type is now Quiz[]
   try { // Add a try block
@@ -62,23 +63,25 @@ export default async function QuizzesPage() {
   console.log(quizzes)
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Your Quizzes</h1>
-        <Link href="/create" passHref>
-          <Button>Create New Quiz</Button>
-        </Link>
-      </div>
-      {quizzes.length > 0 ? (
-        <QuizList initialQuizzes={quizzes} />
-      ) : (
-        <div className="text-center py-10">
-          <p className="text-xl text-gray-500 mb-4">You haven&apos;t created any quizzes yet.</p>
+    <ProtectedRoute>
+      <div className="container mx-auto p-4">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Your Quizzes</h1>
           <Link href="/create" passHref>
-            <Button size="lg">Create Your First Quiz</Button>
+            <Button>Create New Quiz</Button>
           </Link>
         </div>
-      )}
-    </div>
+        {quizzes.length > 0 ? (
+          <QuizList initialQuizzes={quizzes} />
+        ) : (
+          <div className="text-center py-10">
+            <p className="text-xl text-gray-500 mb-4">You haven&apos;t created any quizzes yet.</p>
+            <Link href="/create" passHref>
+              <Button size="lg">Create Your First Quiz</Button>
+            </Link>
+          </div>
+        )}
+      </div>
+    </ProtectedRoute>
   );
 } 

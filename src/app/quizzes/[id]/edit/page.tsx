@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
-import QuizForm from '@/components/management_ui/forms/QuizForm'
+import { useParams, useRouter } from 'next/navigation'
+import QuizEditor from '@/components/management_ui/QuizEditor'
 import LoadingSpinner from '@/components/loading_spinner'
 import { QuestionType } from '@/types/question_types'
-import Image from 'next/image'
+import type { Question, QuizSettingsData } from '@/components/management_ui/QuizEditor'
 
 // Interface for the raw question structure from the API response
 interface ApiQuestionData {
@@ -17,32 +17,22 @@ interface ApiQuestionData {
   type: QuestionType;
 }
 
-// Interface for the structure of Quiz data expected by QuizForm's initialQuestions prop
-interface QuestionDataForForm {
-  id?: string; // id is part of QuestionDataForForm, used by QuizForm
-  question: string;
-  answers: string[];
-  correctAnswer: string;
-  imageUrl: string; // QuizForm expects a string, handles placeholder
-  type: QuestionType;
-  imageFile?: File | null; // Ensure imageFile is part of the Question definition used by QuizForm and EditPage
-}
-
-// Expanded interface for the Quiz data fetched and managed on this page
+// Interface for the structure of Quiz data expected by QuizEditor
 interface QuizDataForEditPage {
   id: string;
   title: string;
-  description?: string; // Added
+  description?: string;
   imageUrl: string;
-  quizType: QuestionType; // Added - overall quiz type
-  tags?: string[];      // Added
-  questions: QuestionDataForForm[];
-  // coverImageFile?: File | null; // To track if user picks a new file in this form context (QuizForm handles its own submission file)
+  quizType: QuestionType;
+  tags?: string[];
+  questions: Question[];
+  defaultSettings?: QuizSettingsData;
 }
 
 export default function EditQuizPage() {
-  const params = useParams(); // Get route params
-  const quizId = params.id as string; // Assuming id is always a string
+  const params = useParams();
+  const router = useRouter();
+  const quizId = params.id as string;
 
   const [quizData, setQuizData] = useState<QuizDataForEditPage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,28 +45,38 @@ export default function EditQuizPage() {
       setLoading(true);
       setError(null);
       try {
-        // USER NOTE: Ensure GET /api/quizzes/[id] returns description, quizType, tags
+        // USER NOTE: Ensure GET /api/quizzes/[id] returns description, quizType, tags, defaultSettings
         const response = await fetch(`/api/quizzes/${quizId}`);
         if (response.ok) {
           const apiResponse = await response.json(); // Expecting { data: { id, title, ... } }
           const rawQuizData = apiResponse.data;
 
-          // Transform API data to the structure needed by the page and QuizForm
+          // Transform API data to the structure needed by QuizEditor
           const transformedData: QuizDataForEditPage = {
             id: rawQuizData.id,
             title: rawQuizData.title,
-            description: rawQuizData.description, // Added
+            description: rawQuizData.description,
             imageUrl: rawQuizData.imageUrl || '/images/placeholder.webp',
-            quizType: rawQuizData.quizType || QuestionType.MULTIPLE_CHOICE, // Added, provide default
-            tags: rawQuizData.tags || [], // Added, provide default
-            questions: rawQuizData.questions.map((q: ApiQuestionData) => ({ // Use ApiQuestionData here
+            quizType: rawQuizData.quizType || QuestionType.MULTIPLE_CHOICE,
+            tags: rawQuizData.tags || [],
+            questions: rawQuizData.questions.map((q: ApiQuestionData) => ({
               id: q.id,
               question: q.question,
               answers: q.answers,
               correctAnswer: q.correctAnswer,
               imageUrl: q.imageUrl || '/images/placeholder.webp',
-              type: q.type, // Assuming question type from API is already QuestionType enum
+              type: q.type,
+              imageFile: null, // Initially null for editing
             })),
+            defaultSettings: rawQuizData.defaultSettings || {
+              theme: 'default',
+              powerUps: [],
+              gameMode: 'basic',
+              guessOptions: 'zero',
+              timeLimit: 'ten',
+              music: true,
+              soundEffects: true,
+            },
           };
           setQuizData(transformedData);
         } else {
@@ -95,29 +95,9 @@ export default function EditQuizPage() {
     fetchQuiz();
   }, [quizId]);
 
-  // Callback for QuizForm if it changes the quiz cover image
-  // This updates the local state for consistency if other UI elements on this page were to use it.
-  // QuizForm itself handles the image file for submission using its internal state.
-  const handleQuizCoverImageChange = (newImageUrl: string /*, newImageFile?: File | null */) => {
-    setQuizData(prevData => {
-      if (!prevData) return null;
-      return {
-        ...prevData,
-        imageUrl: newImageUrl,
-        // coverImageFile: newImageFile || null, // Not strictly needed here if QuizForm manages its own file for submission
-      };
-    });
-  };
-
-  // Define the handleQuestionsChange function
-  const handleQuestionsChange = (updatedQuestions: QuestionDataForForm[]) => {
-    setQuizData(prevData => {
-      if (!prevData) return null;
-      return {
-        ...prevData,
-        questions: updatedQuestions,
-      };
-    });
+  const handleSuccess = (updatedQuizId: string) => {
+    // Redirect to the quiz view or list after successful update
+    router.push(`/games/${updatedQuizId}/multiple-choice`);
   };
 
   if (loading) {
@@ -145,46 +125,34 @@ export default function EditQuizPage() {
     );
   }
 
-  return (
-    <div className="container max-w-display-xl w-full mx-auto gap-4 flex">
-      <div className='basis-1/4 h-full grandstander text-center text-[--text-color] bg-white rounded-lg p-4 flex flex-col gap-2 border border-[--border-color] shadow-[4px_4px_0px_0px_var(--border-dark)]'>
-        <h1 className='text-3xl font-bold mb-6 text-center grandstander'>
-          {quizData.title}
-        </h1>
-        <Image src={quizData.imageUrl} 
-          alt={quizData.title} 
-          width={100} 
-          height={100} 
-          className='rounded-lg w-full h-full object-cover'
-        />
-        <div className='flex flex-col gap-2 text-[--text-color]'>
-          <span>{quizData.description}</span>
-          <span>{quizData.quizType}</span>
-          <span>{quizData.tags?.join(', ')}</span> {/* Added join for tags array */}
-        </div>
-      </div>
+  // Transform the data to match QuizEditor's expected format
+  const initialData = {
+    quizSetup: {
+      title: quizData.title,
+      description: quizData.description || '',
+      coverImageUrl: quizData.imageUrl,
+      coverImageFile: null,
+      quizType: quizData.quizType,
+      tags: quizData.tags || [],
+    },
+    questions: quizData.questions,
+    settings: quizData.defaultSettings || {
+      theme: 'default',
+      powerUps: [],
+      gameMode: 'basic',
+      guessOptions: 'zero',
+      timeLimit: 'ten',
+      music: true,
+      soundEffects: true,
+    },
+  };
 
-      {/* MAIN - Quiz Form */}
-      <div className='basis-3/4 w-full h-full bg-white rounded-lg p-4 flex flex-col gap-2 border border-[--border-color] shadow-[4px_4px_0px_0px_var(--border-dark)]'>
-        <QuizForm
-        className='w-full h-full flex flex-col border-none p-0 gap-2'
-        quizId={quizData.id}
-        // Pass all required props from the fetched and transformed quizData
-        // quizTitle={quizData.title}
-        // quizDescription={quizData.description}
-        // quizCoverImageUrl={quizData.imageUrl}
-        quizOverallType={quizData.quizType}
-        // quizTags={quizData.tags}
-        initialQuestions={quizData.questions.map(q => ({
-          ...q,
-          // imageFile is not directly fetched. QuizForm handles its own new imageFile selections.
-          // If an image URL exists, imageFile should be null initially for editing.
-          imageFile: null 
-        }))}
-        onQuestionsChange={handleQuestionsChange} // Now correctly passed
-        onQuizCoverImageChange={handleQuizCoverImageChange}
-        />
-      </div>
-    </div>
+  return (
+    <QuizEditor 
+      mode="edit"
+      quizId={quizData.id}
+      initialData={initialData}
+      onSuccess={handleSuccess}
+    />
   );
 }

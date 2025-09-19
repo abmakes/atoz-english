@@ -5,6 +5,7 @@ import React from 'react';
 import Image from 'next/image'; // Import next/image
 import { Button } from '@/components/ui/button'; // Import Button
 import Link from 'next/link'; // Import Link
+import { SignInButton, SignUpButton, UserButton, SignedIn, SignedOut } from '@clerk/nextjs';
 
 export default function ConditionalLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -52,18 +53,37 @@ export default function ConditionalLayoutWrapper({ children }: { children: React
           </Link>
 
           {/* Middle: Links */}
-
-
-          {/* Right: Buttons */}
-          <div className="flex text-base h-full gap-4 items-center">
-            <div className="flex gap-6 h-full items-center grandstander">
-              <Link href="/games" className="text-[--text-color] transition-colors hover:font-semibold">Games</Link>
+          <div className="flex gap-6 h-full items-center grandstander">
+            <Link href="/games" className="text-[--text-color] transition-colors hover:font-semibold">Games</Link>
+            <SignedIn>
               <Link href="/create" className="text-[--text-color] transition-colors hover:font-semibold">Create</Link>
-              {/* <Link href="/task" className="text-[--text-color] transition-colors hover:font-semibold">Tasks</Link> */}
               <Link href="/quizzes" className="text-violet-500 transition-colors hover:font-semibold">Profile</Link>
+            </SignedIn>
+
+            {/* Right: Authentication Buttons */}
+            <div className="flex text-base h-full gap-4 items-center">
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <Button variant="outline" className="grandstander text-base h-8 px-6 border-2 border-gray-300 shadow-[2px_2px_0px_0px_#d1d5db]">
+                    Sign In
+                  </Button>
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <Button className="grandstander text-base h-8 px-6 bg-blue-500 hover:bg-blue-600 text-white border-2 border-blue-600 shadow-[2px_2px_0px_0px_#1e40af]">
+                    Sign Up
+                  </Button>
+                </SignUpButton>
+              </SignedOut>
+              <SignedIn>
+                <UserButton 
+                  appearance={{
+                    elements: {
+                      avatarBox: "w-8 h-8"
+                    }
+                  }}
+                />
+              </SignedIn>
             </div>
-            <Button variant="outline" className="grandstander text-base h-8 px-6 border-2 border-gray-300 shadow-[2px_2px_0px_0px_#d1d5db]">Login</Button>
-            {/* <Button variant="solidAccent" className="grandstander pt-2">Sign up</Button> {/* Assuming default variant is primary */}  
           </div>
         </nav>
       )}
@@ -71,35 +91,34 @@ export default function ConditionalLayoutWrapper({ children }: { children: React
       {/* Conditionally Render Background Waves - based on showSpecialBackground */} 
       {showSpecialBackground && (
         <>
-          {/* Top Wave Image Container - Sits above background (z-10) */}
-          <div className={`absolute top-0 left-0 w-full ${topWaveHeight} z-10`}>
+          {/* Top Wave */}
+          <div className={`absolute top-0 left-0 w-full ${topWaveHeight} z-0`}>
             <Image
-              src="/top-wave.png" // Path relative to /public
-              alt="" // Decorative image
-              fill={true} // Fill the container div
-              style={{ objectFit: 'fill' }} // Stretch image to fill exactly
-              priority // Optimize loading as it's likely above the fold
-              aria-hidden="true"
+              src="/top-wave.png"
+              alt="Top Wave Background"
+              fill
+              className="object-cover object-bottom"
+              priority
             />
           </div>
-          
-          {/* Middle Wave Image Container - Sits above background (z-10) */}
-          <div className={`absolute top-2/3 -translate-y-1/2 left-0 w-full ${middleWaveHeight} z-10`}>
+
+          {/* Middle Wave */}
+          <div className={`absolute top-0 left-0 w-full ${middleWaveHeight} z-0`}>
             <Image
-              src="/middle-wave.png" // Assume this image exists in /public
-              alt="" // Decorative image
-              fill={true}
-              style={{ objectFit: 'fill', opacity: 1}}
-              aria-hidden="true"
+              src="/middle-wave.png"
+              alt="Middle Wave Background"
+              fill
+              className="object-cover object-bottom"
               priority
             />
           </div>
         </>
       )}
-      {/* Main Content: Needs higher z-index (z-20) to be above waves */}
-      <div className={`relative z-20 ${showNavbar ? 'pt-2' : ''}`}> 
+
+      {/* Main Content */}
+      <main className={`relative z-10 ${showNavbar ? `pt-${navbarHeight}` : ''}`}>
         {children}
-      </div>
+      </main>
     </div>
   );
 } 

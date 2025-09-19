@@ -165,7 +165,7 @@ export class PixiEngine {
       // --- Initialize PixiJS Assets EARLY (Requires PixiApplication) ---
       console.log('Initializing PixiJS Assets...');
       let bundleLoadPromise: Promise<unknown> = Promise.resolve(); 
-      if (this.config.assets) {
+      if (this.config && this.config.assets) {
          const manifest = { bundles: this.config.assets.bundles };
          await Assets.init({
             basePath: this.config.assets.basePath,
@@ -219,9 +219,9 @@ export class PixiEngine {
       );
       // Register Default Sounds 
       const defaultSounds: AudioConfig[] = [
-        { id: 'correct-sound', filename: 'correct-sound.mp3', volume: 0.8, type: 'sfx' },
-        { id: 'incorrect-sound', filename: 'incorrect-sound.mp3', volume: 0.8, type: 'sfx' },
-        { id: 'background-music', filename: 'background-music.mp3', loop: true, volume: 0.7, type: 'music' },
+        { id: 'correct-sound', filename: 'correct-sound.mp3', volume: 0.2, type: 'sfx' },
+        { id: 'incorrect-sound', filename: 'incorrect-sound.mp3', volume: 0.2, type: 'sfx' },
+        { id: 'background-music', filename: 'background-music.mp3', loop: true, volume: 0.1, type: 'music' },
         { id: 'victory-sound', filename: 'crowd-cheering.mp3', volume: 0.7, type: 'sfx' },
       ];
       defaultSounds.forEach(soundConfig => {

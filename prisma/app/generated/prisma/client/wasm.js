@@ -144,6 +144,25 @@ exports.Prisma.QuestionScalarFieldEnum = {
   quizId: 'quizId'
 };
 
+exports.Prisma.StoredImageScalarFieldEnum = {
+  id: 'id',
+  filename: 'filename',
+  originalUrl: 'originalUrl',
+  blobUrl: 'blobUrl',
+  mimeType: 'mimeType',
+  fileSize: 'fileSize',
+  width: 'width',
+  height: 'height',
+  searchTerm: 'searchTerm',
+  tags: 'tags',
+  pixabayId: 'pixabayId',
+  pixabayUser: 'pixabayUser',
+  usageCount: 'usageCount',
+  lastUsedAt: 'lastUsedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.TagScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -190,6 +209,7 @@ exports.QuestionType = exports.$Enums.QuestionType = {
 exports.Prisma.ModelName = {
   Quiz: 'Quiz',
   Question: 'Question',
+  StoredImage: 'StoredImage',
   Tag: 'Tag'
 };
 

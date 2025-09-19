@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, ReactNode, RefObject } from 'react';
+import React, { useState, useEffect, useRef, useCallback, ReactNode, RefObject } from 'react';
 import { X, CheckCircle, AlertCircle, XCircle, Info } from 'lucide-react';
 
 type ToastVariant = 'info' | 'success' | 'warning' | 'error';
@@ -55,14 +55,14 @@ export const CustomToast: React.FC<CustomToastProps> = ({
         return () => clearTimeout(timer);
       }
     }
-  }, [isVisible, duration, position, triggerRef]);
+  }, [isVisible, duration, position, triggerRef, handleClose]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setShow(false);
     setTimeout(() => {
       if (onClose) onClose();
     }, 300); // Allow time for fade-out animation
-  };
+  }, [onClose]);
 
   const getVariantStyles = () => {
     switch (variant) {

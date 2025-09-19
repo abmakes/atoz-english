@@ -130,14 +130,26 @@ export class MultipleChoiceDataManager {
              // Use the static AssetLoader passed in constructor if needed, or PIXI.Assets directly
              // Assuming PIXI.Assets is sufficient here
              console.log("DataManager: Starting PIXI.Assets.load for:", uniqueImageUrls);
-             await PIXI.Assets.load(uniqueImageUrls);
-             console.log("DataManager: Question media preloaded successfully.");
+             
+             // Load images individually to handle failures gracefully
+             const loadPromises = uniqueImageUrls.map(async (url) => {
+                 try {
+                     await PIXI.Assets.load(url);
+                     console.log(`DataManager: Successfully loaded image: ${url}`);
+                 } catch (error) {
+                     console.warn(`DataManager: Failed to load image ${url}:`, error);
+                     // Don't throw - continue with other images
+                 }
+             });
+             
+             await Promise.allSettled(loadPromises);
+             console.log("DataManager: Question media preloading completed (some may have failed).");
 
          } catch (error) {
              console.error("DataManager: Error during PIXI.Assets.load for question media:", error);
              // Attempt to unload failed assets
              uniqueImageUrls.forEach(url => PIXI.Assets.unload(url).catch(unloadErr => console.warn(`DataManager: Failed to unload ${url} after load error`, unloadErr)));
-             // Decide if this error should halt initialization - currently it doesn't throw
+             // Don't throw - allow game to continue even if some images fail to load
          }
     }
     

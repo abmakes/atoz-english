@@ -69,3 +69,5 @@ src/app/task/
 # Added by Claude Task Master
 tasks.json
 tasks/ 
+# clerk configuration (can include secrets)
+/.clerk/

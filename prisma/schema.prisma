@@ -16,7 +16,7 @@ model Quiz {
   id        String     @id @default(cuid())
   title     String
   description String?
-  imageUrl  String?
+  imageUrl  String?    // For Giphy URLs and direct uploads
   quizType  QuestionType @default(MULTIPLE_CHOICE)
   tags      String[]
   statistics Json?     // Added: To store quiz statistics like playCount, favoritesCount
@@ -30,7 +30,7 @@ model Quiz {
 model Question {
   id            String   @id @default(cuid())
   question      String
-  imageUrl      String?  
+  imageUrl      String?  // For Giphy URLs, direct uploads, and stored Pixabay images
   answers       String[]
   correctAnswer String
   type          QuestionType  @default(MULTIPLE_CHOICE)
@@ -59,6 +59,35 @@ enum Level {
   C1
   C2  
   // Add more types as needed
+}
+
+model StoredImage {
+  id            String   @id @default(cuid())
+  filename      String   // Blob filename (e.g., "pixabay_123456_640.jpg")
+  originalUrl   String   // Original Pixabay URL for reference
+  blobUrl       String   // Vercel Blob URL for serving the image
+  mimeType      String   // image/jpeg, image/png, etc.
+  fileSize      Int      // File size in bytes
+  width         Int      // Image width
+  height        Int      // Image height
+  
+  // Metadata for search and organization
+  searchTerm    String?  // Original search term used to find this image
+  tags          String[] // Tags associated with this image
+  pixabayId     Int      @unique // Original Pixabay image ID (unique to prevent duplicates)
+  pixabayUser   String?  // Original Pixabay user who uploaded
+  
+  // Usage tracking
+  usageCount    Int      @default(0) // How many times this image has been used
+  lastUsedAt    DateTime?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([searchTerm])
+  @@index([tags])
+  @@index([usageCount])
+  @@index([pixabayId])
 }
 
 model Tag {

@@ -237,7 +237,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
 
       // --- Define Audio Configuration ---
       const audioConfig: AudioConfiguration = {
-          defaultVolume: 0.7,
+          defaultVolume: 0.5,
           startMuted: false,
           sounds: [
               {
@@ -259,7 +259,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
                   id: 'background-music',
                   filename: '/audio/default/background-music.mp3',
                   loop: true,
-                  volume: 0.7,
+                  volume: 0.1,
                   type: 'music'
               }
           ]

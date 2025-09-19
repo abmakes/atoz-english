@@ -44,6 +44,18 @@ const nextConfig = {
         hostname: 'media4.giphy.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'pixabay.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.pixabay.com',
+        port: '',
+        pathname: '/**',
       }
     ],
     minimumCacheTTL: 31536000, // 1 year

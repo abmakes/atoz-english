@@ -213,17 +213,38 @@ export async function PUT(
 
         parsedData.title = formData.get('title') as string;
         parsedData.description = formData.get('description') as string || undefined;
-        parsedData.quizImageFile = formData.get('quizImage') as File || undefined;
+        parsedData.quizImageFile = formData.get('quizImageFile') as File || undefined;
         parsedData.quizImageUrl = formData.get('quizImageUrl') as string || undefined;
         
         const quizTypeFromForm = formData.get('quizType') as string;
         parsedData.quizType = (quizTypeFromForm as QuestionType) || QuestionType.MULTIPLE_CHOICE;
 
-        const tagsFromForm = formData.getAll('tags[]');
-        if (tagsFromForm && tagsFromForm.length > 0 && (tagsFromForm[0] !== 'undefined')) {
-            parsedData.tags = tagsFromForm.map(tag => String(tag));
+        // Correctly parse the tags JSON string
+        const tagsString = formData.get('tags') as string;
+        if (tagsString) {
+            try {
+                parsedData.tags = JSON.parse(tagsString);
+            } catch (e) {
+                console.warn('Failed to parse tags JSON string from FormData', e);
+                parsedData.tags = [];
+            }
         } else {
-            parsedData.tags = undefined;
+            parsedData.tags = [];
+        }
+
+        // Correctly parse the defaultSettings JSON string
+        const defaultSettingsString = formData.get('defaultSettings') as string;
+        if (defaultSettingsString) {
+            try {
+                const parsedSettings = JSON.parse(defaultSettingsString);
+                console.log("API Route: Parsed defaultSettings:", parsedSettings); // For debugging
+                parsedData.defaultSettings = parsedSettings;
+            } catch (e) {
+                console.warn('Failed to parse defaultSettings JSON string from FormData', e);
+                parsedData.defaultSettings = undefined;
+            }
+        } else {
+            parsedData.defaultSettings = undefined;
         }
 
         let i = 0;
@@ -235,7 +256,7 @@ export async function PUT(
             questionData.id = formData.get(`questions[${i}][id]`) as string || undefined;
             questionData.question = formData.get(`questions[${i}][question]`) as string;
             questionData.correctAnswer = formData.get(`questions[${i}][correctAnswer]`) as string;
-            questionData.imageFile = formData.get(`questions[${i}][image]`) as File || undefined;
+            questionData.imageFile = formData.get(`questions[${i}][imageFile]`) as File || undefined;
             questionData.imageUrl = formData.get(`questions[${i}][imageUrl]`) as string || undefined;
             
             const typeFromForm = formData.get(`questions[${i}][type]`) as string;
@@ -243,16 +264,18 @@ export async function PUT(
                 ? (typeFromForm as QuestionType) 
                 : parsedData.quizType;
 
-            const answers: string[] = [];
-            let j = 0;
-            while (formData.has(`questions[${i}][answers][${j}]`)) {
-                const answer = formData.get(`questions[${i}][answers][${j}]`) as string;
-                if (answer) {
-                    answers.push(answer);
+            // Correctly parse the answers JSON string
+            const answersString = formData.get(`questions[${i}][answers]`) as string;
+            if (answersString) {
+                try {
+                    questionData.answers = JSON.parse(answersString);
+                } catch (e) {
+                    console.warn(`Failed to parse answers for question ${i}`, e);
+                    questionData.answers = [];
                 }
-                j++;
+            } else {
+                questionData.answers = [];
             }
-            questionData.answers = answers;
             
             parsedData.questions.push(questionData as ParsedQuestionData);
             i++;

@@ -123,7 +123,7 @@ export default function HomePage() {
               { quote: "Finally, a platform that makes complex grammar easy to understand.", author: "Ai Ling", avatar: "/placeholder.webp" },
             ].map((testimonial, index) => (
               <div key={index} className="bg-[--panel-bg] p-6 rounded-lg border-2 border-[--text-color] shadow-[4px_4px_0px_0px_var(--text-color)] flex flex-col">
-                <p className="text-[--text-light] text-lg italic mb-4 flex-grow">\"{testimonial.quote}\"...</p>
+                <p className="text-[--text-light] text-lg italic mb-4 flex-grow">&ldquo;{testimonial.quote}&rdquo;...</p>
                 <div className="flex items-center">
                   <Image src={testimonial.avatar} alt={testimonial.author} width={40} height={40} className="rounded-full mr-3 border-2 border-[--primary-accent]" />
                   <span className="font-bold text-[--text-color]">{testimonial.author}</span>

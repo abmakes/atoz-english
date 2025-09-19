@@ -60,7 +60,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   const [activeTeamId, setActiveTeamId] = useState<string | number | null>(
     config.teams.length > 0 ? config.teams[0].id : null
   );
-  const [volume, setVolume] = useState(80);
+  const [volume, setVolume] = useState(30);
   const [musicMuted, setMusicMuted] = useState(false);
   const [sfxMuted, setSfxMuted] = useState(false);
 
@@ -135,6 +135,12 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   useEffect(() => {
     // Check if we should initialize. If there's already an engine, do nothing.
     if (!config || !gameFactory || !pixiMountPointRef.current || engineInstanceRef.current) {
+      return;
+    }
+
+    // Validate config structure before initialization
+    if (!config.gameMode || !config.teams || !Array.isArray(config.teams) || config.teams.length === 0) {
+      console.error("GameplayView: Invalid config structure - missing required fields");
       return;
     }
 
@@ -249,7 +255,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
     const bus = managersRef.current?.eventBus;
     if (bus) {
        // Get initial values on mount AFTER bus is ready
-        const initialVol = managersRef.current?.audioManager?.getGlobalVolume() ?? 0.8;
+        const initialVol = managersRef.current?.audioManager?.getGlobalVolume() ?? 0.3;
         const initialMusicMuted = managersRef.current?.audioManager?.getIsMusicMuted() ?? false;
         const initialSfxMuted = managersRef.current?.audioManager?.getIsSfxMuted() ?? false;
         const initialVolumePercent = Math.round(initialVol * 100);

@@ -280,7 +280,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
             
             // Ensure volume exists if creating settings for the first time
             if (storedSettings.volume === undefined) {
-                storedSettings.volume = 1.0; // Default volume
+                storedSettings.volume = 0.3; // Default volume
             }
 
             localStorage.setItem(STORAGE_KEY, JSON.stringify(storedSettings));
@@ -371,19 +371,21 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
 
       <div className={`max-w-4xl mx-auto bg-[var(--panel-bg)] filter-blur-sm rounded-[32px] p-8 border-2 border-[var(--border-dark)] shadow-solid z-20`}>
 
+        {/* Quiz Title */}
+        {selectedQuiz && (
+            <h2 className={`grandstander flex justify-center text-2xl font-semibold text-[var(--text-color)] mb-4`}>
+              {selectedQuiz.title}
+            </h2>
+        )}
+
+        {/* Play Button */}
         <div className={`text-center mb-4 flex flex-col justify-center items-center`}>
           <button onClick={handlePlayGame} className={`grandstander buttonXLarge w-72`}>
             Play
           </button>
         </div>
 
-        {selectedQuiz && (
-            <h2 className={`grandstander text-2xl font-semibold text-[var(--text-color)] mb-2`}>
-                Configure: {selectedQuiz.title}
-            </h2>
-        )}
         {/* Teams Section */}
-
         <div className={"mb-4 flex flex-col justify-center items-center"}>
           {/* <h2 className={`grandstander text-2xl font-semibold text-[var(--text-color)] mb-2 pt-2`}>Teams:</h2> */}
           <ul className={`flex flex-row flex-wrap gap-2 justify-center items-center mb-3 text-3xl`}>

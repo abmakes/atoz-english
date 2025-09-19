@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea'; // Assuming you have a Text
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge";
 import Image from 'next/image';
-import type { QuizSetupData } from '@/app/create/page'; // Import the interface
+import type { QuizSetupData } from '@/components/management_ui/QuizEditor'; // Import the interface
 import { TagDrawer } from "@/components/management_ui/TagDrawer"; // Adjusted path
 import { ALL_TAG_CATEGORIES } from "@/lib/tags";
 import { useCustomToast } from '@/components/ui/CustomToast'

@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
-import type { QuizSetupData, Question, QuizSettingsData } from '@/app/create/page';
+import type { QuizSetupData, Question, QuizSettingsData } from '@/components/management_ui/QuizEditor';
 import { useCustomToast } from '@/components/ui/CustomToast';
 import { Badge } from '@/components/ui/badge';
 
