@@ -244,8 +244,10 @@ export async function POST(request: Request) {
         imageUrl: finalQuizImageUrl,
         quizType: validatedData.quizType,
         tags: validatedData.tags || [],
-        statistics: validatedData.statistics || Prisma.JsonNull,
-        defaultSettings: validatedData.defaultSettings || Prisma.JsonNull,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        statistics: validatedData.statistics ? validatedData.statistics as any : Prisma.JsonNull,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        defaultSettings: validatedData.defaultSettings ? validatedData.defaultSettings as any : Prisma.JsonNull,
         authorId: validatedData.authorId, // authorId has a default in Zod schema
         questions: {
           create: questionsToCreate,

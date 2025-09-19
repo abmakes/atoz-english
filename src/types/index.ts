@@ -1,5 +1,4 @@
 import { QuestionType } from "./question_types";
-import { Prisma } from "@prisma/client";
 
 export interface Question {
   id: string;
@@ -36,8 +35,8 @@ export interface Quiz {
   imageUrl?: string | null;
   quizType: QuestionType;
   tags: string[];
-  statistics?: Prisma.JsonValue | null;
-  defaultSettings?: Prisma.JsonValue | null;
+  statistics?: Record<string, unknown> | null;
+  defaultSettings?: Record<string, unknown> | null;
   authorId: string;
   questions: Question[];
   createdAt?: Date;

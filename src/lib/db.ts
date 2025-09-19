@@ -4,7 +4,7 @@
 // Import only what's needed
 import { prisma, withDatabaseRetry } from './prisma';
 import { QuestionType } from '@/types/question_types';
-import { Prisma } from '@prisma/client';
+// Removed unused Prisma import
 
 // Helper function to split array into chunks (for batched operations)
 function chunkArray<T>(array: T[], size: number): T[][] {
@@ -119,8 +119,10 @@ export async function updateQuiz(id: string, data: {
         quizType: data.quizType,
         tags: data.tags,
         imageUrl: data.imageUrl,
-        statistics: data.statistics ? data.statistics as Prisma.InputJsonValue : undefined,
-        defaultSettings: data.defaultSettings ? data.defaultSettings as Prisma.InputJsonValue : undefined,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        statistics: data.statistics ? data.statistics as any : undefined,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        defaultSettings: data.defaultSettings ? data.defaultSettings as any : undefined,
         authorId: data.authorId || undefined,
       },
     });
