@@ -36,6 +36,13 @@ export const CustomToast: React.FC<CustomToastProps> = ({
   const [show, setShow] = useState(false);
   const [triggerPosition, setTriggerPosition] = useState({ top: 0, left: 0 });
 
+  const handleClose = useCallback(() => {
+    setShow(false);
+    setTimeout(() => {
+      if (onClose) onClose();
+    }, 300); // Allow time for fade-out animation
+  }, [onClose]);
+
   useEffect(() => {
     if (isVisible) {
       setShow(true);
@@ -56,13 +63,6 @@ export const CustomToast: React.FC<CustomToastProps> = ({
       }
     }
   }, [isVisible, duration, position, triggerRef, handleClose]);
-
-  const handleClose = useCallback(() => {
-    setShow(false);
-    setTimeout(() => {
-      if (onClose) onClose();
-    }, 300); // Allow time for fade-out animation
-  }, [onClose]);
 
   const getVariantStyles = () => {
     switch (variant) {

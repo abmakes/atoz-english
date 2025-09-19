@@ -5,18 +5,11 @@ import { prisma } from '@/lib/prisma'
 import { put } from '@vercel/blob'
 import { updateQuiz } from '@/lib/db'
 import { QuestionType } from '@/types/question_types'
-import { Question, Quiz } from "@prisma/client"
+import { Question, Quiz } from "../../../../../prisma/app/generated/prisma/client"
 
-// Define an interface for the Quiz object that includes the new fields
-// This is for type assertion until Prisma schema is updated and client regenerated
+// Define an interface for the Quiz object that includes the questions
 interface QuizWithDetails extends Quiz {
-  description?: string | null;
-  quizType?: QuestionType | null; // Assuming QuestionType or string based on your Prisma schema decision
-  tags?: string[] | null;
-  statistics?: Record<string, unknown> | null;
-  defaultSettings?: Record<string, unknown> | null;
-  authorId?: string | null;
-  questions: Question[]; // Assuming Prisma's Question type has all selected fields, including `type` as QuestionType
+  questions: Question[];
 }
 
 // Define Zod Schema for a Question (used in POST/PUT)
