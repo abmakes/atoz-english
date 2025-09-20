@@ -7,7 +7,7 @@ import { EventBus } from '@/lib/pixi-engine/core/EventBus';
 import { PixiSpecificConfig } from '@/lib/themes';
 import { QuestionData } from '@/types';
 import { TimerEventPayload, TIMER_EVENTS, ENGINE_EVENTS, GAME_STATE_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
-import { MultipleChoiceLayoutManager } from './MultipleChoiceLayoutManager';
+import { MultipleChoiceLayoutManager, LayoutProfile } from './MultipleChoiceLayoutManager';
 import { PixiTimer } from '../ui/PixiTimer';
 
 // Define the structure for answer options data used by the UI manager
@@ -144,7 +144,6 @@ export class MultipleChoiceUIManager {
 
         // Recalculate container bounds here as well, to ensure consistency
         const sidePad = params.sidePadding;
-        const bottomPad = params.bottomPadding;
         const contentWidth = screenWidth - 2 * sidePad;
         // Calculate actual button height first, then use that for container sizing
         const actualButtonHeight = Math.round(screenHeight * params.answerButtonHeightMultiplier);
@@ -324,8 +323,6 @@ export class MultipleChoiceUIManager {
             return;
         }
 
-        const { width: screenWidth, height: screenHeight } = this.pixiApp.getScreenSize();
-        
         if (!buttonContainerBounds) {
             console.warn("UIManager.drawBackgroundPanel: No button container bounds provided.");
             return;
@@ -469,7 +466,6 @@ export class MultipleChoiceUIManager {
         // 2. Calculate Concrete Bounds for Major Regions
         const topPad = params.topPadding;
         const sidePad = params.sidePadding;
-        const bottomPad = params.bottomPadding;
         const contentWidth = screenWidth - 2 * sidePad;
 
         // -- Button Container Bounds --
@@ -593,7 +589,7 @@ export class MultipleChoiceUIManager {
     private _addQuestionToButtonContainer(
         container: PIXI.Container, 
         bounds: PIXI.Rectangle, 
-        params: any
+        params: LayoutProfile
     ): void {
         // Get the current question text from the scene
         const questionText = this.scene.getQuestionText();

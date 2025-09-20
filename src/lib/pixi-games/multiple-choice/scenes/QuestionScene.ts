@@ -145,7 +145,7 @@ export class QuestionScene extends PIXI.Container {
             this._positionElements(textBounds, mediaBounds, params, screenWidth);
         } else {
             // When question is in button container, just position media
-            this._positionMediaOnly(mediaBounds, params, screenWidth);
+            this._positionMediaOnly(mediaBounds);
         }
         console.log("QuestionScene: Finished updateLayout");
     }
@@ -225,9 +225,7 @@ export class QuestionScene extends PIXI.Container {
     }
 
     private _positionMediaOnly(
-        mediaBounds: PIXI.Rectangle | null,
-        params: LayoutProfile,
-        screenWidth: number
+        mediaBounds: PIXI.Rectangle | null
     ): void {
         console.log("QuestionScene: Positioning media only (question in button container)");
         

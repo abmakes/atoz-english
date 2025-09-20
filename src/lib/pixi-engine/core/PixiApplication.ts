@@ -516,7 +516,7 @@ export class PixiApplication {
     this.targetElement = null;
     this.parent = null;
     this.resizeObserver = null;
-    // @ts-ignore Allow null assignment after destroy
+    // @ts-expect-error Allow null assignment after destroy
     this.app = null;
   }
 

@@ -1,7 +1,8 @@
 import { GameStateManager, GamePhase } from '@/lib/pixi-engine/core/GameStateManager';
 import { EventBus } from '@/lib/pixi-engine/core/EventBus';
 import { GAME_STATE_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
-import { GameConfig, TeamConfig, DEFAULT_GAME_CONFIG, DEFAULT_SCORE_MODE_CONFIG, DEFAULT_RULE_CONFIG, DEFAULT_CONTROLS_CONFIG, DEFAULT_ASSET_CONFIG, DEFAULT_POWERUP_CONFIG } from '@/lib/pixi-engine/config/GameConfig';
+import { GameConfig, TeamConfig, DEFAULT_GAME_CONFIG, DEFAULT_SCORE_MODE_CONFIG, DEFAULT_RULE_CONFIG, DEFAULT_CONTROLS_CONFIG, DEFAULT_ASSET_CONFIG } from '@/lib/pixi-engine/config/GameConfig';
+import { DEFAULT_POWERUP_CONFIG } from '@/lib/pixi-engine/config/PowerupConfig';
 
 // Mocks
 jest.mock('@/lib/pixi-engine/core/EventBus');
