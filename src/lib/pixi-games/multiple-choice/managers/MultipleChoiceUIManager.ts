@@ -27,6 +27,9 @@ export class MultipleChoiceUIManager {
     private currentQuestionId: string | null = null;
     private currentGeneratedOptions: AnswerOptionUIData[] = [];
     private backgroundPanelDrawRafId: number | null = null;
+    
+    // Constants for button styling
+    private readonly shadowOffsetY = 6;
 
     constructor(
         private readonly pixiApp: PixiApplication,
@@ -143,8 +146,17 @@ export class MultipleChoiceUIManager {
         const sidePad = params.sidePadding;
         const bottomPad = params.bottomPadding;
         const contentWidth = screenWidth - 2 * sidePad;
-        const buttonContainerHeight = params.answerButtonHeightMultiplier * screenHeight;
-        const buttonContainerY = screenHeight - bottomPad - buttonContainerHeight;
+        // Calculate actual button height first, then use that for container sizing
+        const actualButtonHeight = Math.round(screenHeight * params.answerButtonHeightMultiplier);
+        const buttonGap = params.answerButtonGap;
+        // Using this.this.shadowOffsetY instead // Shadow offset from button creation
+        
+        // For 2x3 grid (question + 2 rows of buttons), calculate total height needed
+        const totalButtonHeight = (actualButtonHeight * 3) + (buttonGap * 2 + this.shadowOffsetY * 2);
+        const isMobile = screenHeight < 700; // More appropriate threshold for mobile devices
+        const panelPadding = isMobile ? 10 : 20; // Reduce padding on mobile
+        const buttonContainerHeight = totalButtonHeight + (panelPadding * 2); // Padding above and below
+        const buttonContainerY = screenHeight - buttonContainerHeight; // Touch bottom of screen
         const buttonContainerBounds = new PIXI.Rectangle(sidePad, buttonContainerY, contentWidth, buttonContainerHeight);
         // ---
 
@@ -157,12 +169,13 @@ export class MultipleChoiceUIManager {
         const shadowColor = pixiTheme.primaryAccentHover;
         const borderWidth = 3;
         const shadowOffsetX = 4;
-        const shadowOffsetY = 6;
+        // Using this.this.shadowOffsetY instead
         const borderRadius = 16;
         const columns = params.answerColumns;
         const gap = params.answerButtonGap;
         const buttonWidth = screenWidth * 0.4 - 20;
-        const buttonHeight = 90;
+        // Use responsive button height from layout parameters instead of hardcoded 90px
+        const buttonHeight = Math.round(screenHeight * params.answerButtonHeightMultiplier);
         const buttonFontSize = params.answerButtonFontSize;
 
         // --- 50/50 Power-up Logic ---
@@ -205,6 +218,15 @@ export class MultipleChoiceUIManager {
         this.scene.clearAnswerOptions();
         this.answerButtons = [];
         const optionsContainer = this.scene.getAnswerOptionContainer();
+        
+        // Add question text to the top row of the button container
+        this._addQuestionToButtonContainer(optionsContainer, buttonContainerBounds, params);
+        
+        // Hide the original question text since it's now in the button container
+        const originalQuestionText = this.scene.getQuestionText();
+        if (originalQuestionText) {
+            originalQuestionText.visible = false;
+        }
 
         // --- Calculate starting X position to center the grid ---
         const numColumns = Math.min(columns, optionsToDisplay.length);
@@ -224,7 +246,7 @@ export class MultipleChoiceUIManager {
         optionsToDisplay.forEach((option, i) => {
             const buttonView = new PIXI.Graphics();
             // Draw using themeConfig values
-            buttonView.roundRect(shadowOffsetX, shadowOffsetY, buttonWidth, buttonHeight, borderRadius).fill(shadowColor);
+            buttonView.roundRect(shadowOffsetX, this.shadowOffsetY, buttonWidth, buttonHeight, borderRadius).fill(shadowColor);
             buttonView.roundRect(0, 0, buttonWidth, buttonHeight, borderRadius).fill(borderColor);
             const innerRadius = Math.max(0, borderRadius - borderWidth);
             buttonView.roundRect(borderWidth, borderWidth, buttonWidth - (2 * borderWidth), buttonHeight - (2 * borderWidth), innerRadius).fill(buttonFill);
@@ -249,11 +271,13 @@ export class MultipleChoiceUIManager {
             const button = new Button(buttonView);
             button.view.interactive = true;
 
-            // --- Position Button WITHIN the Container (using reverted dimensions) ---
+            // --- Position Button WITHIN the Container (question takes top row, buttons start from row 1) ---
             const col = i % columns;
-            const row = Math.floor(i / columns);
+            const row = Math.floor(i / columns) + 1; // +1 because question takes row 0
+            const panelPadding = 20; // Same as used in container calculation
+            const buttonPadding = isMobile ? 10 : panelPadding; // Reduce padding on mobile
             button.view.x = startX + col * (buttonWidth + gap + shadowOffsetX);
-            button.view.y = row * (buttonHeight + gap + shadowOffsetY);
+            button.view.y = buttonPadding + row * (buttonHeight + gap + this.shadowOffsetY);
             // ---
 
             button.onPress.connect(() => {
@@ -290,7 +314,7 @@ export class MultipleChoiceUIManager {
         mediaBounds: PIXI.Rectangle | null, // Not directly used in this simplified version for bg panel geometry
         buttonContainerBounds: PIXI.Rectangle | null // Config for button area
     ): void {
-        console.log("UIManager: Drawing simplified background panel with config bounds:", { textBoundsConfigFromLayout, buttonContainerBounds });
+        console.log("UIManager: Drawing full-height background panel with config bounds:", { textBoundsConfigFromLayout, buttonContainerBounds });
         const padding = 20;
         const borderRadius = 20;
         const bgColor = this.themeConfig.panelBg;
@@ -300,59 +324,20 @@ export class MultipleChoiceUIManager {
             return;
         }
 
-        const screenWidth = this.pixiApp.getScreenSize().width;
-        let bgX = 0, bgY = 0, bgWidth = 0, bgHeight = 0;
-
-        const optionsContainer = this.scene.getAnswerOptionContainer();
-        const actualButtonGridWidth = (optionsContainer && optionsContainer.width > 0) ? optionsContainer.width : 0;
-
-        const actualTextBounds = this.scene.getQuestionTextBounds();
-        const actualTextWidth = (actualTextBounds && actualTextBounds.width > 0) ? actualTextBounds.width : 0;
-
-        // 1. Calculate bgWidth
-        if (actualButtonGridWidth > 0) {
-            bgWidth = actualButtonGridWidth + (2 * padding);
-        } else if (actualTextWidth > 0) {
-            bgWidth = actualTextWidth + (2 * padding);
-        } else {
-            // No content to determine width, so clear/don't draw panel
-            this.scene.drawBackgroundPanel(0, 0, 0, 0, 0, 0);
-            console.warn("UIManager.drawBackgroundPanel: No content (text or buttons) to determine panel width.");
-            return;
-        }
-
-        // 2. Calculate bgX (Center panel horizontally on screen)
-        bgX = (screenWidth - bgWidth) / 2;
-
-        // 3. Calculate bgY and bgHeight (to vertically encompass text and buttons)
-        let overallMinY = Infinity, overallMaxY = -Infinity;
-        let hasVerticalContent = false;
-
-        if (actualTextBounds && actualTextBounds.width > 0 && actualTextBounds.height > 0) {
-            overallMinY = Math.min(overallMinY, actualTextBounds.y);
-            overallMaxY = Math.max(overallMaxY, actualTextBounds.y + actualTextBounds.height);
-            hasVerticalContent = true;
-        }
-
-        if (buttonContainerBounds && optionsContainer && optionsContainer.height > 0) {
-            // Use buttonContainerBounds.y for the top of the button area,
-            // and add optionsContainer.height (actual height of buttons) for the bottom.
-            overallMinY = Math.min(overallMinY, buttonContainerBounds.y);
-            overallMaxY = Math.max(overallMaxY, buttonContainerBounds.y + optionsContainer.height);
-            hasVerticalContent = true;
-        }
-
-        if (hasVerticalContent) {
-            bgY = overallMinY - padding;
-            bgHeight = (overallMaxY - overallMinY) + (2 * padding);
-        } else {
-            // No vertical content, clear/don't draw
-            this.scene.drawBackgroundPanel(0, 0, 0, 0, 0, 0);
-            console.warn("UIManager.drawBackgroundPanel: No vertical content (text or buttons) to determine panel height.");
-            return;
-        }
+        const { width: screenWidth, height: screenHeight } = this.pixiApp.getScreenSize();
         
-        console.log("UIManager: Simplified Background panel calculated:", { bgX, bgY, bgWidth, bgHeight });
+        if (!buttonContainerBounds) {
+            console.warn("UIManager.drawBackgroundPanel: No button container bounds provided.");
+            return;
+        }
+
+        // Use the button container bounds for the panel
+        const bgX = buttonContainerBounds.x;
+        const bgY = buttonContainerBounds.y;
+        const bgWidth = buttonContainerBounds.width;
+        const bgHeight = buttonContainerBounds.height;
+        
+        console.log("UIManager: Full-height background panel calculated:", { bgX, bgY, bgWidth, bgHeight });
 
         // Ensure sensible dimensions before drawing
         if (bgWidth > padding && bgHeight > padding) { 
@@ -393,7 +378,7 @@ export class MultipleChoiceUIManager {
          // Constants for drawing
          const borderWidth = 3;
          const shadowOffsetX = 4;
-         const shadowOffsetY = 6;
+         // Using this.this.shadowOffsetY instead
          const borderRadius = 16;
          // --- End Color Definitions ---
 
@@ -405,7 +390,7 @@ export class MultipleChoiceUIManager {
              const buttonView = button.view as PIXI.Graphics;
              // Calculate dimensions needed *before* clearing
              const buttonWidth = buttonView.width - shadowOffsetX;
-             const buttonHeight = buttonView.height - shadowOffsetY;
+             const buttonHeight = buttonView.height - this.shadowOffsetY;
              const innerRadius = Math.max(0, borderRadius - borderWidth);
 
              // --- Determine Styles Based on State ---
@@ -443,7 +428,7 @@ export class MultipleChoiceUIManager {
              buttonView.alpha = currentAlpha; // Apply overall transparency first
 
              // Draw shadow with current shadow color
-             buttonView.roundRect(shadowOffsetX, shadowOffsetY, buttonWidth, buttonHeight, borderRadius).fill(currentShadow);
+             buttonView.roundRect(shadowOffsetX, this.shadowOffsetY, buttonWidth, buttonHeight, borderRadius).fill(currentShadow);
              // Draw border with current border color
              buttonView.roundRect(0, 0, buttonWidth, buttonHeight, borderRadius).fill(currentBorder);
              // Draw main fill with current fill color
@@ -488,8 +473,17 @@ export class MultipleChoiceUIManager {
         const contentWidth = screenWidth - 2 * sidePad;
 
         // -- Button Container Bounds --
-        const buttonContainerHeight = params.answerButtonHeightMultiplier * screenHeight; // Approx height based on params
-        const buttonContainerY = screenHeight - bottomPad - buttonContainerHeight;
+        // Calculate actual button height first, then use that for container sizing
+        const actualButtonHeight = Math.round(screenHeight * params.answerButtonHeightMultiplier);
+        const buttonGap = params.answerButtonGap;
+        // Using this.this.shadowOffsetY instead // Shadow offset from button creation
+        
+        // For 2x3 grid (question + 2 rows of buttons), calculate total height needed
+        const totalButtonHeight = (actualButtonHeight * 3) + (buttonGap * 2 + this.shadowOffsetY * 2);
+        const isMobile = screenHeight < 700; // More appropriate threshold for mobile devices
+        const panelPadding = isMobile ? 10 : 20; // Reduce padding on mobile
+        const buttonContainerHeight = totalButtonHeight + (panelPadding * 2); // Padding above and below
+        const buttonContainerY = screenHeight - buttonContainerHeight; // Touch bottom of screen
         const buttonContainerBounds = new PIXI.Rectangle(
             sidePad,
             buttonContainerY,
@@ -498,32 +492,30 @@ export class MultipleChoiceUIManager {
         );
         console.log("UIManager: Calculated Button Container Bounds:", buttonContainerBounds);
 
-        // -- Text Bounds (Configuration for the scene) -- Renamed to textBoundsConfig
-        const textY = screenHeight * params.questionYMultiplier;
-        const textWidth = contentWidth * params.questionWrapMultiplier;
-        const textX = (screenWidth - textWidth) / 2;
-        const approxMaxTextHeight = buttonContainerY - textY - topPad;
-        const textBoundsConfig = new PIXI.Rectangle(
-            textX,
-            textY,
-            textWidth,
-            Math.max(50, approxMaxTextHeight)
-        );
-         console.log("UIManager: Calculated Text Bounds Config:", textBoundsConfig);
+        // -- Text Bounds (No longer needed since question is in button container) --
+        const textBoundsConfig = null; // Question text is now in button container
+        console.log("UIManager: Question text moved to button container, no separate text bounds needed");
 
-        // -- Media Bounds (Space between top and text) --
+        // -- Media Bounds (Maximize space for image, remove padding on mobile) --
         let mediaBounds: PIXI.Rectangle | null = null;
-        const mediaTop = topPad;
-        const mediaBottom = textBoundsConfig.y - topPad; // Use config Y
+        
+        // On mobile, remove padding completely to maximize image size
+        const mediaTop = isMobile ? 0 : topPad;
+        const mediaBottom = buttonContainerY - (isMobile ? 0 : topPad);
         const mediaHeight = Math.max(10, mediaBottom - mediaTop);
-        if (mediaHeight > 10) { 
+        
+        // On mobile, use more of the screen for image (60% instead of 50%)
+        const maxImageHeight = isMobile ? screenHeight * 0.6 : mediaHeight;
+        const finalMediaHeight = Math.min(mediaHeight, maxImageHeight);
+        
+        if (finalMediaHeight > 10) { 
             mediaBounds = new PIXI.Rectangle(
                 sidePad,
                 mediaTop,
                 contentWidth,
-                mediaHeight
+                finalMediaHeight
             );
-            console.log("UIManager: Calculated Media Bounds:", mediaBounds);
+            console.log(`UIManager: Calculated Media Bounds (${isMobile ? 'mobile 50/50' : 'maximized'}):`, mediaBounds);
         } else {
              console.log("UIManager: Not enough space for media bounds.");
         }
@@ -597,6 +589,39 @@ export class MultipleChoiceUIManager {
          this.pixiTimerInstance?.resume(); // Add null check
     };
     // --- End Add Handlers ---
+
+    private _addQuestionToButtonContainer(
+        container: PIXI.Container, 
+        bounds: PIXI.Rectangle, 
+        params: any
+    ): void {
+        // Get the current question text from the scene
+        const questionText = this.scene.getQuestionText();
+        if (!questionText) return;
+        
+        // Create a copy of the question text for the button container
+        const questionInContainer = new PIXI.Text({
+            text: questionText.text,
+            style: {
+                fontSize: params.questionFontSize,
+                fill: this.themeConfig.textColor || 0x000000,
+                fontFamily: this.themeConfig.fontFamilyTheme || 'Arial',
+                align: 'center',
+                wordWrap: true,
+                wordWrapWidth: bounds.width - 40, // Leave some padding
+            }
+        });
+        
+        // Position in the top row, centered with responsive padding
+        questionInContainer.anchor.set(0.5);
+        questionInContainer.x = bounds.width / 2;
+        const panelPadding = 20; // Same as used in container calculation
+        const isMobile = this.pixiApp.getScreenSize().height < 700; // More appropriate threshold for mobile devices
+        const questionPadding = isMobile ? 10 : panelPadding; // Reduce padding on mobile
+        questionInContainer.y = questionPadding + (Math.round(this.pixiApp.getScreenSize().height * params.answerButtonHeightMultiplier) + params.answerButtonGap + this.shadowOffsetY) / 2;
+        
+        container.addChild(questionInContainer);
+    }
 
     private _repositionAnswerButtonsContainer(bounds: PIXI.Rectangle): void {
          const optionsContainer = this.scene.getAnswerOptionContainer();

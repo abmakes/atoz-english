@@ -122,7 +122,7 @@ export class QuestionScene extends PIXI.Container {
     }
 
     public updateLayout(
-        textBounds: PIXI.Rectangle,
+        textBounds: PIXI.Rectangle | null, // Can be null when question is in button container
         mediaBounds: PIXI.Rectangle | null, // Media might not always exist
         params: LayoutProfile, // Changed from LayoutParameters
         screenWidth: number // May still need screen width for fallback/centering
@@ -131,11 +131,22 @@ export class QuestionScene extends PIXI.Container {
 
         // Update text style using params
         this.questionText.style.fontSize = params.questionFontSize;
-        // Set wrap width based on the provided text bounds width
-        this.questionText.style.wordWrapWidth = textBounds.width;
+        
+        // Set wrap width - use textBounds if available, otherwise use screen width
+        if (textBounds) {
+            this.questionText.style.wordWrapWidth = textBounds.width;
+        } else {
+            // Fallback to screen width when question is in button container
+            this.questionText.style.wordWrapWidth = screenWidth * 0.8;
+        }
 
-        // Position elements using the provided bounds
-        this._positionElements(textBounds, mediaBounds, params, screenWidth);
+        // Position elements using the provided bounds (only if textBounds exists)
+        if (textBounds) {
+            this._positionElements(textBounds, mediaBounds, params, screenWidth);
+        } else {
+            // When question is in button container, just position media
+            this._positionMediaOnly(mediaBounds, params, screenWidth);
+        }
         console.log("QuestionScene: Finished updateLayout");
     }
 
@@ -169,22 +180,24 @@ export class QuestionScene extends PIXI.Container {
 
              if (mediaOrigWidth <= 0 || mediaOrigHeight <= 0) { /* ... hide and return ... */ return;}
 
-            // Use previous logic for available height (relative to text)
+            // Use responsive image scaling based on layout parameters
             const imageTopBound = params.topPadding;
-            // Use the actual text position AFTER it's set above
             const textTop = this.questionText.y - this.questionText.height * this.questionText.anchor.y;
-            const imageBottomBound = textTop - params.topPadding; // Use textTop now
+            const imageBottomBound = textTop - params.topPadding;
             const availableHeightForMedia = Math.max(10, imageBottomBound - imageTopBound);
+            
+            // Calculate maximum allowed height using responsive multiplier
+            const maxAllowedHeight = screenHeight * params.imageMaxHeightMultiplier;
+            const constrainedHeight = Math.min(availableHeightForMedia, maxAllowedHeight);
 
-             // --- Reinstate your scaling logic ---
+             // --- Responsive scaling logic ---
              let scale = 1;
-             // scale down if media is larger than available height
-             if (mediaOrigHeight > availableHeightForMedia && availableHeightForMedia > 0) {
-                 scale = availableHeightForMedia / mediaOrigHeight;
-             }
-             // scale up if media is smaller than available height
-             if (mediaOrigHeight < availableHeightForMedia) {
-               scale = availableHeightForMedia / mediaOrigHeight;
+             // Scale to fit within the responsive height constraint
+             if (mediaOrigHeight > constrainedHeight && constrainedHeight > 0) {
+                 scale = constrainedHeight / mediaOrigHeight;
+             } else if (mediaOrigHeight < constrainedHeight) {
+                 // Scale up to use available space, but respect the max height multiplier
+                 scale = constrainedHeight / mediaOrigHeight;
              }
              // ---
 
@@ -209,6 +222,43 @@ export class QuestionScene extends PIXI.Container {
         }
 
         console.log("QuestionScene: Finished _positionElements (Reverted Logic)");
+    }
+
+    private _positionMediaOnly(
+        mediaBounds: PIXI.Rectangle | null,
+        params: LayoutProfile,
+        screenWidth: number
+    ): void {
+        console.log("QuestionScene: Positioning media only (question in button container)");
+        
+        // Position media in the available space
+        if (this.questionMedia && mediaBounds && mediaBounds.width > 0 && mediaBounds.height > 0) {
+            const mediaOrigWidth = this.questionMedia.texture?.orig.width ?? this.questionMedia.width;
+            const mediaOrigHeight = this.questionMedia.texture?.orig.height ?? this.questionMedia.height;
+
+            if (mediaOrigWidth > 0 && mediaOrigHeight > 0) {
+                // Calculate scale to fit within media bounds
+                const scaleX = mediaBounds.width / mediaOrigWidth;
+                const scaleY = mediaBounds.height / mediaOrigHeight;
+                const scale = Math.min(scaleX, scaleY);
+
+                if (scale > 0 && isFinite(scale)) {
+                    this.questionMedia.scale.set(scale);
+                    this.questionMedia.x = mediaBounds.x + mediaBounds.width / 2;
+                    this.questionMedia.y = mediaBounds.y + mediaBounds.height / 2;
+                    this.questionMedia.anchor.set(0.5);
+                    this.questionMedia.visible = true;
+                } else {
+                    this.questionMedia.visible = false;
+                }
+            } else {
+                this.questionMedia.visible = false;
+            }
+        } else if (this.questionMedia) {
+            this.questionMedia.visible = false;
+        }
+        
+        console.log("QuestionScene: Finished positioning media only");
     }
 
     public getAnswerOptionContainer(): PIXI.Container {

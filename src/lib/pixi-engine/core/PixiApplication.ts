@@ -72,6 +72,10 @@ export class PixiApplication {
    * @returns The screen size
    */
   public getScreenSize(): { width: number; height: number } {
+      if (!this.app) {
+        console.warn('PixiApplication: App not initialized, returning default screen size');
+        return { width: 800, height: 600 };
+      }
       return this.app.screen;
     }
   
@@ -512,7 +516,7 @@ export class PixiApplication {
     this.targetElement = null;
     this.parent = null;
     this.resizeObserver = null;
-    // @ts-expect-error Allow null assignment after destroy
+    // @ts-ignore Allow null assignment after destroy
     this.app = null;
   }
 
