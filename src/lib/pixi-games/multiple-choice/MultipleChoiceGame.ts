@@ -48,6 +48,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
     private uiManager!: MultipleChoiceUIManager;
     private backgroundManager!: GameBackgroundManager;
     private layoutManager!: MultipleChoiceLayoutManager;
+    private currentAnswerOptions: AnswerOptionUIData[] = []; // Store current question's answer options
     private readonly QUESTION_TIMER_ID = 'multipleChoiceQuestionTimer';
     
     constructor(config: GameConfig, managers: PixiEngineManagers) {
@@ -263,6 +264,11 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         // Update power-ups (handles durations)
         const deltaTimeMs = delta * 1000; // Assuming delta is in seconds, convert to ms
         this.powerUpManager.update(deltaTimeMs);
+        
+        // Update transition screen (for spin wheel animation)
+        if (this.transitionScreen) {
+            this.transitionScreen.update(delta);
+        }
     }
 
     /**
@@ -346,12 +352,18 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         
         // UI Manager handles clearing old state
         this.uiManager.clearQuestionState();
+        
+        // Clear stored answer options
+        this.currentAnswerOptions = [];
 
         // UI Manager handles displaying the new question content
         this.uiManager.updateQuestionContent(question);
 
         // Game logic creates the answer options data structure
         const generatedOptions = this._createAnswerOptions(question);
+        
+        // Store the current answer options for use in answer selection
+        this.currentAnswerOptions = generatedOptions;
 
         // UI Manager handles creating and displaying buttons
         this.uiManager.setupAnswerButtons(question.id, generatedOptions);
@@ -367,11 +379,33 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
     }
 
     private _createAnswerOptions(question: QuestionData): AnswerOptionUIData[] {
-        return ((question.answers as string[]) ?? []).map((answerText: string, i: number) => {
+        const answers = (question.answers as string[]) ?? [];
+        
+        // Create answer options with their original indices
+        const answerOptions = answers.map((answerText: string, i: number) => {
             const optionId = `${question.id}-opt-${i}`;
             const isCorrect = answerText === question.correctAnswer;
             return { id: optionId, text: answerText, isCorrect: isCorrect, length: answerText.length };
         });
+        
+        // Shuffle the answer options to randomize their positions
+        const shuffledOptions = this._shuffleArray([...answerOptions]);
+        
+        console.log(`[MultipleChoiceGame] Shuffled ${shuffledOptions.length} answer options for question ${question.id}`);
+        console.log(`[MultipleChoiceGame] Shuffled options:`, shuffledOptions.map(opt => ({ id: opt.id, text: opt.text, isCorrect: opt.isCorrect })));
+        return shuffledOptions;
+    }
+
+    /**
+     * Shuffles an array using Fisher-Yates algorithm for true randomization
+     */
+    private _shuffleArray<T>(array: T[]): T[] {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
     }
     
     private _startQuestionTimer(): void {
@@ -418,10 +452,17 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
              return;
         }
 
-        const generatedOptions = this._createAnswerOptions(question);
+        // Use the stored answer options instead of regenerating them
+        const generatedOptions = this.currentAnswerOptions;
+        if (generatedOptions.length === 0) {
+             console.error(`_handleAnswerSelected: No stored answer options found for question ${questionId}`);
+             this.uiManager.setAnswerButtonsEnabled(true); // Re-enable if error
+             return;
+        }
+        
         const selectedOption = generatedOptions.find(o => o.id === selectedGeneratedOptionId);
         if (!selectedOption) {
-             console.error(`_handleAnswerSelected: Could not find selected option ID ${selectedGeneratedOptionId}`);
+             console.error(`_handleAnswerSelected: Could not find selected option ID ${selectedGeneratedOptionId} in stored options`);
              this.uiManager.setAnswerButtonsEnabled(true); // Re-enable if error
              return;
         }
@@ -461,8 +502,8 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             // --- Calculate if power-up roll should trigger ---
             const progressIndex = this.dataManager.getCurrentProgressIndex();
             const numTeams = this.config.teams.length;
-            // Trigger roll only AFTER the first round is fully complete (progress index > num teams)
-            const shouldTriggerRoll = progressIndex > numTeams;
+            // Trigger roll after each player has had one turn (progress index >= num teams)
+            const shouldTriggerRoll = progressIndex >= numTeams;
             console.log(`[MultipleChoiceGame] _handleAnswerSelected: Checking power-up roll trigger. ProgressIndex: ${progressIndex}, NumTeams: ${numTeams}, ShouldTrigger: ${shouldTriggerRoll}`);
             // --- End calculation ---
 
@@ -692,8 +733,8 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
              // --- Calculate if power-up roll should trigger ---
              const progressIndex = this.dataManager.getCurrentProgressIndex();
              const numTeams = this.config.teams.length;
-             // Trigger roll only AFTER the first round is fully complete (progress index > num teams)
-             const shouldTriggerRoll = progressIndex > numTeams;
+             // Trigger roll after each player has had one turn (progress index >= num teams)
+             const shouldTriggerRoll = progressIndex >= numTeams;
              console.log(`[MultipleChoiceGame] _handleTimerComplete: Checking power-up roll trigger. ProgressIndex: ${progressIndex}, NumTeams: ${numTeams}, ShouldTrigger: ${shouldTriggerRoll}`);
              // --- End calculation ---
 
@@ -789,8 +830,13 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                 console.log(`[MultipleChoiceGame] Power-up activation result:`, activationResult ? `Instance ID ${activationResult.instanceId}` : activationResult); // DEBUG LOG
             } else {
                 // For 50/50, just activate it. It will be used and deactivated when the next question buttons are set up.
-                 const activationResult = this.activatePowerUp(payload.selectedPowerupId, targetTeamId); // Store result
-                 console.log(`[MultipleChoiceGame] 50/50 activation result (will deactivate on use):`, activationResult ? `Instance ID ${activationResult.instanceId}` : activationResult); // DEBUG LOG
+                console.log(`[MultipleChoiceGame] Activating 50/50 powerup for team ${targetTeamId}`);
+                const activationResult = this.activatePowerUp(payload.selectedPowerupId, targetTeamId); // Store result
+                console.log(`[MultipleChoiceGame] 50/50 activation result (will deactivate on use):`, activationResult ? `Instance ID ${activationResult.instanceId}` : activationResult); // DEBUG LOG
+                
+                // Verify the powerup is active
+                const activePowerups = this.powerUpManager.getActivePowerupsForTarget(targetTeamId);
+                console.log(`[MultipleChoiceGame] Active powerups for team ${targetTeamId}:`, activePowerups.map(p => p.id));
             }
         } else {
             console.warn(`[MultipleChoiceGame] Could not determine target team ID to activate selected power-up '${payload.selectedPowerupId}'. State activeTeam: ${this.getState().activeTeam}`);

@@ -326,7 +326,8 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     this.transitionScreen = new TransitionScreen(
         this.pixiApp.getApp(), // Pass the actual PIXI.Application instance
         this.eventBus, 
-        this.powerUpManager // Pass powerUpManager here
+        this.powerUpManager, // Pass powerUpManager here
+        this.gameStateManager // Pass gameStateManager here
     );
     // Add to the highest UI layer
     this.addToLayer(this.transitionScreen, RenderLayer.UI_FOREGROUND);

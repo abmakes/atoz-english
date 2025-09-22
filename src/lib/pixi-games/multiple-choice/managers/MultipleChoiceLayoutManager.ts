@@ -132,13 +132,16 @@ export class MultipleChoiceLayoutManager {
             profile.questionWrapFontSize = Math.round(profile.questionWrapFontSize * Math.min(1.1, scaleFactor));
             profile.answerButtonWrapFontSize = Math.round(profile.answerButtonWrapFontSize * Math.min(1.1, scaleFactor));
             
-            // Increase padding moderately
-            profile.topPadding = Math.round(profile.topPadding * Math.min(1.2, scaleFactor));
-            profile.bottomPadding = Math.round(profile.bottomPadding * Math.min(1.2, scaleFactor));
-            profile.sidePadding = Math.round(profile.sidePadding * Math.min(1.2, scaleFactor));
+            // Reduce padding for larger screens to give more space to images
+            profile.topPadding = Math.round(profile.topPadding * 0.5); // Reduce top padding significantly
+            profile.bottomPadding = Math.round(profile.bottomPadding * 0.5); // Reduce bottom padding significantly
+            profile.sidePadding = Math.round(profile.sidePadding * Math.min(1.2, scaleFactor)); // Keep side padding moderate
             
             // Allow images to take significantly more space on large screens
             profile.imageMaxHeightMultiplier = Math.min(0.6, profile.imageMaxHeightMultiplier * 1.5);
+            
+            // Move question text closer to the image on large screens
+            profile.questionYMultiplier = Math.max(0.65, profile.questionYMultiplier - 0.05);
             
             console.log(`LayoutManager: Applied large screen scaling (factor: ${scaleFactor.toFixed(2)}, max button height: ${maxButtonHeightPx}px)`);
         }

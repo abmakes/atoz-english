@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "../styles/globals.css";
-import ConditionalLayoutWrapper from "@/components/layout/ConditionalLayoutWrapper";
+import Navigation from "@/components/layout/Navigation";
 import { CustomToastProvider } from "@/components/ui/CustomToast";
 import { ClerkProvider } from "@clerk/nextjs";
 
@@ -20,11 +20,12 @@ export default function RootLayout({
   if (!clerkPublishableKey) {
     return (
       <html lang="en">
-        <body className="">
+        <body className="min-h-screen bg-white">
           <CustomToastProvider>
-            <ConditionalLayoutWrapper>
+            <Navigation />
+            <main className="relative z-10">
               {children}
-            </ConditionalLayoutWrapper>
+            </main>
           </CustomToastProvider>
         </body>
       </html>
@@ -34,11 +35,12 @@ export default function RootLayout({
   return (
     <ClerkProvider publishableKey={clerkPublishableKey}>
       <html lang="en">
-        <body className="">
+        <body className="min-h-screen bg-white">
           <CustomToastProvider>
-            <ConditionalLayoutWrapper>
+            <Navigation />
+            <main className="relative z-10">
               {children}
-            </ConditionalLayoutWrapper>
+            </main>
           </CustomToastProvider>
         </body>
       </html>

@@ -189,6 +189,7 @@ export class MultipleChoiceUIManager {
         }
 
         const fiftyFiftyActive = currentTeamId ? powerUpManager.isPowerUpActiveForTarget('fifty_fifty', currentTeamId) : false;
+        console.log(`[UIManager] 50/50 check - currentTeamId: ${currentTeamId}, fiftyFiftyActive: ${fiftyFiftyActive}`);
 
         if (fiftyFiftyActive && currentTeamId) {
             console.log(`[UIManager] 50/50 power-up ACTIVE for team ${currentTeamId}. Applying effect.`);

@@ -2,9 +2,10 @@ import * as PIXI from 'pixi.js';
 import { Text } from 'pixi.js'; // Explicit import
 import { EventBus } from '../core/EventBus'; // Import EventBus
 import { TRANSITION_EVENTS, TransitionPowerupSelectedPayload } from '../core/EventTypes'; // Import event types - Removed TransitionStartPayload
-import { MathUtils } from '../utils/MathUtils'; // Import MathUtils
 // Import PowerUpManager and the new SelectablePowerupInfo interface
 import { PowerUpManager, SelectablePowerupInfo } from '../game/PowerUpManager';
+import { PowerupSpinWheel } from './PowerupSpinWheel';
+import { GameStateManager } from '../core/GameStateManager';
 
 // Define the list of power-ups available for random selection
 // const SELECTABLE_POWERUPS: string[] = ['double_points', 'time_extension', 'fifty_fifty']; // Replaced skip_question
@@ -24,24 +25,19 @@ export interface TransitionScreenConfig {
 export class TransitionScreen extends PIXI.Container {
   private panelBackground: PIXI.Graphics; // Changed from background
   private messageText: Text;
-  private getReadyText: Text; // New text element
-  private powerupTextDisplay: Text; // Text to show cycling power-up
+  private powerupSpinWheel: PowerupSpinWheel | null = null; // Spin wheel for powerup selection
   private currentConfig: TransitionScreenConfig | null = null;
   private timeoutId: number | null = null;
   private resolvePromise: (() => void) | null = null;
   private _manualHideResolve: (() => void) | null = null;
   private eventBus: EventBus; // Add EventBus reference
   private powerUpManager: PowerUpManager; // <-- Add PowerUpManager reference
+  private gameStateManager: GameStateManager; // Add GameStateManager reference
   private app: PIXI.Application; // Store PIXI app reference
 
-  // State for power-up cycling
-  private isCyclingPowerups: boolean = false;
-  private cycleIntervalId: number | null = null;
-  private currentDisplayedPowerupIndex: number = 0;
+  // State for power-up selection
   private finalSelectedPowerupId: string | null = null;
   private currentSelectablePowerups: SelectablePowerupInfo[] = []; // <-- Store selectable powerups for the current roll
-  private readonly CYCLE_INTERVAL_MS = 50; // How fast to cycle
-  private readonly CYCLE_DURATION_MS = 1500; // How long to cycle before stopping
 
   // Panel Dimensions (will be calculated dynamically)
   private panelWidth: number = 0;
@@ -51,12 +47,14 @@ export class TransitionScreen extends PIXI.Container {
   constructor(
     app: PIXI.Application, // Pass PIXI app instance
     eventBus: EventBus,
-    powerUpManager: PowerUpManager
+    powerUpManager: PowerUpManager,
+    gameStateManager: GameStateManager
   ) {
     super();
     this.app = app;
     this.eventBus = eventBus;
     this.powerUpManager = powerUpManager;
+    this.gameStateManager = gameStateManager;
     console.log('[TransitionScreen Constructor] PowerUpManager received:', this.powerUpManager);
 
     this.interactive = true;
@@ -83,33 +81,9 @@ export class TransitionScreen extends PIXI.Container {
     this.messageText.anchor.set(0.5);
     this.addChild(this.messageText);
 
-    // Get Ready Text Styling
-    this.getReadyText = new Text({
-      text: 'Get ready!', // Static text
-      style: {
-        fontFamily: 'Grandstander',
-        fontSize: 42, // Size 42
-        fontWeight: 'normal',
-        fill: 0x114257, // Same color as main message
-        align: 'center'
-      }
-    });
-    this.getReadyText.anchor.set(0.5);
-    this.addChild(this.getReadyText);
 
-    // Power-up Text Display
-    this.powerupTextDisplay = new Text({
-      text: '',
-      style: {
-        fontFamily: 'Grandstander',
-        fontSize: 42,
-        fill: 0x059669, // Keep distinct color for power-up
-        align: 'center'
-      }
-    });
-    this.powerupTextDisplay.anchor.set(0.5);
-    this.powerupTextDisplay.visible = false;
-    this.addChild(this.powerupTextDisplay);
+    // Power-up Spin Wheel (will be created when needed)
+    this.powerupSpinWheel = null;
 
     this.visible = false;
   }
@@ -139,20 +113,71 @@ export class TransitionScreen extends PIXI.Container {
       this.messageText.position.set(this.app.screen.width / 2, this.app.screen.height / 2 - 80); // Adjusted Y
   }
 
-  private _centerGetReadyText(): void {
-      // Position "Get ready!" below the main message
-      this.getReadyText.position.set(
-          this.app.screen.width / 2,
-          this.messageText.y + this.messageText.height / 2 + 30 // Add padding
-      );
-  }
 
   private _centerPowerupText(): void {
-      // Position power-up text below "Get ready!" text
-      this.powerupTextDisplay.position.set(
-          this.app.screen.width / 2,
-          this.getReadyText.y + this.getReadyText.height / 2 + 50 // Add padding
-      );
+    // This method is no longer needed with spin wheel
+  }
+
+  /**
+   * Selects a random powerup immediately and activates it.
+   */
+  private selectRandomPowerup(): void {
+    if (this.currentSelectablePowerups.length === 0) {
+      console.log('[TransitionScreen] No powerups available for random selection');
+      return;
+    }
+
+    // Select random powerup
+    const randomIndex = Math.floor(Math.random() * this.currentSelectablePowerups.length);
+    const selectedPowerup = this.currentSelectablePowerups[randomIndex];
+    this.finalSelectedPowerupId = selectedPowerup.id;
+    
+    console.log(`[TransitionScreen] Randomly selected powerup: ${selectedPowerup.displayName}`);
+    
+    // Emit the POWERUP_SELECTED event immediately
+    const payload: TransitionPowerupSelectedPayload = {
+      selectedPowerupId: selectedPowerup.id,
+      transitionType: this.currentConfig?.type || 'custom'
+    };
+    this.eventBus.emit(TRANSITION_EVENTS.POWERUP_SELECTED, payload);
+    console.log(`[TransitionScreen] Emitted POWERUP_SELECTED event for ${selectedPowerup.id}`);
+  }
+
+  /**
+   * Creates the powerup spin wheel for visual display only.
+   */
+  private createPowerupSpinWheel(): void {
+    if (this.powerupSpinWheel) {
+      this.removeChild(this.powerupSpinWheel);
+      this.powerupSpinWheel.destroy();
+    }
+
+    console.log('[TransitionScreen] Creating spin wheel with preselectedPowerupId:', this.finalSelectedPowerupId);
+    console.log('[TransitionScreen] Available powerups:', this.currentSelectablePowerups.map(p => p.id));
+    
+    this.powerupSpinWheel = new PowerupSpinWheel({
+      powerups: this.currentSelectablePowerups,
+      preselectedPowerupId: this.finalSelectedPowerupId, // Pass the pre-selected powerup
+      onSelection: (selectedPowerup) => {
+        // This is now just for visual feedback - powerup is already selected
+        console.log(`[TransitionScreen] Visual selection: ${selectedPowerup.displayName}`);
+      },
+      onSpinComplete: () => {
+        console.log('[TransitionScreen] Spin wheel completed');
+        // Show result for 1.5 seconds total (shorter since powerup is already active)
+        setTimeout(() => {
+          this.hide();
+          // Resolve the manual hide promise if it exists
+          if (this._manualHideResolve) {
+            this._manualHideResolve();
+            this._manualHideResolve = null;
+          }
+        }, 1500); // Total 1.5 seconds for result display
+      }
+    });
+
+    this.powerupSpinWheel.initialize(this.panelWidth, this.panelHeight);
+    this.addChild(this.powerupSpinWheel);
   }
 
   /**
@@ -169,43 +194,36 @@ export class TransitionScreen extends PIXI.Container {
     this._drawPanelBackground();
     this._centerPanel();
     this._centerMessageText();
-    this._centerGetReadyText(); // Position the new text
     this._centerPowerupText();
     // ****************************************************
 
     this.messageText.text = config.message || '';
     // wordWrapWidth is set in _centerMessageText
 
-    // Make "Get ready!" visible (it's always the same text)
-    this.getReadyText.visible = true;
 
-    this.powerupTextDisplay.text = '';
-    this.powerupTextDisplay.visible = false;
     this.visible = true;
     this.alpha = 1;
     this.finalSelectedPowerupId = null;
-    this.isCyclingPowerups = false;
     this.currentSelectablePowerups = [];
-    if (this.cycleIntervalId) {
-        clearInterval(this.cycleIntervalId);
-        this.cycleIntervalId = null;
-    }
 
-    // Start power-up roll if requested
+    // Create power-up spin wheel if requested
     if (config.triggerPowerupRoll) {
         console.log('[TransitionScreen show()] Checking this.powerUpManager before getSelectablePowerups:', this.powerUpManager);
         this.currentSelectablePowerups = this.powerUpManager.getSelectablePowerups();
         console.log(`[TransitionScreen] Got ${this.currentSelectablePowerups.length} selectable powerups from manager.`);
 
         if (this.currentSelectablePowerups.length > 0) {
-            this.startPowerupCycle();
+            // Select powerup immediately and randomly
+            this.selectRandomPowerup();
+            // Create visual spin wheel
+            this.createPowerupSpinWheel();
         } else {
              console.log("[TransitionScreen] No selectable powerups available for this mode. Skipping roll.");
         }
     }
 
-    // Handle auto-hide logic
-    if (config.autoHide && config.duration) {
+    // Handle auto-hide logic - but not when there's a powerup roll
+    if (config.autoHide && config.duration && !config.triggerPowerupRoll) {
       console.log(`[TransitionScreen] show(): Starting auto-hide timer for ${config.duration}ms`);
       return new Promise(resolve => {
         // Use window.setTimeout for browser compatibility
@@ -244,12 +262,9 @@ export class TransitionScreen extends PIXI.Container {
         clearTimeout(this.timeoutId);
         this.timeoutId = null;
       }
-      if (this.isCyclingPowerups) {
-          console.log("[TransitionScreen] hide(): Cycling was active, stopping and selecting power-up.");
-          this.stopPowerupCycle(true);
-      }
+      // Spin wheel cleanup is handled in the wheel's onSpinComplete callback
 
-      // Emit event if a power-up was selected *before* hiding
+      // Emit power-up event if one was selected (backup in case immediate emission failed)
       if (this.finalSelectedPowerupId) {
           console.log(`[TransitionScreen] hide(): Emitting POWERUP_SELECTED (${this.finalSelectedPowerupId})`);
           const payload: TransitionPowerupSelectedPayload = {
@@ -257,6 +272,7 @@ export class TransitionScreen extends PIXI.Container {
               transitionType: this.currentConfig?.type || 'custom'
           };
           this.eventBus.emit(TRANSITION_EVENTS.POWERUP_SELECTED, payload);
+          console.log(`[TransitionScreen] hide(): Power-up ${this.finalSelectedPowerupId} event emitted`);
           this.finalSelectedPowerupId = null; // Clear after emitting
       }
 
@@ -273,15 +289,6 @@ export class TransitionScreen extends PIXI.Container {
     }
   }
 
-  /**
-   * Update method (called by game loop if needed).
-   * Currently unused, but placeholder for future animations (e.g., wheel spin).
-   * @param delta - Time elapsed since last frame.
-   */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public update(delta: number): void {
-    // Future: Update animations (e.g., loading spinner, power-up wheel)
-  }
 
   /**
    * Adjusts layout when the screen resizes.
@@ -291,65 +298,23 @@ export class TransitionScreen extends PIXI.Container {
     this._drawPanelBackground();
     this._centerPanel();
     this._centerMessageText();
-    this._centerGetReadyText(); // Also reposition this text
     this._centerPowerupText();
+    
+    // Resize spin wheel if it exists
+    if (this.powerupSpinWheel) {
+      this.powerupSpinWheel.resize(this.panelWidth, this.panelHeight);
+    }
   }
 
-  /**
-   * Starts the visual cycling effect for power-up selection.
-   */
-  private startPowerupCycle(): void {
-    if (this.currentSelectablePowerups.length === 0) return; // Should not happen if check in show() is correct
 
-    console.log("[TransitionScreen] Starting power-up cycle...");
-    this.isCyclingPowerups = true;
-    this.powerupTextDisplay.visible = true;
-    this.currentDisplayedPowerupIndex = 0;
-
-    this.cycleIntervalId = window.setInterval(() => {
-      // Cycle through the display names
-      const powerupInfo = this.currentSelectablePowerups[this.currentDisplayedPowerupIndex];
-      this.powerupTextDisplay.text = powerupInfo.displayName; // <-- Use displayName
-      this.currentDisplayedPowerupIndex = (this.currentDisplayedPowerupIndex + 1) % this.currentSelectablePowerups.length;
-    }, this.CYCLE_INTERVAL_MS);
-
-    // Set a timeout to stop the cycle
-    setTimeout(() => {
-      // Check if we haven't already stopped (e.g., by hide() being called early)
-      if (this.isCyclingPowerups) {
-          this.stopPowerupCycle();
-      }
-    }, this.CYCLE_DURATION_MS);
-  }
 
   /**
-   * Stops the visual cycling and selects the final power-up.
-   * @param forceImmediate - If true, stops immediately without waiting for the next interval tick.
+   * Updates the transition screen (for spin wheel animation).
    */
-  private stopPowerupCycle(forceImmediate: boolean = false): void {
-    if (!this.isCyclingPowerups) return;
-
-    console.log(`[TransitionScreen] Stopping power-up cycle... (immediate: ${forceImmediate})`);
-    this.isCyclingPowerups = false;
-    if (this.cycleIntervalId) {
-      clearInterval(this.cycleIntervalId);
-      this.cycleIntervalId = null;
+  public update(delta: number): void {
+    if (this.powerupSpinWheel) {
+      this.powerupSpinWheel.update(delta);
     }
-
-    if (this.currentSelectablePowerups.length > 0) {
-      // Select a random power-up from the *filtered* list
-      const randomIndex = MathUtils.randomIntRange(0, this.currentSelectablePowerups.length - 1);
-      const selectedPowerup = this.currentSelectablePowerups[randomIndex];
-      
-      this.finalSelectedPowerupId = selectedPowerup.id; // <-- Store the ID
-      this.powerupTextDisplay.text = selectedPowerup.displayName; // <-- Display final name
-      console.log(`[TransitionScreen] Final power-up selected: ID=${this.finalSelectedPowerupId}, Name=${selectedPowerup.displayName}`);
-    } else {
-        console.warn("[TransitionScreen] stopPowerupCycle called, but no selectable powerups were available.");
-        this.powerupTextDisplay.text = "No Power-ups!"; // Indicate none available
-        this.finalSelectedPowerupId = null;
-    }
-    // Note: The event emission is now handled in the hide() method
   }
 
   /**
@@ -366,13 +331,13 @@ export class TransitionScreen extends PIXI.Container {
         this.resolvePromise(); // Resolve it immediately
         this.resolvePromise = null;
     }
-    // Clear cycle interval if active
-    if (this.cycleIntervalId) {
-        clearInterval(this.cycleIntervalId);
-        this.cycleIntervalId = null;
+    // Clean up spin wheel
+    if (this.powerupSpinWheel) {
+      this.removeChild(this.powerupSpinWheel);
+      this.powerupSpinWheel.destroy();
+      this.powerupSpinWheel = null;
     }
     // Destroy the new text element
-    this.getReadyText.destroy();
     super.destroy(options);
   }
 }

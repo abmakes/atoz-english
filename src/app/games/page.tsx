@@ -11,6 +11,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '@/stores/useGameStore'; // Import the store
 import { TagDrawer } from '@/components/management_ui/TagDrawer';
 import { ALL_TAG_CATEGORIES } from '@/lib/tags';
+import LoadingSpinner from '@/components/loading_spinner';
 
 // Function to fetch quizzes (can remain outside or be moved inside if preferred)
 async function getQuizzesClient(): Promise<QuizListItem[]> {
@@ -96,9 +97,8 @@ export default function GamesPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8 flex justify-center items-center">
-        <p className="text-xl grandstander text-[--secondary]">Loading quizzes...</p>
-        {/* You can add a spinner here */}
+      <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8 flex flex-col justify-center items-center gap-4">
+        <LoadingSpinner size={12} />
       </div>
     );
   }

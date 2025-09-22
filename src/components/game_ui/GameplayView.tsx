@@ -9,8 +9,9 @@ import { GAME_STATE_EVENTS, SCORING_EVENTS, ScoringScoreUpdatedPayload, GameStat
 import { PixiEngine, PixiEngineManagers } from '@/lib/pixi-engine/core/PixiEngine';
 import { GameConfig } from '@/lib/pixi-engine/config/GameConfig';
 import { BaseGame } from '@/lib/pixi-engine/game/BaseGame';
-import { Settings, ArrowLeft } from 'lucide-react';
+import { Settings, ArrowLeft, Maximize2, Minimize2 } from 'lucide-react';
 import { SETTINGS_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
+import { useFullscreen } from '@/hooks/useFullscreen';
 // import type { EventBus } from '@/lib/pixi-engine/core/EventBus';
 
 // Update state structure to include teamId
@@ -67,6 +68,10 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   // --- Refs for internal engine/managers ---
   const engineInstanceRef = useRef<PixiEngine | null>(null);
   const managersRef = useRef<PixiEngineManagers | null>(null);
+  const gameContainerRef = useRef<HTMLDivElement>(null);
+
+  // --- Fullscreen functionality ---
+  const { isFullscreen, toggleFullscreen, isSupported } = useFullscreen(gameContainerRef);
 
   console.log(config, 'AS GAME Confing form container !!!!!!!!!!!')
 
@@ -236,9 +241,21 @@ const GameplayView: React.FC<GameplayViewProps> = ({
           />
         )
       },
+      ...(isSupported ? [{
+        id: 'fullscreen',
+        label: isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen',
+        icon: isFullscreen ? <Minimize2 /> : <Maximize2 />,
+        onClick: toggleFullscreen,
+      }] : []),
       { id: 'back', label: 'Exit Game', icon: <ArrowLeft />, onClick: onExit },
   ] : [
       { id: 'game-controls', label: 'Audio Settings (Loading...)', icon: <Settings className="opacity-50"/>,},
+      ...(isSupported ? [{
+        id: 'fullscreen',
+        label: isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen',
+        icon: isFullscreen ? <Minimize2 /> : <Maximize2 />,
+        onClick: toggleFullscreen,
+      }] : []),
       { id: 'back', label: 'Exit Game', icon: <ArrowLeft />, onClick: onExit },
   ];
 
@@ -279,8 +296,39 @@ const GameplayView: React.FC<GameplayViewProps> = ({
     }
   }, []);
 
+  // Handle fullscreen changes and resize PixiJS application
+  useEffect(() => {
+    if (engineInstanceRef.current && gameContainerRef.current) {
+      // Small delay to ensure the fullscreen transition is complete
+      const timeoutId = setTimeout(() => {
+        const container = gameContainerRef.current;
+        if (container) {
+          const rect = container.getBoundingClientRect();
+          const width = rect.width || window.innerWidth;
+          const height = rect.height || window.innerHeight;
+          
+          console.log(`Fullscreen change detected. Resizing PixiJS to: ${width}x${height}`);
+          
+          // Trigger resize on the PixiJS application
+          try {
+            if (engineInstanceRef.current) {
+              const pixiApp = engineInstanceRef.current.getApp();
+              if (pixiApp && pixiApp.resize) {
+                pixiApp.resize(width, height);
+              }
+            }
+          } catch (error) {
+            console.warn('Could not resize PixiJS application:', error);
+          }
+        }
+      }, 100);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isFullscreen]);
+
   return (
-    <div className={`${themeClassName} relative min-h-screen w-full overflow-hidden`}>
+    <div ref={gameContainerRef} className={`${themeClassName} relative min-h-screen w-full overflow-hidden`}>
         {/* Overlays */}
         <div className={`absolute flex flex-col gap-2 top-4 left-4 z-10`}>
             {playerScores.map((player: PlayerScoreState) => {
