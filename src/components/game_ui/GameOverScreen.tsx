@@ -18,16 +18,41 @@ interface GameOverScreenProps {
   onSettingsClick?: () => void;
   onMainMenuClick?: () => void;
   onBackClick?: () => void; // 'Back' might function as 'Exit' here
+  celebrationImage?: string; // Pre-selected celebration image
 }
 
 // --- Define Background Images ---
 const gameOverBackgroundImages = [
-    '/images/gameover/bg1.webp', // Replace with your actual image paths
+    '/images/gameover/bg1.webp',
     '/images/gameover/bg2.webp',
     '/images/gameover/bg3.webp',
     '/images/gameover/bg4.webp',
     '/images/gameover/bg5.webp',
 ];
+
+// Select a random celebration image for this game session
+export const selectCelebrationImage = (): string => {
+    const randomIndex = Math.floor(Math.random() * gameOverBackgroundImages.length);
+    const selectedImage = gameOverBackgroundImages[randomIndex];
+    console.log(`Selected celebration image: ${selectedImage}`);
+    return selectedImage;
+};
+
+// Preload a specific celebration image
+export const preloadCelebrationImage = (imagePath: string): Promise<void> => {
+    return new Promise<void>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            console.log(`Preloaded celebration image: ${imagePath}`);
+            resolve();
+        };
+        img.onerror = () => {
+            console.warn(`Failed to preload celebration image: ${imagePath}`);
+            resolve(); // Don't reject, just log warning
+        };
+        img.src = imagePath;
+    });
+};
 // --- End Background Images ---
 
 const GameOverScreen: React.FC<GameOverScreenProps> = ({
@@ -37,6 +62,7 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({
   navMenuItems,
   onPlayAgain,
   onExit,
+  celebrationImage,
 }) => {
   // --- Calculate Tie/Winner ---
   const { titleMessage, winningPlayerNames } = useMemo(() => {
@@ -82,11 +108,8 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({
   }, []); // Empty dependency array ensures this runs only once on mount
   // ---------------------------------
 
-  // --- Select Random Background Image ---
-  const backgroundImage = useMemo(() => {
-    const randomIndex = Math.floor(Math.random() * gameOverBackgroundImages.length);
-    return gameOverBackgroundImages[randomIndex];
-  }, []); // Empty dependency array ensures it's selected only once on mount
+  // --- Use Pre-selected Background Image ---
+  const backgroundImage = celebrationImage || gameOverBackgroundImages[0]; // Fallback to first image if none provided
   // ---------------------------------
 
   // Prepare NavMenu items by potentially overriding the back handler
@@ -135,26 +158,26 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({
       <div className="
           absolute
           -bottom-16
-          z-10
+          z-8
           font-[var(--font-theme)]
           bg-[var(--panel-bg-theme)]
           backdrop-blur-sm
           rounded-[64px]
-          px-20 pt-12 pb-28
+          px-16 pt-6 pb-24
           shadow-[var(--shadow-xl)]
           border
           border-[var(--panel-border)] 
           text-center
-          max-w-[90%] 
+          max-w-[80%] 
         ">
-        <h2 className={`titleXLarge grandstander font-bold`}>
+        <h2 className={`titleXLarge grandstander font-bold my-0`}>
           {titleMessage}
         </h2>
         <div className="w-full max-w-3xl mx-auto flex justify-center gap-6">
-          <button onClick={onPlayAgain} className={`w-96 buttonXLarge`}>
+          <button onClick={onPlayAgain} className={`w-96 buttonXLarge md:text-4xl text-2xl font-bold grandstander -mb-2`}>
             Play Again
           </button>
-          <button onClick={onExit} className={`w-96 buttonXLarge`}>
+          <button onClick={onExit} className={`w-96 buttonXLarge md:text-4xl text-2xl font-bold grandstander -mb-2`}>
             Exit
           </button>
         </div>

@@ -6,31 +6,6 @@ import Image from 'next/image';
 export default function HomePage() {
   return (
     <div className="min-h-screen">
-      <style jsx>{`
-        .neo-card {
-          border: 3px solid var(--text-color);
-          border-radius: 24px;
-          box-shadow: 6px 6px 0px var(--text-color);
-          transition: all 0.3s ease;
-        }
-        .neo-card:hover {
-          box-shadow: 8px 8px 0px var(--text-color);
-          transform: translateY(-2px);
-        }
-        .neo-button {
-          border: 3px solid var(--text-color);
-          border-radius: 9999px;
-          box-shadow: 4px 4px 0px var(--text-color);
-          font-weight: 700;
-          padding: 12px 24px;
-          transition: all 0.2s ease;
-          font-family: 'Grandstander', cursive;
-        }
-        .neo-button:hover {
-          box-shadow: 6px 6px 0px var(--text-color);
-          transform: translateY(-2px);
-        }
-      `}</style>
 
       <section
         className="relative min-h-[80vh] py-20"

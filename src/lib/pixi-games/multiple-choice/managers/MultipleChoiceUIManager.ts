@@ -9,6 +9,7 @@ import { QuestionData } from '@/types';
 import { TimerEventPayload, TIMER_EVENTS, ENGINE_EVENTS, GAME_STATE_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
 import { MultipleChoiceLayoutManager, LayoutProfile } from './MultipleChoiceLayoutManager';
 import { PixiTimer } from '../ui/PixiTimer';
+import { VisualEffectsManager } from '@/lib/pixi-engine/ui/VisualEffectsManager';
 
 // Define the structure for answer options data used by the UI manager
 export interface AnswerOptionUIData {
@@ -27,6 +28,8 @@ export class MultipleChoiceUIManager {
     private currentQuestionId: string | null = null;
     private currentGeneratedOptions: AnswerOptionUIData[] = [];
     private backgroundPanelDrawRafId: number | null = null;
+    private questionCounterText: PIXI.Text | null = null;
+    private visualEffectsManager: VisualEffectsManager;
     
     // Constants for button styling
     private readonly shadowOffsetY = 6;
@@ -41,6 +44,7 @@ export class MultipleChoiceUIManager {
             isPowerUpActive: (powerupId: string, targetId: string | number) => boolean;
             deactivatePowerUpInstance: (instanceId: string) => void;
             getPowerUpTargetId: () => string | number | undefined;
+            updateCurrentAnswerOptions: (options: AnswerOptionUIData[]) => void;
             powerUpManager: {
                 isPowerUpActiveForTarget: (powerupId: string, targetId: string | number) => boolean;
                 deactivatePowerUpByTypeAndTarget: (powerupId: string, targetId: string | number) => boolean;
@@ -74,6 +78,9 @@ export class MultipleChoiceUIManager {
         this.eventBus.on(GAME_STATE_EVENTS.GAME_PAUSED, this._handleGamePaused);
         this.eventBus.on(GAME_STATE_EVENTS.GAME_RESUMED, this._handleGameResumed);
 
+        // Initialize visual effects manager
+        this.visualEffectsManager = new VisualEffectsManager(this.pixiApp.getApp(), this.scene);
+
         console.log("UIManager: Initialized (Restored themeConfig usage).");
     }
 
@@ -102,6 +109,46 @@ export class MultipleChoiceUIManager {
         this.answerButtons = []; // Clear internal button array
         this.currentQuestionId = null;
         this.currentGeneratedOptions = [];
+        
+        // Clear any ongoing visual effects
+        this.visualEffectsManager.clearAllEffects();
+    }
+
+    /**
+     * Updates the question counter display
+     */
+    public updateQuestionCounter(currentIndex: number, totalQuestions: number): void {
+        if (!this.questionCounterText) {
+            this._createQuestionCounter();
+        }
+        
+        if (this.questionCounterText) {
+            this.questionCounterText.text = `Question ${currentIndex + 1} of ${totalQuestions}`;
+            console.log(`UIManager: Updated question counter to: ${this.questionCounterText.text}`);
+        }
+    }
+
+    /**
+     * Creates the question counter text element
+     */
+    private _createQuestionCounter(): void {
+        this.questionCounterText = new PIXI.Text({
+            text: 'Question 1 of 1',
+            style: {
+                fontFamily: this.themeConfig.fontFamilyTheme || 'Grandstander',
+                fontSize: 18,
+                fill: this.themeConfig.questionTextColor,
+                align: 'center'
+            }
+        });
+        
+        this.questionCounterText.anchor.set(1, 0.5); // Right-align
+        this.scene.addChild(this.questionCounterText);
+        
+        // Position immediately to avoid (0,0) flash
+        this._positionQuestionCounter();
+        
+        console.log("UIManager: Created question counter text element");
     }
 
     public updateQuestionContent(question: QuestionData): void {
@@ -153,7 +200,8 @@ export class MultipleChoiceUIManager {
         // For 2x3 grid (question + 2 rows of buttons), calculate total height needed
         const totalButtonHeight = (actualButtonHeight * 3) + (buttonGap * 2 + this.shadowOffsetY * 2);
         const isMobile = screenHeight < 700; // More appropriate threshold for mobile devices
-        const panelPadding = isMobile ? 10 : 20; // Reduce padding on mobile
+        const isTabletNonFullscreen = screenHeight >= 600 && screenHeight <= 650; // Tablet in non-fullscreen mode
+        const panelPadding = isMobile ? 10 : (isTabletNonFullscreen ? 15 : 20); // Reduce padding on mobile and tablet non-fullscreen
         const buttonContainerHeight = totalButtonHeight + (panelPadding * 2); // Padding above and below
         const buttonContainerY = screenHeight - buttonContainerHeight; // Touch bottom of screen
         const buttonContainerBounds = new PIXI.Rectangle(sidePad, buttonContainerY, contentWidth, buttonContainerHeight);
@@ -213,6 +261,12 @@ export class MultipleChoiceUIManager {
         } else {
              // console.log(`[UIManager] 50/50 not active for team ${currentTeamId}`); // Optional log
         }
+        
+        // Update the game's stored answer options if 50/50 was applied
+        if (fiftyFiftyActive && currentTeamId && optionsToDisplay !== generatedOptions) {
+            console.log(`[UIManager] Updating game's stored answer options after 50/50 power-up`);
+            this.gameRef.updateCurrentAnswerOptions(optionsToDisplay);
+        }
         // --- End 50/50 ---
 
         this.scene.clearAnswerOptions();
@@ -270,6 +324,7 @@ export class MultipleChoiceUIManager {
 
             const button = new Button(buttonView);
             button.view.interactive = true;
+            button.view.eventMode = 'static';
 
             // --- Position Button WITHIN the Container (question takes top row, buttons start from row 1) ---
             const col = i % columns;
@@ -433,6 +488,40 @@ export class MultipleChoiceUIManager {
              buttonView.roundRect(borderWidth, borderWidth, buttonWidth - (2 * borderWidth), buttonHeight - (2 * borderWidth), innerRadius ).fill(currentFill);
              // --- End Apply Styles ---
          });
+
+         // Add visual effects for answer feedback
+         if (selectedOptionId) {
+             const selectedOption = generatedOptions.find(option => option.id === selectedOptionId);
+             if (selectedOption) {
+                // Find the button that was selected to get its position
+                const selectedButtonIndex = generatedOptions.findIndex(option => option.id === selectedOptionId);
+                if (selectedButtonIndex >= 0 && selectedButtonIndex < this.answerButtons.length) {
+                    const selectedButton = this.answerButtons[selectedButtonIndex];
+                    const buttonView = selectedButton.view as PIXI.Graphics;
+                    
+                    // Get button center position in global coordinates
+                    const globalPos = buttonView.toGlobal(new PIXI.Point(buttonView.width / 2, buttonView.height / 2));
+                    const buttonX = globalPos.x;
+                    const buttonY = globalPos.y;
+                     
+                     if (selectedOption.isCorrect) {
+                         // Create celebrate emoji for correct answer
+                         this.visualEffectsManager.createCelebrateEmoji(buttonX, buttonY, {
+                             duration: 2000,
+                             scale: 1.5,
+                             alpha: 0.9
+                         });
+                     } else {
+                         // Create sad emoji for incorrect answer
+                         this.visualEffectsManager.createSadEmoji(buttonX, buttonY, {
+                             duration: 1500,
+                             scale: 1.5,
+                             alpha: 0.9
+                         });
+                     }
+                 }
+             }
+         }
     }
 
     public setAnswerButtonsEnabled(enabled: boolean): void {
@@ -448,7 +537,7 @@ export class MultipleChoiceUIManager {
         
         // Position timer container using layout parameters
         const targetX = screenWidth - 64 - params.sidePadding;
-        const targetY = screenHeight * 0.2; // Could add timer position to LayoutParameters if needed
+        const targetY = screenHeight * 0.25; // Moved down 3% more to give more space for question counter
         
         // --- Position the new PixiTimer instance ---
         this.pixiTimerInstance.x = targetX;
@@ -478,7 +567,8 @@ export class MultipleChoiceUIManager {
         // For 2x3 grid (question + 2 rows of buttons), calculate total height needed
         const totalButtonHeight = (actualButtonHeight * 3) + (buttonGap * 2 + this.shadowOffsetY * 2);
         const isMobile = screenHeight < 700; // More appropriate threshold for mobile devices
-        const panelPadding = isMobile ? 10 : 20; // Reduce padding on mobile
+        const isTabletNonFullscreen = screenHeight >= 600 && screenHeight <= 650; // Tablet in non-fullscreen mode
+        const panelPadding = isMobile ? 10 : (isTabletNonFullscreen ? 15 : 20); // Reduce padding on mobile and tablet non-fullscreen
         const buttonContainerHeight = totalButtonHeight + (panelPadding * 2); // Padding above and below
         const buttonContainerY = screenHeight - buttonContainerHeight; // Touch bottom of screen
         const buttonContainerBounds = new PIXI.Rectangle(
@@ -496,13 +586,13 @@ export class MultipleChoiceUIManager {
         // -- Media Bounds (Maximize space for image, remove padding on mobile) --
         let mediaBounds: PIXI.Rectangle | null = null;
         
-        // On mobile, remove padding completely to maximize image size
-        const mediaTop = isMobile ? 0 : topPad;
-        const mediaBottom = buttonContainerY - (isMobile ? 0 : topPad);
+        // On mobile and tablet non-fullscreen, remove padding completely to maximize image size
+        const mediaTop = (isMobile || isTabletNonFullscreen) ? 0 : topPad;
+        const mediaBottom = buttonContainerY - ((isMobile || isTabletNonFullscreen) ? 0 : topPad);
         const mediaHeight = Math.max(10, mediaBottom - mediaTop);
         
-        // On mobile, use more of the screen for image (60% instead of 50%)
-        const maxImageHeight = isMobile ? screenHeight * 0.6 : mediaHeight;
+        // On mobile and tablet non-fullscreen, use more of the screen for image
+        const maxImageHeight = isMobile ? screenHeight * 0.6 : (isTabletNonFullscreen ? screenHeight * 0.65 : mediaHeight);
         const finalMediaHeight = Math.min(mediaHeight, maxImageHeight);
         
         if (finalMediaHeight > 10) { 
@@ -512,7 +602,7 @@ export class MultipleChoiceUIManager {
                 contentWidth,
                 finalMediaHeight
             );
-            console.log(`UIManager: Calculated Media Bounds (${isMobile ? 'mobile 50/50' : 'maximized'}):`, mediaBounds);
+            console.log(`UIManager: Calculated Media Bounds (${isMobile ? 'mobile' : isTabletNonFullscreen ? 'tablet non-fullscreen' : 'maximized'}):`, mediaBounds);
         } else {
              console.log("UIManager: Not enough space for media bounds.");
         }
@@ -521,9 +611,24 @@ export class MultipleChoiceUIManager {
         // 3. Update Scene Layout (passing textBoundsConfig)
         console.log("UIManager: Updating scene layout");
         this.scene.updateLayout(textBoundsConfig, mediaBounds, params, screenWidth);
+        
+        // On mobile, ensure images are properly reloaded after layout update
+        if (isMobile && this.currentQuestionId) {
+            console.log("UIManager: Mobile device detected, ensuring image visibility after layout update");
+            // Add a small delay to ensure the layout update is complete
+            setTimeout(() => {
+                if (this.scene && this.scene.currentQuestionMedia) {
+                    this.scene.currentQuestionMedia.visible = true;
+                    console.log("UIManager: Mobile image visibility restored after layout update");
+                }
+            }, 50);
+        }
 
         // 4. Update Timer Position
         this._positionTimerElements();
+
+        // 5. Update Question Counter Position
+        this._positionQuestionCounter();
 
         // 5. Update Answer Buttons (passing bounds)
         if (this.answerButtons.length > 0 && this.currentQuestionId && this.currentGeneratedOptions.length > 0) {
@@ -554,7 +659,20 @@ export class MultipleChoiceUIManager {
 
     private _handleResize = (): void => {
         console.log("[UIManager._handleResize] Resize event received. Updating layout...");
-        this._updateAndApplyLayout();
+        
+        // On mobile devices, add a small delay to ensure proper image loading after resize
+        const screenHeight = this.pixiApp.getScreenSize().height;
+        const isMobile = screenHeight < 700;
+        
+        if (isMobile) {
+            console.log("[UIManager._handleResize] Mobile device detected, adding delay for image stability...");
+            // Add a small delay to ensure the resize is complete and images can load properly
+            setTimeout(() => {
+                this._updateAndApplyLayout();
+            }, 100);
+        } else {
+            this._updateAndApplyLayout();
+        }
     };
 
     private _handleTimerTick = (payload: TimerEventPayload): void => {
@@ -614,10 +732,30 @@ export class MultipleChoiceUIManager {
         questionInContainer.x = bounds.width / 2;
         const panelPadding = 20; // Same as used in container calculation
         const isMobile = this.pixiApp.getScreenSize().height < 700; // More appropriate threshold for mobile devices
-        const questionPadding = isMobile ? 10 : panelPadding; // Reduce padding on mobile
+        const isTabletNonFullscreen = this.pixiApp.getScreenSize().height >= 600 && this.pixiApp.getScreenSize().height <= 800; // Tablet in non-fullscreen mode
+        const questionPadding = isMobile ? 10 : (isTabletNonFullscreen ? 12 : panelPadding); // Reduce padding on mobile and tablet non-fullscreen
         questionInContainer.y = questionPadding + (Math.round(this.pixiApp.getScreenSize().height * params.answerButtonHeightMultiplier) + params.answerButtonGap + this.shadowOffsetY) / 2;
         
         container.addChild(questionInContainer);
+    }
+
+    /**
+     * Positions the question counter text element
+     */
+    private _positionQuestionCounter(): void {
+        if (!this.questionCounterText) return;
+
+        const screenWidth = this.pixiApp.getScreenSize().width;
+        const screenHeight = this.pixiApp.getScreenSize().height;
+        
+        // Position on the right side, below navigation buttons but above timer
+        this.questionCounterText.x = screenWidth - 20; // 20px from right edge
+        this.questionCounterText.y = screenHeight * 0.13; // 13% from top, moved up 2% more
+        
+        // Right-align the text (already set in _createQuestionCounter)
+        this.questionCounterText.anchor.set(1, 0.5);
+        
+        console.log(`UIManager: Positioned question counter at (${this.questionCounterText.x}, ${this.questionCounterText.y})`);
     }
 
     private _repositionAnswerButtonsContainer(bounds: PIXI.Rectangle): void {
@@ -654,6 +792,9 @@ export class MultipleChoiceUIManager {
             cancelAnimationFrame(this.backgroundPanelDrawRafId);
             this.backgroundPanelDrawRafId = null;
         }
+
+        // Destroy visual effects manager
+        this.visualEffectsManager?.destroy();
 
         console.log("UIManager: Destroy complete.");
     }

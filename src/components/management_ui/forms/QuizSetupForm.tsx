@@ -75,7 +75,7 @@ export default function QuizSetupForm({
             <div className='flex flex-col'>
               <Label htmlFor="quizTitle" className="block text-lg font-medium  mb-1">Quiz Title</Label>
               <Input
-                className='w-full bg-white h-16 text-[--text-color] border-2 border-slate-200 px-6 py-4'
+                className='w-full bg-white h-14 text-[--text-color] border-2 border-slate-200 px-6 py-4'
                 id="quizTitle"
                 type="text"
                 value={title}
@@ -88,7 +88,7 @@ export default function QuizSetupForm({
               <Label htmlFor="quizDescription" className="block text-lg font-medium  mb-1">Description</Label>
               <Textarea
                 rows={2}
-                className='w-full bg-white h-16 text-[--text-color] border-2 border-slate-200 px-6 py-4'
+                className='w-full bg-white h-14 text-[--text-color] border-2 border-slate-200 px-6 py-4'
                 id="quizDescription"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}

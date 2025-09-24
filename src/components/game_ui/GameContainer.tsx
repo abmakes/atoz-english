@@ -4,7 +4,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import GameSetupPanel from './GameSetupPanel';
-import GameOverScreen from './GameOverScreen';
+import GameOverScreen, { selectCelebrationImage, preloadCelebrationImage } from './GameOverScreen';
 import styles from '@/styles/themes/themes.module.css';
 import { GameSetupData, PlayerScoreData, GameOverPayload } from '@/types/gameTypes';
 import {
@@ -64,6 +64,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
   const [finalScores, setFinalScores] = useState<PlayerScoreData[]>([]);
   const [winnerName, setWinnerName] = useState<string | undefined>(undefined);
   const [themeClassName, setThemeClassName] = useState<string>(styles.themeBasic);
+  const [celebrationImage, setCelebrationImage] = useState<string | undefined>(undefined);
   // const [isPaused, setIsPaused] = useState(false);
   
   const pixiMountPointRef = useRef<HTMLDivElement>(null);
@@ -72,6 +73,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
   useEffect(() => {
       setSelectedQuiz(quizId);
   }, [quizId, setSelectedQuiz]);
+
 
   /**
    * Callback triggered when the user confirms settings and starts the game.
@@ -306,6 +308,22 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
       setThemeClassName(simpleThemeClass); // Set state to the simple class name
       // --- END UPDATE ---
 
+      // Select and preload celebration image for this game session
+      const selectedCelebrationImage = selectCelebrationImage();
+      setCelebrationImage(selectedCelebrationImage);
+      
+      // Preload the selected celebration image after a short delay to let quiz images load first
+      setTimeout(() => {
+          console.log('GameContainer: Preloading selected celebration image...');
+          preloadCelebrationImage(selectedCelebrationImage)
+              .then(() => {
+                  console.log('GameContainer: Celebration image preloaded successfully');
+              })
+              .catch((error) => {
+                  console.error('GameContainer: Error preloading celebration image:', error);
+              });
+      }, 2000); // 2 second delay to let quiz images load first
+
       setCurrentView('playing');
   }, [quizId, gameSlug, router]);
 
@@ -381,6 +399,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
                     onPlayAgain={handlePlayAgain}
                     onExit={handleExit}
                     navMenuItems={gameOverNavItems}
+                    celebrationImage={celebrationImage}
                 />;
       default:
         console.error("Reached unknown game state:", currentView);

@@ -162,9 +162,10 @@ const GameplayView: React.FC<GameplayViewProps> = ({
         // Attach listeners ONLY after managers are confirmed
         if (currentManagers) {
           console.log("GameplayView: Attaching event listeners post-init...");
-          currentManagers.eventBus.on(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
-          currentManagers.eventBus.on(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
-          currentManagers.eventBus.on(GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED, handlePixiActiveTeamChanged);
+          // Use arrow functions to access the latest handlers
+          currentManagers.eventBus.on(GAME_STATE_EVENTS.GAME_ENDED, () => handlePixiGameOver());
+          currentManagers.eventBus.on(SCORING_EVENTS.SCORE_UPDATED, (payload: ScoringScoreUpdatedPayload) => handlePixiScoreUpdate(payload));
+          currentManagers.eventBus.on(GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED, (payload: GameStateActiveTeamChangedPayload) => handlePixiActiveTeamChanged(payload));
         } else {
           console.error("GameplayView: Managers are null after engine init!");
         }
@@ -185,9 +186,10 @@ const GameplayView: React.FC<GameplayViewProps> = ({
       const currentManagers = managersRef.current;
       if (currentManagers) {
         console.log("GameplayView: Detaching listeners during cleanup...");
-        currentManagers.eventBus.off(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
-        currentManagers.eventBus.off(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
-        currentManagers.eventBus.off(GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED, handlePixiActiveTeamChanged);
+        // Remove all listeners of these event types (since we used arrow functions)
+        currentManagers.eventBus.off(GAME_STATE_EVENTS.GAME_ENDED);
+        currentManagers.eventBus.off(SCORING_EVENTS.SCORE_UPDATED);
+        currentManagers.eventBus.off(GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED);
       }
       
       console.log("GameplayView: Destroying PixiEngine instance.");
@@ -196,7 +198,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
       engineInstanceRef.current = null;
       managersRef.current = null;
     };
-  }, [config, gameFactory, pixiMountPointRef, handlePixiGameOver, handlePixiScoreUpdate, handlePixiActiveTeamChanged]);
+  }, [config, gameFactory, pixiMountPointRef]);
   // ------------------------------------------------------
 
   // --- Settings/Audio Handlers (Connect to EventBus/AudioManager) ---

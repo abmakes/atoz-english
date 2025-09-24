@@ -138,6 +138,17 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             this.hideTransition();
             console.log("[MultipleChoiceGame] initImplementation: AFTER hideTransition(). Screen hidden.");
 
+            // Show turn transition screen to indicate whose turn it is
+            const firstTeamName = this.config.teams[0]?.name || 'Team 1';
+            console.log("[MultipleChoiceGame] initImplementation: Showing turn transition for first team...");
+            await this.showTransition({ 
+                type: 'turn', 
+                message: `${firstTeamName}'s Turn!`, 
+                duration: 2000, 
+                autoHide: true 
+            });
+            console.log("[MultipleChoiceGame] initImplementation: Turn transition completed.");
+
             // Proceed with UI setup using loaded data
             console.log("[MultipleChoiceGame] initImplementation: Ensuring font loaded...");
             await ensureFontIsLoaded('Grandstander');
@@ -167,6 +178,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                      this.powerUpManager.deactivatePowerUp(instanceId); // Assuming BaseGame has powerUpManager
                  },
                  getPowerUpTargetId: () => this.getState()?.activeTeam,
+                 updateCurrentAnswerOptions: this.updateCurrentAnswerOptions.bind(this),
                  powerUpManager: this.powerUpManager
              };
             this.uiManager = new MultipleChoiceUIManager(
@@ -375,6 +387,12 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         this.setState({ 
             currentQuestionIndex: this.dataManager.getCurrentProgressIndex() - 1 
         });
+        
+        // Update question counter
+        const currentIndex = this.getState().currentQuestionIndex;
+        const totalQuestions = this.dataManager.getTotalQuestionsToAsk();
+        this.uiManager.updateQuestionCounter(currentIndex, totalQuestions);
+        
         console.log(`[MultipleChoiceGame] Showing question index ${this.getState().currentQuestionIndex} ...`);
     }
 
@@ -406,6 +424,14 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
         return shuffled;
+    }
+
+    /**
+     * Updates the current answer options (used by UIManager after 50/50 power-up)
+     */
+    public updateCurrentAnswerOptions(options: AnswerOptionUIData[]): void {
+        console.log(`[MultipleChoiceGame] Updating current answer options: ${options.length} options`);
+        this.currentAnswerOptions = options;
     }
     
     private _startQuestionTimer(): void {
@@ -513,8 +539,8 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                 message: `${nextTeamName}'s Turn!`,
                 duration: 3000,
                 autoHide: true,
-                // Pass the calculated boolean
-                triggerPowerupRoll: shouldTriggerRoll 
+                // Only trigger power-up roll if power-ups are enabled AND should trigger
+                triggerPowerupRoll: this.config.powerups.powerupsEnabled && shouldTriggerRoll 
             });
             console.log("[MultipleChoiceGame] _handleAnswerSelected: AFTER await showTransition (turn).");
 
@@ -744,8 +770,8 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                  message: `${nextTeamName}'s Turn!`, 
                  duration: 3000, 
                  autoHide: true,
-                 // Pass the calculated boolean
-                 triggerPowerupRoll: shouldTriggerRoll
+                 // Only trigger power-up roll if power-ups are enabled AND should trigger
+                 triggerPowerupRoll: this.config.powerups.powerupsEnabled && shouldTriggerRoll
              });
              console.log("[MultipleChoiceGame] _handleTimerComplete: AFTER await showTransition (turn)."); 
 

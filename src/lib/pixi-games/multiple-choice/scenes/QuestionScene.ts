@@ -44,6 +44,7 @@ export class QuestionScene extends PIXI.Container {
 
         this.interactive = true;
         this.interactiveChildren = true;
+        this.eventMode = 'static';
 
         // Create background panel
         this.backgroundPanel = new PIXI.Graphics();
@@ -53,7 +54,7 @@ export class QuestionScene extends PIXI.Container {
         // Create question text with initial style (will be updated by layout)
         const textStyle = new PIXI.TextStyle({
             fontFamily: this.pixiTheme.fontFamilyTheme,
-            fontSize: 36,
+            fontSize: 32,
             fill: this.pixiTheme.questionTextColor,
             align: 'center',
             wordWrap: true,
@@ -67,7 +68,15 @@ export class QuestionScene extends PIXI.Container {
         this.answerOptionsContainer = new PIXI.Container();
         this.answerOptionsContainer.interactive = true;
         this.answerOptionsContainer.interactiveChildren = true;
+        this.answerOptionsContainer.eventMode = 'static';
         this.addChild(this.answerOptionsContainer);
+    }
+
+    /**
+     * Getter for questionMedia to allow external access
+     */
+    public get currentQuestionMedia(): PIXI.Sprite | GifSprite | PIXI.AnimatedSprite | null {
+        return this.questionMedia;
     }
 
     public updateQuestion(text: string, imageUrl?: string): void {
@@ -95,6 +104,19 @@ export class QuestionScene extends PIXI.Container {
                     this.addChild(this.questionMedia);
                     console.log(`Added media from AssetLoader: ${this.questionMedia.constructor.name}`);
 
+                    // Enhanced mobile image loading with retry mechanism
+                    const isMobile = this.pixiApp.getScreenSize().height < 700;
+                    if (isMobile) {
+                        console.log("Mobile device detected, applying enhanced image loading...");
+                        // On mobile, ensure the image is properly loaded and visible
+                        setTimeout(() => {
+                            if (this.questionMedia && !this.questionMedia.destroyed) {
+                                this.questionMedia.visible = true;
+                                console.log("Mobile image made visible after delay");
+                            }
+                        }, 150);
+                    }
+
                     if (this.questionMedia instanceof PIXI.AnimatedSprite || this.questionMedia instanceof GifSprite) {
                         if (!this.questionMedia.playing) {
                             setTimeout(() => {
@@ -106,6 +128,8 @@ export class QuestionScene extends PIXI.Container {
                             }, 50);
                         }
                     }
+                } else {
+                    console.warn(`AssetLoader.getDisplayObject returned null for: ${imageUrl}`);
                 }
             } catch (error) {
                 console.error(`Error during AssetLoader.getDisplayObject for ${imageUrl}:`, error);

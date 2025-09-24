@@ -23,18 +23,18 @@ export class MultipleChoiceLayoutManager {
 
     // Define a default profile (e.g., for 16:9 aspect ratio)
     private readonly defaultProfile: LayoutProfile = {
-        questionFontSize: 44,
+        questionFontSize: 40,
         questionWrapMultiplier: 0.75,
-        questionWrapFontSize: 38,
+        questionWrapFontSize: 36,
         questionWrapYMultiplier: 0.55,
         questionYMultiplier: 0.73, // Position question text to maintain ~15px gap
         answerColumns: 2, // 2 columns for answer buttons (question will span both)
         answerButtonWidthMultiplier: 0.38,
         answerButtonHeightMultiplier: 0.25,
-        answerButtonFontSize: 32,
+        answerButtonFontSize: 28,
         answerContainerYMultiplier: 0.85,
         answerButtonGap: 15,
-        answerButtonWrapFontSize: 24,
+        answerButtonWrapFontSize: 22,
         answerButtonWrapHeightMultiplier: 0.27,
         imageMaxHeightMultiplier: 0.4,
         topPadding: 20,
@@ -87,7 +87,43 @@ export class MultipleChoiceLayoutManager {
         // Clamp screen height to reasonable bounds
         const clampedHeight = Math.max(minHeight, Math.min(maxHeight, screenHeight));
         
-        if (clampedHeight < baseHeight) {
+        // Detect tablet in non-fullscreen mode (very specific range for actual tablets, not laptops)
+        const isTabletNonFullscreen = screenHeight >= 600 && screenHeight <= 650;
+        
+        if (isTabletNonFullscreen) {
+            // Special handling for tablet in non-fullscreen mode
+            console.log("LayoutManager: Detected tablet in non-fullscreen mode, applying compact scaling");
+            
+            // Apply moderate scaling for tablet non-fullscreen
+            const tabletScaleFactor = Math.max(0.8, clampedHeight / baseHeight);
+            
+            // Scale button height moderately for tablet non-fullscreen
+            const buttonHeightScale = Math.max(0.7, tabletScaleFactor * 0.9);
+            profile.answerButtonHeightMultiplier *= buttonHeightScale;
+            
+            // Reduce font sizes moderately for tablet non-fullscreen
+            profile.answerButtonFontSize = Math.round(profile.answerButtonFontSize * tabletScaleFactor * 0.95);
+            profile.questionFontSize = Math.round(profile.questionFontSize * tabletScaleFactor * 0.95);
+            profile.questionWrapFontSize = Math.round(profile.questionWrapFontSize * tabletScaleFactor * 0.95);
+            profile.answerButtonWrapFontSize = Math.round(profile.answerButtonWrapFontSize * tabletScaleFactor * 0.95);
+            
+            // Reduce padding moderately for tablet non-fullscreen
+            profile.topPadding = Math.round(profile.topPadding * tabletScaleFactor * 0.8);
+            profile.bottomPadding = Math.round(profile.bottomPadding * tabletScaleFactor * 0.8);
+            profile.sidePadding = Math.round(profile.sidePadding * tabletScaleFactor * 0.9);
+            
+            // Reduce gaps moderately
+            profile.answerButtonGap = Math.round(profile.answerButtonGap * tabletScaleFactor * 0.9);
+            
+            // Allow images to take more space on tablet non-fullscreen
+            profile.imageMaxHeightMultiplier = Math.min(0.5, profile.imageMaxHeightMultiplier * 1.1);
+            
+            // Keep question positioning similar to default
+            profile.questionYMultiplier = Math.min(0.75, profile.questionYMultiplier + 0.02);
+            
+            console.log(`LayoutManager: Applied tablet non-fullscreen scaling (factor: ${tabletScaleFactor.toFixed(2)})`);
+            
+        } else if (clampedHeight < baseHeight) {
             // Scale down for smaller screens
             const scaleFactor = Math.max(0.6, clampedHeight / baseHeight); // Minimum 60% of original size
             
