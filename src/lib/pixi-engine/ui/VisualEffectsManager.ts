@@ -83,6 +83,13 @@ export class VisualEffectsManager {
         const riseDuration = duration * 0.7; // 70% of time for rising
 
         const animate = () => {
+            // Check if emojiText still exists and is valid
+            if (!emojiText || emojiText.destroyed) {
+                balloonTicker.stop();
+                balloonTicker.destroy();
+                return;
+            }
+
             time += 16; // ~60fps
             const progress = Math.min(time / riseDuration, 1);
             
@@ -109,9 +116,13 @@ export class VisualEffectsManager {
                 balloonTicker.stop();
                 balloonTicker.destroy();
                 
-                // Remove the emoji
-                this.container.removeChild(emojiText);
-                emojiText.destroy();
+                // Safely remove and destroy the emoji
+                if (emojiText && !emojiText.destroyed && this.container.children.includes(emojiText)) {
+                    this.container.removeChild(emojiText);
+                }
+                if (emojiText && !emojiText.destroyed) {
+                    emojiText.destroy();
+                }
             }
         };
 
@@ -188,6 +199,13 @@ export class VisualEffectsManager {
         const riseDuration = duration * 0.7; // 70% of time for rising
 
         const animate = () => {
+            // Check if emojiText still exists and is valid
+            if (!emojiText || emojiText.destroyed) {
+                balloonTicker.stop();
+                balloonTicker.destroy();
+                return;
+            }
+
             time += 16; // ~60fps
             const progress = Math.min(time / riseDuration, 1);
             
@@ -214,9 +232,13 @@ export class VisualEffectsManager {
                 balloonTicker.stop();
                 balloonTicker.destroy();
                 
-                // Remove the emoji
-                this.container.removeChild(emojiText);
-                emojiText.destroy();
+                // Safely remove and destroy the emoji
+                if (emojiText && !emojiText.destroyed && this.container.children.includes(emojiText)) {
+                    this.container.removeChild(emojiText);
+                }
+                if (emojiText && !emojiText.destroyed) {
+                    emojiText.destroy();
+                }
             }
         };
 
@@ -256,7 +278,14 @@ export class VisualEffectsManager {
      * Clears all effects
      */
     public clearAllEffects(): void {
-        this.container.removeChildren();
+        // Safely destroy all children
+        const children = [...this.container.children]; // Create a copy to avoid modification during iteration
+        children.forEach(child => {
+            if (child && !child.destroyed) {
+                this.container.removeChild(child);
+                child.destroy();
+            }
+        });
     }
 
     /**
