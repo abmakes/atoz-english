@@ -1,7 +1,5 @@
 import { GameObjects } from 'phaser';
 import { BaseGame, BaseGameState } from '../../phaser-engine/game/BaseGame';
-import { GameConfig } from '../../phaser-engine/config/GameConfig';
-import { PhaserEngineManagers } from '../../phaser-engine/core/PhaserEngine';
 
 /**
  * Test game state interface.
@@ -149,7 +147,7 @@ export class TestGame extends BaseGame<TestGameState> {
   /**
    * Updates the test game each frame.
    */
-  protected updateImplementation(delta: number): void {
+  protected updateImplementation(_delta: number): void {
     // Update score display
     if (this.scoreText) {
       this.scoreText.setText(`Score: ${this.getState().score}`);

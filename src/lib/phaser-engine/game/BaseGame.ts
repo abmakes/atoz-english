@@ -1,25 +1,11 @@
 import { Scene } from 'phaser';
-import { EventBus } from '../core/EventBus';
-import { StorageManager } from '../core/StorageManager';
-import { ScoringManager } from './ScoringManager';
-import { TimerManager } from './TimerManager';
-import { AssetLoader } from '../assets/AssetLoader';
 import { PhaserEngineManagers } from '../core/PhaserEngine';
 import { getThemeConfig } from '../../themes';
 import type { PixiThemeConfig } from '../../themes';
-import { ControlsManager } from '../core/ControlsManager';
-import { GameStateManager } from '../core/GameStateManager';
-import { PowerUpManager } from './PowerUpManager';
-import { AudioManager } from '../core/AudioManager';
 import { GameConfig, validateGameConfig } from '../config/GameConfig';
 import { 
-  GAME_STATE_EVENTS, 
-  ENGINE_EVENTS,
-  GameStateActiveTeamChangedPayload, 
   EngineEvents, 
   TRANSITION_EVENTS,
-  TransitionStartPayload,
-  TransitionEndPayload,
   TransitionPowerupSelectedPayload
 } from '../core/EventTypes';
 import { v4 as uuidv4 } from 'uuid';

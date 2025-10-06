@@ -1,4 +1,4 @@
-import { EventEmitter } from 'phaser';
+import { Events } from 'phaser';
 import { EngineEvents, TIMER_EVENTS } from './EventTypes';
 
 /**
@@ -10,7 +10,7 @@ import { EngineEvents, TIMER_EVENTS } from './EventTypes';
  * while using Phaser's native event system under the hood.
  */
 export class EventBus {
-  private emitter: EventEmitter;
+  private emitter: Events.EventEmitter;
   private isDebugMode: boolean;
 
   /**
@@ -18,7 +18,7 @@ export class EventBus {
    * @param debug - Optional flag to enable debug logging for events.
    */
   constructor(debug: boolean = process.env.NODE_ENV === 'development') {
-    this.emitter = new EventEmitter();
+    this.emitter = new Events.EventEmitter();
     this.isDebugMode = debug;
     if (this.isDebugMode) {
       console.log('[EventBus] Debug mode enabled.');

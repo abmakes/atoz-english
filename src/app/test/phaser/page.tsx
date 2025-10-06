@@ -60,7 +60,7 @@ export default function PhaserTestPage() {
         });
 
         // Listen for game over
-        eventBus.on('game:over', (payload: any) => {
+        eventBus.on('game:over', (payload: { finalScore: number; clickCount: number }) => {
           setGameStatus(`Game Over! Final Score: ${payload.finalScore}`);
           setIsGameRunning(false);
         });
@@ -85,7 +85,7 @@ export default function PhaserTestPage() {
         engine.destroy();
       }
     };
-  }, []);
+  }, [engine]);
 
   const handleStartGame = () => {
     if (engine) {
@@ -265,7 +265,7 @@ export default function PhaserTestPage() {
             <div className="bg-white rounded-lg shadow-lg p-4">
               <h2 className="text-xl font-semibold mb-4">Instructions</h2>
               <div className="text-sm text-gray-600 space-y-2">
-                <p>• Click "Start Game" to begin the test game</p>
+                <p>• Click &quot;Start Game&quot; to begin the test game</p>
                 <p>• Click the red button in the game to score points</p>
                 <p>• Use the test controls to interact with the game</p>
                 <p>• The game ends when you reach 100 points</p>
