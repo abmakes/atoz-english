@@ -35,6 +35,19 @@
     box-shadow: 6px 6px 0px var(--text-color);
     transform: translateY(-2px);
   }
+  
+  .slider-white [data-radix-slider-thumb] {
+    background-color: white !important;
+    border-color: var(--primary-accent) !important;
+  }
+  
+  .slider-white .bg-background {
+    background-color: white !important;
+  }
+  
+  .slider-white [role="slider"] {
+    background-color: white !important;
+  }
 }
 
 @layer base {

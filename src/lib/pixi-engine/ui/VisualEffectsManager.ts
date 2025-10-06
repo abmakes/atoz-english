@@ -51,8 +51,7 @@ export class VisualEffectsManager {
             fontSize: 32 * scale,
             fontFamily: 'Arial',
             fill: 0xFFFFFF,
-            stroke: 0x000000,
-            strokeThickness: 1,
+            stroke: { color: 0x000000, width: 1 },
         });
 
         emojiText.anchor.set(0.5);
@@ -167,8 +166,7 @@ export class VisualEffectsManager {
             fontSize: 32 * scale,
             fontFamily: 'Arial',
             fill: 0xFFFFFF,
-            stroke: 0x000000,
-            strokeThickness: 1,
+            stroke: { color: 0x000000, width: 1 },
         });
 
         emojiText.anchor.set(0.5);
@@ -253,7 +251,7 @@ export class VisualEffectsManager {
     /**
      * Fades out a display object
      */
-    private fadeOut(object: PIXI.DisplayObject, duration: number): void {
+    private fadeOut(object: PIXI.Container, duration: number): void {
         const startAlpha = object.alpha;
         const startTime = Date.now();
         

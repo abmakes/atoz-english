@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import QuizForm, { QuizFormHandle } from "@/components/management_ui/forms/QuizForm"
 import UploadForm from "@/components/management_ui/forms/UploadForm"
 import QuizSetupForm from "@/components/management_ui/forms/QuizSetupForm"
+import AIGenerationForm from "@/components/management_ui/forms/AIGenerationForm"
 import DownloadButton from "@/components/management_ui/DownloadButton"
 import Image from "next/image"
 import { Card } from "@/components/ui/card"
@@ -683,14 +684,14 @@ export default function QuizEditor({ mode, quizId, initialData, onSuccess }: Qui
   // ============================================================================
   
   return (
-    <div className='flex flex-col h-[calc(100vh-120px)] px-6'>
+    <div className='flex flex-col h-[calc(100vh-120px)] px-2 lg:px-6'>
       <div className="container h-full w-full mx-auto flex flex-col items-center">
         
         {/* ========================================================================
          * PROGRESS INDICATOR
          * Shows the current step and allows navigation between steps
          * ======================================================================== */}
-        <div className="flex justify-center space-x-4 grandstander font-semibold bg-[--text-color] rounded-full border-2 border-[--border-dark] shadow-[4px_4px_0px_0px_#1F6E91] mb-6">
+        <div className="flex w-full sm:w-auto justify-center space-x-2 sm:space-x-4 grandstander font-semibold bg-[--text-color] rounded-full border-2 border-[--border-dark] shadow-[4px_4px_0px_0px_#1F6E91] mb-6">
 
           {stepDetails.map((step, index) => {
             // Determine the status of each step for styling
@@ -704,16 +705,16 @@ export default function QuizEditor({ mode, quizId, initialData, onSuccess }: Qui
             }
 
             // Dynamic classes based on step status
-            let stepContainerClasses = 'flex gap-2 p-0.5 min-w-56 text-justify items-center w-full rounded-full'; 
-            let iconClasses = 'rounded-full text-xl font-bold pt-1 flex items-center justify-center h-8 w-8'; 
-            let titleClasses = 'px-2 pt-1'; 
+            const isActive = status === 'active';
+            let stepContainerClasses = `flex gap-2 p-0.5 text-justify items-center rounded-full ${isActive ? 'bg-white min-w-32 sm:min-w-56 flex-1 sm:flex-none' : 'min-w-12 sm:min-w-56 flex-none'}`; 
+            let iconClasses = 'rounded-full text-xl font-bold pt-1 flex items-center justify-center h-8 w-8 flex-shrink-0'; 
+            let titleClasses = 'px-2 pt-1 whitespace-nowrap'; 
             let iconContent: React.ReactNode | number = step.number;
 
             switch (status) {
               case 'active':
-                stepContainerClasses += ' bg-white';
                 iconClasses += ' text-[--text-color] font-bold text-xl px-3 bg-white rounded-full border-2 border-[--primary-accent]'; 
-                titleClasses += ' text-[--text-color] font-bold text-lg no-wrap w-full';
+                titleClasses += ' text-[--text-color] font-bold text-lg';
                 break;
               case 'completed':
                 stepContainerClasses += ' bg-[--text-color]';
@@ -722,7 +723,7 @@ export default function QuizEditor({ mode, quizId, initialData, onSuccess }: Qui
                 iconContent = <Check size={20} strokeWidth={4} absoluteStrokeWidth className='text-[--primary-accent]' />;
                 break;
               case 'pending':
-                stepContainerClasses += '';
+                stepContainerClasses += ' bg-[--text-color]';
                 iconClasses += ' bg-white text-[--text-color]'; 
                 titleClasses += ' text-[--primary-accent]';
                 break;
@@ -732,10 +733,13 @@ export default function QuizEditor({ mode, quizId, initialData, onSuccess }: Qui
                 titleClasses += ' text-nowrap';
             }
 
+            // Mobile: Hide text for non-active steps, Desktop: Show all text
+            const titleClassesWithResponsive = `${titleClasses} ${isActive ? 'block' : 'hidden sm:block'}`;
+
             return (
               <div key={step.id} className={stepContainerClasses}>
                 <span className={iconClasses}>{iconContent}</span>
-                <span className={titleClasses}>{step.title}</span>
+                <span className={titleClassesWithResponsive}>{step.title}</span>
               </div>
             );
           })}
@@ -762,58 +766,63 @@ export default function QuizEditor({ mode, quizId, initialData, onSuccess }: Qui
          * Main area for adding/editing questions and quiz content
          * ======================================================================== */}
         { creationStep === 'content' && (
-          <div className="max-w-screen-xl w-full flex-grow flex gap-4 mt-6">
+          <div className="max-w-screen-xl w-full flex flex-col lg:flex-row flex-grow gap-4 mt-6">
             
             {/* SIDEBAR - Quiz Information and Navigation */}
             <div className={`basis-1/4 flex flex-col h-full gap-2 grandstander text-[--text-color] bg-white p-4 items-center align-middle border rounded-lg border-[--border-dark] shadow-[4px_4px_0px_0px_var(--border-dark)]`}>
-              <div className='flex flex-col gap-2'>
+              <div className='flex flex-row lg:flex-col gap-2 w-full'>
                 {/* Quiz Title */}
-                <h2 className='text-2xl w-full text-center font-bold px-4'>{quizSetupData.title || "Quiz Title"}</h2>
-                <span className='text-center'>{quizSetupData.quizType.replace(/_/g, ' ')} QUIZ </span>
-                
-                {/* Cover Image */}
-                {quizSetupData.coverImageUrl && (
-                  <Image 
-                    src={quizSetupData.coverImageFile ? URL.createObjectURL(quizSetupData.coverImageFile) : quizSetupData.coverImageUrl} 
-                    alt={quizSetupData.title || "Quiz cover image"} 
-                    width={300} 
-                    height={200} 
-                    className='rounded-lg w-full h-auto object-cover aspect-[16/9]'
-                  />
-                )}
-                
+                <div className='flex flex-col w-full justify-center lg:items-center gap-0 '>
+                  <h2 className='text-2xl w-full text-center font-bold px-4'>{quizSetupData.title || "Quiz Title"}</h2>
+                  
+                  {/* Cover Image */}
+                  {quizSetupData.coverImageUrl && (
+                    <Image 
+                      src={quizSetupData.coverImageFile ? URL.createObjectURL(quizSetupData.coverImageFile) : quizSetupData.coverImageUrl} 
+                      alt={quizSetupData.title || "Quiz cover image"} 
+                      width={300} 
+                      height={200} 
+                      className='rounded-lg hidden lg:block lg:w-full h-auto my-2 object-cover aspect-[16/9]'
+                    />
+                  )}
                 {/* Description */}
-                <p className='text-center text-sm py-2'>{quizSetupData.description || "No description yet."}</p>
+                <span className='text-center'>{quizSetupData.quizType.replace(/_/g, ' ')} QUIZ </span>
+                <p className='text-center text-sm py-0'>{quizSetupData.description || "No description yet."}</p>
+                </div>
+                <div className='flex flex-col w-full justify-center lg:items-center px-6 items-end gap-2 '>
+
                 
                 {/* Tags */}
-                <div className='flex gap-2 justify-center'>
-                  {quizSetupData.tags.length > 0 && (
-                    <div className='text-center'>
-                      <div className="flex flex-wrap justify-center gap-2">
-                        {quizSetupData.tags.map((tag, index) => (
-                          <Badge key={index} variant="outline" className="text-sm bg-white text-[--text-color] border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]">{tag}</Badge>
-                        ))}
+                  <div className='flex gap-2 justify-center'>
+                    {quizSetupData.tags.length > 0 && (
+                      <div className='text-center'>
+                        <div className="flex flex-wrap justify-center gap-2">
+                          {quizSetupData.tags.map((tag, index) => (
+                            <Badge key={index} variant="outline" className="text-sm bg-white text-[--text-color] border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]">{tag}</Badge>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {quizSetupData.tags.length === 0 && (
-                    <div className='text-center'><Badge variant="outline" className="text-xs font-medium bg-white text-[--text-color] border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]">No tags yet</Badge></div>
-                  )}
+                    )}
+                    {quizSetupData.tags.length === 0 && (
+                      <div className='text-center'><Badge variant="outline" className="text-xs font-medium bg-white text-[--text-color] border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]">No tags yet</Badge></div>
+                    )}
+                  </div>
+                  
+                  {/* Question Count */}
+                  <h3 className='text-center text-lg font-bold py-2'>Questions: {questionsList.length}</h3>
                 </div>
-                
-                {/* Question Count */}
-                <h3 className='text-center text-lg font-bold py-2'>Questions: {questionsList.length}</h3>
               </div>
+
               
               {/* Navigation Buttons */}
-              <div className='flex flex-col gap-4 w-full justify-center'> 
+              <div className='flex flex-row lg:flex-col gap-4 w-full justify-center'> 
                 <Button variant='outline' 
-                  className="flex items-center h-full text-lg font-semibold border border-[--border-dark] gap-2 bg-[--background] text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] hover:bg-teal-50 hover:border-[--border-dark] hover:shadow-[4px_6px_0px_0px_var(--border-dark)] hover:scale-105 transition-all duration-300"
+                  className="flex w-full lg:w-auto items-center h-full text-lg font-semibold border border-[--border-dark] gap-2 bg-[--background] text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] hover:bg-teal-50 hover:border-[--border-dark] hover:shadow-[4px_6px_0px_0px_var(--border-dark)] hover:scale-105 transition-all duration-300"
                   onClick={() => setCreationStep('setup')}>
                      <ArrowLeft className="-mt-0.5" size={20} /> Edit Quiz Info
                 </Button>
                 <Button variant='outline' 
-                  className="flex items-center h-full text-lg font-semibold border border-[#1F6E91] gap-2 bg-[--text-color] text-white shadow-[4px_4px_0px_0px_var(--border-dark)] hover:bg-white hover:border-[#1F6E91] hover:shadow-[4px_6px_0px_0px_var(--border-dark)] hover:scale-105 transition-all duration-300"
+                  className="flex w-full lg:w-auto items-center h-full text-lg font-semibold border border-[#1F6E91] gap-2 bg-[--text-color] text-white shadow-[4px_4px_0px_0px_var(--border-dark)] hover:bg-white hover:border-[#1F6E91] hover:shadow-[4px_6px_0px_0px_var(--border-dark)] hover:scale-105 transition-all duration-300"
                   onClick={handleGoToPublishStep}>
                     {mode === 'create' ? 'Publish Quiz' : 'Update Quiz'} <ArrowRight className="-mt-0.5" size={20} /> 
                 </Button>
@@ -824,7 +833,7 @@ export default function QuizEditor({ mode, quizId, initialData, onSuccess }: Qui
             <div className="basis-3/4 flex flex-col gap-4 grandstander items-center text-[--text-color] h-full align-middle ">
               
               {/* Content Method Selector */}
-              <div className="absolute -mt-6 flex w-[540px] justify-between items-center grandstander gap-2 bg-[--primary-light] border border-[--border-dark] rounded-lg shadow-[4px_4px_0px_0px_var(--border-dark)]">
+              <div className="md:absolute md:-mt-6 flex w-full md:w-[540px] justify-between items-center grandstander gap-2 bg-[--primary-light] border border-[--border-dark] rounded-lg shadow-[4px_4px_0px_0px_var(--border-dark)]">
                 <Button variant='default' className={`w-32 pr-4 pl-1 text-[--text-color] ${contentView === 'create' ? 'bg-white' : 'hover:font-bold'}`} onClick={() => setContentView('create')}>
                   <div className={`flex items-center p-1.5 mr-2 justify-center rounded-full ${contentView === 'create' ? 'bg-[--background] border-2 border-[--primary-accent]' : 'hover:bg-white'}`}>
                     <Pencil size={16} />
@@ -835,10 +844,10 @@ export default function QuizEditor({ mode, quizId, initialData, onSuccess }: Qui
                     <Upload size={16} />
                   </div> Upload
                 </Button>
-                <Button variant='default' className={`w-52 pr-4 pl-1 text-[--text-color] ${contentView === 'ai-generation' ? 'bg-white' : 'hover:font-bold'}`} onClick={() => setContentView('ai-generation')}>
+                <Button variant='default' className={`w-40 pr-4 pl-1 text-[--text-color] ${contentView === 'ai-generation' ? 'bg-white' : 'hover:font-bold'}`} onClick={() => setContentView('ai-generation')}>
                   <div className={`flex items-center p-1.5 mr-2 justify-center rounded-full ${contentView === 'ai-generation' ? 'bg-[--background] border-2 border-[--primary-accent]' : 'hover:bg-white'}`}>
                     <Sparkles size={16} />
-                  </div> Generate with AI
+                  </div> AI Generator
                 </Button>
               </div>
 
@@ -880,11 +889,13 @@ export default function QuizEditor({ mode, quizId, initialData, onSuccess }: Qui
 
                 {/* AI Question Generation */}
                 {contentView === 'ai-generation' && (
-                  <div className="flex w-full justify-center p-6">
-                    <div className="flex flex-col gap-4">
-                      <h1 className="text-2xl">Generate with AI</h1>
-                    </div>
-                  </div>
+                  <AIGenerationForm
+                    onQuestionsGenerated={handleAddQuestions}
+                    quizType={quizSetupData.quizType}
+                    quizTitle={quizSetupData.title}
+                    quizDescription={quizSetupData.description}
+                    existingTags={quizSetupData.tags}
+                  />
                 )}
               </div>
             </div>

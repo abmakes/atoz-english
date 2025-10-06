@@ -18,6 +18,7 @@ import {
 } from '@/lib/pixi-engine/config/GameConfig';
 import { PixiEngineManagers } from '@/lib/pixi-engine/core/PixiEngine';
 import { MultipleChoiceGame } from '@/lib/pixi-games/multiple-choice/MultipleChoiceGame';
+import { SplashDashGame } from '@/lib/pixi-games/splash-dash/SplashDashGame';
 import type { NavMenuItemProps } from './NavMenu';
 import { GAME_EVENTS, ENGINE_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
 import { PowerupConfig, STANDARD_SCORE_MODE_POWERUPS } from '@/lib/pixi-engine/config/PowerupConfig';
@@ -47,10 +48,19 @@ interface GameContainerProps {
  * Factory function to create a specific game instance.
  * @param config - The game configuration object.
  * @param managers - The core PixiEngine managers.
- * @returns An instance of the game controller (e.g., MultipleChoiceGame).
+ * @param gameSlug - The game type identifier.
+ * @returns An instance of the game controller.
  */
-const gameFactory = (config: GameConfig, managers: PixiEngineManagers): MultipleChoiceGame => {
-    return new MultipleChoiceGame(config, managers);
+const gameFactory = (config: GameConfig, managers: PixiEngineManagers, gameSlug: string) => {
+    switch (gameSlug) {
+        case 'multiple-choice':
+            return new MultipleChoiceGame(config, managers);
+        case 'splash-dash':
+            return new SplashDashGame(config, managers);
+        default:
+            console.warn(`Unknown game slug: ${gameSlug}, falling back to multiple-choice`);
+            return new MultipleChoiceGame(config, managers);
+    }
 };
 
 /**
@@ -219,7 +229,19 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
       };
 
       // --- Define Controls Config (using ControlsConfig) ---
-      const controlConfig: ControlsConfig = {
+      const controlConfig: ControlsConfig = gameSlug === 'splash-dash' ? {
+          // Splash Dash specific controls for two players
+          actionMap: {
+              MOVE_PLAYER1: { keyboard: 'KeyA' }, // Player 1 moves with 'A' key
+              MOVE_PLAYER2: { keyboard: 'KeyL' }, // Player 2 moves with 'L' key
+          },
+          playerMappings: [
+              { playerId: 'player1', deviceType: 'keyboard' },
+              { playerId: 'player2', deviceType: 'keyboard' }
+          ],
+          gamepadDeadzone: DEFAULT_GAME_CONFIG.controls.gamepadDeadzone,
+      } : {
+          // Multiple Choice controls
           actionMap: { // Use action names consistent with DEFAULT_CONTROLS_CONFIG
               UP: { keyboard: 'ArrowUp' },
               DOWN: { keyboard: 'ArrowDown' },
@@ -384,7 +406,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
                     onGameOver={handleGameOver}
                     onExit={handleExit}
                     pixiMountPointRef={pixiMountPointRef as React.RefObject<HTMLDivElement>}
-                    gameFactory={gameFactory}
+                    gameFactory={(config, managers) => gameFactory(config, managers, gameSlug)}
                 />
             </>
         );

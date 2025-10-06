@@ -40,8 +40,8 @@ export const selectCelebrationImage = (): string => {
 
 // Preload a specific celebration image
 export const preloadCelebrationImage = (imagePath: string): Promise<void> => {
-    return new Promise<void>((resolve, reject) => {
-        const img = new Image();
+    return new Promise<void>((resolve) => {
+        const img = new window.Image();
         img.onload = () => {
             console.log(`Preloaded celebration image: ${imagePath}`);
             resolve();

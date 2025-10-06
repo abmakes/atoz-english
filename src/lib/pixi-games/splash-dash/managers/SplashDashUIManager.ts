@@ -1,11 +1,10 @@
 import * as PIXI from 'pixi.js';
-import { Color } from 'pixi.js';
 // Assets import removed - using AssetLoader instead
 import { GifSprite } from 'pixi.js/gif';
 import { PixiApplication } from '@/lib/pixi-engine/core/PixiApplication';
 import { EventBus } from '@/lib/pixi-engine/core/EventBus';
 import { AssetLoader } from '@/lib/pixi-engine/assets/AssetLoader';
-import { PixiThemeConfig } from '@/themes';
+// import { PixiThemeConfig } from '@/themes';
 import { SplashDashLayoutManager } from './SplashDashLayoutManager';
 import { QuestionData } from '@/types';
 import { ENGINE_EVENTS, CONTROLS_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
@@ -27,7 +26,7 @@ export class SplashDashUIManager {
     private app: PixiApplication;
     private eventBus: EventBus;
     private assetLoader: typeof AssetLoader;
-    private themeConfig: PixiThemeConfig['pixiConfig'];
+    private themeConfig: Record<string, unknown>;
     private layoutManager: SplashDashLayoutManager;
     private view: PIXI.Container;
 
@@ -49,7 +48,7 @@ export class SplashDashUIManager {
         app: PixiApplication,
         eventBus: EventBus,
         assetLoader: typeof AssetLoader,
-        themeConfig: PixiThemeConfig['pixiConfig'],
+        themeConfig: Record<string, unknown>,
         layoutManager: SplashDashLayoutManager
     ) {
         this.app = app;
@@ -337,7 +336,11 @@ export class SplashDashUIManager {
                     }
                     
                     // Handle different display object types (Sprite, AnimatedSprite, GifSprite)
-                    if (displayObject instanceof PIXI.Sprite || (displayObject as any) instanceof PIXI.AnimatedSprite || (displayObject as any) instanceof GifSprite) {
+                    const isSprite = displayObject instanceof PIXI.Sprite;
+                    const isAnimatedSprite = displayObject instanceof PIXI.AnimatedSprite;
+                    const isGifSprite = displayObject instanceof GifSprite;
+                    
+                    if (isSprite || isAnimatedSprite || isGifSprite) {
                         this.questionImage = displayObject as PIXI.Sprite;
                         this.questionImage.anchor.set(0.5);
                         
@@ -350,9 +353,9 @@ export class SplashDashUIManager {
                         this._updateLayout();
                         
                         // Handle animation for GIFs and AnimatedSprites
-                        if ((displayObject as any) instanceof PIXI.AnimatedSprite || (displayObject as any) instanceof GifSprite) {
+                        if (isAnimatedSprite || isGifSprite) {
                             console.log(`[SplashDashUIManager] Starting animation for ${displayObject.constructor.name}: ${question.imageUrl}`);
-                            const animatedObject = displayObject as any;
+                            const animatedObject = displayObject as PIXI.AnimatedSprite | GifSprite;
                             if (!animatedObject.playing) {
                                 setTimeout(() => {
                                     if (animatedObject && !animatedObject.destroyed) {

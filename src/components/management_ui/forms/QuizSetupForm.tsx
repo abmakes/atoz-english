@@ -11,8 +11,9 @@ import type { QuizSetupData } from '@/components/management_ui/QuizEditor'; // I
 import { TagDrawer } from "@/components/management_ui/TagDrawer"; // Adjusted path
 import { ALL_TAG_CATEGORIES } from "@/lib/tags";
 import { useCustomToast } from '@/components/ui/CustomToast'
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Image as Picture } from 'lucide-react';
 import QuizTypeGrid, { QuestionType } from "@/components/management_ui/forms/QuizTypeGrid"; // Added import for QuizTypeGrid and its QuestionType
+import ImageSelectModal from '@/components/management_ui/ImageSelectModal';
 
 interface QuizSetupFormProps {
   initialData: QuizSetupData;
@@ -34,6 +35,7 @@ export default function QuizSetupForm({
   const [coverImageFile, setCoverImageFile] = useState<File | null>(initialData.coverImageFile);
   const [coverImageUrlPreview, setCoverImageUrlPreview] = useState(initialData.coverImageUrl || PLACEHOLDER_IMAGE_CLIENT);
   const [quizType, setQuizType] = useState<QuestionType>(initialData.quizType as QuestionType);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const { addToast } = useCustomToast()
 
   useEffect(() => {
@@ -46,11 +48,12 @@ export default function QuizSetupForm({
     }
   }, [coverImageFile, initialData.coverImageUrl]);
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
-      setCoverImageFile(file);
-    }
+
+  const handleImageSelect = (imageUrl: string) => {
+    setCoverImageUrlPreview(imageUrl);
+    setCoverImageFile(null); // Clear file when using selected image
+    setIsImageModalOpen(false);
+    addToast('Cover image selected!', { variant: 'success' });
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -67,84 +70,89 @@ export default function QuizSetupForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col grandstander gap-4 mt-4 space-y-2 bg-white p-6 rounded-lg w-full max-w-screen-lg border border-[--border-dark] shadow-[4px_4px_0px_0px_var(--border-dark)]">
+    <form onSubmit={handleSubmit} className="flex flex-col grandstander gap-4 mt-4 space-y-2 bg-white p-2 lg:p-6 rounded-lg w-full max-w-screen-lg border border-[--border-dark] shadow-[4px_4px_0px_0px_var(--border-dark)]">
       
-      <div className='flex flex-row gap-8 bg-gray-50 p-4 rounded-lg text-[--text-color]'>
-        <div className='basis-2/3'>
-          <div className='flex flex-col gap-4'>
-            <div className='flex flex-col'>
-              <Label htmlFor="quizTitle" className="block text-lg font-medium  mb-1">Quiz Title</Label>
-              <Input
-                className='w-full bg-white h-14 text-[--text-color] border-2 border-slate-200 px-6 py-4'
-                id="quizTitle"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter the quiz title"
-                required
-              />
-            </div>
-            <div className='flex flex-col'>
-              <Label htmlFor="quizDescription" className="block text-lg font-medium  mb-1">Description</Label>
-              <Textarea
-                rows={2}
-                className='w-full bg-white h-14 text-[--text-color] border-2 border-slate-200 px-6 py-4'
-                id="quizDescription"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Enter a brief description for your quiz"
-              />
-            </div>
-          </div>
-        </div>        
-        
-        <div className='basis-1/3 flex flex-col items-center'>
-          <div className="mt-2 flex flex-col items-start gap-2">
-            <div className="relative w-full">
-              <Image 
-                src={coverImageUrlPreview} 
-                alt="Quiz Cover Preview" 
-                width={160} 
-                height={90} 
-                className="h-40 w-full object-cover rounded-md border bg-slate-100"
-              />
-              
-              <div className="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center gap-2 hover:bg-white/80 hover:opacity-100 opacity-0 transition-colors cursor-pointer">
-                <Label htmlFor="coverImageFile" className="flex w-full justify-center gap-2 font-light text-gray-800 mb-1">
-                  Select a cover image for your quiz
-                </Label>
+      <div className='flex flex-col gap-8 bg-gray-50 p-4 rounded-lg text-[--text-color]'>        
+        <div className='flex flex-col lg:flex-row gap-4'>
+          <div className='flex-1 lg:basis-2/3'>
+            <div className='flex flex-col gap-4'>
+              <div className='flex flex-col'>
+                <Label htmlFor="quizTitle" className="block text-base font-medium  mb-1">Quiz Details</Label>
+                <Input
+                  className='w-full bg-white h-14 text-[--text-color] border-2 border-slate-200 px-6 py-4'
+                  id="quizTitle"
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Enter the quiz title"
+                  required
+                />
+              </div>
+              <div className='flex flex-col'>
+                {/* <Label htmlFor="quizDescription" className="block text-base font-medium  mb-1">Description</Label> */}
+                <Textarea
+                  rows={2}
+                  className='w-full bg-white h-14 text-[--text-color] border-2 border-slate-200 px-6 py-4'
+                  id="quizDescription"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Enter a brief description for your quiz"
+                />
               </div>
             </div>
-            
-            <Input
-              id="coverImageFile"
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="
-                p-0 flex justify-center items-center w-full
-                file:mr-4 file:px-4 file:py-2
-                file:rounded-lg file:border-0
-                file:text-base file:font-semibold
-                file:bg-violet-100 file:text-violet-700
-                hover:file:bg-violet-200 hover:bg-violet-50 transition-colors cursor-pointer
-                border border-violet-400
-                "           
-              />
+          </div>        
+        
+          <div className='flex-1 lg:basis-1/3 flex flex-col items-center'>
+            <div className="mt-2 flex flex-col items-start gap-2 w-full">
+              <div className="relative w-full">
+                <Image 
+                  src={coverImageUrlPreview} 
+                  alt="Quiz Cover Preview" 
+                  width={160} 
+                  height={90} 
+                  className="h-40 w-full object-cover rounded-md border bg-slate-100"
+                />
+                
+                <div className="absolute bottom-2 right-2">
+                  <Button
+                    type="button"
+                    onClick={() => setIsImageModalOpen(true)}
+                    className="flex items-center gap-2 text-sm border border-violet-700 font-semibold bg-violet-100 text-violet-700 rounded-full hover:bg-white hover:text-violet-700 transition-colors px-4 py-2"
+                    title="Select cover image"
+                  >
+                    <span>Select Cover Image</span>
+                    <Picture className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+              
+              {/* <Input
+                id="coverImageFile"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="
+                  p-0 flex justify-center items-center w-full
+                  file:mr-4 file:px-4 file:py-2
+                  file:rounded-lg file:border-0
+                  file:text-base file:font-semibold
+                  file:bg-violet-100 file:text-violet-700
+                  hover:file:bg-violet-200 hover:bg-violet-50 transition-colors cursor-pointer
+                  border border-violet-400
+                  "           
+                /> */}
 
+            </div>
           </div>
         </div>
-      </div>
-
-      <QuizTypeGrid quizType={quizType} setQuizType={setQuizType} />
-
-      <div className='bg-gray-50 flex p-4 space-x-4 rounded-lg'>
+        <QuizTypeGrid quizType={quizType} setQuizType={setQuizType} />
+        <div className='flex flex-col lg:flex-row lg:items-center gap-4 rounded-lg'>
           <TagDrawer
             allTags={ALL_TAG_CATEGORIES}
             selectedTags={selectedTags}
             onTagToggle={onTagToggle}
             triggerElement={
-              <div className='flex items-center w-72 h-10 rounded-full border border-violet-400 hover:bg-violet-50 cursor-pointer transition-colors'>
+              <div className='flex items-center w-full lg:w-72 h-10 rounded-full border border-violet-400 hover:bg-violet-50 cursor-pointer transition-colors'>
                 <span className="flex items-center text-base w-32 h-full px-4 pt-2 pb-1 font-semibold
                   bg-violet-100 text-violet-700 rounded-full
                   hover:bg-violet-200 transition-colors"
@@ -152,32 +160,36 @@ export default function QuizSetupForm({
                   Quiz Tags
                 </span>
                 <Button id="quizTags" type="button" variant="outline" 
-                  className='text-base pt-2 pb-1 border-none w-32 h-full text-[--text-color]'>
+                  className='text-base pt-2 pb-1 border-none flex-1 h-full text-[--text-color]'>
                     Select Tags
                 </Button>
               </div>
             }
             description="Choose tags that best describe your quiz."
           />
-        <div className="p-1 flex flex-wrap gap-2 text-center items-center">
-          {selectedTags.length > 0 ? (
-            selectedTags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="cursor-pointer px-2 pt-1 h-8 text-sm transition-all text-nowrap text-[--text-color] duration-150 border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)] ease-in-out hover:shadow-md">
-                {tag}
-                <button 
-                  type="button" // Add type button to prevent form submission
-                  onClick={() => onTagToggle(tag)} 
-                  className="ml-2 text-xs font-bold hover:text-red-500"
-                >
-                  &times;
-                </button>
-              </Badge>
-            ))
-          ) : (
-            <p className="text-sm ml-2 text-gray-500">No tags selected yet.</p>
-          )}
+          <div className="flex flex-wrap gap-2 items-center">
+            {selectedTags.length > 0 ? (
+              selectedTags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="cursor-pointer px-2 pt-1 h-8 text-sm transition-all text-nowrap text-[--text-color] duration-150 border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)] ease-in-out hover:shadow-md">
+                  {tag}
+                  <button 
+                    type="button" // Add type button to prevent form submission
+                    onClick={() => onTagToggle(tag)} 
+                    className="ml-2 text-xs font-bold hover:text-red-500"
+                  >
+                    &times;
+                  </button>
+                </Badge>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500">No tags selected yet.</p>
+            )}
+          </div>
         </div>
       </div>
+
+
+ 
 
       <div className="flex justify-end">
         <Button variant='outline' 
@@ -186,6 +198,14 @@ export default function QuizSetupForm({
             Create Questions <ArrowRight className="-mt-0.5" size={20} /> 
         </Button>
       </div>
+
+      {isImageModalOpen && (
+        <ImageSelectModal 
+          isOpen={isImageModalOpen} 
+          onClose={() => setIsImageModalOpen(false)} 
+          onImageSelect={handleImageSelect} 
+        />
+      )}
     </form>
   )
 } 

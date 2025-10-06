@@ -76,40 +76,85 @@ export class MultipleChoiceDataManager {
 
     // --- Private loading methods moved from MultipleChoiceGame ---
     private async _loadQuestionData(): Promise<void> {
-        const apiUrl = `/api/quizzes/${this.quizId}`;
-        console.log(`DataManager: Fetching questions from ${apiUrl}`);
-        try {
-            const response = await fetch(apiUrl, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
-            });
+        const maxRetries = 3;
+        const retryDelay = 1000; // 1 second
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const apiUrl = `/api/quizzes/${this.quizId}`;
+                console.log(`DataManager: Fetching questions from ${apiUrl} (attempt ${attempt}/${maxRetries})`);
+                
+                // Add timeout to prevent hanging requests
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+                
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                if (response.status === 404) {
-                   console.error(`DataManager: Quiz not found (404) for ID: ${this.quizId}`);
-                   throw new Error(`Quiz not found for ID: ${this.quizId}`);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    if (response.status === 404) {
+                       console.error(`DataManager: Quiz not found (404) for ID: ${this.quizId}`);
+                       throw new Error(`Quiz not found for ID: ${this.quizId}`);
+                    }
+                    
+                    // Check if it's a connection pool timeout (500 error)
+                    if (response.status === 500 && errorText.includes('connection pool')) {
+                        console.warn(`DataManager: Database connection pool timeout (attempt ${attempt}/${maxRetries})`);
+                        if (attempt < maxRetries) {
+                            console.log(`DataManager: Retrying in ${retryDelay}ms...`);
+                            await new Promise(resolve => setTimeout(resolve, retryDelay));
+                            continue;
+                        }
+                    }
+                    
+                    throw new Error(`API Error fetching quiz: ${response.status} ${response.statusText} - ${errorText}`);
+                 }
+
+                 const quizData = await response.json();
+                 console.log("MINIMAL TEST - quizData:", quizData);
+                 const potentialQuestions = quizData?.data?.questions ?? quizData?.questions;
+
+                 if (!potentialQuestions || !Array.isArray(potentialQuestions)) {
+                    console.error("DataManager: Invalid quiz data format received:", quizData);
+                    throw new Error("Invalid quiz data format received.");
+                 }
+
+                 this.questionsData = potentialQuestions as QuestionData[];
+                 console.log(`DataManager: Loaded ${this.questionsData.length} questions.`);
+                 
+                 // Success - break out of retry loop
+                 return;
+
+             } catch (error) {
+                console.error(`DataManager: Failed during _loadQuestionData (attempt ${attempt}/${maxRetries}):`, error);
+                
+                // If it's the last attempt or not a retryable error, throw
+                if (attempt === maxRetries || !this.isRetryableError(error)) {
+                    this.questionsData = []; // Ensure it's empty on error
+                    throw error; // Re-throw to be caught by loadData
                 }
-                throw new Error(`API Error fetching quiz: ${response.status} ${response.statusText} - ${errorText}`);
-             }
-
-             const quizData = await response.json();
-             console.log("MINIMAL TEST - quizData:", quizData);
-             const potentialQuestions = quizData?.data?.questions ?? quizData?.questions;
-
-             if (!potentialQuestions || !Array.isArray(potentialQuestions)) {
-                console.error("DataManager: Invalid quiz data format received:", quizData);
-                throw new Error("Invalid quiz data format received.");
-             }
-
-             this.questionsData = potentialQuestions as QuestionData[];
-             console.log(`DataManager: Loaded ${this.questionsData.length} questions.`);
-
-         } catch (error) {
-            console.error("DataManager: Failed during _loadQuestionData:", error);
-            this.questionsData = []; // Ensure it's empty on error
-            throw error; // Re-throw to be caught by loadData
+                
+                // Wait before retrying
+                console.log(`DataManager: Retrying in ${retryDelay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+            }
         }
+    }
+    
+    /**
+     * Determines if an error is retryable
+     */
+    private isRetryableError(error: any): boolean {
+        if (error.name === 'AbortError') return true; // Timeout
+        if (error.message?.includes('connection pool')) return true; // DB connection issues
+        if (error.message?.includes('fetch')) return true; // Network issues
+        return false;
     }
 
     private async _preloadQuestionMedia(questions: QuestionData[]): Promise<void> {

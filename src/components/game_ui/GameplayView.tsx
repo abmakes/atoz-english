@@ -198,7 +198,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
       engineInstanceRef.current = null;
       managersRef.current = null;
     };
-  }, [config, gameFactory, pixiMountPointRef]);
+  }, [config, gameFactory, pixiMountPointRef, handlePixiGameOver, handlePixiScoreUpdate, handlePixiActiveTeamChanged]);
   // ------------------------------------------------------
 
   // --- Settings/Audio Handlers (Connect to EventBus/AudioManager) ---

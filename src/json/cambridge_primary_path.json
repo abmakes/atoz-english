@@ -1,0 +1,56 @@
+[
+  {
+      "vocabulary": "Family members",
+      "grammar": "Verb to be: Affirmative and Negative",
+      "examples": "I’m seven years old. She’s from Colombia. I’m not eight years old. She isn’t from Canada.",
+      "language_in_use": "Are these Grandma and Grandpa? No, they aren’t."
+  },
+  {
+      "vocabulary": "School-related terms",
+      "grammar": "Demonstrative Pronouns: this, that, these, those",
+      "examples": "This is a desk. That is the auditorium. These are tablets. Those are uniforms.",
+      "language_in_use": "My school is big. Your teacher is nice."
+  },
+  {
+      "vocabulary": "Living things",
+      "grammar": "There is, there are",
+      "examples": "There is a dragonfly. There are plants.",
+      "language_in_use": "Where is Pinocchio? He’s next to the books."
+  },
+  {
+      "vocabulary": "Friendship activities",
+      "grammar": "Present Simple: Affirmative and Negative",
+      "examples": "I lend my pencils. I don’t ride my bike to school.",
+      "language_in_use": "Does the horse help Henrietta? No, it doesn’t."
+  },
+  {
+      "vocabulary": "Fun activities",
+      "grammar": "Present Simple: like, likes, don’t like, doesn’t like",
+      "examples": "Some children like playing with dolls. Others don’t like playing with dolls.",
+      "language_in_use": "My mom likes collecting dolls."
+  },
+  {
+      "vocabulary": "Community service terms",
+      "grammar": "Present Simple: have, has, Affirmative and Negative",
+      "examples": "The kids have a project every month. The bird feeder has seeds.",
+      "language_in_use": "What do Tom and Rick have? They have toys."
+  },
+  {
+      "vocabulary": "Plants and animals",
+      "grammar": "Can, can’t",
+      "examples": "Bats can fly. Bats can’t see colors very well.",
+      "language_in_use": "a tree, a bee, a cow"
+  },
+  {
+      "vocabulary": "Imaginative concepts",
+      "grammar": "Present Simple: want / need, Affirmative and Negative",
+      "examples": "She wants an alebrije. She doesn’t want a yo-yo.",
+      "language_in_use": "What does the boy need? He needs a bed."
+  },
+  {
+      "vocabulary": "Clothing terms",
+      "grammar": "Present Progressive: Affirmative and Negative",
+      "examples": "I’m wearing a sweater. I’m not wearing a scarf.",
+      "language_in_use": "Is Nasreddin sitting under a tree? Yes, he is."
+  }
+]

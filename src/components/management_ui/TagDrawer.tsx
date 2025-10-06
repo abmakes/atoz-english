@@ -68,27 +68,40 @@ export function TagDrawer({
           <div className="flex flex-col gap-2 pl-8 py-2">
             <DrawerDescription className="text-base">{description}</DrawerDescription>
           </div>  
-          <div className="grid grid-cols-6 gap-4 px-8">
-            {allTags.map((categoryItem) => (
-              <div key={categoryItem.category}>
-                <h3 className="text-lg font-semibold mb-2">{categoryItem.category}</h3>
-                <div className="flex flex-wrap gap-2">
-                  {categoryItem.tags.map((tag) => {
-                    const isSelected = selectedTags.includes(tag);
-                    return (
-                      <Badge
-                        key={tag}
-                        variant={isSelected ? "default" : "outline"}
-                        onClick={() => onTagToggle(tag)}
-                        className={`cursor-pointer text-sm font-medium transition-all text-nowrap duration-150 border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)] ease-in-out hover:shadow-md ${isSelected ? "bg-[--primary-accent] text-[--text-color]" : "bg-[--background-color] text-[--text-color]"}`}
-                      >
-                        {tag}
-                      </Badge>
-                    );
-                  })}
+          <div className="grid grid-cols-12 gap-4 px-8">
+            {allTags.map((categoryItem) => {
+              // Determine column span based on category
+              let colSpan = 2; // Default for Level
+              if (categoryItem.category === "Grammar") {
+                colSpan = 6; // 3x wider (6 columns)
+              } else if (categoryItem.category === "Topic") {
+                colSpan = 4; // 2x wider (4 columns)
+              }
+              
+              return (
+                <div 
+                  key={categoryItem.category} 
+                  style={{ gridColumn: `span ${colSpan}` }}
+                >
+                  <h3 className="text-lg font-semibold mb-2">{categoryItem.category}</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {categoryItem.tags.map((tag) => {
+                      const isSelected = selectedTags.includes(tag);
+                      return (
+                        <Badge
+                          key={tag}
+                          variant={isSelected ? "default" : "outline"}
+                          onClick={() => onTagToggle(tag)}
+                          className={`cursor-pointer text-sm font-medium transition-all text-nowrap duration-150 border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)] ease-in-out hover:shadow-md ${isSelected ? "bg-[--primary-accent] text-[--text-color]" : "bg-[--background-color] text-[--text-color]"}`}
+                        >
+                          {tag}
+                        </Badge>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </ScrollArea>
       </DrawerContent>

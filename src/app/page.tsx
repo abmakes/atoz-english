@@ -8,27 +8,27 @@ export default function HomePage() {
     <div className="min-h-screen">
 
       <section
-        className="relative min-h-[80vh] py-20"
+        className="relative min-h-[50vh] py-20"
         style={{
           backgroundImage: "url('/images/learning_animals.png')",
-          backgroundSize: "auto 100%",
+          backgroundSize: "auto 80%",
           backgroundPosition: "right center",
           backgroundRepeat: "no-repeat",
         }}
       >
-        <div className="container mx-auto px-6 h-full">
-          <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[70vh]">
+        <div className="    mx-auto px-6 h-full">
+          <div className="grid md:grid-cols-2 -mt-24 md:-mt-0 gap-12 items-center min-h-[70vh]">
             <div className="relative order-1">
-              <div className="neo-card p-12 rotate-2 hover:rotate-0 transition-transform duration-300 bg-white min-h-[400px] flex flex-col justify-center">
+              <div className="neo-card p-8 md:p-12 rotate-2 hover:rotate-0 transition-transform duration-300 bg-white min-h-[250px] md:min-h-[400px] flex flex-col justify-center">
                 <h2 className="text-4xl font-black grandstander text-balance leading-tight mb-4 text-[--text-color]">AtoZ English</h2>
                 <p className="text-lg text-[--text-light] leading-relaxed mb-6">
                   Learn English through fun games and interactive adventures with our adorable animal friends!
                 </p>
-                <div className="flex gap-4">
+                <div className="flex flex-wrap gap-4">
                   <Link href="/games">
-                    <button className="neo-button bg-[--primary-accent] text-white hover:bg-[--primary-accent-hover]">Play Now</button>
+                    <button className="neo-button w-40 bg-[--primary-accent] text-white hover:bg-[--primary-accent-hover]">Play Now</button>
                   </Link>
-                  <button className="neo-button bg-white text-[--text-color] hover:bg-gray-50">Learn More</button>
+                  <button className="neo-button w-40 bg-white text-[--text-color] hover:bg-gray-50">Learn More</button>
                 </div>
               </div>
             </div>

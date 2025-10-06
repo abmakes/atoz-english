@@ -57,13 +57,13 @@ const SortingPreview = ({ isSelected }: { isSelected: boolean }) => {
   const [items, setItems] = useState([0, 1, 2])
 
   return (
-    <div className="space-y-2">
-      <div className="h-2 bg-gray-300 rounded w-2/3 mb-3"></div>
+    <div className="space-y-1">
+      <div className="h-1.5 bg-gray-300 rounded w-2/3 mb-2"></div>
       <AnimatePresence>
         {items.map((item, index) => (
           <motion.div
             key={item}
-            className="flex items-center space-x-2 bg-gray-100 p-1.5 rounded"
+            className="flex items-center space-x-1 bg-gray-100 p-1 rounded"
             layout
             animate={
               isSelected
@@ -83,13 +83,13 @@ const SortingPreview = ({ isSelected }: { isSelected: boolean }) => {
               }
             }}
           >
-            <div className="w-2 h-2 bg-gray-400 rounded grid grid-cols-2 gap-0.5">
+            <div className="w-1.5 h-1.5 bg-gray-400 rounded grid grid-cols-2 gap-0.5">
               <div className="w-0.5 h-0.5 bg-gray-600 rounded-full"></div>
               <div className="w-0.5 h-0.5 bg-gray-600 rounded-full"></div>
               <div className="w-0.5 h-0.5 bg-gray-600 rounded-full"></div>
               <div className="w-0.5 h-0.5 bg-gray-600 rounded-full"></div>
             </div>
-            <div className="h-1.5 bg-gray-300 rounded flex-1"></div>
+            <div className="h-1 bg-gray-300 rounded flex-1"></div>
           </motion.div>
         ))}
       </AnimatePresence>
@@ -174,10 +174,10 @@ const questionTypeConfig = {
 
 export default function QuizTypeSelector({ quizType, setQuizType }: QuizTypeSelectorProps) {
   return (
-    <div className="flex flex-row bg-gray-50 p-6 rounded-lg">
-      <Label className="pr-4 block text-lg text-nowrap text-[--text-color] font-medium mb-4">Select Quiz Type:</Label>
+    <div className="flex flex-col lg:flex-row bg-gray-50 rounded-lg">
+      <Label className="pr-4 block text-base text-nowrap text-[--text-color] font-medium mb-2 lg:mb-0">Select Quiz Type:</Label>
 
-      <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-3">
         {Object.values(QuestionType).map((type) => {
           const config = questionTypeConfig[type]
           const PreviewComponent = config.component
@@ -187,7 +187,7 @@ export default function QuizTypeSelector({ quizType, setQuizType }: QuizTypeSele
             <motion.div
               key={type}
               className={cn(
-                "relative p-4 rounded-lg border-2 cursor-pointer transition-all duration-200",
+                "relative p-3 rounded-lg border-2 cursor-pointer transition-all duration-200",
                 isSelected
                   ? "border-violet-500 bg-violet-50 shadow-md"
                   : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm",
@@ -199,25 +199,27 @@ export default function QuizTypeSelector({ quizType, setQuizType }: QuizTypeSele
             >
               {isSelected && (
                 <motion.div
-                  className="absolute top-2 right-2 w-5 h-5 bg-violet-500 rounded-full flex items-center justify-center"
+                  className="absolute top-1.5 right-1.5 w-4 h-4 bg-violet-500 rounded-full flex items-center justify-center"
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 >
-                  <div className="w-2 h-2 bg-white rounded-full" />
+                  <div className="w-1.5 h-1.5 bg-white rounded-full" />
                 </motion.div>
               )}
 
-              <div className="mb-3">
-                <h3 className={cn("font-medium text-sm mb-1", isSelected ? "text-violet-700" : "text-gray-700")}>
-                  {config.title}
-                </h3>
-                <p className={cn("text-xs", isSelected ? "text-violet-600" : "text-gray-500")}>{config.description}</p>
-              </div>
+              <div className="flex flex-row items-center gap-3 h-20 p-2">
+                <div className="flex-1 flex flex-col justify-center min-w-0">
+                  <h3 className={cn("font-medium text-xs mb-0.5 truncate", isSelected ? "text-violet-700" : "text-gray-700")}>
+                    {config.title}
+                  </h3>
+                  <p className={cn("text-xs line-clamp-2", isSelected ? "text-violet-600" : "text-gray-500")}>{config.description}</p>
+                </div>
 
-              <div className="h-20 flex items-center justify-center">
-                <div className="w-full max-w-[120px]">
-                  <PreviewComponent isSelected={isSelected} />
+                <div className="w-20 h-16 flex items-center justify-center flex-shrink-0">
+                  <div className="w-16 h-12 overflow-hidden">
+                    <PreviewComponent isSelected={isSelected} />
+                  </div>
                 </div>
               </div>
             </motion.div>

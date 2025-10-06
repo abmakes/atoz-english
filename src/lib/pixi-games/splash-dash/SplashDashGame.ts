@@ -209,7 +209,7 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
                 this.pixiApp,
                 this.eventBus,
                 this.assetLoader,
-                this.themeConfig.pixiConfig,
+                this.themeConfig.pixiConfig as unknown as Record<string, unknown>,
                 this.layoutManager
             );
             this.view.addChild(this.uiManager.getView());

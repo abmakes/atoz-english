@@ -1,0 +1,315 @@
+[  
+  [    
+    {
+    "vocabulary": "Numbers: 1 to 10",
+    "grammar": "Ask and answer about personal details",
+    "examples": "What's your name? My name's... How old are you? I'm...",
+    "language_in_use": "Ask and answer about age: How old are you? I'm five."
+    },
+    {
+    "vocabulary": "Feelings: angry, cold, happy, hot, sad, scared, sick, tired ",
+    "grammar": "Ask and answer about feelings",
+    "examples": "How are you? I'm happy",
+    "language_in_use": "Ask and answer about feelings: Are you angry? Yes, I am. / No, I'm not."
+    },
+    {
+      "vocabulary": "Classroom objects: backpack, book, crayon, notebook, pen, pencil, pencil case, rubber",
+      "grammar": "Talk about classroom objects",
+      "examples": "This is my pen. I've got a rubber",
+      "language_in_use": "Talk about your classroom objects: This is my notebook. I've got a backpack."
+    },
+    {
+      "vocabulary": "Colours: blue, brown, green, orange, pink, purple, red, yellow ",
+      "grammar": "Talk about favourite colours",
+      "examples": "What colour is it? It's pink. My favourite colour is pink.",
+      "language_in_use": "Ask and answer about colours: What's your favourite colour? My favourite colour is yellow."
+    },
+    {
+      "vocabulary": "Clothes: dress, jumper, shirt, shoes, skirt, socks, trousers, T-shirt",
+      "grammar": "Describe clothes",
+      "examples": "My shirt is blue. My socks are red.",
+      "language_in_use": "Ask and answer about clothes: I've got a new skirt. What colour is it? It's purple"
+    },
+    {
+      "vocabulary": "Parts of the face and body: ear, eye, finger, hair, hand, head, leg, mouth, nose, teeth",
+      "grammar": "Describe parts of the body",
+      "examples": "I've got two hands. This is my nose. These are my ears.",
+      "language_in_use": "Talk about yourself: This is my hand. I've got two hands."
+    },
+    {
+      "vocabulary": "Family members: aunt, brother, daddy, grandma, grandpa, mummy, sister, uncle",
+      "grammar": "Introduce and describe how family members feel:",
+      "examples": "My brother is scared. These are my uncle and aunt. They're happy.",
+      "language_in_use": "Introduce your family members to a friend: This is my brother. Hello! Nice to meet you."
+    },
+    {
+      "vocabulary": "Farm animals: cow, donkey, duck, goat, horse, rabbit, rooster, sheep",
+      "grammar": "Ask and answer about animals",
+      "examples": "What is it? It's a duck. What are they? They're sheep.",
+      "language_in_use": "Ask and answer to guess an animal: Is it a cow? No, it isn't. Is it a rabbit? Yes, it is!"
+    },    
+    {
+      "vocabulary": "",
+      "grammar": "",
+      "examples": "",
+      "language_in_use": ""
+    },
+    {
+      "vocabulary": "",
+      "grammar": "",
+      "examples": "",
+      "language_in_use": ""
+    }
+  ],
+  [    
+      {
+          "vocabulary": "People, Describing words",
+          "grammar": "To be, Question words (What/How old)",
+          "examples": "I am Beth, I'm tall, I'm seven",
+          "language_in_use": "To be questions and short answers. What's your name? How old are you? I'm..."
+      },
+      {
+          "vocabulary": "Classroom objects",
+          "grammar": "A/an",
+          "examples": "It's a pen. It's an umbrella",
+          "language_in_use": "To be questions and short answers. Is it blue? Yes, it is. No, it isn't."
+      },
+      {
+          "vocabulary": "Family members",
+          "grammar": "This/that, My/your",
+          "examples": "This is my grandma. That's your grandma.",
+          "language_in_use": "Who's this/that; his/her. Her name is Sally. That's his tiger."
+      },
+      {          
+          "vocabulary": "Feelings",
+          "grammar": "To be affirmative and negative",
+          "examples": "She's happy. She isn't happy",
+          "language_in_use": "To be questions and short answers. Are you hungry? Yes, I am. No, I'm not."
+      },
+      {
+          "vocabulary": "Action verbs",
+          "grammar": "Can/can't for ability",
+          "examples": "They can swim. They can't sing.",
+          "language_in_use": "Can questions and short answers. Can you see the sun? Yes, I can. No, I can't."
+      },
+      {
+          "vocabulary": "Play things",
+          "grammar": "Prepositions of place",
+          "examples": "It's on the seesaw. It's next to the swing.",
+          "language_in_use": "Where's the orange paint? It's next to the pencils. Where are the crayons?They're in the blue box."
+      },
+      {
+          "vocabulary": "Parts of the body",
+          "grammar": "Adjectives, Have got affirmative and negative",
+          "examples": "I've got two legs. They haven't got ears",
+          "language_in_use": "Have got questions and short answers. Have you got long hair? Yes, I have. No, I haven't."
+      },
+      {
+          "vocabulary": "Clothes",
+          "grammar": "Have got affirmative and negative",
+          "examples": "He's got a hat. She hasn't got a hat.",
+          "language_in_use": "Present continuous questions and answers. What are you wearing? I'm wearing a white shirt."
+      },
+      {
+          "vocabulary": "Furniture",
+          "grammar": "There is/there are",
+          "examples": "There's one bed. There are two beds.",
+          "language_in_use": "Have got questions and short answers. Has he got a big bed? Yes, he has. No, he hasn't."
+      },
+      {
+          "vocabulary": "Food",
+          "grammar": "Present simple affirmative and negative",
+          "examples": "I like pears. I don't like carrots.",
+          "language_in_use": "These/those. These are coconuts. Those are melons."      
+      }
+  ],
+  [
+    {
+      "vocabulary": "Animals, Countries",
+      "grammar": "There is/there are + some/any",
+      "examples": "There are some crocodiles. There aren't any pandas.",
+      "language_in_use": "Are there any...? Yes, there are."
+    },
+    {
+      "vocabulary": "Days of the week, Activities",
+      "grammar": "Present simple (I/we/they) affirmative and negative",
+      "examples": "I play basketball. They don't play basketball.",
+      "language_in_use": "Do you...? Yes, I do."
+    },
+    {
+      "vocabulary": "Personal possessions",
+      "grammar": "Possessive adjectives (our/their)",
+      "examples": "It's our camera. It's their phone.",
+      "language_in_use": "Whose phone is this? It's Paula's."
+    },
+    {
+      "vocabulary": "Buildings, Places",
+      "grammar": "Present simple (he/she) affirmative and negative",
+      "examples": "She lives in a house. He doesn't play football.",
+      "language_in_use": "Where does he live? What time does he start school?"
+    },
+    {
+      "vocabulary": "Weather, Natural features",
+      "grammar": "Present continuous (affirmative and negative)",
+      "examples": "I'm watching videos. They aren't swimming.",
+      "language_in_use": "What are you doing? What's he wearing?"
+    },
+    {
+      "vocabulary": "Transport",
+      "grammar": "Imperatives",
+      "examples": "Stop! Don't run!",
+      "language_in_use": "Are you playing a game? No, I'm not."
+    },
+    {
+      "vocabulary": "Seasons, Activities",
+      "grammar": "Like + -ing",
+      "examples": "I like having picnics. I don't like swimming.",
+      "language_in_use": "Let's fly our kites! What about playing tennis in the park?"
+    },
+    {
+      "vocabulary": "Fruits, Vegetables",
+      "grammar": "Would like + a/an/some",
+      "examples": "I'd like some lemons. Would you like a watermelon?",
+      "language_in_use": "Would you like to feed the lambs? I'd like to ride on a tractor."
+    },
+    {
+      "vocabulary": "Rooms, Furniture",
+      "grammar": "Past simple (was/were)",
+      "examples": "I was with grandma. We weren't hungry.",
+      "language_in_use": "Were you at home yesterday? Yes, I was."
+    },
+    {
+      "vocabulary": "Places in a town",
+      "grammar": "Past simple (regular verbs)",
+      "examples": "I visited the zoo. They cooked.",
+      "language_in_use": "Where were you on Saturday? In the morning we..."
+    }
+  ],
+  [ 
+    {
+      "vocabulary": "School subjects, Rooms and activities, Adverbs of sequence",
+      "grammar": "Present simple or present continuous?",
+      "examples": "He plays… He's watching…",
+      "language_in_use": "good at/not good at. I'm good at English. I'm not good at PE."
+    },
+    {
+      "vocabulary": "Chores and free time, Buildings and breakfast. Frequency expressions",
+      "grammar": "Adverbs of frequency",
+      "examples": "I always / usually / sometimes / hardly ever / never …",
+      "language_in_use": "How often do you ...? Once a month."
+    },
+    {
+      "vocabulary": "Places around town, Adjectives to describe people, Family",
+      "grammar": "To be: present simple or past simple?",
+      "examples": "Yesterday she was sad. Today she's happy.",
+      "language_in_use": "Wh-questions with was/were. Where were you on Saturday?"
+    },
+    {
+      "vocabulary": "Food and tableware, Safari",
+      "grammar": "Countable and uncountable nouns with some/any",
+      "examples": "There's some water. There isn't any water.",
+      "language_in_use": "How much/many...? There's/there are... How much spinach is there? There's a lot. There isn't much."
+    },
+    {
+      "vocabulary": "Family and musical instruments, Action verbs, Dressing up",
+      "grammar": "Past simple regular verbs",
+      "examples": "Yesterday he played the drums.",
+      "language_in_use": "Past simple yes/no questions. Did you like painting at kindergarten? Yes, I did."
+    },
+    {
+      "vocabulary": "Sea animals, Adjectives",
+      "grammar": "Comparing two people, animals or objects",
+      "examples": "The starfish is slower than the seahorse.",
+      "language_in_use": "Superlative form of short adjectives. My dad is the tallest."
+    },
+    {
+      "vocabulary": "Stories and fairy tales, Past simple irregular verbs, Adverbs",
+      "grammar": "Past simple tense irregular verbs",
+      "examples": "He had a cake. He didn't have a cake.",
+      "language_in_use": "Past simple with Wh-question form. What did you eat?"
+    },
+    {
+      "vocabulary": "Objects in a history museum, Materials and objects in a house, Zoo words",
+      "grammar": "There was/were...",
+      "examples": "There was a mammoth in the cave!",
+      "language_in_use": "Yes/No questions with there was/were. Were there any parrots? No, there weren't."
+    },
+    {
+      "vocabulary": "Sports clothes and equipment, Healthy eating",
+      "grammar": "Have to/don't have to",
+      "examples": "Tom has to jump high.",
+      "language_in_use": "Why...? and Because... Why do they have to...? Because they need..."
+    },
+    {
+      "vocabulary": "Months and dates, Festivals, Languages",
+      "grammar": "Future plans with going to",
+      "examples": "He's going to climb.",
+      "language_in_use": "Questions with going to. Are you going to visit Spain? Yes, I am."
+    }
+  ],
+  [
+    {
+      "vocabulary": "The world around us",
+      "grammar": "Prepositions of place and activities",
+      "examples": "In, on, under, behind, next to, in front of",
+      "language_in_use": "Past simple question forms; verb + ...ing"
+    },
+    {
+      "vocabulary": "Prepositions of movement",
+      "grammar": "Verbs and action verbs",
+      "examples": "Want, need, like, love, don't mind",
+      "language_in_use": "Verbs with to + infinitive; could/couldn't and when clauses in the past"
+    },
+    {
+      "vocabulary": "Bikes and cycling",
+      "grammar": "Describing a city bike ride",
+      "examples": "",
+      "language_in_use": "Must and mustn't for obligation; give directions"
+    },
+    {
+      "vocabulary": "Jobs, Adjectives, Animals",
+      "grammar": "Comparative form of long adjectives, Superlative form of long adjectives",
+      "examples": "",
+      "language_in_use": "Comparing two people, animals or objects"
+    },
+    {
+      "vocabulary": "At the doctor's, Adjectives and verbs for staying healthy, Shops",
+      "grammar": "Should and shouldn't for advice, Clauses of purpose",
+      "examples": "",
+      "language_in_use": "Clauses of purpose; should and shouldn't for advice"
+    },
+    {
+      "vocabulary": "The natural world, Verbs and pronouns, Verbs and activities",
+      "grammar": "Past continuous",
+      "examples": "",
+      "language_in_use": "Ask questions using the past continuous"
+    },
+    {
+      "vocabulary": "Technology, Inventions",
+      "grammar": "Possessive pronouns, Defining relative clauses",
+      "examples": "",
+      "language_in_use": "Use possessive pronouns; defining relative clauses"
+    },
+    {
+      "vocabulary": "Parts of plants and animals, Science and technology",
+      "grammar": "Will/won't for future predictions",
+      "examples": "",
+      "language_in_use": "Ask questions using will"
+    },
+    {
+      "vocabulary": "Using water, The water cycle",
+      "grammar": "Zero conditional, What happens if + present simple",
+      "examples": "",
+      "language_in_use": "What happens if + present simple"
+    },
+    {
+      "vocabulary": "Physical descriptions, Pronouns and detective words, Around the house",
+      "grammar": "Present perfect",
+      "examples": "",
+      "language_in_use": "Ask 'What's the matter?' and make suggestions"
+    }
+  ]
+]
+
+
+  
