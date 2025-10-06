@@ -69,7 +69,7 @@ function getVocabularyForLevel(level: string, tags: string[]): string[] {
 }
 
 // Helper function to get book/unit content
-function getBookUnitContent(book: string, unit: string): any {
+function getBookUnitContent(book: string, unit: string): Record<string, unknown> | null {
   if (book.startsWith('academy_stars')) {
     const bookIndex = book === 'academy_stars_starters' ? 0 : 
                      book === 'academy_stars_1' ? 1 :
@@ -95,7 +95,7 @@ function createMultipleChoicePrompt(
   quizTitle: string,
   quizDescription: string,
   numberOfQuestions: number,
-  bookContent?: any
+  bookContent?: Record<string, unknown>
 ): string {
   const levelDescriptions = {
     'PRE_A1': 'Pre-A1 (Starters) - Very basic English for young learners',
@@ -105,7 +105,7 @@ function createMultipleChoicePrompt(
 
   const levelDesc = levelDescriptions[level as keyof typeof levelDescriptions] || levelDescriptions['PRE_A1'];
 
-  let prompt = `You are an expert ESL teacher creating multiple choice questions for ${levelDesc} level students.
+  const prompt = `You are an expert ESL teacher creating multiple choice questions for ${levelDesc} level students.
 
 CONTEXT:
 - Quiz Title: "${quizTitle}"
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
       numberOfQuestions,
       quizTitle,
       quizDescription,
-      language
+      language: _language // eslint-disable-line @typescript-eslint/no-unused-vars
     } = body;
 
     // Validate required fields
@@ -192,9 +192,9 @@ export async function POST(request: NextRequest) {
     const vocabulary = getVocabularyForLevel(level, tags);
     
     // Get book/unit content if specified
-    let bookContent = null;
+    let bookContent: Record<string, unknown> | undefined = undefined;
     if (book && unit) {
-      bookContent = getBookUnitContent(book, unit);
+      bookContent = getBookUnitContent(book, unit) || undefined;
     }
 
     // Create the prompt based on question type
@@ -224,7 +224,7 @@ export async function POST(request: NextRequest) {
     const text = response.text();
 
     // Parse the JSON response
-    let generatedQuestions: any[];
+    let generatedQuestions: Record<string, unknown>[];
     try {
       // Clean the response text (remove any markdown formatting)
       const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -239,10 +239,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate and format the generated questions
-    const formattedQuestions: GeneratedQuestion[] = generatedQuestions.map((q: any, index: number) => ({
-      question: q.question || `Generated question ${index + 1}`,
-      answers: q.answers || ['A) Option 1', 'B) Option 2', 'C) Option 3', 'D) Option 4'],
-      correctAnswer: q.correctAnswer || 'A) Option 1',
+    const formattedQuestions: GeneratedQuestion[] = generatedQuestions.map((q: Record<string, unknown>, index: number) => ({
+      question: (q.question as string) || `Generated question ${index + 1}`,
+      answers: (q.answers as string[]) || ['A) Option 1', 'B) Option 2', 'C) Option 3', 'D) Option 4'],
+      correctAnswer: (q.correctAnswer as string) || 'A) Option 1',
       type: QuestionType.MULTIPLE_CHOICE,
       imageUrl: '/images/placeholder.webp',
       imageFile: null

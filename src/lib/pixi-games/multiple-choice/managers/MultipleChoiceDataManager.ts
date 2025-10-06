@@ -150,10 +150,12 @@ export class MultipleChoiceDataManager {
     /**
      * Determines if an error is retryable
      */
-    private isRetryableError(error: any): boolean {
-        if (error.name === 'AbortError') return true; // Timeout
-        if (error.message?.includes('connection pool')) return true; // DB connection issues
-        if (error.message?.includes('fetch')) return true; // Network issues
+    private isRetryableError(error: unknown): boolean {
+        if (error && typeof error === 'object' && 'name' in error && error.name === 'AbortError') return true; // Timeout
+        if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+            if (error.message.includes('connection pool')) return true; // DB connection issues
+            if (error.message.includes('fetch')) return true; // Network issues
+        }
         return false;
     }
 
