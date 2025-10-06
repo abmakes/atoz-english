@@ -1,3 +1,4 @@
+import { Scene } from 'phaser';
 import { EventBus } from './EventBus';
 import { StorageManager } from './StorageManager';
 
@@ -35,9 +36,7 @@ interface AudioSettings {
 
 /**
  * Manages audio playback using Phaser's audio system for the game engine.
- * 
- * This is a port from the PixiJS version that used Howler.js, now using
- * Phaser's native audio capabilities while maintaining the same interface.
+ * This is a port from the PixiJS version that used Howler.js.
  */
 export class AudioManager {
   /** Map of registered sounds with their types */
@@ -50,352 +49,333 @@ export class AudioManager {
   private isSfxMuted: boolean = false;
   /** Storage key for audio settings */
   private static readonly STORAGE_KEY = 'audio_settings';
-  /** Base path for sound assets, relative to /public */
-  private soundsBasePath: string = '/audio/default/'; // Default path
-  
-  /** The ID of the sound definition currently playing as music */
-  private currentMusicId: string | null = null;
-  /** The specific playback instance for the current music */
-  private currentMusicSound: Phaser.Sound.BaseSound | null = null;
+  /** Base path for audio files */
+  private basePath: string;
+  /** Event bus for audio events */
+  private eventBus: EventBus;
+  /** Storage manager for persisting settings */
+  private storageManager: StorageManager;
+  /** Phaser scene for audio context */
+  private scene: Scene | null = null;
 
+  /**
+   * Creates an instance of AudioManager.
+   * @param {EventBus} eventBus - The central event bus for emitting audio events.
+   * @param {StorageManager} storageManager - Storage manager for persisting audio settings.
+   * @param {string} basePath - Base path for audio files.
+   * @param {boolean} initialMusicMuted - Initial music muted state.
+   * @param {boolean} initialSfxMuted - Initial SFX muted state.
+   */
   constructor(
-    private eventBus: EventBus,
-    private storageManager: StorageManager,
-    private scene: Phaser.Scene, // Phaser scene for audio context
-    soundsBasePath?: string, // Make optional for backward compatibility or default theme
-    initialMusicMuted?: boolean, // <-- Add optional initial state param
-    initialSfxMuted?: boolean    // <-- Add optional initial state param
+    eventBus: EventBus,
+    storageManager: StorageManager,
+    basePath: string,
+    initialMusicMuted: boolean = false,
+    initialSfxMuted: boolean = false
   ) {
-    // Load settings *first* as a fallback
+    this.eventBus = eventBus;
+    this.storageManager = storageManager;
+    this.basePath = basePath;
+    this.isMusicMuted = initialMusicMuted;
+    this.isSfxMuted = initialSfxMuted;
+    
+    // Load saved settings
     this.loadSettings();
-
-    // Override with initial states if provided
-    if (initialMusicMuted !== undefined) {
-      this.isMusicMuted = initialMusicMuted;
-    }
-    if (initialSfxMuted !== undefined) {
-      this.isSfxMuted = initialSfxMuted;
-    }
-
-    // Use provided base path or default
-    if (soundsBasePath) {
-        this.soundsBasePath = soundsBasePath;
-    }
     
-    console.log(`AudioManager initialized with sounds base path: ${this.soundsBasePath}`);
-    console.log('AudioManager initial state:', { 
-      volume: this.globalVolume, 
-      musicMuted: this.isMusicMuted, 
-      sfxMuted: this.isSfxMuted 
-    });
-
-    // Save the potentially overridden initial state back to storage
-    this.saveSettings(); 
+    console.log('AudioManager initialized with base path:', basePath);
   }
 
   /**
-   * Load audio settings from storage
+   * Sets the Phaser scene for audio context.
+   * @param {Scene} scene - The Phaser scene.
    */
-  private loadSettings(): void {
-    const settings = this.storageManager.get<AudioSettings>(AudioManager.STORAGE_KEY);
-    if (settings) {
-      this.globalVolume = settings.volume ?? 1.0;
-      this.isMusicMuted = settings.musicMuted ?? false;
-      this.isSfxMuted = settings.sfxMuted ?? false;
-    } else {
-      // If no settings found, initialize with defaults
-      this.globalVolume = 1.0;
-      this.isMusicMuted = false;
-      this.isSfxMuted = false;
-    }
-    console.log('Loaded audio settings:', { 
-      volume: this.globalVolume, 
-      musicMuted: this.isMusicMuted, 
-      sfxMuted: this.isSfxMuted 
-    });
+  public setScene(scene: Scene): void {
+    this.scene = scene;
+    console.log('AudioManager: Scene set for audio context');
   }
 
   /**
-   * Save current audio settings to storage
+   * Registers a sound with the audio manager.
+   * @param {AudioConfig} config - The audio configuration.
+   * @throws {Error} If the sound ID already exists or if scene is not set.
    */
-  private saveSettings(): void {
-    this.storageManager.set(AudioManager.STORAGE_KEY, {
-      volume: this.globalVolume,
-      musicMuted: this.isMusicMuted,
-      sfxMuted: this.isSfxMuted
-    });
-    console.log('Saved audio settings:', { 
-      volume: this.globalVolume, 
-      musicMuted: this.isMusicMuted, 
-      sfxMuted: this.isSfxMuted 
-    });
-  }
-
-  /**
-   * Register a new sound with the audio manager
-   * @param config Configuration for the sound to register
-   * @returns The created Phaser sound instance
-   */
-  public registerSound(config: AudioConfig): Phaser.Sound.BaseSound {
+  public registerSound(config: AudioConfig): void {
     if (this.sounds.has(config.id)) {
-      console.warn(`Sound with id ${config.id} already registered. Returning existing instance.`);
-      // Ensure we return the Phaser sound instance, not the stored object
-      return this.sounds.get(config.id)!.sound; 
+      throw new Error(`Sound with ID '${config.id}' is already registered`);
     }
 
-    // Construct the full path using the base path and filename
-    // Ensure paths are joined correctly (e.g., handle leading/trailing slashes)
-    const fullSrc = `${this.soundsBasePath.replace(/\/$/, '')}/${config.filename.replace(/^\//, '')}`;
-    console.log(`Registering sound ${config.id} with path: ${fullSrc}`);
+    if (!this.scene) {
+      throw new Error('Scene must be set before registering sounds');
+    }
 
-    // Create Phaser sound based on type
-    let sound: Phaser.Sound.BaseSound;
+    const fullPath = `${this.basePath}${config.filename}`;
     
-    if (config.type === 'music') {
-      sound = this.scene.sound.add(config.id, {
-        url: fullSrc,
-        loop: config.loop ?? false,
-        volume: (config.volume ?? 1.0) * this.globalVolume,
-        preload: config.preload ?? true
-      });
-    } else {
-      // SFX
-      sound = this.scene.sound.add(config.id, {
-        url: fullSrc,
-        loop: config.loop ?? false,
-        volume: (config.volume ?? 1.0) * this.globalVolume,
-        preload: config.preload ?? true
-      });
-    }
+    try {
+      // Load the sound using Phaser's audio system
+      this.scene.load.audio(config.id, fullPath);
+      
+      // Create a placeholder sound object that will be replaced when loaded
+      const sound = {
+        id: config.id,
+        type: config.type,
+        volume: config.volume || 1.0,
+        loop: config.loop || false,
+        loaded: false
+      } as any;
 
-    // Store the Phaser sound instance and its type
-    this.sounds.set(config.id, { sound: sound, type: config.type }); 
-    return sound;
+      this.sounds.set(config.id, { sound, type: config.type });
+      
+      console.log(`AudioManager: Registered sound '${config.id}' from '${fullPath}'`);
+    } catch (error) {
+      console.error(`AudioManager: Failed to register sound '${config.id}':`, error);
+      throw error;
+    }
   }
 
   /**
-   * Play a registered sound
-   * @param id The ID of the sound to play
-   * @param sprite Optional sprite name if using audio sprites
-   * @returns The sound instance for controlling playback, or null if sound not found or muted
+   * Plays a registered sound.
+   * @param {string} soundId - The ID of the sound to play.
+   * @param {number} [volume] - Optional volume override (0.0 to 1.0).
+   * @returns {boolean} True if the sound was played successfully, false otherwise.
    */
-  public play(id: string, sprite?: string): Phaser.Sound.BaseSound | null {
-    const soundData = this.sounds.get(id);
+  public playSound(soundId: string, volume?: number): boolean {
+    const soundData = this.sounds.get(soundId);
     if (!soundData) {
-      console.warn(`No sound registered with id: ${id}`);
-      return null;
+      console.warn(`AudioManager: Sound '${soundId}' not found`);
+      return false;
     }
 
-    // Handle Music Playback
-    if (soundData.type === 'music') {
-      // Stop previous music if different
-      if (this.currentMusicId && this.currentMusicId !== id) {
-           this.stop(this.currentMusicId);
+    // Check if sound type is muted
+    if ((soundData.type === 'music' && this.isMusicMuted) || 
+        (soundData.type === 'sfx' && this.isSfxMuted)) {
+      return false;
+    }
+
+    if (!this.scene) {
+      console.warn('AudioManager: Scene not set, cannot play sound');
+      return false;
+    }
+
+    try {
+      // Get the actual Phaser sound object
+      const phaserSound = this.scene.sound.get(soundId);
+      if (!phaserSound) {
+        console.warn(`AudioManager: Sound '${soundId}' not loaded in scene`);
+        return false;
       }
+
+      // Set volume
+      const finalVolume = (volume !== undefined ? volume : soundData.sound.volume || 1.0) * this.globalVolume;
+      phaserSound.setVolume(finalVolume);
+
+      // Play the sound
+      phaserSound.play();
       
-      // Check if already playing this exact instance
-      if (this.currentMusicId === id && this.currentMusicSound && this.currentMusicSound.isPlaying) {
-          console.log(`Music sound '${id}' is already playing.`);
-          return this.currentMusicSound; // Return existing playing instance
-      }
-
-      // If globally muted, don't start new music
-      if (this.isMusicMuted) {
-          console.log(`Cannot play music sound '${id}' - Music is globally muted.`);
-          this.currentMusicId = id; // Still track it as the intended music
-          this.currentMusicSound = null; // But no active playing instance
-          return null;
-      }
-
-      console.log(`Playing music sound: ${id}`);
-      soundData.sound.play();
-      
-      // Track the new music
-      this.currentMusicId = id;
-      this.currentMusicSound = soundData.sound;
-
-      // Apply the current mute state *immediately* to this instance
-      soundData.sound.setMute(this.isMusicMuted);
-      
-      return soundData.sound;
-
-    // Handle SFX Playback
-    } else { 
-      if (this.isSfxMuted) {
-        console.log(`SFX sound '${id}' muted.`);
-        return null;
-      }
-      console.log(`Playing SFX sound: ${id}`);
-      soundData.sound.play();
-      return soundData.sound;
+      console.log(`AudioManager: Playing sound '${soundId}' at volume ${finalVolume}`);
+      return true;
+    } catch (error) {
+      console.error(`AudioManager: Failed to play sound '${soundId}':`, error);
+      return false;
     }
   }
 
   /**
-   * Stop a specific sound
-   * @param id The ID of the sound to stop
+   * Stops a playing sound.
+   * @param {string} soundId - The ID of the sound to stop.
+   * @returns {boolean} True if the sound was stopped successfully, false otherwise.
    */
-  public stop(id: string): void {
-    const soundData = this.sounds.get(id);
-    if (soundData) {
-      console.log(`Stopping sound: ${id}`);
-      
-      // If stopping the currently tracked music instance
-      if (id === this.currentMusicId) {
-          console.log(`   -> Clearing tracked music ID: ${this.currentMusicId}`);
-          this.currentMusicId = null;
-          this.currentMusicSound = null;
+  public stopSound(soundId: string): boolean {
+    if (!this.scene) {
+      console.warn('AudioManager: Scene not set, cannot stop sound');
+      return false;
+    }
+
+    try {
+      const phaserSound = this.scene.sound.get(soundId);
+      if (phaserSound && phaserSound.isPlaying) {
+        phaserSound.stop();
+        console.log(`AudioManager: Stopped sound '${soundId}'`);
+        return true;
       }
-      
-      // Stop the actual sound
-      soundData.sound.stop();
-    } else {
-        console.warn(`Cannot stop sound: ID '${id}' not found.`);
+      return false;
+    } catch (error) {
+      console.error(`AudioManager: Failed to stop sound '${soundId}':`, error);
+      return false;
     }
   }
 
   /**
-   * Stop all currently playing sounds
+   * Stops all sounds of a specific type.
+   * @param {SoundType} type - The type of sounds to stop.
    */
-  public stopAll(): void {
-    console.log("Stopping all sounds");
-    // Stop all registered sounds
-    this.sounds.forEach((soundData, id) => {
-        console.log(`Stopping sound: ${id}`);
-        soundData.sound.stop();
-    });
-    // Clear tracked music state
-    this.currentMusicId = null; 
-    this.currentMusicSound = null;
-  }
+  public stopAllSounds(type?: SoundType): void {
+    if (!this.scene) {
+      console.warn('AudioManager: Scene not set, cannot stop sounds');
+      return;
+    }
 
-  /**
-   * Set the volume for a specific sound
-   * @param id The ID of the sound
-   * @param volume Volume level (0.0 to 1.0)
-   */
-  public setVolume(id: string, volume: number): void {
-    const soundData = this.sounds.get(id);
-    if (soundData) {
-      soundData.sound.setVolume(volume * this.globalVolume);
+    try {
+      if (type) {
+        // Stop sounds of specific type
+        this.sounds.forEach((soundData, soundId) => {
+          if (soundData.type === type) {
+            const phaserSound = this.scene!.sound.get(soundId);
+            if (phaserSound && phaserSound.isPlaying) {
+              phaserSound.stop();
+            }
+          }
+        });
+        console.log(`AudioManager: Stopped all ${type} sounds`);
+      } else {
+        // Stop all sounds
+        this.scene.sound.stopAll();
+        console.log('AudioManager: Stopped all sounds');
+      }
+    } catch (error) {
+      console.error('AudioManager: Failed to stop sounds:', error);
     }
   }
 
   /**
-   * Set the global volume level for all sounds
-   * @param volume Volume level (0.0 to 1.0)
+   * Sets the global volume for all sounds.
+   * @param {number} volume - Volume level (0.0 to 1.0).
    */
   public setGlobalVolume(volume: number): void {
     this.globalVolume = Math.max(0, Math.min(1, volume));
-    // Update all registered sounds with new global volume
-    this.sounds.forEach((soundData) => {
-      const originalVolume = soundData.sound.volume / (this.globalVolume || 1); // Get original volume
-      soundData.sound.setVolume(originalVolume * this.globalVolume);
-    });
     this.saveSettings();
+    console.log(`AudioManager: Global volume set to ${this.globalVolume}`);
   }
 
   /**
-   * Get the current global volume level
-   * @returns The current global volume (0.0 to 1.0)
+   * Gets the current global volume.
+   * @returns {number} The current global volume (0.0 to 1.0).
    */
   public getGlobalVolume(): number {
     return this.globalVolume;
   }
 
   /**
-   * Mute/unmute music tracks.
-   * @param muted Whether music should be muted.
+   * Sets whether music is muted.
+   * @param {boolean} muted - True to mute music, false to unmute.
    */
   public setMusicMuted(muted: boolean): void {
-    if (this.isMusicMuted !== muted) {
-      this.isMusicMuted = muted;
-      console.log(`Setting global Music Mute: ${muted}.`);
-
-      // Apply mute state to the currently playing music instance, if any
-      if (this.currentMusicId && this.currentMusicSound) {
-        console.log(`   -> Applying mute(${muted}) to music instance: ${this.currentMusicId}`);
-        this.currentMusicSound.setMute(muted);
-      } else {
-         console.log(`   -> No tracked music instance (${this.currentMusicId}) to apply mute state to.`);
-      }
-      
-      // If unmuting, and we *have* a currentMusicId but *no* playing instance
-      // (meaning play() was called while muted), try to start it now.
-      if (!muted && this.currentMusicId && (!this.currentMusicSound || !this.currentMusicSound.isPlaying)) {
-         console.log(`   -> Music was unmuted, attempting to play intended music: ${this.currentMusicId}`);
-         this.play(this.currentMusicId); // This will handle checks and potentially start playback
-      }
-
-      this.saveSettings();
-    } else {
-        console.log(`Global Music Mute already set to: ${muted}. No change.`);
+    this.isMusicMuted = muted;
+    this.saveSettings();
+    
+    if (muted) {
+      this.stopAllSounds('music');
     }
+    
+    console.log(`AudioManager: Music ${muted ? 'muted' : 'unmuted'}`);
   }
 
   /**
-   * Check if music is currently muted.
-   * @returns Whether music is muted.
+   * Gets whether music is muted.
+   * @returns {boolean} True if music is muted, false otherwise.
    */
-  public getIsMusicMuted(): boolean {
+  public isMusicMuted(): boolean {
     return this.isMusicMuted;
   }
 
   /**
-   * Mute/unmute sound effects.
-   * @param muted Whether SFX should be muted.
+   * Sets whether sound effects are muted.
+   * @param {boolean} muted - True to mute SFX, false to unmute.
    */
   public setSfxMuted(muted: boolean): void {
-    if (this.isSfxMuted !== muted) {
-      this.isSfxMuted = muted;
-      console.log(`SFX ${muted ? 'muted' : 'unmuted'}.`);
-      // Stop currently playing SFX if muted
-      if (muted) {
-        this.sounds.forEach((soundData) => {
-          if (soundData.type === 'sfx') {
-            soundData.sound.stop();
-          }
-        });
-      }
-      this.saveSettings();
+    this.isSfxMuted = muted;
+    this.saveSettings();
+    
+    if (muted) {
+      this.stopAllSounds('sfx');
     }
+    
+    console.log(`AudioManager: SFX ${muted ? 'muted' : 'unmuted'}`);
   }
 
   /**
-   * Check if sound effects are currently muted.
-   * @returns Whether SFX are muted.
+   * Gets whether sound effects are muted.
+   * @returns {boolean} True if SFX are muted, false otherwise.
    */
-  public getIsSfxMuted(): boolean {
+  public isSfxMuted(): boolean {
     return this.isSfxMuted;
   }
 
   /**
-   * Unload and destroy a registered sound
-   * @param id The ID of the sound to unload
+   * Loads audio settings from storage.
    */
-  public unregisterSound(id: string): void {
-    const soundData = this.sounds.get(id);
-    if (soundData) {
-      soundData.sound.destroy();
-      this.sounds.delete(id);
+  private loadSettings(): void {
+    try {
+      const settings = this.storageManager.getItem<AudioSettings>(AudioManager.STORAGE_KEY);
+      if (settings) {
+        this.globalVolume = settings.volume;
+        this.isMusicMuted = settings.musicMuted;
+        this.isSfxMuted = settings.sfxMuted;
+        console.log('AudioManager: Settings loaded from storage');
+      }
+    } catch (error) {
+      console.warn('AudioManager: Failed to load settings from storage:', error);
     }
   }
 
   /**
-   * Clean up all sounds and reset the manager
+   * Saves audio settings to storage.
+   */
+  private saveSettings(): void {
+    try {
+      const settings: AudioSettings = {
+        volume: this.globalVolume,
+        musicMuted: this.isMusicMuted,
+        sfxMuted: this.isSfxMuted
+      };
+      this.storageManager.setItem(AudioManager.STORAGE_KEY, settings);
+    } catch (error) {
+      console.warn('AudioManager: Failed to save settings to storage:', error);
+    }
+  }
+
+  /**
+   * Gets information about a registered sound.
+   * @param {string} soundId - The ID of the sound.
+   * @returns {AudioConfig | null} The sound configuration or null if not found.
+   */
+  public getSoundInfo(soundId: string): AudioConfig | null {
+    const soundData = this.sounds.get(soundId);
+    if (!soundData) {
+      return null;
+    }
+
+    return {
+      id: soundId,
+      filename: '', // We don't store the filename in the sound data
+      type: soundData.type,
+      volume: soundData.sound.volume || 1.0,
+      loop: soundData.sound.loop || false
+    };
+  }
+
+  /**
+   * Gets all registered sound IDs.
+   * @returns {string[]} Array of registered sound IDs.
+   */
+  public getRegisteredSounds(): string[] {
+    return Array.from(this.sounds.keys());
+  }
+
+  /**
+   * Cleans up resources used by the AudioManager.
    */
   public destroy(): void {
-    console.log('Destroying AudioManager...');
-    // Use stopAll to clear state
-    this.stopAll(); 
-    // Unload all sounds
-    this.sounds.forEach((soundData, id) => {
-         console.log(`   -> Destroying sound: ${id}`);
-         soundData.sound.destroy();
-    });
+    console.log('AudioManager: Destroying...');
+    
+    // Stop all sounds
+    this.stopAllSounds();
+    
+    // Clear sounds map
     this.sounds.clear();
-    this.currentMusicId = null;
-    this.currentMusicSound = null;
-    console.log('AudioManager destroyed.');
+    
+    // Clear scene reference
+    this.scene = null;
+    
+    console.log('AudioManager: Destroyed');
   }
 }

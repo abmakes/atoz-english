@@ -16,6 +16,8 @@ export interface PowerupDefinition {
   effectParams?: Record<string, unknown>; 
   /** Optional key/alias of the asset used for the power-up's visual representation (e.g., icon). */
   assetKey?: string;
+  /** Optional icon filename for the power-up. */
+  icon?: string;
 }
 
 /** 
@@ -43,7 +45,8 @@ export const STANDARD_SCORE_MODE_POWERUPS: PowerupDefinition[] = [
         // No durationSeconds - lasts until manually deactivated
         effectType: 'score_multiplier',
         effectParams: { multiplier: 2 },
-        assetKey: 'double-points-icon' // Placeholder asset key
+        assetKey: 'double-points-icon', // Placeholder asset key
+        icon: 'double-points.png'
     },
     {
         id: 'time_extension',
@@ -52,7 +55,8 @@ export const STANDARD_SCORE_MODE_POWERUPS: PowerupDefinition[] = [
         durationSeconds: 10,
         effectType: 'timer_modifier',
         effectParams: { amount: 5 }, // Adds 5 seconds
-        assetKey: 'time-extension-icon' // Placeholder asset key
+        assetKey: 'time-extension-icon', // Placeholder asset key
+        icon: 'time-extension.png'
     },
     {
         id: 'fifty_fifty',
@@ -60,7 +64,8 @@ export const STANDARD_SCORE_MODE_POWERUPS: PowerupDefinition[] = [
         description: 'Removes half of the incorrect answer options.',
         durationSeconds: 10,
         effectType: 'answer_modifier',
-        assetKey: 'fifty-fifty-icon' // Placeholder asset key
+        assetKey: 'fifty-fifty-icon', // Placeholder asset key
+        icon: 'fifty-fifty.png'
     },
     {
         id: 'comeback',
@@ -69,7 +74,8 @@ export const STANDARD_SCORE_MODE_POWERUPS: PowerupDefinition[] = [
         effectType: 'score_boost',
         durationSeconds: 30,
         effectParams: { multiplier: 1.5, minPointsBehind: 20 },
-        assetKey: 'comeback-icon' // Placeholder asset key
+        assetKey: 'comeback-icon', // Placeholder asset key
+        icon: 'comeback.png'
     }
 ];
 
@@ -80,6 +86,3 @@ export const DEFAULT_POWERUP_CONFIG: PowerupConfig = {
   availablePowerups: [],
   powerupsEnabled: false,
 };
-
-// Re-export types if needed elsewhere, though importing from GameConfig is often cleaner
-// export type { PowerupDefinition, PowerupConfig };
