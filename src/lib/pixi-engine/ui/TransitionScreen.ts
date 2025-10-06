@@ -6,16 +6,19 @@ import { TRANSITION_EVENTS, TransitionPowerupSelectedPayload } from '../core/Eve
 import { PowerUpManager, SelectablePowerupInfo } from '../game/PowerUpManager';
 import { PowerupSpinWheel } from './PowerupSpinWheel';
 import { GameStateManager } from '../core/GameStateManager';
+import { AssetLoader } from '../assets/AssetLoader';
 
 // Define the list of power-ups available for random selection
 // const SELECTABLE_POWERUPS: string[] = ['double_points', 'time_extension', 'fifty_fifty']; // Replaced skip_question
 
 export interface TransitionScreenConfig {
-  type: 'loading' | 'turn' | 'powerup' | 'custom';
+  type: 'loading' | 'turn' | 'powerup' | 'custom' | 'question_preview' | 'countdown' | 'go';
   message?: string;
   duration?: number; // Duration in ms for auto-hide
   autoHide?: boolean;
   triggerPowerupRoll?: boolean; // Add the flag here
+  question?: { question: string; imageUrl?: string; [key: string]: unknown }; // QuestionData for question preview
+  showCountdown?: boolean; // Show countdown after question preview
 }
 
 /**
@@ -25,6 +28,10 @@ export interface TransitionScreenConfig {
 export class TransitionScreen extends PIXI.Container {
   private panelBackground: PIXI.Graphics; // Changed from background
   private messageText: Text;
+  private questionText: Text; // For question preview
+  private questionImage: PIXI.Sprite | null = null; // For question image
+  private countdownText: Text; // For countdown
+  private goText: Text; // For GO! text
   private powerupSpinWheel: PowerupSpinWheel | null = null; // Spin wheel for powerup selection
   private currentConfig: TransitionScreenConfig | null = null;
   private timeoutId: number | null = null;
@@ -34,6 +41,7 @@ export class TransitionScreen extends PIXI.Container {
   private powerUpManager: PowerUpManager; // <-- Add PowerUpManager reference
   private gameStateManager: GameStateManager; // Add GameStateManager reference
   private app: PIXI.Application; // Store PIXI app reference
+  private assetLoader: typeof AssetLoader; // Add AssetLoader reference
 
   // State for power-up selection
   private finalSelectedPowerupId: string | null = null;
@@ -48,13 +56,15 @@ export class TransitionScreen extends PIXI.Container {
     app: PIXI.Application, // Pass PIXI app instance
     eventBus: EventBus,
     powerUpManager: PowerUpManager,
-    gameStateManager: GameStateManager
+    gameStateManager: GameStateManager,
+    assetLoader: typeof AssetLoader
   ) {
     super();
     this.app = app;
     this.eventBus = eventBus;
     this.powerUpManager = powerUpManager;
     this.gameStateManager = gameStateManager;
+    this.assetLoader = assetLoader;
     console.log('[TransitionScreen Constructor] PowerUpManager received:', this.powerUpManager);
 
     this.interactive = true;
@@ -81,6 +91,51 @@ export class TransitionScreen extends PIXI.Container {
     this.messageText.anchor.set(0.5);
     this.addChild(this.messageText);
 
+    // Question text for question preview
+    this.questionText = new Text({ 
+      text: '', 
+      style: {
+        fontFamily: 'Grandstander',
+        fontSize: 48,
+        fontWeight: 'bold',
+        fill: 0x114257,
+        align: 'center',
+        wordWrap: true,
+        wordWrapWidth: 1 // Placeholder, will be set in show/resize
+      }
+    });
+    this.questionText.anchor.set(0.5);
+    this.addChild(this.questionText);
+
+    // Countdown text
+    this.countdownText = new Text({ 
+      text: '', 
+      style: {
+        fontFamily: 'Grandstander',
+        fontSize: 120,
+        fontWeight: 'bold',
+        fill: 0xFFD700,
+        align: 'center',
+        stroke: { color: 0x000000, width: 6 }
+      }
+    });
+    this.countdownText.anchor.set(0.5);
+    this.addChild(this.countdownText);
+
+    // GO! text
+    this.goText = new Text({ 
+      text: 'GO!', 
+      style: {
+        fontFamily: 'Grandstander',
+        fontSize: 100,
+        fontWeight: 'bold',
+        fill: 0x00FF00,
+        align: 'center',
+        stroke: { color: 0x000000, width: 6 }
+      }
+    });
+    this.goText.anchor.set(0.5);
+    this.addChild(this.goText);
 
     // Power-up Spin Wheel (will be created when needed)
     this.powerupSpinWheel = null;
@@ -108,14 +163,201 @@ export class TransitionScreen extends PIXI.Container {
   }
 
   private _centerMessageText(): void {
-      // Position main message higher
+      // Position "Get Ready" in top half of screen
       this.messageText.style.wordWrapWidth = this.panelWidth * 0.9;
-      this.messageText.position.set(this.app.screen.width / 2, this.app.screen.height / 2 - 80); // Adjusted Y
+      this.messageText.position.set(this.app.screen.width / 2, this.app.screen.height * 0.25); // Top quarter
+  }
+
+  private _centerQuestionText(): void {
+      // Position question text in bottom half of screen
+      this.questionText.style.wordWrapWidth = this.panelWidth * 0.8;
+      this.questionText.position.set(this.app.screen.width / 2, this.app.screen.height * 0.75); // Bottom quarter
+  }
+
+  private _centerCountdownText(): void {
+      // Position countdown in center
+      this.countdownText.position.set(this.app.screen.width / 2, this.app.screen.height / 2);
+  }
+
+  private _centerGoText(): void {
+      // Position GO! in center
+      this.goText.position.set(this.app.screen.width / 2, this.app.screen.height / 2);
   }
 
 
   private _centerPowerupText(): void {
     // This method is no longer needed with spin wheel
+  }
+
+  private _resetUIElements(): void {
+    this.messageText.visible = true;
+    this.questionText.visible = false;
+    this.countdownText.visible = false;
+    this.goText.visible = false;
+    
+    if (this.questionImage) {
+      this.questionImage.destroy();
+      this.questionImage = null;
+    }
+  }
+
+  private async _showQuestionPreview(question: { question: string; imageUrl?: string; [key: string]: unknown }): Promise<void> {
+    // Phase 1: Show "Get Ready!" in top half, question in bottom half
+    this.messageText.text = 'Get Ready!';
+    this.messageText.visible = true;
+    this.questionText.text = question.question;
+    this.questionText.visible = true;
+
+    // Wait 1 second, then hide "Get Ready!" and show image
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Phase 2: Hide "Get Ready!" and show image in top half
+    this.messageText.visible = false;
+    
+    // Load and display question image if it exists
+    if (question.imageUrl) {
+      try {
+        console.log('Loading question image:', question.imageUrl);
+        // CRITICAL: Use AssetLoader.getDisplayObject() for proper GIF handling
+        const displayObject = this.assetLoader.getDisplayObject(question.imageUrl);
+        
+        if (displayObject) {
+          // CRITICAL: Handle different display object types
+          const isSprite = displayObject instanceof PIXI.Sprite;
+          const isAnimatedSprite = displayObject instanceof PIXI.AnimatedSprite;
+          
+          if (isSprite || isAnimatedSprite) {
+            this.questionImage = displayObject as PIXI.Sprite;
+            this.questionImage.anchor.set(0.5);
+            this.questionImage.x = this.app.screen.width / 2;
+            this.questionImage.y = this.app.screen.height * 0.25; // Top quarter, same as "Get Ready!"
+            
+            // Scale image to fit nicely in the top half
+            const maxWidth = this.app.screen.width * 0.8;
+            const maxHeight = this.app.screen.height * 0.4; // Top half minus some padding
+            const scaleX = maxWidth / this.questionImage.width;
+            const scaleY = maxHeight / this.questionImage.height;
+            const scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
+            this.questionImage.scale.set(scale);
+            
+            this.addChild(this.questionImage);
+            
+            // CRITICAL: Handle animation for AnimatedSprites
+            if (isAnimatedSprite) {
+              console.log(`[TransitionScreen] Starting animation for AnimatedSprite: ${question.image}`);
+              if (!displayObject.playing) {
+                setTimeout(() => {
+                  if (displayObject && !displayObject.destroyed) {
+                    displayObject.play(); // CRITICAL: This starts animation!
+                    console.log(`[TransitionScreen] Animation started for: ${question.image}`);
+                  }
+                }, 50);
+              }
+            }
+            
+            console.log('Question image loaded and displayed');
+          } else {
+            // Check for GifSprite separately
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const gifSprite = displayObject as any;
+            if (gifSprite && typeof gifSprite.play === 'function') {
+              this.questionImage = gifSprite as PIXI.Sprite;
+              this.questionImage.anchor.set(0.5);
+              this.questionImage.x = this.app.screen.width / 2;
+              this.questionImage.y = this.app.screen.height * 0.25;
+              
+              // Scale image to fit nicely in the top half
+              const maxWidth = this.app.screen.width * 0.8;
+              const maxHeight = this.app.screen.height * 0.4;
+              const scaleX = maxWidth / this.questionImage.width;
+              const scaleY = maxHeight / this.questionImage.height;
+              const scale = Math.min(scaleX, scaleY, 1);
+              this.questionImage.scale.set(scale);
+              
+              this.addChild(this.questionImage);
+              
+              // Start GIF animation
+              console.log(`[TransitionScreen] Starting animation for GifSprite: ${question.image}`);
+              if (!gifSprite.playing) {
+                setTimeout(() => {
+                  if (gifSprite && !gifSprite.destroyed) {
+                    gifSprite.play();
+                    console.log(`[TransitionScreen] GIF animation started for: ${question.image}`);
+                  }
+                }, 50);
+              }
+              
+              console.log('Question GIF loaded and displayed');
+            } else {
+              console.warn(`[TransitionScreen] Unsupported display object type for: ${question.image}`);
+            }
+          }
+        } else {
+          console.warn(`[TransitionScreen] AssetLoader.getDisplayObject returned null for: ${question.image}`);
+        }
+      } catch (error) {
+        console.warn('Failed to load question image:', error);
+        // If image fails to load, show a placeholder or continue without it
+      }
+    }
+
+    // Wait 1 more second with image and question both visible, then start countdown
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Phase 3: Start countdown with both image and question visible
+    if (this.currentConfig?.showCountdown) {
+      this._showCountdown();
+    }
+  }
+
+  private _showCountdown(): void {
+    // Keep image and question visible during countdown
+    this.messageText.visible = false;
+    this.questionText.visible = true; // Keep question visible
+    this.countdownText.visible = true;
+    
+    let count = 3;
+    this.countdownText.text = count.toString();
+    
+    const countdownInterval = setInterval(() => {
+      count--;
+      if (count > 0) {
+        this.countdownText.text = count.toString();
+      } else {
+        clearInterval(countdownInterval);
+        this._showGo();
+      }
+    }, 1000);
+  }
+
+  private _showGo(): void {
+    // Keep image and question visible during GO!
+    this.countdownText.visible = false;
+    this.questionText.visible = true; // Keep question visible
+    this.goText.visible = true;
+    
+    // Add some animation to GO! text
+    this.goText.scale.set(0.5);
+    const targetScale = 1.2;
+    const startTime = Date.now();
+    const duration = 500;
+    
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const scale = 0.5 + (targetScale - 0.5) * progress;
+      this.goText.scale.set(scale);
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+    animate();
+    
+    // Hide after 1 second
+    setTimeout(() => {
+      this.hide();
+    }, 1000);
   }
 
   /**
@@ -194,20 +436,40 @@ export class TransitionScreen extends PIXI.Container {
     this._drawPanelBackground();
     this._centerPanel();
     this._centerMessageText();
+    this._centerQuestionText();
+    this._centerCountdownText();
+    this._centerGoText();
     this._centerPowerupText();
     // ****************************************************
 
     this.messageText.text = config.message || '';
     // wordWrapWidth is set in _centerMessageText
 
+    // Handle different transition types
+    this._resetUIElements();
+    
+    if (config.type === 'question_preview' && config.question) {
+      // Start the question preview flow (this will handle its own timing)
+      this._showQuestionPreview(config.question).catch(error => {
+        console.error('Error in question preview:', error);
+        // Fallback to countdown if preview fails
+        if (config.showCountdown) {
+          this._showCountdown();
+        }
+      });
+    } else if (config.type === 'countdown') {
+      this._showCountdown();
+    } else if (config.type === 'go') {
+      this._showGo();
+    }
 
     this.visible = true;
     this.alpha = 1;
     this.finalSelectedPowerupId = null;
     this.currentSelectablePowerups = [];
 
-    // Create power-up spin wheel if requested
-    if (config.triggerPowerupRoll) {
+    // Create power-up spin wheel if requested (only for powerup type)
+    if (config.triggerPowerupRoll && config.type === 'powerup') {
         console.log('[TransitionScreen show()] Checking this.powerUpManager before getSelectablePowerups:', this.powerUpManager);
         this.currentSelectablePowerups = this.powerUpManager.getSelectablePowerups();
         console.log(`[TransitionScreen] Got ${this.currentSelectablePowerups.length} selectable powerups from manager.`);
@@ -298,7 +560,24 @@ export class TransitionScreen extends PIXI.Container {
     this._drawPanelBackground();
     this._centerPanel();
     this._centerMessageText();
+    this._centerQuestionText();
+    this._centerCountdownText();
+    this._centerGoText();
     this._centerPowerupText();
+    
+    // Update image position if it exists
+    if (this.questionImage) {
+      this.questionImage.x = this.app.screen.width / 2;
+      this.questionImage.y = this.app.screen.height * 0.25;
+      
+      // Recalculate scale for new screen size
+      const maxWidth = this.app.screen.width * 0.8;
+      const maxHeight = this.app.screen.height * 0.4;
+      const scaleX = maxWidth / (this.questionImage.width / this.questionImage.scale.x);
+      const scaleY = maxHeight / (this.questionImage.height / this.questionImage.scale.y);
+      const scale = Math.min(scaleX, scaleY, 1);
+      this.questionImage.scale.set(scale);
+    }
     
     // Resize spin wheel if it exists
     if (this.powerupSpinWheel) {

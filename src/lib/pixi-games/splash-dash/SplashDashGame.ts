@@ -1,0 +1,893 @@
+import { BaseGame, BaseGameState, GameState } from '@/lib/pixi-engine/game/BaseGame';
+import { PixiEngineManagers } from '@/lib/pixi-engine/core/PixiEngine';
+import { GameConfig } from '@/lib/pixi-engine/config/GameConfig';
+import { GAME_STATE_EVENTS, TIMER_EVENTS, TimerEventPayload, GAME_EVENTS, AnswerSelectedPayload, CONTROLS_EVENTS, ControlsPlayerActionPayload } from '@/lib/pixi-engine/core/EventTypes';
+import { TimerType } from '@/lib/pixi-engine/game/TimerManager';
+import { GameSetupData as SplashDashGameConfig } from '@/types/gameTypes';
+import { QuestionData } from '@/types';
+import { SplashDashDataManager } from './managers/SplashDashDataManager';
+import { SplashDashUIManager } from './managers/SplashDashUIManager';
+import { SplashDashBackgroundManager } from './managers/SplashDashBackgroundManager';
+import { SplashDashLayoutManager } from './managers/SplashDashLayoutManager';
+import { SplashDashPlayerManager } from './managers/SplashDashPlayerManager';
+import { GifAsset } from 'pixi.js/gif';
+
+// Font loading utility
+async function ensureFontIsLoaded(fontFamily: string, descriptor: string = '28px'): Promise<void> {
+    const fontCheckString = `${descriptor} "${fontFamily}"`;
+    try {
+        if (!document.fonts.check(fontCheckString)) {
+            console.log(`Waiting for font: ${fontFamily}...`);
+            await document.fonts.load(fontCheckString);
+            console.log(`Font ${fontFamily} loaded.`);
+        } else {
+             console.log(`Font ${fontFamily} was already loaded.`);
+        }
+    } catch (error) {
+        console.error(`Failed to load font "${fontFamily}":`, error);
+    }
+}
+
+/**
+ * Custom game state interface for SplashDashGame.
+ * Extends BaseGameState with game-specific properties.
+ */
+interface SplashDashGameState extends BaseGameState {
+    currentQuestionIndex: number;
+    activeTeamIndex: number;
+    activeTeam: string | number;
+    timerCompleteCount: number;
+    hasTriggeredGameOver: boolean;
+    phase: 'loading' | 'playing' | 'gameOver';
+    players: Array<{
+        id: string;
+        x: number;
+        y: number;
+        rotation: number;
+        score: number;
+        isMoving: boolean;
+        isAtAnswer: boolean;
+        currentAnswerId?: string;
+    }>;
+    currentQuestion: QuestionData | null;
+    answerCircles: Array<{
+        id: string;
+        x: number;
+        y: number;
+        answer: string;
+        isCorrect: boolean;
+    }>;
+    gamePhase: 'playing' | 'questionComplete' | 'gameOver';
+    feedback: {
+        show: boolean;
+        x: number;
+        y: number;
+        correct: boolean;
+        timer: number;
+    };
+}
+
+/**
+ * SplashDashGame - A two-player competitive quiz game where players control
+ * capybara characters swimming to reach correct answer circles.
+ */
+export class SplashDashGame extends BaseGame<SplashDashGameState> {
+    private dataManager!: SplashDashDataManager;
+    private uiManager!: SplashDashUIManager;
+    private backgroundManager!: SplashDashBackgroundManager;
+    private layoutManager!: SplashDashLayoutManager;
+    private playerManager!: SplashDashPlayerManager;
+    private readonly QUESTION_TIMER_ID = 'splashDashQuestionTimer';
+    private readonly MOVEMENT_TIMER_ID = 'splashDashMovementTimer';
+    
+    constructor(config: GameConfig, managers: PixiEngineManagers) {
+        super(config, managers);
+
+        console.log("SplashDashGame constructor - Config received:", this.config);
+
+        if (typeof GifAsset !== 'undefined') {
+            console.log("GIF Asset handler registered.");
+        }
+    }
+
+    /**
+     * Creates initial game state for SplashDashGame
+     * @returns The initial SplashDashGameState
+     */
+    protected createInitialState(): SplashDashGameState {
+        const firstTeamId = this.config.teams.length > 0 ? this.config.teams[0].id : 'unknown';
+        
+        const { width, height } = this.pixiApp.getScreenSize();
+        
+        console.log(`[SplashDashGame] createInitialState: Screen size: ${width}x${height}`);
+        console.log(`[SplashDashGame] createInitialState: Teams:`, this.config.teams);
+        
+        return {
+            currentQuestionIndex: 0,
+            activeTeamIndex: 0, 
+            activeTeam: firstTeamId,
+            timerCompleteCount: 0,
+            hasTriggeredGameOver: false,
+            phase: 'loading',
+            scores: {},
+            players: [
+                { 
+                    id: String(this.config.teams[0]?.id || 'player1'),
+                    x: width * 0.25, 
+                    y: height * (2/3), // 1/3 up from bottom
+                    rotation: -Math.PI/2, 
+                    score: 0, 
+                    isMoving: false,
+                    isAtAnswer: false
+                },
+                { 
+                    id: String(this.config.teams[1]?.id || 'player2'),
+                    x: width * 0.75, 
+                    y: height * (2/3), // 1/3 up from bottom
+                    rotation: -Math.PI/2, 
+                    score: 0, 
+                    isMoving: false,
+                    isAtAnswer: false
+                }
+            ],
+            currentQuestion: null,
+            answerCircles: [],
+            gamePhase: 'playing',
+            feedback: { show: false, x: 0, y: 0, correct: false, timer: 0 }
+        };
+    }
+
+    /**
+     * Game-specific initialization implementation.
+     * Loads questions, preloads media, sets up UI elements, binds events.
+     * @param engineAssetsPromise - A promise that resolves when engine-level assets (like bundles) are loaded.
+     */
+    protected async initImplementation(engineAssetsPromise: Promise<unknown>): Promise<void> {
+        try {
+            console.log("[SplashDashGame] initImplementation: Starting...");
+            
+            // Show initial loading transition
+            await this.showTransition({ type: 'loading', message: 'Getting Ready...', autoHide: false });
+
+            // Initialize Layout Manager first
+            const { width, height } = this.pixiApp.getScreenSize();
+            this.layoutManager = new SplashDashLayoutManager(width, height);
+            console.log("[SplashDashGame] Layout Manager initialized with screen size:", width, "x", height);
+
+            // Initialize Data Manager
+            if (!this.config.questionHandling) {
+                throw new Error("Question handling configuration is missing in GameConfig.");
+            }
+            if (!this.config.quizId) {
+                throw new Error("Quiz ID is missing in GameConfig.");
+            }
+
+            this.dataManager = new SplashDashDataManager(
+                this.config.quizId, 
+                this.config.questionHandling,
+                this.assetLoader 
+            );
+
+            const gameDataPromise = this.dataManager.loadData();
+
+            // Wait for both engine assets AND game data to load concurrently
+            await Promise.all([engineAssetsPromise, gameDataPromise]);
+            console.log("[SplashDashGame] All assets/data loaded.");
+
+            // Load Grandstander font
+            await ensureFontIsLoaded('Grandstander');
+
+            // Hide loading transition
+            this.hideTransition();
+
+            // Show turn transition screen
+            const firstTeamName = this.config.teams[0]?.name || 'Team 1';
+            await this.showTransition({ 
+                type: 'turn', 
+                message: `${firstTeamName}'s Turn!`, 
+                duration: 2000, 
+                autoHide: true 
+            });
+
+
+
+            // Initialize Background Manager
+            this.backgroundManager = new SplashDashBackgroundManager(this.pixiApp.getApp(), this.themeConfig as unknown as Record<string, unknown>, this.eventBus, this.assetLoader);
+            this.view.addChildAt(this.backgroundManager.getView(), 0);
+
+            // Initialize Player Manager
+            this.playerManager = new SplashDashPlayerManager(
+                this.pixiApp,
+                this.eventBus,
+                this.assetLoader,
+                this.layoutManager
+            );
+            this.view.addChild(this.playerManager.getView());
+
+            // Initialize UI Manager
+            this.uiManager = new SplashDashUIManager(
+                this.pixiApp,
+                this.eventBus,
+                this.assetLoader,
+                this.themeConfig.pixiConfig,
+                this.layoutManager
+            );
+            this.view.addChild(this.uiManager.getView());
+
+            // Initialize players with sprites
+            await this.playerManager.initializePlayers(this.getState().players);
+            console.log("[SplashDashGame] Players initialized with sprites.");
+
+            this.dataManager.initializeSequencer(this.config.teams.length);
+
+            // Show the first question with transition
+            this._showQuestionWithTransition();
+
+            // Bind game-specific events
+            this._bindGameEvents();
+
+            this.setState({ phase: 'playing' }); 
+            
+            console.log(`${this.constructor.name}: Initialized successfully.`);
+
+        } catch (error) {
+            console.error(`Error initializing ${this.constructor.name}:`, error);
+            this.hideTransition(); 
+            this.setState({ hasTriggeredGameOver: true, phase: 'gameOver' });
+            this._unbindGameEvents();
+            this.uiManager?.destroy();
+            this.backgroundManager?.destroy();
+            this.playerManager?.destroy();
+            throw error;
+        }
+    }
+
+    /**
+     * Binds event listeners for game events
+     */
+    private _bindGameEvents(): void {
+        console.log("[SplashDashGame] _bindGameEvents: Registering listeners...");
+        this.registerEventListener(TIMER_EVENTS.TIMER_COMPLETED, this._handleTimerComplete.bind(this));
+        this.registerEventListener(GAME_STATE_EVENTS.GAME_PAUSED, this._handleGamePaused.bind(this));
+        this.registerEventListener(GAME_STATE_EVENTS.GAME_RESUMED, this._handleGameResumed.bind(this));
+        this.registerEventListener(CONTROLS_EVENTS.PLAYER_ACTION, this._handlePlayerAction.bind(this));
+        console.log("[SplashDashGame] _bindGameEvents: Listeners registered.");
+    }
+
+    /**
+     * Unbinds all event listeners
+     */
+    private _unbindGameEvents(): void {
+        this.unregisterEventListener(TIMER_EVENTS.TIMER_COMPLETED, this._handleTimerComplete.bind(this));
+        this.unregisterEventListener(GAME_STATE_EVENTS.GAME_PAUSED, this._handleGamePaused.bind(this));
+        this.unregisterEventListener(GAME_STATE_EVENTS.GAME_RESUMED, this._handleGameResumed.bind(this));
+        this.unregisterEventListener(CONTROLS_EVENTS.PLAYER_ACTION, this._handlePlayerAction.bind(this));
+    }
+
+    /**
+     * Start gameplay after initialization
+     */
+    public start(): void {
+        if (this.gameState !== GameState.INITIALIZED) {
+            console.warn("Cannot start game that is not initialized");
+            return;
+        }
+
+        this.gameState = GameState.STARTED;
+        console.log(`${this.constructor.name}: Game started`);
+        
+        // Start the movement timer for continuous updates
+        this._startMovementTimer();
+    }
+
+    /**
+     * Update game logic each frame
+     * @param delta Time elapsed since last frame
+     */
+    public update(delta: number): void {
+        // Update power-ups
+        const deltaTimeMs = delta * 1000;
+        this.powerUpManager.update(deltaTimeMs);
+        
+        // Update transition screen
+        if (this.transitionScreen) {
+            this.transitionScreen.update(delta);
+        }
+
+        // Update player positions and animations
+        this._updatePlayerMovement(delta);
+        this.playerManager?.update(delta, this.getState().players);
+        
+        // Check for collisions with answer circles
+        this._checkAnswerCollisions();
+        
+        // Update UI elements (if needed)
+        // this.uiManager?.update(delta);
+        
+        // Update background effects (water animation)
+        this.backgroundManager?.update();
+    }
+
+    /**
+     * Render game elements
+     */
+    public render(): void {
+        // All rendering is handled by PIXI automatically
+        // Custom rendering logic could be added here if needed
+    }
+
+    /**
+     * Clean up resources during game end
+     */
+    protected endImplementation(): void {
+        console.log(`${this.constructor.name}: End implementation`);
+        
+        // Remove timers
+        if (this.timerManager && this.timerManager.getTimer(this.QUESTION_TIMER_ID)) {
+            this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
+        }
+        // Movement updates are handled in main update loop, no timer to remove
+
+        // Disable player controls
+        this.playerManager?.setControlsEnabled(false);
+        
+        // Clear UI state
+        this.uiManager?.clearQuestionState();
+    }
+
+    /**
+     * Clean up all resources during game destruction
+     */
+    protected destroyImplementation(): void {
+        console.log(`${this.constructor.name}: Destroying...`);
+        this._unbindGameEvents();
+
+        // Remove timers
+        if (this.timerManager && this.timerManager.getTimer(this.QUESTION_TIMER_ID)) {
+            this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
+        }
+        // Movement updates are handled in main update loop, no timer to remove
+
+        // Destroy managers
+        this.uiManager?.destroy();
+        this.backgroundManager?.destroy();
+        this.playerManager?.destroy();
+
+        this.view.removeChildren();
+        console.log(`${this.constructor.name}: Destroy complete.`);
+    }
+
+    /**
+     * Shows the next question with transition screen preview
+     */
+    private async _showQuestionWithTransition(): Promise<void> {
+        if (!this.dataManager || !this.uiManager) {
+            console.error("Cannot show question: Managers not initialized.");
+            this._triggerGameOver();
+            return;
+        }
+
+        console.log("[SplashDashGame] _showQuestionWithTransition: Getting next question...");
+        const question = this.dataManager.getNextQuestion();
+        console.log("[SplashDashGame] _showQuestionWithTransition: Question received:", question);
+        
+        if (!question) {
+            console.log("[SplashDashGame] _showQuestionWithTransition: DataManager indicates sequence finished.");
+            if (!this.getState().hasTriggeredGameOver) {
+                this._triggerGameOver();
+            }
+            return;
+        }
+
+        // Show transition screen with question preview and countdown
+        await this.showTransition({
+            type: 'question_preview',
+            question: question as unknown as { question: string; imageUrl?: string; [key: string]: unknown },
+            showCountdown: true,
+            autoHide: false
+        });
+
+        // After transition, show the actual question
+        this._showQuestion(question);
+    }
+
+    /**
+     * Shows the next question using Data and UI Managers.
+     */
+    private _showQuestion(question?: QuestionData): void {
+        if (!this.dataManager || !this.uiManager) {
+            console.error("Cannot show question: Managers not initialized.");
+            this._triggerGameOver();
+            return;
+        }
+
+        // If no question provided, get the next one
+        if (!question) {
+            console.log("[SplashDashGame] _showQuestion: Getting next question...");
+            const nextQuestion = this.dataManager.getNextQuestion();
+            console.log("[SplashDashGame] _showQuestion: Question received:", nextQuestion);
+            question = nextQuestion || undefined;
+        }
+        
+        if (!question) {
+            console.log("[SplashDashGame] _showQuestion: DataManager indicates sequence finished.");
+            if (!this.getState().hasTriggeredGameOver) {
+                this._triggerGameOver();
+            }
+            return;
+        }
+        
+        // Clear old state
+        this.uiManager.clearQuestionState();
+        
+        // Reset player positions and states for new question
+        const { width, height } = this.pixiApp.getScreenSize();
+        const startPositions = [
+            { x: width * 0.25, y: height * (2/3) }, // 1/3 up from bottom
+            { x: width * 0.75, y: height * (2/3) }  // 1/3 up from bottom
+        ];
+        
+        console.log(`[SplashDashGame] Resetting players to positions:`, startPositions);
+        
+        const players = [...this.getState().players];
+        const resetPlayers = players.map((player, index) => {
+            const newPlayer = {
+                ...player,
+                x: startPositions[index].x,
+                y: startPositions[index].y,
+                isMoving: false,
+                isAtAnswer: false,
+                currentAnswerId: undefined
+            };
+            console.log(`[SplashDashGame] Player ${player.id} reset from (${player.x}, ${player.y}) to (${newPlayer.x}, ${newPlayer.y})`);
+            return newPlayer;
+        });
+        this.setState({ players: resetPlayers });
+        
+        // Reset the visual positions in the player manager to match the game state
+        this.playerManager.resetPlayerPositions();
+
+        // Update question content
+        this.uiManager.updateQuestionContent(question);
+
+        // Create answer circles
+        const answerCircles = this._createAnswerCircles(question);
+        
+        // Update state with new question
+        this.setState({ 
+            currentQuestionIndex: this.dataManager.getCurrentProgressIndex() - 1,
+            currentQuestion: question,
+            answerCircles: answerCircles
+        });
+
+        // Setup answer rectangles in UI
+        this.uiManager.setupAnswerRectangles(question.id, answerCircles);
+
+        // Start the question timer
+        this._startQuestionTimer();
+
+        // Update question counter
+        const currentIndex = this.getState().currentQuestionIndex;
+        const totalQuestions = this.dataManager.getTotalQuestionsToAsk();
+        this.uiManager.updateQuestionCounter(currentIndex, totalQuestions);
+        
+        console.log(`[SplashDashGame] Showing question index ${this.getState().currentQuestionIndex} ...`);
+    }
+
+    /**
+     * Creates answer circles positioned randomly on screen
+     */
+    private _createAnswerCircles(question: QuestionData) {
+        const { width, height } = this.pixiApp.getScreenSize();
+        const answers = question.answers as string[];
+        
+        return answers.map((answerText: string, i: number) => {
+            const isCorrect = answerText === question.correctAnswer;
+            return {
+                id: `${question.id}-answer-${i}`,
+                x: 100 + Math.random() * (width - 200),
+                y: 100 + Math.random() * (height - 200),
+                text: answerText, // Changed from 'answer' to 'text' to match UI manager
+                answer: answerText,
+                isCorrect: isCorrect
+            };
+        });
+    }
+
+    /**
+     * Starts the question timer
+     */
+    private _startQuestionTimer(): void {
+        const specificConfig = this.config as unknown as SplashDashGameConfig;
+        const questionDuration = specificConfig.intensityTimeLimit * 1000;
+
+        this.timerManager.createTimer(this.QUESTION_TIMER_ID, questionDuration, TimerType.COUNTDOWN);
+        this.timerManager.startTimer(this.QUESTION_TIMER_ID);
+
+        console.log(`Created and started timer ${this.QUESTION_TIMER_ID} for ${questionDuration}ms`);
+    }
+
+    /**
+     * Starts the movement timer for continuous game updates
+     */
+    private _startMovementTimer(): void {
+        // For continuous movement updates, we'll use the main update loop instead of a timer
+        // This is more efficient for high-frequency updates
+        console.log('[SplashDashGame] Movement updates will be handled in main update loop');
+    }
+
+    /**
+     * Handles when a player reaches an answer circle
+     */
+    private async _handleAnswerReached(playerId: string, answerCircleId: string): Promise<void> {
+        console.log(`[SplashDashGame] _handleAnswerReached: Player ${playerId} reached answer ${answerCircleId}`);
+        
+        if (this.getState().hasTriggeredGameOver) { return; }
+
+        // Use the current question data from state instead of looking it up by ID
+        const currentQuestion = this.getState().currentQuestion;
+        if (!currentQuestion) {
+            console.error("_handleAnswerReached: Could not find current question data");
+            return;
+        }
+
+        const answerCircle = this.getState().answerCircles.find(circle => circle.id === answerCircleId);
+        if (!answerCircle) {
+            console.error("_handleAnswerReached: Could not find answer circle");
+            return;
+        }
+
+        const isCorrect = answerCircle.isCorrect;
+        const currentTeamId = playerId;
+
+        // Mark player as at answer to prevent further movement
+        const players = [...this.getState().players];
+        const playerIndex = players.findIndex(p => p.id === playerId);
+        if (playerIndex !== -1) {
+            players[playerIndex] = { 
+                ...players[playerIndex], 
+                isAtAnswer: true, 
+                isMoving: false,
+                currentAnswerId: answerCircleId
+            };
+            this.setState({ players });
+        }
+
+        // Process the answer
+        this._processAnswerSelection(currentQuestion, answerCircle, isCorrect, currentTeamId);
+
+        // Check if all players have answered or if we should wait for more answers
+        const allPlayersAnswered = this.getState().players.every(player => player.isAtAnswer);
+        
+        if (allPlayersAnswered) {
+            // All players have answered, wait for feedback then move to next question
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Longer feedback time
+            
+            if (this.getState().hasTriggeredGameOver) { return; }
+
+            // Check if game is over
+            const isSequenceFinished = this.dataManager.isSequenceFinished();
+            console.log(`[SplashDashGame] _handleAnswerReached: All players answered. Sequence finished: ${isSequenceFinished}`);
+
+            if (isSequenceFinished) {
+                this._triggerGameOver();
+            } else {
+                // Move to next question with transition
+                this._showQuestionWithTransition();
+            }
+        } else {
+            // Some players haven't answered yet, just show feedback for this player
+            console.log(`[SplashDashGame] _handleAnswerReached: Player ${playerId} answered, waiting for other players...`);
+        }
+    }
+
+    /**
+     * Handles player movement input
+     */
+    private _handlePlayerMovement(playerId: string, isMoving: boolean): void {
+        const players = this.getState().players;
+        const playerIndex = players.findIndex(p => p.id === playerId);
+        
+        if (playerIndex !== -1) {
+            const updatedPlayers = [...players];
+            updatedPlayers[playerIndex].isMoving = isMoving;
+            this.setState({ players: updatedPlayers });
+        }
+    }
+
+    /**
+     * Updates player positions in the game state
+     */
+    private _updatePlayerPositions(players: Array<{id: string, x: number, y: number, rotation: number}>): void {
+        const currentPlayers = this.getState().players;
+        const updatedPlayers = currentPlayers.map(player => {
+            const updatedPlayer = players.find(p => p.id === player.id);
+            if (updatedPlayer) {
+                return {
+                    ...player,
+                    x: updatedPlayer.x,
+                    y: updatedPlayer.y,
+                    rotation: updatedPlayer.rotation
+                };
+            }
+            return player;
+        });
+        
+        this.setState({ players: updatedPlayers });
+    }
+
+    /**
+     * Process a player's answer selection
+     */
+    private _processAnswerSelection(
+        question: QuestionData,
+        answerCircle: { id: string; answer: string; isCorrect: boolean },
+        isCorrect: boolean,
+        teamId: string
+    ): void {
+        console.log(`Answer reached: ${answerCircle.id}, Correct: ${isCorrect}, Team: ${teamId}`);
+
+        // Get remaining time
+        let remainingTimeMs = 0;
+        if (this.timerManager && this.timerManager.getTimer(this.QUESTION_TIMER_ID)) {
+            remainingTimeMs = this.timerManager.getTimeRemaining(this.QUESTION_TIMER_ID);
+        }
+
+        // Update player score based on answer correctness
+        const players = [...this.getState().players];
+        const playerIndex = players.findIndex(p => p.id === teamId);
+        if (playerIndex !== -1) {
+            if (isCorrect) {
+                players[playerIndex] = { ...players[playerIndex], score: players[playerIndex].score + 1 };
+                console.log(`[SplashDashGame] Player ${teamId} score increased to ${players[playerIndex].score} (correct answer)`);
+            } else {
+                players[playerIndex] = { ...players[playerIndex], score: Math.max(0, players[playerIndex].score - 5) };
+                console.log(`[SplashDashGame] Player ${teamId} score decreased to ${players[playerIndex].score} (incorrect answer, -5 points)`);
+            }
+            this.setState({ players });
+        }
+
+        // Show visual feedback
+        this.uiManager?.showAnswerFeedback(answerCircle.id, isCorrect);
+
+        // Emit event for scoring
+        const payload: AnswerSelectedPayload = {
+            questionId: question.id,
+            selectedOptionId: answerCircle.id,
+            isCorrect,
+            teamId: teamId,
+            remainingTimeMs: remainingTimeMs,
+            scoreMultiplier: 1
+        };
+        this.emitEvent(GAME_EVENTS.ANSWER_SELECTED, payload);
+
+        // Remove question timer
+        if (this.timerManager && this.timerManager.getTimer(this.QUESTION_TIMER_ID)) {
+            this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
+        }
+
+        console.log(`[SplashDashGame] _processAnswerSelection finished.`);
+    }
+
+    /**
+     * Handles timer completion
+     */
+    private async _handleTimerComplete(payload: TimerEventPayload): Promise<void> {
+        console.log(`[SplashDashGame] _handleTimerComplete: Timer ${payload.timerId}`);
+
+        if (payload.timerId === this.QUESTION_TIMER_ID) {
+            // Question timer expired
+            await this._handleTimeUp();
+        }
+    }
+
+    /**
+     * Handles when time runs out
+     */
+    private async _handleTimeUp(): Promise<void> {
+        if (!this.dataManager || !this.uiManager) return;
+
+        const currentQuestion = this.getState().currentQuestion;
+        if (!currentQuestion) return;
+        
+        console.log(`[SplashDashGame] _handleTimeUp: Time up for question ${currentQuestion.id}`);
+
+        // Apply penalty to players who haven't answered yet
+        const players = [...this.getState().players];
+        let anyPlayerPenalized = false;
+        
+        players.forEach((player, index) => {
+            if (!player.isAtAnswer) {
+                players[index] = { 
+                    ...player, 
+                    score: Math.max(0, player.score - 5),
+                    isAtAnswer: true // Mark as answered to prevent further movement
+                };
+                anyPlayerPenalized = true;
+                console.log(`[SplashDashGame] Player ${player.id} penalized for timeout: score = ${players[index].score}`);
+            }
+        });
+        
+        if (anyPlayerPenalized) {
+            this.setState({ players });
+        }
+
+        // Show time up feedback
+        this.uiManager?.showAnswerFeedback(null, false);
+
+        // Wait for feedback delay
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        if (this.getState().hasTriggeredGameOver) { return; }
+
+        // Check if game is over
+        const isSequenceFinished = this.dataManager.isSequenceFinished();
+        console.log(`[SplashDashGame] _handleTimeUp: Sequence finished: ${isSequenceFinished}`);
+
+        if (isSequenceFinished) {
+            this._triggerGameOver();
+        } else {
+            // Move to next question with transition
+            this._showQuestionWithTransition();
+        }
+    }
+
+    /**
+     * Triggers game over
+     */
+    private _triggerGameOver(): void {
+        if (this.getState().hasTriggeredGameOver) {
+            console.log("triggerGameOver: Already triggered. Skipping.");
+            return;
+        }
+        
+        this.hideTransition();
+
+        this.setState({ 
+            hasTriggeredGameOver: true,
+            phase: 'gameOver'
+        });
+
+        console.log("Triggering Game Over");
+        this.playerManager?.setControlsEnabled(false);
+
+        // Emit game ended event
+        this.emitEvent(GAME_STATE_EVENTS.GAME_ENDED);
+        this.end();
+        this.uiManager?.clearQuestionState();
+    }
+
+    /**
+     * Handles game pause
+     */
+    private _handleGamePaused(): void {
+        console.log("[SplashDashGame] Received GAME_PAUSED. Pausing timers.");
+        if (this.timerManager && this.timerManager.getTimer(this.QUESTION_TIMER_ID)) {
+            this.timerManager.pauseTimer(this.QUESTION_TIMER_ID);
+        }
+        // Movement updates are handled in main update loop, no timer to pause
+    }
+
+    /**
+     * Handles game resume
+     */
+    private _handleGameResumed(): void {
+        console.log("[SplashDashGame] Received GAME_RESUMED. Resuming timers.");
+        if (this.timerManager && this.timerManager.getTimer(this.QUESTION_TIMER_ID)) {
+            this.timerManager.resumeTimer(this.QUESTION_TIMER_ID);
+        }
+        // Movement updates are handled in main update loop, no timer to resume
+    }
+
+    /**
+     * Updates player movement and rotation each frame
+     */
+    private _updatePlayerMovement(delta: number): void {
+        const players = [...this.getState().players];
+        const { width, height } = this.pixiApp.getScreenSize();
+        const ROTATION_SPEED = (Math.PI * 2) / 160; // Full rotation in ~2.67 seconds (50% faster)
+        const MOVEMENT_SPEED = width / (7 * 60); // Move across screen in 7 seconds at 60fps
+        const PLAYER_SIZE = 30;
+
+        players.forEach((player, index) => {
+            let { x, y, rotation } = player;
+            const { isMoving } = player;
+
+            if (!isMoving) {
+                // Rotate continuously when not moving
+                rotation += ROTATION_SPEED * (delta / 16.66);
+            } else {
+                // Move forward when moving
+                const oldX = x;
+                const oldY = y;
+                x += Math.cos(rotation) * MOVEMENT_SPEED * (delta / 16.66);
+                y += Math.sin(rotation) * MOVEMENT_SPEED * (delta / 16.66);
+
+                // Keep player within bounds - prevent going under question area
+                const BOTTOM_UI_HEIGHT = 150; // Height of bottom question area
+                const minY = PLAYER_SIZE;
+                const maxY = height - BOTTOM_UI_HEIGHT - PLAYER_SIZE; // Don't go under question area
+                
+                x = Math.max(PLAYER_SIZE, Math.min(width - PLAYER_SIZE, x));
+                y = Math.max(minY, Math.min(maxY, y));
+                
+                console.log(`[SplashDashGame] Player ${index} moving: ${oldX.toFixed(1)},${oldY.toFixed(1)} -> ${x.toFixed(1)},${y.toFixed(1)}`);
+            }
+
+            // Update player state
+            players[index] = { ...player, x, y, rotation };
+        });
+
+        // Update the game state with new player positions
+        this.setState({ players });
+    }
+
+    /**
+     * Handles player action events (movement controls)
+     */
+    private _handlePlayerAction(payload: ControlsPlayerActionPayload): void {
+        const players = [...this.getState().players];
+        let playerIndex = -1;
+        
+        console.log(`[SplashDashGame] _handlePlayerAction:`, payload);
+        console.log(`[SplashDashGame] _handlePlayerAction: Current players:`, players);
+
+        // Handle splash-dash specific control actions
+        console.log(`[SplashDashGame] Expected team IDs:`, this.config.teams.map(t => t.id));
+        console.log(`[SplashDashGame] Payload playerId:`, payload.playerId);
+        console.log(`[SplashDashGame] Payload action:`, payload.action);
+        
+        if (payload.action === 'MOVE_PLAYER1') {
+            playerIndex = 0;
+            console.log(`[SplashDashGame] MOVE_PLAYER1 detected, setting playerIndex to 0`);
+        } else if (payload.action === 'MOVE_PLAYER2') {
+            playerIndex = 1;
+            console.log(`[SplashDashGame] MOVE_PLAYER2 detected, setting playerIndex to 1`);
+        }
+
+        if (playerIndex !== -1) {
+            const player = players[playerIndex];
+            if (!player.isAtAnswer) { // Only allow movement if not already at an answer
+                players[playerIndex] = { ...player, isMoving: payload.value as boolean };
+                this.setState({ players: players });
+            }
+        }
+    }
+
+    /**
+     * Checks for collisions between players and answer rectangles
+     */
+    private _checkAnswerCollisions(): void {
+        const players = this.getState().players;
+        const answerRectangles = this.uiManager?.getAnswerRectangles() || [];
+
+        players.forEach(player => {
+            if (player.isAtAnswer) return; // Already at an answer
+
+            answerRectangles.forEach(answerRect => {
+                // Check if player is within the rectangle bounds
+                const playerRadius = 30; // Player collision radius
+                const rectLeft = answerRect.x;
+                const rectRight = answerRect.x + answerRect.width;
+                const rectTop = answerRect.y;
+                const rectBottom = answerRect.y + answerRect.height;
+
+                // Expand rectangle by player radius for collision detection
+                const expandedLeft = rectLeft - playerRadius;
+                const expandedRight = rectRight + playerRadius;
+                const expandedTop = rectTop - playerRadius;
+                const expandedBottom = rectBottom + playerRadius;
+
+                // Check if player center is within expanded rectangle
+                if (player.x >= expandedLeft && player.x <= expandedRight &&
+                    player.y >= expandedTop && player.y <= expandedBottom) {
+                    // Collision detected
+                    this._handleAnswerReached(player.id, answerRect.id);
+                }
+            });
+        });
+    }
+
+
+
+}

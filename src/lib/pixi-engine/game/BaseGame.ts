@@ -327,7 +327,8 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
         this.pixiApp.getApp(), // Pass the actual PIXI.Application instance
         this.eventBus, 
         this.powerUpManager, // Pass powerUpManager here
-        this.gameStateManager // Pass gameStateManager here
+        this.gameStateManager, // Pass gameStateManager here
+        this.assetLoader // Pass assetLoader here
     );
     // Add to the highest UI layer
     this.addToLayer(this.transitionScreen, RenderLayer.UI_FOREGROUND);

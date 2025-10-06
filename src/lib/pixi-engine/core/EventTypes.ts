@@ -174,14 +174,14 @@ export const TRANSITION_EVENTS = {
 } as const;
 
 export interface TransitionStartPayload {
-  type: 'loading' | 'turn' | 'powerup' | 'custom';
+  type: 'loading' | 'turn' | 'powerup' | 'custom' | 'question_preview' | 'countdown' | 'go';
   message?: string;
   duration?: number; // Match TransitionScreenConfig
   triggerPowerupRoll?: boolean;
 }
 
 export interface TransitionEndPayload {
-  type: 'loading' | 'turn' | 'powerup' | 'custom';
+  type: 'loading' | 'turn' | 'powerup' | 'custom' | 'question_preview' | 'countdown' | 'go';
 }
 
 export interface TransitionPowerupSelectedPayload {
