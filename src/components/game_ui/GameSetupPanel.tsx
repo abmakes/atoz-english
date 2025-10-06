@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 // Remove Zustand import
 import { useGameStore } from '@/stores/useGameStore';
 // Import only necessary types from central location
@@ -19,6 +20,8 @@ interface GameSetupPanelProps {
     onGoBack: () => void;
     /** The URL slug for the game type, passed from the parent. */
     initialGameSlug: string; // Already receives initial slug
+    /** The quiz ID for constructing URLs. */
+    quizId: string;
 }
 
 // Rename internal interfaces to avoid conflicts if needed, though not strictly necessary now
@@ -89,9 +92,10 @@ const mapPowerUpsArrayToObject = (powerUpsArray: string[]): LocalPowerups => {
  * Allows users to configure game settings before starting,
  * including teams, theme, intensity, and powerups.
  */
-const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }) => {
+const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, quizId }) => {
   // Remove Zustand usage
   const selectedQuiz = useGameStore((state) => state.selectedQuiz);
+  const router = useRouter();
 
   // --- State ---
   const [teams, setTeams] = useState<LocalTeam[]>([
@@ -353,6 +357,11 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
       onGoBack();
   }
 
+  const handleSplashDashClick = () => {
+      console.log("SplashDash link clicked - navigating to splash-dash");
+      router.push(`/games/${quizId}/splash-dash`);
+  }
+
   // --- Render ---
   return (
     // Apply themeWrapper and the *local* dynamic theme class for preview
@@ -368,6 +377,16 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack }
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
       </button>
+
+      {/* SplashDash Beta Link */}
+      <div className="mb-4">
+        <button
+          onClick={handleSplashDashClick}
+          className="text-sm text-[var(--text-color)] hover:text-[var(--accent-color)] underline transition-colors duration-200"
+        >
+          Try Splash Dash Beta
+        </button>
+      </div>
 
       <div className={`max-w-4xl mx-auto bg-[var(--panel-bg)] filter-blur-sm rounded-[32px] p-8 border-2 border-[var(--border-dark)] shadow-solid z-20`}>
 

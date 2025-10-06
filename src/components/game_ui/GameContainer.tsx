@@ -392,6 +392,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
                     onStartGame={handleStartGame}
                     onGoBack={handleBackFromSetup}
                     initialGameSlug={gameSlug}
+                    quizId={quizId}
                 />;
       case 'playing':
         if (!gameConfig) {
