@@ -62,7 +62,7 @@ export class TestGame extends BaseGame<TestGameState> {
       {
         fontFamily: 'Grandstander',
         fontSize: '48px',
-        fontWeight: 'bold',
+        // fontWeight: 'bold', // Not supported in Phaser
         color: '#114257',
         align: 'center'
       }
@@ -105,7 +105,9 @@ export class TestGame extends BaseGame<TestGameState> {
 
     // Register event listeners
     this.registerEventListener('test:incrementScore', this._onIncrementScore.bind(this));
-    this.registerEventListener('test:changeMessage', this._onChangeMessage.bind(this));
+    this.registerEventListener('test:changeMessage', (newMessage: unknown) => {
+      this._onChangeMessage(newMessage as string);
+    });
 
     // Show initial transition
     await this.showTransition({
@@ -136,10 +138,12 @@ export class TestGame extends BaseGame<TestGameState> {
     });
 
     // Start a simple timer to demonstrate timer manager
-    this.managers.timerManager.startTimer('testTimer', 10, () => {
+    this.managers.timerManager.createTimer('testTimer', 10000); // 10 seconds
+    this.managers.timerManager.onTimerComplete('testTimer', () => {
       console.log('[TestGame] Test timer completed!');
       this._onTimerComplete();
     });
+    this.managers.timerManager.startTimer('testTimer');
 
     console.log('[TestGame] Test game started!');
   }
@@ -147,7 +151,7 @@ export class TestGame extends BaseGame<TestGameState> {
   /**
    * Updates the test game each frame.
    */
-  protected updateImplementation(_delta: number): void {
+  protected updateImplementation(): void {
     // Update score display
     if (this.scoreText) {
       this.scoreText.setText(`Score: ${this.getState().score}`);
@@ -219,11 +223,11 @@ export class TestGame extends BaseGame<TestGameState> {
     });
 
     // Play sound effect
-    this.managers.audioManager.playSound('correct-sound');
+    this.managers.audioManager.play('correct-sound');
 
     // Add visual feedback
     if (this.clickButton) {
-      this.scene.tweens.add({
+      this.tweens.add({
         targets: this.clickButton,
         scaleX: 1.2,
         scaleY: 1.2,

@@ -41,7 +41,7 @@ export class PowerupSpinWheel extends GameObjects.Container {
     this.centerText = new GameObjects.Text(scene, 0, 0, 'SPIN!', {
       fontFamily: 'Grandstander',
       fontSize: '32px',
-      fontWeight: 'bold',
+        // fontWeight: 'bold', // Not supported in Phaser
       color: '#FFFFFF',
       align: 'center'
     });

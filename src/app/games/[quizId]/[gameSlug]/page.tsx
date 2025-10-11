@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import GameContainer from '@/components/game_ui/GameContainer';
+import GameContainerHybrid from '@/components/game_ui/GameContainerHybrid';
 import LoadingSpinner from '@/components/loading_spinner';
 
 // Will import actual game components later
@@ -36,5 +36,5 @@ export default function GamePage() {
     );
   }
 
-  return <GameContainer quizId={quizId!} gameSlug={gameSlug!} />;
+  return <GameContainerHybrid quizId={quizId!} gameSlug={gameSlug!} />;
 } 

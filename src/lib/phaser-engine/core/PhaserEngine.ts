@@ -4,6 +4,7 @@ import { GameStateManager } from './GameStateManager';
 import { ControlsManager } from './ControlsManager';
 import { StorageManager } from './StorageManager';
 import { AudioManager, AudioConfig } from './AudioManager';
+import { RuleEngine } from './RuleEngine';
 import { ScoringManager } from '../game/ScoringManager';
 import { TimerManager } from '../game/TimerManager';
 import { PowerUpManager } from '../game/PowerUpManager';
@@ -28,6 +29,8 @@ export interface PhaserEngineManagers {
   storageManager: StorageManager;
   /** Manages audio playback and settings. */
   audioManager: AudioManager;
+  /** Manages rule-based game logic and event processing. */
+  ruleEngine: RuleEngine;
   /** Manages player/team scores and lives. */
   scoringManager: ScoringManager;
   /** Manages game timers (e.g., countdowns, elapsed time). */
@@ -99,6 +102,8 @@ export class PhaserEngine {
   private storageManager: StorageManager;
   /** The audio manager instance. */
   private audioManager!: AudioManager;
+  /** The rule engine instance. */
+  private ruleEngine!: RuleEngine;
   /** The scoring manager instance. */
   private scoringManager: ScoringManager;
   /** The timer manager instance. */
@@ -129,13 +134,13 @@ export class PhaserEngine {
       physics: {
         default: 'arcade',
         arcade: {
-          gravity: { y: 0 },
+          gravity: { x: 0, y: 0 },
           debug: options.debug || false
         }
       },
       scene: {
         key: 'MainGameScene',
-        create: this.createMainScene.bind(this)
+        create: (data: any) => this.createMainScene(data)
       },
       ...options
     });
@@ -160,8 +165,8 @@ export class PhaserEngine {
    * Creates the main game scene that will contain the active game.
    * @param {Phaser.Scene} scene - The Phaser scene instance.
    */
-  private createMainScene(scene: Scene): void {
-    this.gameScene = scene;
+  private createMainScene(data: any): void {
+    this.gameScene = data;
     console.log('Main game scene created');
   }
 
@@ -201,27 +206,30 @@ export class PhaserEngine {
       console.log('Initializing AssetLoader...');
       let bundleLoadPromise: Promise<unknown> = Promise.resolve();
       if (this.config && this.config.assets) {
-        const manifestUrl = this.config.assets.manifestUrl || 'assets/asset-manifest.json';
-        await AssetLoader.init(this.gameScene, manifestUrl);
+        await AssetLoader.init(this.gameScene!);
         console.log('AssetLoader initialized.');
         
         if (this.config.assets.bundles && this.config.assets.bundles.length > 0) {
           const bundleNames = this.config.assets.bundles.map(b => b.name);
           console.log('Starting background loading of asset bundles:', bundleNames);
-          bundleLoadPromise = Promise.all(bundleNames.map(bundleName =>
+          // Use Promise.allSettled to handle individual bundle failures gracefully
+          bundleLoadPromise = Promise.allSettled(bundleNames.map(bundleName =>
             AssetLoader.loadGameBundle(bundleName)
           ));
-          bundleLoadPromise.then(() => {
-            console.log('All defined asset bundles loaded (in background).');
-          }).catch(err => {
-            console.error('Error loading asset bundles in background:', err);
+          bundleLoadPromise.then((results: any) => {
+            const successful = results.filter((r: any) => r.status === 'fulfilled').length;
+            const failed = results.filter((r: any) => r.status === 'rejected').length;
+            console.log(`Asset bundle loading complete: ${successful} successful, ${failed} failed.`);
+            if (failed > 0) {
+              console.warn('Some asset bundles failed to load, but continuing...');
+            }
           });
         } else {
           console.log('No asset bundles defined in config to preload.');
         }
       } else {
         console.warn('PhaserEngine: No assets configuration found in GameConfig.');
-        await AssetLoader.init(this.gameScene, 'assets/asset-manifest.json');
+        await AssetLoader.init(this.gameScene!);
         console.log('AssetLoader initialized (no config).');
       }
 
@@ -230,8 +238,8 @@ export class PhaserEngine {
 
       // ControlsManager init
       if (this.config.controls) {
-        this.controlsManager.init(this.config.controls, this.eventBus, this.gameScene);
-        this.controlsManager.enable(this.gameScene);
+        this.controlsManager.init(this.config.controls, this.eventBus, this.gameScene!);
+        this.controlsManager.enable(this.gameScene!);
       } else {
         console.warn("PhaserEngine: No controls configuration found in GameConfig.");
       }
@@ -242,14 +250,24 @@ export class PhaserEngine {
       // PowerUpManager init
       this.powerUpManager = new PowerUpManager(this.eventBus, this.config);
 
+      // RuleEngine init
+      this.ruleEngine = new RuleEngine(this.eventBus, this.config, {
+        gameStateManager: this.gameStateManager,
+        scoringManager: this.scoringManager,
+        powerUpManager: this.powerUpManager,
+        timerManager: this.timerManager,
+        storageManager: this.storageManager,
+        audioManager: undefined // Will be set after AudioManager is created
+      });
+
       // Create AudioManager
       const themeConfig = getThemeConfig('default');
       this.audioManager = new AudioManager(
         this.eventBus,
         this.storageManager,
         themeConfig.soundsBasePath,
-        this.config.initialMusicMuted,
-        this.config.initialSfxMuted
+        this.config.initialMusicMuted || false,
+        this.config.initialSfxMuted || false
       );
 
       // Register Default Sounds
@@ -287,21 +305,47 @@ export class PhaserEngine {
 
       // Game Creation and Initialization
       console.log('Creating game instance...');
+      console.log('PhaserEngine: this.config =', this.config);
       const managers = this.getAllManagers();
+      console.log('PhaserEngine: managers =', managers);
       this.currentGame = gameFactory(this.config, managers);
 
-      // Add the game to the main scene
-      if (this.gameScene) {
-        this.gameScene.add.existing(this.currentGame);
-      }
+      // Note: BaseGame extends Phaser.Scene, so it's managed by Phaser's scene system
+      // We need to wait for the scene to be created before calling our custom init
+      console.log('Setting up game initialization after scene creation...');
+      
+      // Add the scene to the game and wait for it to be created
+      this.game.scene.add('MainGameScene', this.currentGame, true);
+      
+      // Set up a promise that resolves when the scene is created and our init is called
+      const gameInitPromise = new Promise<void>((resolve, reject) => {
+        // Use a timeout to wait for the scene to be ready
+        const checkSceneReady = () => {
+          if (this.currentGame.scene && this.currentGame.scene.isActive()) {
+            // Scene is ready, now call our custom init
+            this.currentGame.init(bundleLoadPromise).then(() => {
+              console.log('Game initialization complete.');
+              resolve();
+            }).catch((error) => {
+              console.error('Error during game initialization:', error);
+              reject(error);
+            });
+          } else {
+            // Scene not ready yet, check again in next frame
+            setTimeout(checkSceneReady, 16); // ~60fps
+          }
+        };
+        
+        // Start checking
+        setTimeout(checkSceneReady, 16);
+      });
 
-      console.log('Initializing game...');
-      await this.currentGame.init(bundleLoadPromise);
-      console.log('Game initialization complete.');
+      // Wait for the game initialization to complete
+      await gameInitPromise;
 
       // Set up update loop using Phaser's scene update
-      if (this.gameScene) {
-        this.gameScene.events.on('update', this.handleUpdate.bind(this));
+      if (this.currentGame) {
+        this.currentGame.events.on('update', this.handleUpdate.bind(this));
       }
 
       this.initialized = true;
@@ -320,8 +364,8 @@ export class PhaserEngine {
    * @returns {PhaserEngineManagers} An object containing all manager instances.
    */
   private getAllManagers(): PhaserEngineManagers {
-    if (!this.powerUpManager || !this.audioManager) {
-      throw new Error('PhaserEngine: PowerUpManager and AudioManager must be initialized before calling getAllManagers()');
+    if (!this.powerUpManager || !this.audioManager || !this.ruleEngine) {
+      throw new Error('PhaserEngine: PowerUpManager, AudioManager, and RuleEngine must be initialized before calling getAllManagers()');
     }
 
     return {
@@ -330,6 +374,7 @@ export class PhaserEngine {
       controlsManager: this.controlsManager,
       storageManager: this.storageManager,
       audioManager: this.audioManager,
+      ruleEngine: this.ruleEngine,
       scoringManager: this.scoringManager,
       timerManager: this.timerManager,
       powerUpManager: this.powerUpManager,
@@ -345,7 +390,7 @@ export class PhaserEngine {
    */
   private handleUpdate(time: number, delta: number): void {
     if (this.currentGame) {
-      this.currentGame.update(delta);
+      this.currentGame.updateImplementation(delta);
     }
   }
 
@@ -414,6 +459,11 @@ export class PhaserEngine {
    * @returns {T} The requested manager instance.
    */
   public getManager<T extends keyof PhaserEngineManagers>(managerName: T): PhaserEngineManagers[T] {
+    // Allow access to eventBus before full initialization
+    if (managerName === 'eventBus') {
+      return this.eventBus as PhaserEngineManagers[T];
+    }
+    
     const managers = this.getAllManagers();
     return managers[managerName];
   }
@@ -425,7 +475,7 @@ export class PhaserEngine {
     if (this.currentGame) {
       this.currentGame.pause();
     }
-    this.game.scene.pause();
+    this.game.scene.pause('MainGameScene');
     console.log('PhaserEngine: Game paused');
   }
 
@@ -436,7 +486,7 @@ export class PhaserEngine {
     if (this.currentGame) {
       this.currentGame.resume();
     }
-    this.game.scene.resume();
+    this.game.scene.resume('MainGameScene');
     console.log('PhaserEngine: Game resumed');
   }
 
@@ -467,11 +517,12 @@ export class PhaserEngine {
       // Destroy managers
       this.controlsManager?.destroy();
       this.audioManager?.destroy();
+      this.ruleEngine?.destroy();
       this.timerManager?.destroy();
       this.powerUpManager?.destroy();
       this.scoringManager?.destroy();
       this.gameStateManager?.destroy();
-      this.storageManager?.destroy();
+      this.storageManager?.clear();
       this.eventBus?.destroy();
 
       // Destroy the Phaser game

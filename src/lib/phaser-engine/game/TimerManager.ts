@@ -22,7 +22,7 @@ export interface TimerInstance {
   startTime: number;      // Timestamp when the timer last started/resumed
   pauseTime: number;      // Timestamp when the timer was paused
   elapsed: number;        // Total elapsed time in ms while running
-  phaserEvent: Phaser.Time.TimerEvent | null;   // Phaser timer event reference
+  rafId: number | null;   // ID for requestAnimationFrame
   speedMultiplier: number; // Added for speed control
 }
 
@@ -32,19 +32,19 @@ type TimerCompletionCallback = (timer: Readonly<TimerInstance>) => void;
 /**
  * Manages timers (countdown/countup), persists state, and emits events.
  * 
- * This is a port from the PixiJS version that used requestAnimationFrame,
- * now using Phaser's native time system for better integration.
+ * This is a direct port from the PixiJS version using requestAnimationFrame
+ * for scene-independent operation.
  */
 export class TimerManager {
   private timers: Map<string, TimerInstance> = new Map();
   // Added for completion callbacks
   private completionCallbacks: Map<string, Array<TimerCompletionCallback>> = new Map();
   private readonly STORAGE_KEY = 'timer/timers';
+  private isTicking: boolean = false; // Flag to manage the global tick loop
 
   constructor(
     private eventBus: EventBus,
-    private storageManager: StorageManager,
-    private scene: Phaser.Scene // Phaser scene for time events
+    private storageManager: StorageManager
   ) {
     this._loadTimers();
     // Check if any loaded timers were running and need restarting
@@ -54,8 +54,8 @@ export class TimerManager {
         timer.status = TimerStatus.PAUSED;
         console.warn(`TimerManager: Loaded timer '${timer.id}' was running. Set to PAUSED.`);
       }
-      // Always clear phaserEvent on load
-      timer.phaserEvent = null;
+      // Always clear rafId on load
+      timer.rafId = null;
       // Initialize speedMultiplier if loading from older state
       timer.speedMultiplier = timer.speedMultiplier ?? 1;
     });
@@ -86,12 +86,12 @@ export class TimerManager {
           startTime: 0,
           pauseTime: 0,
           elapsed: 0,
-          phaserEvent: null,
+          rafId: null,
           speedMultiplier: Math.max(0, speedMultiplier) // Ensure non-negative multiplier
       };
       this.timers.set(id, newTimer);
       this._saveTimers();
-      this.eventBus.emit(TIMER_EVENTS.TIMER_STARTED, { timerId: id });
+      this.eventBus.emit(TIMER_EVENTS.STARTED, { timerId: id });
       return { ...newTimer }; // Return a copy
   }
 
@@ -99,7 +99,7 @@ export class TimerManager {
 
   private _loadTimers(): void {
     try {
-      const savedTimersData = this.storageManager.get<Record<string, Omit<TimerInstance, 'phaserEvent'>>>(this.STORAGE_KEY);
+      const savedTimersData = this.storageManager.get<Record<string, Omit<TimerInstance, 'rafId'>>>(this.STORAGE_KEY);
       if (savedTimersData && typeof savedTimersData === 'object') {
         const loadedTimers = new Map<string, TimerInstance>();
         Object.entries(savedTimersData).forEach(([key, savedTimer]) => {
@@ -110,9 +110,9 @@ export class TimerManager {
               return;
             }
             loadedTimers.set(timerId, {
-                ...(savedTimer as Omit<TimerInstance, 'phaserEvent'>),
+                ...(savedTimer as Omit<TimerInstance, 'rafId'>),
                 id: timerId,
-                phaserEvent: null,
+                rafId: null,
                 // Ensure loaded running timers are set to paused
                 status: savedTimer.status === TimerStatus.RUNNING ? TimerStatus.PAUSED : (savedTimer.status || TimerStatus.IDLE),
                 startTime: savedTimer.startTime || 0,
@@ -136,11 +136,11 @@ export class TimerManager {
 
   private _saveTimers(): void {
     try {
-      const timersToSave: Record<string, Omit<TimerInstance, 'phaserEvent'>> = {};
+      const timersToSave: Record<string, Omit<TimerInstance, 'rafId'>> = {};
       this.timers.forEach((timer, id) => {
-          // Create a copy of the timer object excluding phaserEvent
+          // Create a copy of the timer object excluding rafId
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { phaserEvent, ...rest } = timer; // Keep phaserEvent in destructuring but ignore it
+          const { rafId, ...rest } = timer; // Keep rafId in destructuring but ignore it
           timersToSave[id] = rest; // Save only the rest of the properties
       });
       this.storageManager.set(this.STORAGE_KEY, timersToSave);
@@ -158,72 +158,75 @@ export class TimerManager {
     return timer;
   }
 
-  // --- Phaser Timer Logic ---
-  private _createPhaserTimer(timer: TimerInstance): void {
-    if (timer.phaserEvent) {
-      // Clean up existing timer
-      timer.phaserEvent.destroy();
-    }
-
-    // Create a repeating timer that ticks every 16ms (roughly 60fps)
-    const tickInterval = 16; // milliseconds
-    timer.phaserEvent = this.scene.time.addEvent({
-      delay: tickInterval,
-      callback: () => this._tickTimer(timer),
-      loop: true,
-      paused: false
-    });
-
-    // For countdown timers, also set up completion timer
-    if (timer.type === TimerType.COUNTDOWN) {
-      const remainingTime = Math.max(0, timer.duration - timer.elapsed);
-      if (remainingTime > 0) {
-        this.scene.time.delayedCall(remainingTime, () => {
-          this._completeTimer(timer);
-        });
-      }
-    }
-  }
-
-  private _tickTimer(timer: TimerInstance): void {
-    if (timer.status !== TimerStatus.RUNNING) return;
+  // --- Ticking Logic (Implementation) ---
+  private _tick(): void {
+    if (!this.isTicking) return;
 
     const now = Date.now();
-    const deltaTime = now - timer.startTime;
-    timer.elapsed += deltaTime * timer.speedMultiplier;
-    timer.startTime = now;
+    let hasRunningTimers = false;
 
-    // Emit update event
-    const payload: TimerEventPayload = {
-        timerId: timer.id,
-        elapsed: timer.elapsed,
-        remaining: timer.type === TimerType.COUNTDOWN ? Math.max(0, timer.duration - timer.elapsed) : undefined,
-        duration: timer.duration
-    };
-    this.eventBus.emit(TIMER_EVENTS.TIMER_TICK, payload);
+    this.timers.forEach((timer) => {
+        if (timer.status !== TimerStatus.RUNNING) return;
 
-    // Check for completion (countdown only)
-    if (timer.type === TimerType.COUNTDOWN && timer.elapsed >= timer.duration) {
-        this._completeTimer(timer);
+        hasRunningTimers = true;
+        const deltaTime = now - timer.startTime;
+        timer.elapsed += deltaTime * timer.speedMultiplier;
+        timer.startTime = now;
+
+        // Emit update event (can be throttled if needed)
+        const payload: TimerEventPayload = {
+            timerId: timer.id,
+            elapsed: timer.elapsed,
+            remaining: timer.type === TimerType.COUNTDOWN ? Math.max(0, timer.duration - timer.elapsed) : undefined,
+            duration: timer.duration
+        };
+        this.eventBus.emit(TIMER_EVENTS.TIMER_TICK, payload);
+
+        // Check for completion
+        if (timer.type === TimerType.COUNTDOWN && timer.elapsed >= timer.duration) {
+            timer.status = TimerStatus.COMPLETED;
+            timer.elapsed = timer.duration;
+            timer.rafId = null;
+            this.eventBus.emit(TIMER_EVENTS.TIMER_COMPLETED, { timerId: timer.id, duration: timer.duration, elapsed: timer.elapsed });
+            console.debug(`TimerManager: Timer '${timer.id}' completed.`);
+
+            // Execute completion callbacks
+            this._executeCallbacks(timer.id);
+        }
+    });
+
+    this._saveTimers(); // Save state potentially every frame (consider debouncing/throttling later if performance issue)
+
+    if (hasRunningTimers) {
+        // Schedule the next tick
+        requestAnimationFrame(this._tick.bind(this));
+    } else {
+        // No running timers, stop the global loop
+        this.isTicking = false;
+        console.debug("TimerManager: No running timers, stopping global tick.");
     }
   }
 
-  private _completeTimer(timer: TimerInstance): void {
-    timer.status = TimerStatus.COMPLETED;
-    timer.elapsed = timer.duration;
-    
-    // Clean up Phaser timer
-    if (timer.phaserEvent) {
-      timer.phaserEvent.destroy();
-      timer.phaserEvent = null;
+  private _startGlobalTick(): void {
+    if (!this.isTicking) {
+        this.isTicking = true;
+        console.debug("TimerManager: Starting global tick.");
+        // Set initial startTime for all newly started timers before the first tick
+        const now = Date.now();
+        this.timers.forEach(timer => {
+          if(timer.status === TimerStatus.RUNNING && timer.startTime === 0) {
+             timer.startTime = now;
+          }
+        });
+        requestAnimationFrame(this._tick.bind(this));
     }
+  }
 
-    this._saveTimers();
-    this.eventBus.emit(TIMER_EVENTS.TIMER_COMPLETED, { timerId: timer.id, duration: timer.duration, elapsed: timer.elapsed });
-    console.debug(`TimerManager: Timer '${timer.id}' completed.`);
-
-    // Execute completion callbacks
-    this._executeCallbacks(timer.id);
+  private _stopGlobalTick(): void {
+    // The tick loop stops itself when no timers are running
+    // This method is more for forceful external stops if needed
+    this.isTicking = false;
+    console.debug("TimerManager: Forcefully stopping global tick requested.");
   }
 
   // Execute and clear callbacks for a given timer ID
@@ -258,9 +261,9 @@ export class TimerManager {
       timer.startTime = Date.now();
       timer.status = TimerStatus.RUNNING;
       timer.pauseTime = 0; // Clear pause time
-      this._createPhaserTimer(timer);
       this._saveTimers();
-      this.eventBus.emit(TIMER_EVENTS.TIMER_STARTED, { timerId: id });
+      this._startGlobalTick(); // Ensure the global tick loop is running
+      this.eventBus.emit(TIMER_EVENTS.STARTED, { timerId: id });
       console.debug(`TimerManager: Started timer '${id}'.`);
   }
 
@@ -270,14 +273,10 @@ export class TimerManager {
 
       timer.status = TimerStatus.PAUSED;
       timer.pauseTime = Date.now(); // Record pause time
-      
-      // Pause the Phaser timer
-      if (timer.phaserEvent) {
-        timer.phaserEvent.paused = true;
-      }
-      
+      // Elapsed time is updated implicitly in _tick just before pausing effectively
+      // No need to explicitly cancel RAF here, _tick loop will ignore paused timers
       this._saveTimers();
-      this.eventBus.emit(TIMER_EVENTS.TIMER_PAUSED, { timerId: id });
+      this.eventBus.emit(TIMER_EVENTS.PAUSED, { timerId: id });
       console.debug(`TimerManager: Paused timer '${id}'.`);
   }
 
@@ -286,38 +285,23 @@ export class TimerManager {
       if (timer.status !== TimerStatus.PAUSED) return; // Can only resume paused timers
 
       // Adjust start time to effectively ignore the paused duration
-      timer.startTime = Date.now(); // Reset start time for delta calculations
+      timer.startTime = Date.now(); // Reset start time for delta calculations in _tick
       timer.pauseTime = 0; // Clear pause time
       timer.status = TimerStatus.RUNNING;
-      
-      // Resume the Phaser timer
-      if (timer.phaserEvent) {
-        timer.phaserEvent.paused = false;
-      } else {
-        // Recreate timer if it was destroyed
-        this._createPhaserTimer(timer);
-      }
-      
       this._saveTimers();
-      this.eventBus.emit(TIMER_EVENTS.TIMER_RESUMED, { timerId: id });
+      this._startGlobalTick(); // Ensure the global tick loop is running
+      this.eventBus.emit(TIMER_EVENTS.RESUMED, { timerId: id });
       console.debug(`TimerManager: Resumed timer '${id}'.`);
   }
 
   public resetTimer(id: string): void {
       const timer = this._getTimerOrFail(id);
       const wasRunning = timer.status === TimerStatus.RUNNING;
-      
-      // Clean up Phaser timer
-      if (timer.phaserEvent) {
-        timer.phaserEvent.destroy();
-        timer.phaserEvent = null;
-      }
-      
       timer.status = TimerStatus.IDLE;
       timer.elapsed = 0;
       timer.startTime = 0;
       timer.pauseTime = 0;
-      
+      // No need to explicitly cancel RAF here, _tick loop ignores non-running timers
       this._saveTimers();
       // Emit stopped event only if it was actually running before reset
       if (wasRunning) {
@@ -330,12 +314,6 @@ export class TimerManager {
       if (this.timers.has(id)) {
           const timer = this._getTimerOrFail(id); // Get timer before deleting
           const wasRunning = timer.status === TimerStatus.RUNNING;
-          
-          // Clean up Phaser timer
-          if (timer.phaserEvent) {
-            timer.phaserEvent.destroy();
-          }
-          
           this.timers.delete(id);
           // Also remove any completion callbacks associated with this timer
           this.completionCallbacks.delete(id);
@@ -345,6 +323,8 @@ export class TimerManager {
           if (wasRunning) {
               this.eventBus.emit(TIMER_EVENTS.TIMER_STOPPED, { timerId: id });
           }
+          // Add a specific TIMER_REMOVED event? Or is STOPPED enough?
+          // Let's assume STOPPED is sufficient for now.
           console.debug(`TimerManager: Removed timer '${id}'.`);
       } else {
           console.warn(`TimerManager: Cannot remove non-existent timer '${id}'.`);
@@ -359,6 +339,7 @@ export class TimerManager {
           // Clear callbacks for all timers when stopping all
           this.completionCallbacks.delete(timer.id);
       });
+      this._stopGlobalTick(); // Ensure the loop stops if it hasn't already
       console.debug("TimerManager: Stopped and cleared callbacks for all timers.");
   }
 
@@ -508,12 +489,8 @@ export class TimerManager {
   public destroy(): void {
     console.log('Destroying TimerManager...');
     
-    // Clean up all Phaser timers
-    this.timers.forEach(timer => {
-      if (timer.phaserEvent) {
-        timer.phaserEvent.destroy();
-      }
-    });
+    // Stop the global tick loop
+    this._stopGlobalTick();
     
     // Clear all data
     this.timers.clear();

@@ -77,7 +77,7 @@ export class TransitionScreen extends GameObjects.Container {
     this.messageText = new GameObjects.Text(scene, 0, 0, '', {
       fontFamily: 'Grandstander',
       fontSize: '64px',
-      fontWeight: 'bold',
+        // fontWeight: 'bold', // Not supported in Phaser
       color: '#114257',
       align: 'center',
       wordWrap: { width: 1 } // Placeholder, will be set in show/resize
@@ -89,7 +89,7 @@ export class TransitionScreen extends GameObjects.Container {
     this.questionText = new GameObjects.Text(scene, 0, 0, '', {
       fontFamily: 'Grandstander',
       fontSize: '48px',
-      fontWeight: 'bold',
+        // fontWeight: 'bold', // Not supported in Phaser
       color: '#114257',
       align: 'center',
       wordWrap: { width: 1 }
@@ -101,7 +101,7 @@ export class TransitionScreen extends GameObjects.Container {
     this.countdownText = new GameObjects.Text(scene, 0, 0, '', {
       fontFamily: 'Grandstander',
       fontSize: '120px',
-      fontWeight: 'bold',
+        // fontWeight: 'bold', // Not supported in Phaser
       color: '#FFD700',
       align: 'center',
       stroke: '#000000',
@@ -114,7 +114,7 @@ export class TransitionScreen extends GameObjects.Container {
     this.goText = new GameObjects.Text(scene, 0, 0, 'GO!', {
       fontFamily: 'Grandstander',
       fontSize: '100px',
-      fontWeight: 'bold',
+        // fontWeight: 'bold', // Not supported in Phaser
       color: '#00FF00',
       align: 'center',
       stroke: '#000000',
@@ -372,7 +372,8 @@ export class TransitionScreen extends GameObjects.Container {
   /**
    * Shows GO! transition.
    */
-  private async _showGo(config: TransitionScreenConfig): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private async _showGo(_config: TransitionScreenConfig): Promise<void> {
     this._updatePanelDimensions();
     
     this.countdownText.setVisible(false);

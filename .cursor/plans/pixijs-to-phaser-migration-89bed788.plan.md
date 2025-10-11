@@ -1,250 +1,341 @@
 <!-- 89bed788-0c35-4148-941f-c621e58bf240 60b16be2-bb3b-424d-848c-9edec26f0615 -->
 # PixiJS to Phaser 3 Migration Plan
 
-## Phase 1: Foundation - Phaser Engine Core
+## CORRECTED ARCHITECTURE APPROACH
 
-### 1.1 Create Phaser Engine Structure
+**Key Decision:** Use scene-independent managers (like PixiJS) with Phaser for rendering only.
 
-- Create `src/lib/phaser-engine/` directory structure:
-  - `core/` - PhaserEngine, EventBus, GameStateManager, ControlsManager, StorageManager
-  - `game/` - BaseGame, ScoringManager, TimerManager, PowerUpManager
-  - `assets/` - AssetLoader (hybrid approach for GIF support)
-  - `config/` - GameConfig, PhaserConfig
-  - `ui/` - TransitionScreen, UI components
-  - `scenes/` - Base scene classes
+- Managers work without scene dependencies
+- BaseGame extends Phaser.Scene for rendering benefits
+- Defer GIF support to Phase 2 (get static images working first)
+- Focus on stable, observable progress
 
-### 1.2 Port Core Managers (Keep Architecture, Change Implementation)
+## Phase 1: Foundation - Phaser Engine Core (STABLE LOADING)
 
-- **EventBus** (`src/lib/phaser-engine/core/EventBus.ts`)
-  - Keep existing EventBus interface and event types
-  - Implement using Phaser's EventEmitter as underlying system
-  - Maintain all current event constants (ENGINE_EVENTS, GAME_EVENTS, etc.)
+### 1.1 Create Phaser Engine Structure ✅ COMPLETED
 
-- **GameStateManager** (`src/lib/phaser-engine/core/GameStateManager.ts`)
-  - Port from PixiJS Container-based to Phaser Scene-based state management
-  - Keep same state transition logic and events
+- [x] Create `src/lib/phaser-engine/` directory structure:
+  - [x] `core/` - PhaserEngine, EventBus, GameStateManager, ControlsManager, StorageManager, RuleEngine
+  - [x] `game/` - BaseGame, ScoringManager, TimerManager, PowerUpManager, QuestionSequencer
+  - [x] `assets/` - AssetLoader (simplified for static images first)
+  - [x] `config/` - GameConfig, PhaserConfig
+  - [x] `ui/` - TransitionScreen, PowerupSpinWheel
+  - [ ] `scenes/` - Base scene classes (DEFERRED - using single scene approach)
 
-- **ScoringManager** (`src/lib/phaser-engine/game/ScoringManager.ts`)
-  - Direct port (no rendering dependencies)
-  - Keep all scoring rules and team/player management
+### 1.2 Port Core Managers (Keep Architecture, Change Implementation) ✅ MOSTLY COMPLETED
 
-- **TimerManager** (`src/lib/phaser-engine/game/TimerManager.ts`)
-  - Replace PixiJS Ticker with Phaser time events
-  - Keep same timer interface and countdown/countup logic
+- [x] **EventBus** (`src/lib/phaser-engine/core/EventBus.ts`)
+  - [x] Keep existing EventBus interface and event types
+  - [x] Implement using EventEmitter3 (not Phaser's EventEmitter)
+  - [x] Maintain all current event constants (ENGINE_EVENTS, GAME_EVENTS, etc.)
 
-- **PowerUpManager** (`src/lib/phaser-engine/game/PowerUpManager.ts`)
-  - Direct port (minimal rendering dependencies)
-  - Keep power-up definitions and effect system
+- [x] **GameStateManager** (`src/lib/phaser-engine/core/GameStateManager.ts`)
+  - [x] Direct port (no scene dependencies)
+  - [x] Keep same state transition logic and events
 
-- **ControlsManager** (`src/lib/phaser-engine/core/ControlsManager.ts`)
-  - Replace PixiJS pointer events with Phaser input system
-  - Support keyboard, mouse, touch, gamepad
-  - Keep same control mapping interface
+- [x] **ScoringManager** (`src/lib/phaser-engine/game/ScoringManager.ts`)
+  - [x] Direct port (no rendering dependencies)
+  - [x] Keep all scoring rules and team/player management
 
-### 1.3 Hybrid Asset Loading System
+- [x] **TimerManager** (`src/lib/phaser-engine/game/TimerManager.ts`) ⚠️ NEEDS FIX
+  - [x] Port timer interface and countdown/countup logic
+  - [ ] **CRITICAL FIX:** Remove scene dependency, use browser timers (setTimeout/setInterval)
+  - [ ] **CRITICAL FIX:** Update constructor to match PixiJS version (2 params only)
 
-- **AssetLoader** (`src/lib/phaser-engine/assets/AssetLoader.ts`)
-  - Create Phaser-based loader that wraps PIXI.Assets for GIF support
-  - Use Phaser's native loader for images, audio, spritesheets
-  - Keep custom GIF loading path using pixi.js/gif library
-  - Create adapter methods:
-    - `loadAsset(key, url, type)` - Routes to appropriate loader
-    - `getDisplayObject(key)` - Returns Phaser GameObject or GifSprite wrapper
-    - `preloadGif(url)` - Uses existing PIXI GIF loading
-  - Maintain GIF animation support with same API surface
+- [x] **PowerUpManager** (`src/lib/phaser-engine/game/PowerUpManager.ts`)
+  - [x] Direct port (minimal rendering dependencies)
+  - [x] Keep power-up definitions and effect system
 
-### 1.4 PhaserEngine Main Class
+- [x] **ControlsManager** (`src/lib/phaser-engine/core/ControlsManager.ts`)
+  - [x] Replace PixiJS pointer events with Phaser input system
+  - [x] Support keyboard, mouse, touch
+  - [x] Keep same control mapping interface
 
-- **PhaserEngine** (`src/lib/phaser-engine/core/PhaserEngine.ts`)
-  - Create Phaser.Game instance with configuration
-  - Initialize all core managers
-  - Provide scene management and lifecycle
-  - Match PixiEngine interface for drop-in replacement:
-    - `init(config, gameFactory)` - Initialize with game config
-    - `destroy()` - Cleanup
-    - `getManagers()` - Return manager instances
-  - Support same configuration options as PixiEngine
+- [x] **RuleEngine** (`src/lib/phaser-engine/core/RuleEngine.ts`)
+  - [x] Direct port from PixiJS version
+  - [x] Event-driven game logic processing
 
-## Phase 2: Base Game Framework
+- [x] **QuestionSequencer** (`src/lib/phaser-engine/game/QuestionSequencer.ts`)
+  - [x] Direct port from PixiJS version
+  - [x] Question distribution and sequencing logic
 
-### 2.1 BaseGame Pattern for Phaser
+### 1.3 Simplified Asset Loading System (STATIC IMAGES ONLY) ✅ COMPLETED
 
-- **BaseGame** (`src/lib/phaser-engine/game/BaseGame.ts`)
-  - Extend `Phaser.Scene` instead of Container
-  - Keep same lifecycle methods:
-    - `createInitialState()` - Define initial game state
-    - `initImplementation()` - Async initialization
-    - `update(delta)` - Game loop
-    - `render()` - Optional custom rendering
-    - `destroy()` - Cleanup
-  - Provide same manager access as PixiJS version
-  - Implement render layer system using Phaser depth/zIndex
-  - Keep state management pattern (setState, getState)
-  - Maintain transition screen integration
-  - Support power-up system integration
+- [x] **AssetLoader** (`src/lib/phaser-engine/assets/AssetLoader.ts`) - ✅ COMPLETED
+  - [x] **REMOVE:** All PIXI imports and dual-cache complexity
+  - [x] **SIMPLIFY:** Use only Phaser's scene.load system
+  - [x] **DEFER:** GIF support to Phase 2
+  - [x] **FIX:** Remove scene dependency from init()
+  - [x] **FIX:** Defer scene-based loading to BaseGame
 
-### 2.2 Scene Management
+### 1.4 PhaserEngine Main Class ✅ COMPLETED
 
-- **BaseBootScene** (`src/lib/phaser-engine/scenes/BaseBootScene.ts`)
-  - Handle initial asset preloading
-  - Initialize engine managers
-  - Load theme configurations
+- [x] **PhaserEngine** (`src/lib/phaser-engine/core/PhaserEngine.ts`)
+  - [x] Create Phaser.Game instance with configuration
+  - [x] Initialize all core managers
+  - [x] Provide single-scene management and lifecycle
+  - [x] Match PixiEngine interface for drop-in replacement:
+    - [x] `init(config, gameFactory)` - Initialize with game config
+    - [x] `destroy()` - Cleanup
+    - [x] `getManagers()` - Return manager instances
+  - [x] Support same configuration options as PixiEngine
 
-- **BasePreloaderScene** (`src/lib/phaser-engine/scenes/BasePreloaderScene.ts`)
-  - Show loading screen
-  - Preload game-specific assets
-  - Handle GIF preloading via hybrid AssetLoader
+## Phase 2: Base Game Framework (STABLE ASSET LOADING & DISPLAY)
 
-- **BaseGameScene** (`src/lib/phaser-engine/scenes/BaseGameScene.ts`)
-  - Main game scene template
-  - Implements BaseGame pattern
-  - Manages game state and lifecycle
+### 2.1 BaseGame Pattern for Phaser ✅ COMPLETED
 
-### 2.3 UI Components for Phaser
+- [x] **BaseGame** (`src/lib/phaser-engine/game/BaseGame.ts`)
+  - [x] Extend `Phaser.Scene` instead of Container
+  - [x] Keep same lifecycle methods:
+    - [x] `createInitialState()` - Define initial game state
+    - [x] `initImplementation()` - Async initialization
+    - [x] `update(delta)` - Game loop
+    - [x] `destroy()` - Cleanup
+  - [x] Provide same manager access as PixiJS version
+  - [x] Implement render layer system using Phaser depth/zIndex
+  - [x] Keep state management pattern (setState, getState)
+  - [x] Maintain transition screen integration
+  - [x] Support power-up system integration
 
-- **TransitionScreen** (`src/lib/phaser-engine/ui/TransitionScreen.ts`)
-  - Port to Phaser GameObject/Container
-  - Keep all transition types (loading, turn, powerup, question_preview, countdown)
-  - Maintain power-up wheel animation
-  - Support same configuration interface
+### 2.2 Scene Management (DEFERRED - Using Single Scene)
 
-- **Button** (`src/lib/phaser-engine/ui/Button.ts`)
-  - Create Phaser-native button component
-  - Support theming and interaction states
+- [ ] **BaseBootScene** - **DEFERRED** (using inline scene creation)
+- [ ] **BasePreloaderScene** - **DEFERRED** (using inline scene creation)  
+- [ ] **BaseGameScene** - **DEFERRED** (using inline scene creation)
 
-- **Text Components** (`src/lib/phaser-engine/ui/Text.ts`)
-  - Wrapper around Phaser.GameObjects.Text
-  - Support custom fonts (Grandstander)
-  - Theme-aware styling
+**Decision:** Use single scene approach for simplicity and stability.
 
-## Phase 3: Game Conversions
+### 2.3 UI Components for Phaser ✅ PARTIALLY COMPLETED
 
-### 3.1 Multiple Choice Game Migration
+- [x] **TransitionScreen** (`src/lib/phaser-engine/ui/TransitionScreen.ts`)
+  - [x] Port to Phaser GameObject/Container
+  - [x] Keep all transition types (loading, turn, powerup, question_preview, countdown)
+  - [x] Maintain power-up wheel animation
+  - [x] Support same configuration interface
 
-- **Structure** (`src/lib/phaser-games/multiple-choice/`)
-  - MultipleChoiceGame.ts - Extend BaseGame/BaseGameScene
-  - managers/
-    - MultipleChoiceDataManager.ts - Direct port (no rendering)
-    - MultipleChoiceUIManager.ts - Convert to Phaser GameObjects
-    - MultipleChoiceLayoutManager.ts - Direct port
-    - GameBackgroundManager.ts - Convert to Phaser Graphics/Sprites
+- [x] **PowerupSpinWheel** (`src/lib/phaser-engine/ui/PowerupSpinWheel.ts`)
+  - [x] Basic Phaser implementation with tweens
 
-- **Key Changes**:
-  - Replace PIXI.Container with Phaser.GameObjects.Container
-  - Replace PIXI.Graphics with Phaser.GameObjects.Graphics
-  - Replace PIXI.Text with Phaser.GameObjects.Text
-  - Replace PIXI.Sprite with Phaser.GameObjects.Sprite
-  - Use AssetLoader.getDisplayObject() for images (maintains GIF support)
-  - Convert button interactions to Phaser pointer events
-  - Keep all game logic, sequencing, and scoring identical
+- [ ] **Button** (`src/lib/phaser-engine/ui/Button.ts`) - **DEFERRED**
+  - [ ] Create Phaser-native button component
+  - [ ] Support theming and interaction states
 
-### 3.2 Splash Dash Game Migration
+- [ ] **Text Components** (`src/lib/phaser-engine/ui/Text.ts`) - **DEFERRED**
+  - [ ] Wrapper around Phaser.GameObjects.Text
+  - [ ] Support custom fonts (Grandstander)
+  - [ ] Theme-aware styling
 
-- **Structure** (`src/lib/phaser-games/splash-dash/`)
-  - SplashDashGame.ts - Extend BaseGame/BaseGameScene
-  - managers/
-    - SplashDashDataManager.ts - Direct port
-    - SplashDashUIManager.ts - Convert to Phaser GameObjects
-    - SplashDashLayoutManager.ts - Direct port
-    - SplashDashBackgroundManager.ts - Convert animated water tiles to Phaser
-    - SplashDashPlayerManager.ts - Convert sprite animation to Phaser
+## Phase 3: Critical Fixes (STABLE APPLICATION LOADING) ✅ COMPLETED
 
-- **Key Changes**:
-  - Replace PIXI.AnimatedSprite with Phaser sprite animations
-  - Convert water tile animation to Phaser sprite sheets
-  - Port displacement filter to Phaser FX or custom shader
-  - Replace keyboard controls with Phaser input system
-  - Convert collision detection to Phaser physics or keep custom
-  - Maintain all game mechanics (swimming, answer circles, timer)
-  - Use AssetLoader for GIF question images
+### 3.1 Fix Critical Runtime Errors ✅ COMPLETED
 
-### 3.3 Transition Screen Updates
+- [x] **Fix TimerManager Constructor** - ✅ COMPLETED
+  - [x] Remove `scene: Phaser.Scene` parameter from constructor
+  - [x] Use browser timers (setTimeout/setInterval) instead of Phaser scene.time
+  - [x] Update PhaserEngine to call TimerManager with 2 params only
+  - [x] Test: Application loads without constructor errors
 
-- Port question preview functionality to Phaser
-- Maintain countdown and "GO!" animations
-- Keep GIF loading for question images in preview
-- Ensure smooth transitions between scenes
+- [x] **Fix AssetLoader Scene Dependency** - ✅ COMPLETED
+  - [x] Remove scene parameter from `init()` method
+  - [x] Remove all PIXI imports and dual-cache logic
+  - [x] Simplify to pure Phaser asset loading
+  - [x] Defer scene-based loading to BaseGame
+  - [x] Test: AssetLoader initializes without scene dependency
 
-## Phase 4: Integration and React Components
+- [x] **Fix Missing EventTypes** - ✅ COMPLETED
+  - [x] Add missing event payload types to EventTypes.ts
+  - [x] Ensure all manager events are properly typed
+  - [x] Test: No TypeScript compilation errors
 
-### 4.1 React Component Updates
+- [x] **Fix PhaserEngine Manager Initialization** - ✅ COMPLETED
+  - [x] Update manager initialization order
+  - [x] Ensure all managers receive correct parameters
+  - [x] Test: PhaserEngine initializes without errors
 
-- **GameContainer** (`src/components/game_ui/GameContainer.tsx`)
-  - Replace PixiEngine import with PhaserEngine
-  - Update initialization to use Phaser.Game
-  - Mount Phaser canvas to DOM element
-  - Keep same props and state management
-  - Maintain game over flow and scoring display
+### 3.2 Create Test Game (OBSERVABLE OUTPUT) ✅ COMPLETED
 
-- **GameplayView** (`src/components/game_ui/GameplayView.tsx`)
-  - Update for Phaser engine reference
-  - Keep same event listener pattern
-  - Maintain score updates and team management
-  - Support pause/resume functionality
+- [x] **Create Simple Test Game** (`src/lib/phaser-games/test/`)
+  - [x] TestGame.ts - Minimal game extending BaseGame
+  - [x] Display "Hello Phaser" text on screen
+  - [x] Show basic Phaser canvas rendering
+  - [x] Test: Can see Phaser canvas with text
 
-### 4.2 Game Factory Pattern
+- [x] **Create Test React Component**
+  - [x] Update GameContainer to use PhaserEngine
+  - [x] Mount test game in React component
+  - [x] Test: Can load test game in browser
 
-- **GameFactory** (`src/lib/phaser-engine/core/GameFactory.ts`)
-  - Create registry for Phaser games
-  - Map game slugs to game classes
-  - Provide same factory interface as PixiJS version
-  - Support dynamic game loading
+## Phase 4: Multiple Choice Game Migration (STABLE GAME FUNCTIONALITY)
 
-### 4.3 Configuration Updates
+### 4.1 Multiple Choice Game Migration
 
-- Update game configuration to support Phaser settings
-- Maintain backward compatibility with existing quiz data
-- Keep theme system working with Phaser rendering
+- [ ] **Structure** (`src/lib/phaser-games/multiple-choice/`)
+  - [ ] MultipleChoiceGame.ts - Extend BaseGame
+  - [ ] managers/
+    - [ ] MultipleChoiceDataManager.ts - Direct port (no rendering)
+    - [ ] MultipleChoiceUIManager.ts - Convert to Phaser GameObjects
+    - [ ] MultipleChoiceLayoutManager.ts - Direct port
+    - [ ] GameBackgroundManager.ts - Convert to Phaser Graphics/Sprites
 
-## Phase 5: Testing and Refinement
+- [ ] **Key Changes**:
+  - [ ] Replace PIXI.Container with Phaser.GameObjects.Container
+  - [ ] Replace PIXI.Graphics with Phaser.GameObjects.Graphics
+  - [ ] Replace PIXI.Text with Phaser.GameObjects.Text
+  - [ ] Replace PIXI.Sprite with Phaser.GameObjects.Sprite
+  - [ ] Use simplified AssetLoader for static images only
+  - [ ] Convert button interactions to Phaser pointer events
+  - [ ] Keep all game logic, sequencing, and scoring identical
 
-### 5.1 Feature Parity Verification
+### 4.2 Splash Dash Game Migration (DEFERRED)
 
-- Test all quiz types (multiple choice, splash dash)
-- Verify GIF loading and animation
-- Test all power-ups and their effects
-- Verify transition screens and animations
-- Test responsive layout on all devices
-- Verify audio playback and settings
-- Test team management and scoring
-- Verify timer functionality
+- [ ] **Structure** (`src/lib/phaser-games/splash-dash/`) - **DEFERRED TO PHASE 5**
+  - [ ] SplashDashGame.ts - Extend BaseGame
+  - [ ] managers/ - All deferred
 
-### 5.2 Performance Optimization
+### 4.3 Transition Screen Updates ✅ COMPLETED
 
-- Profile Phaser game performance
-- Optimize asset loading and caching
-- Test GIF animation performance
-- Ensure smooth 60fps gameplay
-- Optimize memory usage
+- [x] Port question preview functionality to Phaser
+- [x] Maintain countdown and "GO!" animations
+- [ ] Keep GIF loading for question images in preview - **DEFERRED TO PHASE 6**
+- [x] Ensure smooth transitions between scenes
 
-### 5.3 Clean Up
+## Phase 5: Integration and React Components (STABLE REACT INTEGRATION)
 
-- Remove PixiJS engine code (`src/lib/pixi-engine/`)
-- Remove PixiJS games (`src/lib/pixi-games/`)
-- Update all imports to use phaser-engine
-- Remove PixiJS dependencies from package.json
-- Update documentation
+### 5.1 React Component Updates
 
-## Phase 6: Documentation and Future Expansion
+- [ ] **GameContainer** (`src/components/game_ui/GameContainer.tsx`)
+  - [ ] Replace PixiEngine import with PhaserEngine
+  - [ ] Update initialization to use Phaser.Game
+  - [ ] Mount Phaser canvas to DOM element
+  - [ ] Keep same props and state management
+  - [ ] Maintain game over flow and scoring display
 
-### 6.1 Update Documentation
+- [ ] **GameplayView** (`src/components/game_ui/GameplayView.tsx`)
+  - [ ] Update for Phaser engine reference
+  - [ ] Keep same event listener pattern
+  - [ ] Maintain score updates and team management
+  - [ ] Support pause/resume functionality
 
-- Create new game-development-guide.md for Phaser
-- Document Phaser-specific patterns and best practices
-- Update GIF loading documentation
-- Create migration guide for future games
-- Document scene lifecycle and state management
+### 5.2 Game Factory Pattern
 
-### 6.2 Future Game Template
+- [ ] **GameFactory** (`src/lib/phaser-engine/core/GameFactory.ts`)
+  - [ ] Create registry for Phaser games
+  - [ ] Map game slugs to game classes
+  - [ ] Provide same factory interface as PixiJS version
+  - [ ] Support dynamic game loading
 
-- Create template scene for new games
-- Document how to extend BaseGame/BaseGameScene
-- Provide examples of common game patterns
-- Create boilerplate for new game types
+### 5.3 Configuration Updates
+
+- [ ] Update game configuration to support Phaser settings
+- [ ] Maintain backward compatibility with existing quiz data
+- [ ] Keep theme system working with Phaser rendering
+
+## Phase 6: Splash Dash Game Migration (STABLE ADVANCED GAMES)
+
+### 6.1 Splash Dash Game Migration
+
+- [ ] **Structure** (`src/lib/phaser-games/splash-dash/`)
+  - [ ] SplashDashGame.ts - Extend BaseGame
+  - [ ] managers/
+    - [ ] SplashDashDataManager.ts - Direct port
+    - [ ] SplashDashUIManager.ts - Convert to Phaser GameObjects
+    - [ ] SplashDashLayoutManager.ts - Direct port
+    - [ ] SplashDashBackgroundManager.ts - Convert animated water tiles to Phaser
+    - [ ] SplashDashPlayerManager.ts - Convert sprite animation to Phaser
+
+- [ ] **Key Changes**:
+  - [ ] Replace PIXI.AnimatedSprite with Phaser sprite animations
+  - [ ] Convert water tile animation to Phaser sprite sheets
+  - [ ] Port displacement filter to Phaser FX or custom shader
+  - [ ] Replace keyboard controls with Phaser input system
+  - [ ] Convert collision detection to Phaser physics or keep custom
+  - [ ] Maintain all game mechanics (swimming, answer circles, timer)
+  - [ ] Use simplified AssetLoader for static images only
+
+## Phase 7: GIF Support Implementation (STABLE ANIMATED CONTENT)
+
+### 7.1 Hybrid Asset Loading System
+
+- [ ] **AssetLoader** (`src/lib/phaser-engine/assets/AssetLoader.ts`)
+  - [ ] Add back PIXI.Assets for GIF support
+  - [ ] Create Phaser-based loader that wraps PIXI.Assets for GIF support
+  - [ ] Use Phaser's native loader for images, audio, spritesheets
+  - [ ] Keep custom GIF loading path using pixi.js/gif library
+  - [ ] Create adapter methods:
+    - [ ] `loadAsset(key, url, type)` - Routes to appropriate loader
+    - [ ] `getDisplayObject(key)` - Returns Phaser GameObject or GifSprite wrapper
+    - [ ] `preloadGif(url)` - Uses existing PIXI GIF loading
+  - [ ] Maintain GIF animation support with same API surface
+
+### 7.2 GIF Integration Testing
+
+- [ ] Test GIF loading and animation
+- [ ] Verify GIF performance in games
+- [ ] Test GIF question images in Multiple Choice
+- [ ] Test GIF question images in Splash Dash
+
+## Phase 8: Testing and Refinement (STABLE PRODUCTION)
+
+### 8.1 Feature Parity Verification
+
+- [ ] Test all quiz types (multiple choice, splash dash)
+- [ ] Verify GIF loading and animation
+- [ ] Test all power-ups and their effects
+- [ ] Verify transition screens and animations
+- [ ] Test responsive layout on all devices
+- [ ] Verify audio playback and settings
+- [ ] Test team management and scoring
+- [ ] Verify timer functionality
+
+### 8.2 Performance Optimization
+
+- [ ] Profile Phaser game performance
+- [ ] Optimize asset loading and caching
+- [ ] Test GIF animation performance
+- [ ] Ensure smooth 60fps gameplay
+- [ ] Optimize memory usage
+
+### 8.3 Clean Up
+
+- [ ] Remove PixiJS engine code (`src/lib/pixi-engine/`)
+- [ ] Remove PixiJS games (`src/lib/pixi-games/`)
+- [ ] Update all imports to use phaser-engine
+- [ ] Remove PixiJS dependencies from package.json
+- [ ] Update documentation
+
+## Phase 9: Documentation and Future Expansion
+
+### 9.1 Update Documentation
+
+- [ ] Create new game-development-guide.md for Phaser
+- [ ] Document Phaser-specific patterns and best practices
+- [ ] Update GIF loading documentation
+- [ ] Create migration guide for future games
+- [ ] Document scene lifecycle and state management
+
+### 9.2 Future Game Template
+
+- [ ] Create template scene for new games
+- [ ] Document how to extend BaseGame/BaseGameScene
+- [ ] Provide examples of common game patterns
+- [ ] Create boilerplate for new game types
 
 ## Key Technical Decisions
 
-### GIF Support Strategy (Hybrid Approach)
+### CORRECTED Architecture Approach
+
+**Scene-Independent Managers:**
+
+- Managers work without scene dependencies (like PixiJS)
+- BaseGame extends Phaser.Scene for rendering benefits only
+- Single scene approach for simplicity and stability
+- Defer complex scene management to later phases
+
+### GIF Support Strategy (DEFERRED APPROACH)
+
+**Phase 1-5:** Static images only for stability
+
+**Phase 7:** Add hybrid approach:
 
 1. Keep pixi.js/gif library for GIF support
 2. Phaser loads static images and spritesheets natively
@@ -275,8 +366,8 @@
 ## Dependencies to Add
 
 - phaser: ^3.80.0 (latest stable)
-- Keep pixi.js/gif for GIF support
-- Remove @pixi/devtools and other PixiJS-specific deps
+- Keep pixi.js/gif for GIF support (Phase 7)
+- Remove @pixi/devtools and other PixiJS-specific deps (Phase 8)
 
 ## File Structure After Migration
 
@@ -285,35 +376,49 @@ src/lib/
 ├── phaser-engine/          # New Phaser engine
 │   ├── core/              # Core managers
 │   ├── game/              # Game managers
-│   ├── assets/            # Hybrid asset loader
+│   ├── assets/            # Simplified asset loader (Phase 1-5)
 │   ├── config/            # Configuration
 │   ├── ui/                # UI components
-│   └── scenes/            # Base scenes
+│   └── scenes/            # Base scenes (DEFERRED)
 ├── phaser-games/          # New Phaser games
-│   ├── multiple-choice/
-│   └── splash-dash/
+│   ├── test/              # Test game (Phase 3)
+│   ├── multiple-choice/   # Phase 4
+│   └── splash-dash/       # Phase 6
 └── themes/                # Keep existing themes
 ```
 
-This plan ensures a systematic, safe migration that maintains all current functionality while setting up a robust foundation for future game development with Phaser's superior architecture and ecosystem.
+## STABLE PHASES SUMMARY
 
-### To-dos
+**Phase 1:** Foundation - Phaser Engine Core (STABLE LOADING) ✅ COMPLETED
 
-- [ ] Create Phaser engine directory structure and base files
-- [ ] Port core managers (EventBus, GameStateManager, Scoring, Timer, PowerUp, Controls)
-- [ ] Implement hybrid AssetLoader with GIF support
-- [ ] Create PhaserEngine main class matching PixiEngine interface
-- [ ] Create BaseGame pattern extending Phaser.Scene
-- [ ] Create base scene classes (Boot, Preloader, Game)
-- [ ] Port UI components (TransitionScreen, Button, Text)
-- [ ] Convert Multiple Choice game to Phaser
-- [ ] Convert Splash Dash game to Phaser
-- [ ] Update transition screens for Phaser
-- [ ] Update React components for Phaser integration
-- [ ] Create Phaser game factory pattern
-- [ ] Update configuration for Phaser
-- [ ] Comprehensive testing of all features
-- [ ] Performance optimization and profiling
-- [ ] Remove PixiJS code and dependencies
-- [ ] Update all documentation for Phaser
-- [ ] Create future game template and guides
+**Phase 2:** Base Game Framework (STABLE ASSET LOADING & DISPLAY) ✅ COMPLETED
+
+**Phase 3:** Critical Fixes (STABLE APPLICATION LOADING) ✅ COMPLETED
+
+**Phase 4:** Multiple Choice Game Migration (STABLE GAME FUNCTIONALITY)
+
+**Phase 5:** Integration and React Components (STABLE REACT INTEGRATION)
+
+**Phase 6:** Splash Dash Game Migration (STABLE ADVANCED GAMES)
+
+**Phase 7:** GIF Support Implementation (STABLE ANIMATED CONTENT)
+
+**Phase 8:** Testing and Refinement (STABLE PRODUCTION)
+
+**Phase 9:** Documentation and Future Expansion
+
+### COMPLETED STEPS (Phase 3) ✅
+
+1. **Fix TimerManager Constructor** - ✅ Remove scene dependency
+2. **Fix AssetLoader Scene Dependency** - ✅ Simplify to pure Phaser
+3. **Fix Missing EventTypes** - ✅ Add proper TypeScript types
+4. **Create Test Game** - ✅ Observable "Hello Phaser" output
+5. **Test Application Loading** - ✅ No runtime errors
+
+### NEXT STEPS (Phase 4)
+
+1. **Multiple Choice Game Migration** - Port existing game to Phaser
+2. **React Component Integration** - Update GameContainer for Phaser
+3. **Game Factory Pattern** - Create registry for Phaser games
+
+This plan ensures a systematic, stable migration with observable progress at each phase.

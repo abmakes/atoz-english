@@ -30,7 +30,8 @@ export class ControlsManager {
      * @param {EventBus} eventBus - The application's central event bus for emitting action events.
      * @param {Phaser.Scene} scene - The Phaser scene for input handling.
      */
-    init(config: ControlsConfig, eventBus: EventBus, scene: Phaser.Scene): void {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    init(config: ControlsConfig, eventBus: EventBus, _scene: Phaser.Scene): void {
         console.log('ControlsManager initializing...');
         this.config = config;
         this.eventBus = eventBus;
@@ -62,8 +63,7 @@ export class ControlsManager {
         // Set up keyboard input using Phaser's keyboard manager
         this.setupKeyboardInput(scene);
         
-        // Set up gamepad input using Phaser's gamepad manager
-        this.setupGamepadInput(scene);
+        // Note: Gamepad input removed for now - focusing on keyboard and touch/click
         
         this.isEnabled = true;
         console.log('ControlsManager enabled.');
@@ -251,11 +251,21 @@ export class ControlsManager {
     private setupKeyboardInput(scene: Phaser.Scene): void {
         if (!this.config?.actionMap) return;
 
+        // Check if the scene's input system is ready
+        if (!scene.input || !scene.input.keyboard) {
+            console.warn('ControlsManager: Scene input system not ready, deferring keyboard setup');
+            // Use setTimeout instead of scene.time.delayedCall since scene.time might not be ready
+            setTimeout(() => {
+                this.setupKeyboardInput(scene);
+            }, 100);
+            return;
+        }
+
         // Set up keyboard input using Phaser's keyboard manager
         for (const action in this.config.actionMap) {
             const mapping = this.config.actionMap[action];
             if (mapping.keyboard) {
-                const key = scene.input.keyboard?.addKey(mapping.keyboard);
+                const key = scene.input.keyboard.addKey(mapping.keyboard);
                 if (key) {
                     key.on('down', () => {
                         if (this.isKeyboardEnabled && !this.actionStates.get(action)) {
@@ -272,26 +282,6 @@ export class ControlsManager {
         }
     }
 
-    private setupGamepadInput(scene: Phaser.Scene): void {
-        if (!this.config?.actionMap) return;
-
-        // Set up gamepad input using Phaser's gamepad manager
-        scene.input.gamepad?.on('down', (event: any, button: any, value: any, buttonIndex: number) => {
-            if (!this.isKeyboardEnabled) return; // Use keyboard enabled flag for gamepad too for now
-
-            const action = this.getActionForGamepadButton(buttonIndex);
-            if (action && !this.actionStates.get(action)) {
-                this.updateActionState(action, true, 'gamepad');
-            }
-        });
-
-        scene.input.gamepad?.on('up', (event: any, button: any, value: any, buttonIndex: number) => {
-            const action = this.getActionForGamepadButton(buttonIndex);
-            if (action && this.actionStates.get(action)) {
-                this.updateActionState(action, false, 'gamepad');
-            }
-        });
-    }
 
     // --- Private Event Handlers ---
 
@@ -334,22 +324,6 @@ export class ControlsManager {
         return null;
     }
 
-    /**
-     * Finds the action name associated with a given gamepad button index.
-     * @param buttonIndex - The gamepad button index.
-     * @returns The action name or null if no mapping exists.
-     */
-    private getActionForGamepadButton(buttonIndex: number): string | null {
-        if (!this.config?.actionMap) return null;
-
-        for (const action in this.config.actionMap) {
-            const mapping = this.config.actionMap[action];
-            if (mapping.gamepadButton === buttonIndex) {
-                return action;
-            }
-        }
-        return null;
-    }
 
     /**
      * Updates the state of an action and emits an event.
@@ -358,7 +332,7 @@ export class ControlsManager {
      * @param device - The type of device triggering the action.
      * @param position - Optional position data for pointer events.
      */
-    private updateActionState(action: string, isPressed: boolean, device: 'keyboard' | 'pointer' | 'gamepad' | 'unknown', position?: { x: number; y: number }): void {
+    private updateActionState(action: string, isPressed: boolean, device: 'keyboard' | 'pointer' | 'unknown', position?: { x: number; y: number }): void {
         this.actionStates.set(action, isPressed);
 
         // TODO: Determine playerId based on config.playerMappings and device (later)

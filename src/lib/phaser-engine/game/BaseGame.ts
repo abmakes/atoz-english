@@ -202,10 +202,10 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     fixedTimeAccumulator: 0
   };
 
-  /** 
+  /**
    * The transition screen instance for this game.
    */
-  protected transitionScreen: TransitionScreen;
+  protected transitionScreen: TransitionScreen | null = null;
 
   /**
    * Creates a new BaseGame instance.
@@ -216,10 +216,14 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     // Call Phaser Scene constructor with a unique key
     super({ key: `Game_${uuidv4()}` });
     
+    console.log('BaseGame constructor: config =', config);
+    console.log('BaseGame constructor: managers =', managers);
+    
     // Validate configuration
-    const validation = validateGameConfig(config);
-    if (!validation.valid) {
-      throw new Error(`Invalid game configuration: ${validation.errors?.join(', ')}`);
+    const validationErrors = validateGameConfig(config);
+    if (validationErrors.length > 0) {
+      console.error('BaseGame constructor: validation failed:', validationErrors);
+      throw new Error(`Invalid game configuration: ${validationErrors.join(', ')}`);
     }
 
     this.config = Object.freeze({ ...config });
@@ -227,24 +231,12 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     this.gameId = uuidv4();
     
     // Load theme configuration
-    this.themeConfig = getThemeConfig(this.config.themeId || 'default');
+    this.themeConfig = getThemeConfig(this.config.theme || 'default');
     
     // Initialize game state
     this.gameState = this.createInitialState();
     
-    // Create and add the transition screen early in the BaseGame constructor
-    this.transitionScreen = new TransitionScreen(
-      this, // Pass the Phaser Scene instance
-      this.managers.eventBus, 
-      this.managers.powerUpManager,
-      this.managers.gameStateManager,
-      this.managers.assetLoader
-    );
-    // Add to the highest UI layer
-    this.addToLayer(this.transitionScreen, RenderLayer.UI_FOREGROUND);
-
-    // Add listener for the new power-up selection event
-    this.registerEventListener(TRANSITION_EVENTS.POWERUP_SELECTED, this._handlePowerupSelected.bind(this));
+    // TransitionScreen will be created in the init method when the scene is ready
   }
 
   /**
@@ -330,6 +322,20 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
       // Wait for engine assets to be ready
       await engineAssetsPromise;
       
+      // Create and add the transition screen now that the scene is ready
+      this.transitionScreen = new TransitionScreen(
+        this, // Pass the Phaser Scene instance
+        this.managers.eventBus, 
+        this.managers.powerUpManager,
+        this.managers.gameStateManager,
+        this.managers.assetLoader
+      );
+      // Add to the highest UI layer
+      this.addToLayer(this.transitionScreen, RenderLayer.UI_FOREGROUND);
+
+      // Add listener for the new power-up selection event
+      this.registerEventListener(TRANSITION_EVENTS.POWERUP_SELECTED, this._handlePowerupSelected.bind(this));
+      
       // Call implementation
       await this.initImplementation(engineAssetsPromise);
       
@@ -408,6 +414,7 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    * @param {(...args: unknown[]) => void} listener - The event listener function.
    */
   protected registerEventListener(event: string, listener: (...args: unknown[]) => void): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.managers.eventBus.on(event as keyof EngineEvents, listener as any);
     this.eventListeners.push({ event, listener });
   }
@@ -419,7 +426,9 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    */
   protected addToLayer(gameObject: Phaser.GameObjects.GameObject, layer: RenderLayer): void {
     this.add.existing(gameObject);
-    gameObject.setDepth(layer);
+    if ('setDepth' in gameObject && typeof gameObject.setDepth === 'function') {
+      gameObject.setDepth(layer);
+    }
   }
 
   /**
@@ -428,6 +437,10 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    * @returns {Promise<void>} A promise that resolves when the transition is complete.
    */
   protected async showTransition(config: TransitionScreenConfig): Promise<void> {
+    if (!this.transitionScreen) {
+      console.warn('[BaseGame] TransitionScreen not initialized yet');
+      return;
+    }
     return this.transitionScreen.show(config);
   }
 
@@ -435,6 +448,10 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    * Hides the transition screen.
    */
   protected hideTransition(): void {
+    if (!this.transitionScreen) {
+      console.warn('[BaseGame] TransitionScreen not initialized yet');
+      return;
+    }
     this.transitionScreen.hide();
   }
 
@@ -442,8 +459,9 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    * Handles power-up selection events.
    * @param {TransitionPowerupSelectedPayload} payload - The power-up selection payload.
    */
-  private _handlePowerupSelected(payload: TransitionPowerupSelectedPayload): void {
-    console.log(`[BaseGame] Power-up selected: ${payload.selectedPowerupId} during ${payload.transitionType}`);
+  private _handlePowerupSelected(payload: unknown): void {
+    const powerupPayload = payload as any;
+    console.log(`[BaseGame] Power-up selected: ${powerupPayload?.selectedPowerupId} during ${powerupPayload?.transitionType}`);
     // Subclasses can override this method to handle power-up selections
   }
 
@@ -493,6 +511,7 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     
     // Clean up event listeners
     this.eventListeners.forEach(({ event, listener }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       this.managers.eventBus.off(event as keyof EngineEvents, listener as any);
     });
     this.eventListeners = [];

@@ -1,16 +1,13 @@
-import { Events } from 'phaser';
+import EventEmitter from 'eventemitter3';
 import { EngineEvents, TIMER_EVENTS } from './EventTypes';
 
 /**
  * EventBus provides a central hub for event-driven communication
  * throughout the Phaser engine and related components.
- * It wraps Phaser's EventEmitter and uses a defined type map for type safety.
- * 
- * This maintains full compatibility with the PixiJS EventBus interface
- * while using Phaser's native event system under the hood.
+ * It wraps EventEmitter3 and uses a defined type map for type safety.
  */
 export class EventBus {
-  private emitter: Events.EventEmitter;
+  private emitter: EventEmitter;
   private isDebugMode: boolean;
 
   /**
@@ -18,10 +15,10 @@ export class EventBus {
    * @param debug - Optional flag to enable debug logging for events.
    */
   constructor(debug: boolean = process.env.NODE_ENV === 'development') {
-    this.emitter = new Events.EventEmitter();
+    this.emitter = new EventEmitter();
     this.isDebugMode = debug;
     if (this.isDebugMode) {
-      console.log('[EventBus] Debug mode enabled.');
+      console.log('[PhaserEventBus] Debug mode enabled.');
     }
   }
 
@@ -82,15 +79,15 @@ export class EventBus {
     if (eventName === TIMER_EVENTS.TIMER_TICK) {
         return;
     }
-    console.log(`[EventBus] Event Emitted: ${String(eventName)}`, args.length > 0 ? args : '(No Payload)');
-    // Consider adding timestamp or other filtering logic here if needed
+    console.log(`[PhaserEventBus] Event Emitted: ${String(eventName)}`, args.length > 0 ? args : '(No Payload)');
   }
 
   /**
-   * Remove all listeners for a specific event or all events.
-   * @param eventName - Optional event name. If not provided, removes all listeners.
+   * Remove all listeners for a specific event.
+   * @param eventName - The name of the event.
+   * @returns The EventBus instance for chaining.
    */
-  public removeAllListeners(eventName?: string): this {
+  public removeAllListeners<K extends keyof EngineEvents>(eventName?: K): this {
     this.emitter.removeAllListeners(eventName);
     return this;
   }
@@ -100,7 +97,7 @@ export class EventBus {
    * @param eventName - The name of the event.
    * @returns The number of listeners.
    */
-  public listenerCount(eventName: string): number {
+  public listenerCount<K extends keyof EngineEvents>(eventName: K): number {
     return this.emitter.listenerCount(eventName);
   }
 
@@ -108,7 +105,7 @@ export class EventBus {
    * Get all event names that have listeners.
    * @returns Array of event names.
    */
-  public eventNames(): string[] {
+  public eventNames(): (string | symbol)[] {
     return this.emitter.eventNames();
   }
 
@@ -117,6 +114,6 @@ export class EventBus {
    */
   public destroy(): void {
     this.emitter.removeAllListeners();
-    this.emitter.destroy();
+    console.log('[PhaserEventBus] Destroyed and all listeners removed.');
   }
 }

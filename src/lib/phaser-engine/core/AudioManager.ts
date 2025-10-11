@@ -1,4 +1,4 @@
-import { Scene } from 'phaser';
+import { Howl, Howler } from 'howler';
 import { EventBus } from './EventBus';
 import { StorageManager } from './StorageManager';
 
@@ -35,12 +35,13 @@ interface AudioSettings {
 }
 
 /**
- * Manages audio playback using Phaser's audio system for the game engine.
- * This is a port from the PixiJS version that used Howler.js.
+ * Manages audio playback using Howler.js for the game engine.
+ * This is a port from the PixiJS version, maintaining the same interface
+ * and behavior for compatibility with the Phaser engine.
  */
 export class AudioManager {
   /** Map of registered sounds with their types */
-  private sounds: Map<string, { sound: Phaser.Sound.BaseSound; type: SoundType }> = new Map();
+  private sounds: Map<string, { sound: Howl; type: SoundType }> = new Map();
   /** Global volume setting (0.0 to 1.0) */
   private globalVolume: number = 1.0;
   /** Whether music is currently muted */
@@ -49,333 +50,362 @@ export class AudioManager {
   private isSfxMuted: boolean = false;
   /** Storage key for audio settings */
   private static readonly STORAGE_KEY = 'audio_settings';
-  /** Base path for audio files */
-  private basePath: string;
-  /** Event bus for audio events */
-  private eventBus: EventBus;
-  /** Storage manager for persisting settings */
-  private storageManager: StorageManager;
-  /** Phaser scene for audio context */
-  private scene: Scene | null = null;
+  /** Base path for sound assets, relative to /public */
+  private soundsBasePath: string = '/audio/default/'; // Default path
+  
+  /** The ID of the sound definition currently playing as music */
+  private currentMusicId: string | null = null;
+  /** The specific playback instance ID returned by Howler for the current music */
+  private currentMusicPlayingId: number | null = null;
 
-  /**
-   * Creates an instance of AudioManager.
-   * @param {EventBus} eventBus - The central event bus for emitting audio events.
-   * @param {StorageManager} storageManager - Storage manager for persisting audio settings.
-   * @param {string} basePath - Base path for audio files.
-   * @param {boolean} initialMusicMuted - Initial music muted state.
-   * @param {boolean} initialSfxMuted - Initial SFX muted state.
-   */
   constructor(
-    eventBus: EventBus,
-    storageManager: StorageManager,
-    basePath: string,
-    initialMusicMuted: boolean = false,
-    initialSfxMuted: boolean = false
+    private eventBus: EventBus,
+    private storageManager: StorageManager,
+    soundsBasePath?: string, // Make optional for backward compatibility or default theme
+    initialMusicMuted?: boolean, // <-- Add optional initial state param
+    initialSfxMuted?: boolean    // <-- Add optional initial state param
   ) {
-    this.eventBus = eventBus;
-    this.storageManager = storageManager;
-    this.basePath = basePath;
-    this.isMusicMuted = initialMusicMuted;
-    this.isSfxMuted = initialSfxMuted;
-    
-    // Load saved settings
+    // Load settings *first* as a fallback
     this.loadSettings();
+
+    // Override with initial states if provided
+    if (initialMusicMuted !== undefined) {
+      this.isMusicMuted = initialMusicMuted;
+    }
+    if (initialSfxMuted !== undefined) {
+      this.isSfxMuted = initialSfxMuted;
+    }
+
+    // Use provided base path or default
+    if (soundsBasePath) {
+        this.soundsBasePath = soundsBasePath;
+    }
     
-    console.log('AudioManager initialized with base path:', basePath);
+    console.log(`AudioManager initialized with sounds base path: ${this.soundsBasePath}`);
+    console.log('AudioManager initial state:', { 
+      volume: this.globalVolume, 
+      musicMuted: this.isMusicMuted, 
+      sfxMuted: this.isSfxMuted 
+    });
+
+    // Apply initial global volume
+    Howler.volume(this.globalVolume);
+    // Muting is handled internally now
+
+    // Save the potentially overridden initial state back to storage
+    this.saveSettings(); 
   }
 
   /**
-   * Sets the Phaser scene for audio context.
-   * @param {Scene} scene - The Phaser scene.
+   * Load audio settings from storage
    */
-  public setScene(scene: Scene): void {
-    this.scene = scene;
-    console.log('AudioManager: Scene set for audio context');
+  private loadSettings(): void {
+    const settings = this.storageManager.get<AudioSettings>(AudioManager.STORAGE_KEY);
+    if (settings) {
+      this.globalVolume = settings.volume ?? 1.0;
+      this.isMusicMuted = settings.musicMuted ?? false;
+      this.isSfxMuted = settings.sfxMuted ?? false;
+    } else {
+      // If no settings found, initialize with defaults
+      this.globalVolume = 1.0;
+      this.isMusicMuted = false;
+      this.isSfxMuted = false;
+    }
+    console.log('Loaded audio settings:', { 
+      volume: this.globalVolume, 
+      musicMuted: this.isMusicMuted, 
+      sfxMuted: this.isSfxMuted 
+    });
   }
 
   /**
-   * Registers a sound with the audio manager.
-   * @param {AudioConfig} config - The audio configuration.
-   * @throws {Error} If the sound ID already exists or if scene is not set.
+   * Save current audio settings to storage
    */
-  public registerSound(config: AudioConfig): void {
+  private saveSettings(): void {
+    this.storageManager.set(AudioManager.STORAGE_KEY, {
+      volume: this.globalVolume,
+      musicMuted: this.isMusicMuted,
+      sfxMuted: this.isSfxMuted
+    });
+    console.log('Saved audio settings:', { 
+      volume: this.globalVolume, 
+      musicMuted: this.isMusicMuted, 
+      sfxMuted: this.isSfxMuted 
+    });
+  }
+
+  /**
+   * Register a new sound with the audio manager
+   * @param config Configuration for the sound to register
+   * @returns The created Howl instance
+   */
+  public registerSound(config: AudioConfig): Howl {
     if (this.sounds.has(config.id)) {
-      throw new Error(`Sound with ID '${config.id}' is already registered`);
+      console.warn(`Sound with id ${config.id} already registered. Returning existing instance.`);
+      // Ensure we return the Howl instance, not the stored object
+      return this.sounds.get(config.id)!.sound; 
     }
 
-    if (!this.scene) {
-      throw new Error('Scene must be set before registering sounds');
-    }
+    // Construct the full path using the base path and filename
+    // Ensure paths are joined correctly (e.g., handle leading/trailing slashes)
+    const fullSrc = `${this.soundsBasePath.replace(/\/$/, '')}/${config.filename.replace(/^\//, '')}`;
+    console.log(`Registering sound ${config.id} with path: ${fullSrc}`);
 
-    const fullPath = `${this.basePath}${config.filename}`;
-    
-    try {
-      // Load the sound using Phaser's audio system
-      this.scene.load.audio(config.id, fullPath);
-      
-      // Create a placeholder sound object that will be replaced when loaded
-      const sound = {
-        id: config.id,
-        type: config.type,
-        volume: config.volume || 1.0,
-        loop: config.loop || false,
-        loaded: false
-      } as any;
+    const sound = new Howl({
+      src: [fullSrc], // Use the constructed full path
+      loop: config.loop ?? false,
+      volume: (config.volume ?? 1.0) * this.globalVolume,
+      preload: config.preload ?? true,
+      sprite: config.sprite
+    });
 
-      this.sounds.set(config.id, { sound, type: config.type });
-      
-      console.log(`AudioManager: Registered sound '${config.id}' from '${fullPath}'`);
-    } catch (error) {
-      console.error(`AudioManager: Failed to register sound '${config.id}':`, error);
-      throw error;
-    }
+    // Store the Howl instance and its type
+    this.sounds.set(config.id, { sound: sound, type: config.type }); 
+    return sound;
   }
 
   /**
-   * Plays a registered sound.
-   * @param {string} soundId - The ID of the sound to play.
-   * @param {number} [volume] - Optional volume override (0.0 to 1.0).
-   * @returns {boolean} True if the sound was played successfully, false otherwise.
+   * Play a registered sound
+   * @param id The ID of the sound to play
+   * @param sprite Optional sprite name if using audio sprites
+   * @returns The sound ID for controlling playback, or null if sound not found or muted
    */
-  public playSound(soundId: string, volume?: number): boolean {
-    const soundData = this.sounds.get(soundId);
+  public play(id: string, sprite?: string): number | null {
+    const soundData = this.sounds.get(id);
     if (!soundData) {
-      console.warn(`AudioManager: Sound '${soundId}' not found`);
-      return false;
+      console.warn(`No sound registered with id: ${id}`);
+      return null;
     }
 
-    // Check if sound type is muted
-    if ((soundData.type === 'music' && this.isMusicMuted) || 
-        (soundData.type === 'sfx' && this.isSfxMuted)) {
-      return false;
-    }
-
-    if (!this.scene) {
-      console.warn('AudioManager: Scene not set, cannot play sound');
-      return false;
-    }
-
-    try {
-      // Get the actual Phaser sound object
-      const phaserSound = this.scene.sound.get(soundId);
-      if (!phaserSound) {
-        console.warn(`AudioManager: Sound '${soundId}' not loaded in scene`);
-        return false;
+    // Handle Music Playback
+    if (soundData.type === 'music') {
+      // Stop previous music if different or restarting
+      if (this.currentMusicId && (this.currentMusicId !== id || !soundData.sound.playing(this.currentMusicPlayingId ?? undefined))) {
+           this.stop(this.currentMusicId, this.currentMusicPlayingId ?? undefined);
       }
-
-      // Set volume
-      const finalVolume = (volume !== undefined ? volume : soundData.sound.volume || 1.0) * this.globalVolume;
-      phaserSound.setVolume(finalVolume);
-
-      // Play the sound
-      phaserSound.play();
       
-      console.log(`AudioManager: Playing sound '${soundId}' at volume ${finalVolume}`);
-      return true;
-    } catch (error) {
-      console.error(`AudioManager: Failed to play sound '${soundId}':`, error);
-      return false;
-    }
-  }
-
-  /**
-   * Stops a playing sound.
-   * @param {string} soundId - The ID of the sound to stop.
-   * @returns {boolean} True if the sound was stopped successfully, false otherwise.
-   */
-  public stopSound(soundId: string): boolean {
-    if (!this.scene) {
-      console.warn('AudioManager: Scene not set, cannot stop sound');
-      return false;
-    }
-
-    try {
-      const phaserSound = this.scene.sound.get(soundId);
-      if (phaserSound && phaserSound.isPlaying) {
-        phaserSound.stop();
-        console.log(`AudioManager: Stopped sound '${soundId}'`);
-        return true;
+      // Check if already playing this exact instance
+      if (this.currentMusicId === id && this.currentMusicPlayingId !== null && soundData.sound.playing(this.currentMusicPlayingId)) {
+          console.log(`Music sound '${id}' is already playing (instance: ${this.currentMusicPlayingId}).`);
+          return this.currentMusicPlayingId; // Return existing playing ID
       }
-      return false;
-    } catch (error) {
-      console.error(`AudioManager: Failed to stop sound '${soundId}':`, error);
-      return false;
+
+      // If globally muted, don't start new music
+      if (this.isMusicMuted) {
+          console.log(`Cannot play music sound '${id}' - Music is globally muted.`);
+          this.currentMusicId = id; // Still track it as the intended music
+          this.currentMusicPlayingId = null; // But no active playing instance
+          return null;
+      }
+
+      console.log(`Playing music sound: ${id}`);
+      const playingId = soundData.sound.play(sprite);
+      
+      // Track the new music
+      this.currentMusicId = id;
+      this.currentMusicPlayingId = playingId;
+
+      // Apply the current mute state *immediately* to this instance
+      // This shouldn't be needed if we checked isMusicMuted above, but belt-and-suspenders
+      soundData.sound.mute(this.isMusicMuted, playingId);
+      
+      return playingId;
+
+    // Handle SFX Playback
+    } else { 
+      if (this.isSfxMuted) {
+        console.log(`SFX sound '${id}' muted.`);
+        return null;
+      }
+      console.log(`Playing SFX sound: ${id}`);
+      return soundData.sound.play(sprite);
     }
   }
 
   /**
-   * Stops all sounds of a specific type.
-   * @param {SoundType} type - The type of sounds to stop.
+   * Stop a specific sound or sprite
+   * @param id The ID of the sound to stop
+   * @param soundId Optional specific sound instance ID to stop
    */
-  public stopAllSounds(type?: SoundType): void {
-    if (!this.scene) {
-      console.warn('AudioManager: Scene not set, cannot stop sounds');
-      return;
-    }
-
-    try {
-      if (type) {
-        // Stop sounds of specific type
-        this.sounds.forEach((soundData, soundId) => {
-          if (soundData.type === type) {
-            const phaserSound = this.scene!.sound.get(soundId);
-            if (phaserSound && phaserSound.isPlaying) {
-              phaserSound.stop();
-            }
-          }
-        });
-        console.log(`AudioManager: Stopped all ${type} sounds`);
+  public stop(id: string, soundId?: number): void {
+    const soundData = this.sounds.get(id);
+    if (soundData) {
+      console.log(`Stopping sound: ${id}${soundId !== undefined ? ` (instance: ${soundId})` : ''}`);
+      
+      // If stopping the currently tracked music instance
+      if (id === this.currentMusicId && (soundId === undefined || soundId === this.currentMusicPlayingId)) {
+          console.log(`   -> Clearing tracked music ID: ${this.currentMusicId} / ${this.currentMusicPlayingId}`);
+          this.currentMusicId = null;
+          this.currentMusicPlayingId = null;
+      }
+      
+      // Stop the actual sound instance(s)
+      if (soundId !== undefined) {
+        soundData.sound.stop(soundId);
       } else {
-        // Stop all sounds
-        this.scene.sound.stopAll();
-        console.log('AudioManager: Stopped all sounds');
+        soundData.sound.stop(); // Stops all instances of this sound ID
+         // If stopping all instances, ensure tracked ID is cleared if it matches
+         if (id === this.currentMusicId) {
+            this.currentMusicId = null;
+            this.currentMusicPlayingId = null;
+        }
       }
-    } catch (error) {
-      console.error('AudioManager: Failed to stop sounds:', error);
+    } else {
+        console.warn(`Cannot stop sound: ID '${id}' not found.`);
     }
   }
 
   /**
-   * Sets the global volume for all sounds.
-   * @param {number} volume - Volume level (0.0 to 1.0).
+   * Stop all currently playing sounds
+   */
+  public stopAll(): void {
+    console.log("Stopping all sounds via Howler.stop()");
+    // Use Howler's global stop, which should trigger stop events if needed
+    Howler.stop(); 
+    // Clear tracked music state
+    this.currentMusicId = null; 
+    this.currentMusicPlayingId = null;
+    // Note: Howler.stop() stops everything. We might need more granular control
+    // if we only want to stop *our* managed sounds, but this is simpler for now.
+    // Alternative: Iterate this.sounds and call stop() on each.
+    // this.sounds.forEach((soundData, id) => {
+    //     console.log(`Stopping sound: ${id}`);
+    //     soundData.sound.stop();
+    // });
+    // this.currentMusicId = null;
+    // this.currentMusicPlayingId = null;
+  }
+
+  /**
+   * Set the volume for a specific sound
+   * @param id The ID of the sound
+   * @param volume Volume level (0.0 to 1.0)
+   */
+  public setVolume(id: string, volume: number): void {
+    const soundData = this.sounds.get(id);
+    if (soundData) {
+      soundData.sound.volume(volume * this.globalVolume);
+    }
+  }
+
+  /**
+   * Set the global volume level for all sounds
+   * @param volume Volume level (0.0 to 1.0)
    */
   public setGlobalVolume(volume: number): void {
     this.globalVolume = Math.max(0, Math.min(1, volume));
+    Howler.volume(this.globalVolume);
     this.saveSettings();
-    console.log(`AudioManager: Global volume set to ${this.globalVolume}`);
   }
 
   /**
-   * Gets the current global volume.
-   * @returns {number} The current global volume (0.0 to 1.0).
+   * Get the current global volume level
+   * @returns The current global volume (0.0 to 1.0)
    */
   public getGlobalVolume(): number {
     return this.globalVolume;
   }
 
   /**
-   * Sets whether music is muted.
-   * @param {boolean} muted - True to mute music, false to unmute.
+   * Mute/unmute music tracks.
+   * @param muted Whether music should be muted.
    */
   public setMusicMuted(muted: boolean): void {
-    this.isMusicMuted = muted;
-    this.saveSettings();
-    
-    if (muted) {
-      this.stopAllSounds('music');
+    if (this.isMusicMuted !== muted) {
+      this.isMusicMuted = muted;
+      console.log(`Setting global Music Mute: ${muted}.`);
+
+      // Apply mute state to the currently playing music instance, if any
+      if (this.currentMusicId && this.currentMusicPlayingId !== null) {
+        const soundData = this.sounds.get(this.currentMusicId);
+        if (soundData) {
+            console.log(`   -> Applying mute(${muted}) to music instance: ${this.currentMusicId} / ${this.currentMusicPlayingId}`);
+            soundData.sound.mute(muted, this.currentMusicPlayingId);
+        } else {
+             console.warn(`   -> Could not find Howl instance for tracked music ID ${this.currentMusicId} to apply mute state.`);
+        }
+      } else {
+         console.log(`   -> No tracked music instance (${this.currentMusicId} / ${this.currentMusicPlayingId}) to apply mute state to.`);
+      }
+      
+      // If unmuting, and we *have* a currentMusicId but *no* playing instance
+      // (meaning play() was called while muted), try to start it now.
+      if (!muted && this.currentMusicId && this.currentMusicPlayingId === null) {
+         console.log(`   -> Music was unmuted, attempting to play intended music: ${this.currentMusicId}`);
+         this.play(this.currentMusicId); // This will handle checks and potentially start playback
+      }
+
+      this.saveSettings();
+    } else {
+        console.log(`Global Music Mute already set to: ${muted}. No change.`);
     }
-    
-    console.log(`AudioManager: Music ${muted ? 'muted' : 'unmuted'}`);
   }
 
   /**
-   * Gets whether music is muted.
-   * @returns {boolean} True if music is muted, false otherwise.
+   * Check if music is currently muted.
+   * @returns Whether music is muted.
    */
-  public isMusicMuted(): boolean {
+  public getIsMusicMuted(): boolean {
     return this.isMusicMuted;
   }
 
   /**
-   * Sets whether sound effects are muted.
-   * @param {boolean} muted - True to mute SFX, false to unmute.
+   * Mute/unmute sound effects.
+   * @param muted Whether SFX should be muted.
    */
   public setSfxMuted(muted: boolean): void {
-    this.isSfxMuted = muted;
-    this.saveSettings();
-    
-    if (muted) {
-      this.stopAllSounds('sfx');
+    if (this.isSfxMuted !== muted) {
+      this.isSfxMuted = muted;
+      console.log(`SFX ${muted ? 'muted' : 'unmuted'}.`);
+      // Stop currently playing SFX if muted
+      if (muted) {
+        this.sounds.forEach((soundData) => {
+          if (soundData.type === 'sfx') {
+            soundData.sound.stop();
+          }
+        });
+      }
+      this.saveSettings();
     }
-    
-    console.log(`AudioManager: SFX ${muted ? 'muted' : 'unmuted'}`);
   }
 
   /**
-   * Gets whether sound effects are muted.
-   * @returns {boolean} True if SFX are muted, false otherwise.
+   * Check if sound effects are currently muted.
+   * @returns Whether SFX are muted.
    */
-  public isSfxMuted(): boolean {
+  public getIsSfxMuted(): boolean {
     return this.isSfxMuted;
   }
 
   /**
-   * Loads audio settings from storage.
+   * Unload and destroy a registered sound
+   * @param id The ID of the sound to unload
    */
-  private loadSettings(): void {
-    try {
-      const settings = this.storageManager.getItem<AudioSettings>(AudioManager.STORAGE_KEY);
-      if (settings) {
-        this.globalVolume = settings.volume;
-        this.isMusicMuted = settings.musicMuted;
-        this.isSfxMuted = settings.sfxMuted;
-        console.log('AudioManager: Settings loaded from storage');
-      }
-    } catch (error) {
-      console.warn('AudioManager: Failed to load settings from storage:', error);
+  public unregisterSound(id: string): void {
+    const soundData = this.sounds.get(id);
+    if (soundData) {
+      soundData.sound.unload();
+      this.sounds.delete(id);
     }
   }
 
   /**
-   * Saves audio settings to storage.
-   */
-  private saveSettings(): void {
-    try {
-      const settings: AudioSettings = {
-        volume: this.globalVolume,
-        musicMuted: this.isMusicMuted,
-        sfxMuted: this.isSfxMuted
-      };
-      this.storageManager.setItem(AudioManager.STORAGE_KEY, settings);
-    } catch (error) {
-      console.warn('AudioManager: Failed to save settings to storage:', error);
-    }
-  }
-
-  /**
-   * Gets information about a registered sound.
-   * @param {string} soundId - The ID of the sound.
-   * @returns {AudioConfig | null} The sound configuration or null if not found.
-   */
-  public getSoundInfo(soundId: string): AudioConfig | null {
-    const soundData = this.sounds.get(soundId);
-    if (!soundData) {
-      return null;
-    }
-
-    return {
-      id: soundId,
-      filename: '', // We don't store the filename in the sound data
-      type: soundData.type,
-      volume: soundData.sound.volume || 1.0,
-      loop: soundData.sound.loop || false
-    };
-  }
-
-  /**
-   * Gets all registered sound IDs.
-   * @returns {string[]} Array of registered sound IDs.
-   */
-  public getRegisteredSounds(): string[] {
-    return Array.from(this.sounds.keys());
-  }
-
-  /**
-   * Cleans up resources used by the AudioManager.
+   * Clean up all sounds and reset the manager
    */
   public destroy(): void {
-    console.log('AudioManager: Destroying...');
-    
-    // Stop all sounds
-    this.stopAllSounds();
-    
-    // Clear sounds map
+    console.log('Destroying AudioManager...');
+    // Use stopAll to clear Howler state and our tracked state
+    this.stopAll(); 
+    // Unload all sounds
+    this.sounds.forEach((soundData, id) => {
+         console.log(`   -> Unloading sound: ${id}`);
+         soundData.sound.unload();
+    });
     this.sounds.clear();
-    
-    // Clear scene reference
-    this.scene = null;
-    
-    console.log('AudioManager: Destroyed');
+    this.currentMusicId = null;
+    this.currentMusicPlayingId = null;
+    console.log('AudioManager destroyed.');
+    // No need to reset Howler global volume here, as it persists across instances
+    Howler.unload();
   }
 }
