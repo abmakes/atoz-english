@@ -1,11 +1,11 @@
 import { BaseGame } from '@/lib/phaser-engine/game/BaseGame';
-// import { PhaserEngineManagers } from '@/lib/phaser-engine/core/PhaserEngine';
-// import { GameConfig } from '@/lib/phaser-engine/config/GameConfig';
+import { PhaserEngineManagers } from '@/lib/phaser-engine/core/PhaserEngine';
+import { GameConfig } from '@/lib/phaser-engine/config/GameConfig';
 import { MultipleChoiceDataManager } from './managers/MultipleChoiceDataManager';
 import { MultipleChoiceUIManager } from './managers/MultipleChoiceUIManager';
 import { GameBackgroundManager } from './managers/GameBackgroundManager';
 import { MultipleChoiceLayoutManager } from './managers/MultipleChoiceLayoutManager';
-import { GAME_EVENTS, TIMER_EVENTS, GAME_STATE_EVENTS } from '@/lib/phaser-engine/core/EventTypes';
+import { GAME_EVENTS, TIMER_EVENTS, GAME_STATE_EVENTS, TimerEventPayload, TransitionPowerupSelectedPayload } from '@/lib/phaser-engine/core/EventTypes';
 import { TimerType } from '@/lib/phaser-engine/game/TimerManager';
 import { QuestionData } from '@/types';
 
@@ -33,7 +33,13 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
     private backgroundManager!: GameBackgroundManager;
     private layoutManager!: MultipleChoiceLayoutManager;
     private currentAnswerOptions: AnswerOptionUIData[] = [];
+    private currentQuestion: QuestionData | null = null;
     private readonly QUESTION_TIMER_ID = 'multipleChoiceQuestionTimer';
+
+    constructor(config: GameConfig, managers: PhaserEngineManagers) {
+        super(config, managers);
+        console.log("MultipleChoiceGame constructor - Config received:", this.config);
+    }
 
     protected createInitialState(): MultipleChoiceGameState {
         const firstTeamId = this.config.teams.length > 0 ? this.config.teams[0].id : 'unknown';
@@ -48,18 +54,19 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         };
     }
 
-    protected async initImplementation(): Promise<void> {
+    protected async initImplementation(engineAssetsPromise: Promise<unknown>): Promise<void> {
         console.log('MultipleChoiceGame: Initializing Phaser version...');
         
         // Show loading transition
         await this.showTransition({ 
             type: 'loading', 
             message: 'Getting Ready...', 
-            autoHide: false 
+            autoHide: true,
+            duration: 1000
         });
 
-        // Get screen dimensions from Phaser
-        const { width, height } = this.managers.phaserGame.scale;
+        // Get screen dimensions from Phaser scene
+        const { width, height } = this.scale;
 
         // Initialize Layout Manager
         this.layoutManager = new MultipleChoiceLayoutManager(width, height);
@@ -74,30 +81,46 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
 
         this.dataManager = new MultipleChoiceDataManager(
             this.config.quizId,
-            this.config.questionHandling,
-            this.managers.assetLoader
+            this.config.questionHandling
         );
 
         // Load data
-        await this.dataManager.loadData();
+        console.log('MultipleChoiceGame: About to load data...');
+        try {
+            await this.dataManager.loadData();
+            console.log('MultipleChoiceGame: Data loaded successfully');
+            
+            // Check if we have questions
+            if (this.dataManager.getTotalLoadedQuestions() === 0) {
+                throw new Error('No questions found in quiz data');
+            }
+        } catch (error) {
+            console.error('MultipleChoiceGame: Failed to load data:', error);
+            await this.showTransition({ 
+                type: 'custom', 
+                message: 'Failed to load quiz data. Please try again.', 
+                duration: 3000, 
+                autoHide: true 
+            });
+            throw error;
+        }
 
         // Get the actual scene from the Phaser game
-        const scene = this.managers.phaserGame.scene.getScene('MainGameScene');
+        const scene = this; // This IS the scene
         if (!scene) {
             throw new Error('MainGameScene not found');
         }
 
         // Initialize Background Manager
         this.backgroundManager = new GameBackgroundManager(
-            scene,
+            this,
             this.managers.eventBus
         );
 
         // Initialize UI Manager
         this.uiManager = new MultipleChoiceUIManager(
-            scene,
+            this,
             this.managers.eventBus,
-            this.managers.assetLoader,
             width,
             height,
             this.layoutManager,
@@ -192,6 +215,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         if (!question) {
             console.log("DataManager indicates sequence finished.");
             if (!this.getState().hasTriggeredGameOver) {
+                console.log("MultipleChoiceGame: No more questions, triggering game over from _showQuestion");
                 this._triggerGameOver();
             }
             return;
@@ -200,6 +224,9 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         // Clear previous state
         this.uiManager.clearQuestionState();
         this.currentAnswerOptions = [];
+
+        // Store current question reference
+        this.currentQuestion = question;
 
         // Update question content
         this.uiManager.updateQuestionContent(question);
@@ -285,9 +312,8 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         // Disable buttons
         this.uiManager.setAnswerButtonsEnabled(false);
 
-        const question = this.dataManager.getQuestionById(questionId);
-        if (!question) {
-            console.error(`Could not find question data ID ${questionId}`);
+        if (!this.currentQuestion || this.currentQuestion.id !== questionId) {
+            console.error(`Current question mismatch: expected ${questionId}, got ${this.currentQuestion?.id || 'null'}`);
             this.uiManager.setAnswerButtonsEnabled(true);
             return;
         }
@@ -300,7 +326,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         }
 
         // Process the answer
-        this._processAnswerSelection(question, selectedOption, this.currentAnswerOptions);
+        this._processAnswerSelection(this.currentQuestion, selectedOption, this.currentAnswerOptions);
 
         // Wait for feedback
         await new Promise(resolve => setTimeout(resolve, 1500));
@@ -391,8 +417,13 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
     }
 
     private _triggerGameOver(): void {
-        if (this.getState().hasTriggeredGameOver) return;
+        console.log('MultipleChoiceGame: _triggerGameOver called');
+        if (this.getState().hasTriggeredGameOver) {
+            console.log('MultipleChoiceGame: Game over already triggered, returning');
+            return;
+        }
 
+        console.log('MultipleChoiceGame: Triggering game over...');
         this.hideTransition();
         this.setState({ 
             hasTriggeredGameOver: true,
@@ -400,12 +431,27 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         });
 
         this.uiManager?.setAnswerButtonsEnabled(false);
+        
+        // Get final scores from ScoringManager
+        const finalScores = this.config.teams.map(team => ({
+            playerName: team.name || `Team ${team.id}`,
+            score: this.managers.scoringManager.getScore(team.id)
+        }));
+        
+        // Determine winner (team with highest score)
+        const winner = finalScores.reduce((prev, current) => 
+            (prev.score > current.score) ? prev : current
+        );
+        
+        console.log('MultipleChoiceGame: Game over - Final scores:', finalScores, 'Winner:', winner.playerName);
+        
         this.managers.eventBus.emit(GAME_STATE_EVENTS.GAME_ENDED, {
-            scores: [],
-            winner: 'Unknown'
+            scores: finalScores,
+            winner: winner.playerName
         });
         this.end();
         this.uiManager?.clearQuestionState();
+        this.currentQuestion = null;
     }
 
     private async _handleTimerComplete(payload: unknown): Promise<void> {
@@ -426,8 +472,10 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         if (this.getState().hasTriggeredGameOver) return;
 
         const isSequenceFinished = this.dataManager.isSequenceFinished();
+        console.log("MultipleChoiceGame: Timer complete - isSequenceFinished:", isSequenceFinished);
 
         if (isSequenceFinished) {
+            console.log("MultipleChoiceGame: Sequence finished, triggering game over from _handleTimerComplete");
             this._triggerGameOver();
         } else {
             // Move to next team
@@ -460,20 +508,14 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
     private _handleTimeUp(): void {
         if (!this.dataManager || !this.uiManager) return;
 
-        const currentQuestionIndex = this.getState().currentQuestionIndex;
-        const allQuestions = this.dataManager.getAllQuestions();
-        const question = currentQuestionIndex >= 0 && currentQuestionIndex < allQuestions.length
-            ? allQuestions[currentQuestionIndex]
-            : undefined;
-
         const currentTeamId = this.getState().activeTeam;
 
-        if (question) {
-            this._showTimeUpFeedback(question);
+        if (this.currentQuestion) {
+            this._showTimeUpFeedback(this.currentQuestion);
 
             // Emit timeout event
             this.managers.eventBus.emit(GAME_EVENTS.ANSWER_SELECTED, {
-                questionId: question.id,
+                questionId: this.currentQuestion.id,
                 selectedOptionId: null,
                 isCorrect: false,
                 teamId: currentTeamId,

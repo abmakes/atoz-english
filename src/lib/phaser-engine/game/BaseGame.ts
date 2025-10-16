@@ -285,6 +285,9 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
   create(): void {
     console.log(`[BaseGame] Scene created: ${this.scene.key}`);
     this.currentState = GameState.INITIALIZED;
+    
+    // Emit a custom event to signal that the scene is ready for our custom initialization
+    this.events.emit('scene-ready');
   }
 
   /**
@@ -308,12 +311,15 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
 
   /**
    * Initializes the game with engine assets.
+   * This is our custom initialization method, separate from Phaser's init() lifecycle method.
    * @param {Promise<unknown>} engineAssetsPromise - Promise that resolves when engine assets are loaded.
    * @returns {Promise<void>} A promise that resolves when initialization is complete.
    */
-  public async init(engineAssetsPromise: Promise<unknown>): Promise<void> {
+  public async initializeGame(engineAssetsPromise: Promise<unknown>): Promise<void> {
+    console.log(`[BaseGame] initializeGame() called - currentState: ${this.currentState}, expected: ${GameState.INITIALIZED}`);
     if (this.currentState !== GameState.INITIALIZED) {
-      throw new Error('Game must be initialized before calling init()');
+      console.error(`[BaseGame] State check failed - currentState: ${this.currentState}, expected: ${GameState.INITIALIZED}`);
+      throw new Error('Game must be initialized before calling initializeGame()');
     }
 
     try {
@@ -327,8 +333,7 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
         this, // Pass the Phaser Scene instance
         this.managers.eventBus, 
         this.managers.powerUpManager,
-        this.managers.gameStateManager,
-        this.managers.assetLoader
+        this.managers.gameStateManager
       );
       // Add to the highest UI layer
       this.addToLayer(this.transitionScreen, RenderLayer.UI_FOREGROUND);
@@ -441,6 +446,7 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
       console.warn('[BaseGame] TransitionScreen not initialized yet');
       return;
     }
+    console.log('[BaseGame] showTransition called with config:', config);
     return this.transitionScreen.show(config);
   }
 

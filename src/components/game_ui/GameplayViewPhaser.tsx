@@ -8,12 +8,14 @@ import { GameOverPayload } from '@/types/gameTypes';
 
 interface GameplayViewPhaserProps {
   gameSlug: string;
+  quizId: string;
   onGameOver: (payload: GameOverPayload) => void;
   onBack: () => void;
 }
 
 export default function GameplayViewPhaser({
   gameSlug,
+  quizId,
   onGameOver,
   onBack
 }: GameplayViewPhaserProps) {
@@ -22,21 +24,38 @@ export default function GameplayViewPhaser({
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Use a ref to store the callback to avoid re-initialization
+  const onGameOverRef = useRef(onGameOver);
+  onGameOverRef.current = onGameOver;
+
   const handleGameOver = useCallback((payload: GameOverPayload) => {
     console.log('GameplayViewPhaser: Game over received:', payload);
-    onGameOver(payload);
-  }, [onGameOver]);
+    onGameOverRef.current(payload);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
 
     const initializeGame = async () => {
       try {
-        if (!gameContainerRef.current || engineInstanceRef.current) {
+        if (!gameContainerRef.current) {
+          console.log('GameplayViewPhaser: No container ref available');
           return;
         }
 
-        console.log('GameplayViewPhaser: Initializing Phaser game...');
+        // Check if there's already a Phaser canvas in the container
+        const existingCanvas = gameContainerRef.current.querySelector('canvas');
+        if (existingCanvas) {
+          console.log('GameplayViewPhaser: Canvas already exists, skipping initialization');
+          return;
+        }
+
+        if (engineInstanceRef.current) {
+          console.log('GameplayViewPhaser: Engine already exists, skipping initialization');
+          return;
+        }
+
+        console.log('GameplayViewPhaser: Initializing Phaser game...', { gameSlug });
         setError(null);
 
         // Create Phaser engine
@@ -56,13 +75,18 @@ export default function GameplayViewPhaser({
         const eventBus = phaserEngine.getManager('eventBus');
         
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        eventBus.on('game:over', (payload: any) => {
+        eventBus.on('game:ended', (payload: any) => {
           console.log('GameplayViewPhaser: Game over event received:', payload);
           handleGameOver(payload);
         });
 
         // Initialize with the appropriate game
-        const gameConfig = MULTIPLE_CHOICE_GAME_CONFIG;
+        const gameConfig = {
+          ...MULTIPLE_CHOICE_GAME_CONFIG,
+          quizId: quizId // Set the quizId from props
+        };
+        
+        console.log('GameplayViewPhaser: Using game config with quizId:', quizId);
         
         if (gameSlug === 'multiple-choice') {
           await phaserEngine.init(gameConfig, (config, managers) => {
@@ -90,14 +114,24 @@ export default function GameplayViewPhaser({
     initializeGame();
 
     return () => {
+      console.log('GameplayViewPhaser: useEffect cleanup triggered', { gameSlug });
       mounted = false;
       if (engineInstanceRef.current) {
         console.log('GameplayViewPhaser: Destroying engine...');
         engineInstanceRef.current.destroy();
         engineInstanceRef.current = null;
       }
+      
+      // Clean up any remaining canvas elements
+      if (gameContainerRef.current) {
+        const canvases = gameContainerRef.current.querySelectorAll('canvas');
+        canvases.forEach(canvas => {
+          console.log('GameplayViewPhaser: Removing canvas element');
+          canvas.remove();
+        });
+      }
     };
-  }, [gameSlug, handleGameOver]);
+  }, [gameSlug, quizId]);
 
   if (error) {
     return (

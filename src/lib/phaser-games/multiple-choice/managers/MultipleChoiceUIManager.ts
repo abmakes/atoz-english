@@ -1,6 +1,5 @@
 import { Scene } from 'phaser';
 import { EventBus } from '@/lib/phaser-engine/core/EventBus';
-import { AssetLoader } from '@/lib/phaser-engine/assets/AssetLoader';
 import { ENGINE_EVENTS, TIMER_EVENTS } from '@/lib/phaser-engine/core/EventTypes';
 import { MultipleChoiceLayoutManager, LayoutProfile } from './MultipleChoiceLayoutManager';
 import { QuestionData } from '@/types';
@@ -24,7 +23,6 @@ interface GameRef {
 export class MultipleChoiceUIManager {
     private scene: Scene;
     private eventBus: EventBus;
-    private assetLoader: typeof AssetLoader;
     private layoutManager: MultipleChoiceLayoutManager;
     private gameRef: GameRef;
     
@@ -50,7 +48,6 @@ export class MultipleChoiceUIManager {
     constructor(
         scene: Scene,
         eventBus: EventBus,
-        assetLoader: typeof AssetLoader,
         screenWidth: number,
         screenHeight: number,
         layoutManager: MultipleChoiceLayoutManager,
@@ -59,7 +56,6 @@ export class MultipleChoiceUIManager {
         console.log('PhaserMultipleChoiceUIManager created');
         this.scene = scene;
         this.eventBus = eventBus;
-        this.assetLoader = assetLoader;
         this.layoutManager = layoutManager;
         this.gameRef = gameRef;
         this.screenWidth = screenWidth;
@@ -193,24 +189,36 @@ export class MultipleChoiceUIManager {
         this._clearQuestionImage();
 
         try {
-            // Use AssetLoader to get the display object
-            const displayObject = this.assetLoader.getDisplayObject(imageUrl);
-            if (displayObject) {
-                // Convert to Phaser Image if it's a PIXI object
-                if (displayObject instanceof Phaser.GameObjects.Image) {
-                    this.questionImage = displayObject;
-                } else {
-                    // For PIXI objects, we need to create a Phaser equivalent
-                    // This is a simplified approach - in a real implementation,
-                    // you'd need to handle the conversion properly
-                    console.warn('PhaserUIManager: PIXI object conversion not fully implemented');
-                }
-
-                if (this.questionImage) {
+            // Load image using Phaser's native loader
+            const imageKey = `question-${Date.now()}`; // Use timestamp to ensure uniqueness
+            
+            // Check if already loaded
+            if (!this.scene.textures.exists(imageKey)) {
+                this.scene.load.image(imageKey, imageUrl);
+                this.scene.load.once('complete', () => {
+                    this.questionImage = this.scene.add.image(
+                        this.layoutParams.questionImageX,
+                        this.layoutParams.questionImageY,
+                        imageKey
+                    );
                     this.questionImage.setOrigin(0.5);
                     this.questionContainer.add(this.questionImage);
                     this._positionQuestionImage();
-                }
+                });
+                this.scene.load.once('loaderror', (file: any) => {
+                    console.error('PhaserUIManager: Error loading question image:', file.key, file.url);
+                });
+                this.scene.load.start();
+            } else {
+                // Already loaded, just create the image
+                this.questionImage = this.scene.add.image(
+                    this.layoutParams.questionImageX,
+                    this.layoutParams.questionImageY,
+                    imageKey
+                );
+                this.questionImage.setOrigin(0.5);
+                this.questionContainer.add(this.questionImage);
+                this._positionQuestionImage();
             }
         } catch (error) {
             console.error('PhaserUIManager: Error loading question image:', error);

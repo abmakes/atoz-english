@@ -4,7 +4,6 @@ import { TRANSITION_EVENTS, TransitionPowerupSelectedPayload } from '../core/Eve
 import { PowerUpManager, SelectablePowerupInfo } from '../game/PowerUpManager';
 import { PowerupSpinWheel } from './PowerupSpinWheel';
 import { GameStateManager } from '../core/GameStateManager';
-import { AssetLoader } from '../assets/AssetLoader';
 import { RenderLayer } from '../game/BaseGame';
 
 export interface TransitionScreenConfig {
@@ -39,7 +38,6 @@ export class TransitionScreen extends GameObjects.Container {
   private powerUpManager: PowerUpManager;
   private gameStateManager: GameStateManager;
   private scene: Scene;
-  private assetLoader: typeof AssetLoader;
 
   // State for power-up selection
   private finalSelectedPowerupId: string | null = null;
@@ -53,8 +51,7 @@ export class TransitionScreen extends GameObjects.Container {
     scene: Scene,
     eventBus: EventBus,
     powerUpManager: PowerUpManager,
-    gameStateManager: GameStateManager,
-    assetLoader: typeof AssetLoader
+    gameStateManager: GameStateManager
   ) {
     super(scene, 0, 0);
     
@@ -62,7 +59,6 @@ export class TransitionScreen extends GameObjects.Container {
     this.eventBus = eventBus;
     this.powerUpManager = powerUpManager;
     this.gameStateManager = gameStateManager;
-    this.assetLoader = assetLoader;
     
     console.log('[TransitionScreen Constructor] PowerUpManager received:', this.powerUpManager);
 
@@ -452,18 +448,44 @@ export class TransitionScreen extends GameObjects.Container {
   private async _loadQuestionImage(imageUrl: string): Promise<void> {
     try {
       console.log('Loading question image:', imageUrl);
-      const displayObject = this.assetLoader.getDisplayObject(imageUrl);
       
-      if (displayObject) {
-        // Convert PIXI display object to Phaser sprite
-        // This is a simplified conversion - in practice, you might need more sophisticated handling
-        if (this.questionImage) {
-          this.questionImage.destroy();
-        }
-        
-        // For now, we'll create a placeholder sprite
-        // In a full implementation, you'd convert the PIXI object to a Phaser texture
-        this.questionImage = this.scene.add.sprite(0, 0, 'question-image');
+      // Clear existing image
+      if (this.questionImage) {
+        this.questionImage.destroy();
+        this.questionImage = null;
+      }
+      
+      // Load image using Phaser's native loader
+      const imageKey = `question-transition-${Date.now()}`;
+      
+      // Check if already loaded
+      if (!this.scene.textures.exists(imageKey)) {
+        this.scene.load.image(imageKey, imageUrl);
+        this.scene.load.once('complete', () => {
+          this.questionImage = this.scene.add.sprite(0, 0, imageKey);
+          this.questionImage.setOrigin(0.5);
+          this.questionImage.setPosition(this.panelWidth / 2, this.panelHeight * 0.25);
+          
+          // Scale image to fit
+          const maxWidth = this.panelWidth * 0.8;
+          const maxHeight = this.panelHeight * 0.4;
+          const scaleX = maxWidth / this.questionImage.width;
+          const scaleY = maxHeight / this.questionImage.height;
+          const scale = Math.min(scaleX, scaleY, 1);
+          this.questionImage.setScale(scale);
+          
+          this.add(this.questionImage);
+          this.questionImage.setVisible(true);
+          
+          console.log('Question image loaded and displayed');
+        });
+        this.scene.load.once('loaderror', (file: any) => {
+          console.error('TransitionScreen: Error loading question image:', file.key, file.url);
+        });
+        this.scene.load.start();
+      } else {
+        // Already loaded, just create the sprite
+        this.questionImage = this.scene.add.sprite(0, 0, imageKey);
         this.questionImage.setOrigin(0.5);
         this.questionImage.setPosition(this.panelWidth / 2, this.panelHeight * 0.25);
         
@@ -479,8 +501,6 @@ export class TransitionScreen extends GameObjects.Container {
         this.questionImage.setVisible(true);
         
         console.log('Question image loaded and displayed');
-      } else {
-        console.warn(`AssetLoader.getDisplayObject returned null for: ${imageUrl}`);
       }
     } catch (error) {
       console.warn('Failed to load question image:', error);

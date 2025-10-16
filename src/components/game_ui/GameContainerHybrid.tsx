@@ -104,7 +104,7 @@ export default function GameContainerHybrid({ quizId, gameSlug }: GameContainerP
     }
   }, [gameOverData]);
 
-  const renderGameplayView = () => {
+  const renderGameplayView = useCallback(() => {
     if (!gameSetupData) {
       return <div>No game setup data available</div>;
     }
@@ -112,7 +112,9 @@ export default function GameContainerHybrid({ quizId, gameSlug }: GameContainerP
     if (engineType === 'phaser') {
       return (
         <PhaserGameplayView
+          key={`phaser-${gameSlug}`}
           gameSlug={gameSlug}
+          quizId={quizId}
           onGameOver={handleGameOver}
           onBack={handleBackFromPlaying}
         />
@@ -132,7 +134,7 @@ export default function GameContainerHybrid({ quizId, gameSlug }: GameContainerP
         />
       );
     }
-  };
+  }, [gameSetupData, engineType, gameSlug, quizId, handleGameOver, handleBackFromPlaying]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">

@@ -250,17 +250,7 @@ export class PhaserEngine {
       // PowerUpManager init
       this.powerUpManager = new PowerUpManager(this.eventBus, this.config);
 
-      // RuleEngine init
-      this.ruleEngine = new RuleEngine(this.eventBus, this.config, {
-        gameStateManager: this.gameStateManager,
-        scoringManager: this.scoringManager,
-        powerUpManager: this.powerUpManager,
-        timerManager: this.timerManager,
-        storageManager: this.storageManager,
-        audioManager: undefined // Will be set after AudioManager is created
-      });
-
-      // Create AudioManager
+      // Create AudioManager first
       const themeConfig = getThemeConfig('default');
       this.audioManager = new AudioManager(
         this.eventBus,
@@ -269,6 +259,16 @@ export class PhaserEngine {
         this.config.initialMusicMuted || false,
         this.config.initialSfxMuted || false
       );
+
+      // RuleEngine init (after AudioManager is created)
+      this.ruleEngine = new RuleEngine(this.eventBus, this.config, {
+        gameStateManager: this.gameStateManager,
+        scoringManager: this.scoringManager,
+        powerUpManager: this.powerUpManager,
+        timerManager: this.timerManager,
+        storageManager: this.storageManager,
+        audioManager: this.audioManager
+      });
 
       // Register Default Sounds
       const defaultSounds: AudioConfig[] = [
@@ -314,30 +314,24 @@ export class PhaserEngine {
       // We need to wait for the scene to be created before calling our custom init
       console.log('Setting up game initialization after scene creation...');
       
-      // Add the scene to the game and wait for it to be created
+      // Add the scene to the game first
       this.game.scene.add('MainGameScene', this.currentGame, true);
       
       // Set up a promise that resolves when the scene is created and our init is called
       const gameInitPromise = new Promise<void>((resolve, reject) => {
-        // Use a timeout to wait for the scene to be ready
-        const checkSceneReady = () => {
-          if (this.currentGame.scene && this.currentGame.scene.isActive()) {
-            // Scene is ready, now call our custom init
-            this.currentGame.init(bundleLoadPromise).then(() => {
-              console.log('Game initialization complete.');
-              resolve();
-            }).catch((error) => {
-              console.error('Error during game initialization:', error);
-              reject(error);
-            });
-          } else {
-            // Scene not ready yet, check again in next frame
-            setTimeout(checkSceneReady, 16); // ~60fps
-          }
-        };
-        
-        // Start checking
-        setTimeout(checkSceneReady, 16);
+        // Wait for the scene to be fully initialized by Phaser
+        // Use a timeout to ensure the scene's create() method has been called
+        setTimeout(() => {
+          console.log('Scene should be ready now, calling custom initializeGame()');
+          // Now call our custom initializeGame after the scene's create() method has set currentState to INITIALIZED
+          this.currentGame.initializeGame(bundleLoadPromise).then(() => {
+            console.log('Game initialization complete.');
+            resolve();
+          }).catch((error) => {
+            console.error('Error during game initialization:', error);
+            reject(error);
+          });
+        }, 100); // Wait 100ms for the scene to be fully initialized
       });
 
       // Wait for the game initialization to complete

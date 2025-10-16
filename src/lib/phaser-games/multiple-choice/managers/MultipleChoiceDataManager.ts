@@ -1,7 +1,6 @@
 import { QuestionData } from '@/types';
 import { QuestionSequencer } from '@/lib/phaser-engine/game/QuestionSequencer';
 import { QuestionHandlingConfig } from '@/lib/phaser-engine/config/GameConfig';
-import { AssetLoader } from '@/lib/phaser-engine/assets/AssetLoader';
 
 export class MultipleChoiceDataManager {
     private questionsData: QuestionData[] = [];
@@ -10,13 +9,10 @@ export class MultipleChoiceDataManager {
     // Store config needed for loading/sequencing
     private quizId: string;
     private questionHandlingConfig: QuestionHandlingConfig;
-    private assetLoader: typeof AssetLoader;
-
-    constructor(quizId: string, questionHandlingConfig: QuestionHandlingConfig, assetLoader: typeof AssetLoader) {
+    constructor(quizId: string, questionHandlingConfig: QuestionHandlingConfig) {
         console.log('[PhaserDataManager] Constructor START');
         console.log('[PhaserDataManager] Received quizId:', quizId);
         console.log('[PhaserDataManager] Received questionHandlingConfig:', questionHandlingConfig);
-        console.log('[PhaserDataManager] Received assetLoader:', assetLoader ? 'Exists' : 'Missing');
 
         if (!quizId) {
             console.error('[PhaserDataManager] Constructor ERROR: Quiz ID is missing!');
@@ -28,7 +24,6 @@ export class MultipleChoiceDataManager {
         }
         this.quizId = quizId;
         this.questionHandlingConfig = questionHandlingConfig;
-        this.assetLoader = assetLoader;
         console.log('[PhaserDataManager] Constructor END');
     }
 
@@ -72,6 +67,7 @@ export class MultipleChoiceDataManager {
 
     // --- Private loading methods ---
     private async _loadQuestionData(): Promise<void> {
+
         const maxRetries = 3;
         const retryDelay = 1000; // 1 second
         
@@ -167,30 +163,8 @@ export class MultipleChoiceDataManager {
              return;
          }
         
-        console.log(`PhaserDataManager: Preloading ${uniqueImageUrls.length} unique media assets...`);
-
-        try {
-             // Use the hybrid AssetLoader for preloading
-             console.log("PhaserDataManager: Starting asset preloading for:", uniqueImageUrls);
-             
-             // Load images individually to handle failures gracefully
-             const loadPromises = uniqueImageUrls.map(async (url) => {
-                 try {
-                     await this.assetLoader.preloadAssets([url]);
-                     console.log(`PhaserDataManager: Successfully preloaded image: ${url}`);
-                 } catch (error) {
-                     console.warn(`PhaserDataManager: Failed to preload image ${url}:`, error);
-                     // Don't throw - continue with other images
-                 }
-             });
-             
-             await Promise.allSettled(loadPromises);
-             console.log("PhaserDataManager: Question media preloading completed (some may have failed).");
-
-         } catch (error) {
-             console.error("PhaserDataManager: Error during asset preloading for question media:", error);
-             // Don't throw - allow game to continue even if some images fail to load
-         }
+        console.log(`PhaserDataManager: Found ${uniqueImageUrls.length} image URLs (preloading deferred to on-demand loading).`);
+        // Preloading removed - images will be loaded on-demand when needed
     }
     
     // --- Sequencer Accessors ---
@@ -204,11 +178,11 @@ export class MultipleChoiceDataManager {
     }
 
     public isSequenceFinished(): boolean {
-        return this.questionSequencer?.isFinished() ?? true; // Default to true if sequencer not init
+        return !(this.questionSequencer?.hasMoreQuestions() ?? false); // Default to true if sequencer not init
     }
 
     public getCurrentProgressIndex(): number {
-         return this.questionSequencer?.getCurrentProgressIndex() ?? 0;
+         return this.questionSequencer?.getCurrentIndex() ?? 0;
     }
 
     public getTotalQuestionsToAsk(): number {
@@ -240,4 +214,5 @@ export class MultipleChoiceDataManager {
         this.preloadedMediaUrls = [];
         this.questionSequencer = undefined;
     }
+
 }

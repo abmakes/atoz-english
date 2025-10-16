@@ -60,13 +60,13 @@ export class ControlsManager {
         }
         console.log('Enabling ControlsManager...');
         
-        // Set up keyboard input using Phaser's keyboard manager
-        this.setupKeyboardInput(scene);
+        // Keyboard input disabled for now - multiple choice game uses mouse/touch only
+        // this.setupKeyboardInput(scene);
         
-        // Note: Gamepad input removed for now - focusing on keyboard and touch/click
+        // Note: Gamepad input removed for now - focusing on touch/click only
         
         this.isEnabled = true;
-        console.log('ControlsManager enabled.');
+        console.log('ControlsManager enabled (keyboard input disabled).');
     }
 
     /**
@@ -248,20 +248,34 @@ export class ControlsManager {
 
     // --- Private Setup Methods ---
 
-    private setupKeyboardInput(scene: Phaser.Scene): void {
+    // Keyboard input disabled for now - multiple choice game uses mouse/touch only
+    /*
+    private setupKeyboardInput(scene: Phaser.Scene, retryCount: number = 0): void {
         if (!this.config?.actionMap) return;
 
+        // Maximum retry limit to prevent infinite loops
+        const MAX_RETRIES = 50; // 5 seconds max (50 * 100ms)
+        
         // Check if the scene's input system is ready
         if (!scene.input || !scene.input.keyboard) {
-            console.warn('ControlsManager: Scene input system not ready, deferring keyboard setup');
+            if (retryCount >= MAX_RETRIES) {
+                console.error('ControlsManager: Scene input system not ready after maximum retries, giving up keyboard setup');
+                return;
+            }
+            
+            if (retryCount === 0) {
+                console.warn('ControlsManager: Scene input system not ready, deferring keyboard setup');
+            }
+            
             // Use setTimeout instead of scene.time.delayedCall since scene.time might not be ready
             setTimeout(() => {
-                this.setupKeyboardInput(scene);
+                this.setupKeyboardInput(scene, retryCount + 1);
             }, 100);
             return;
         }
 
         // Set up keyboard input using Phaser's keyboard manager
+        let keyboardActionsSetup = 0;
         for (const action in this.config.actionMap) {
             const mapping = this.config.actionMap[action];
             if (mapping.keyboard) {
@@ -277,10 +291,18 @@ export class ControlsManager {
                             this.updateActionState(action, false, 'keyboard');
                         }
                     });
+                    keyboardActionsSetup++;
                 }
             }
         }
+        
+        if (retryCount > 0) {
+            console.log(`ControlsManager: Keyboard setup completed after ${retryCount} retries, ${keyboardActionsSetup} actions configured`);
+        } else {
+            console.log(`ControlsManager: Keyboard setup completed immediately, ${keyboardActionsSetup} actions configured`);
+        }
     }
+    */
 
 
     // --- Private Event Handlers ---
