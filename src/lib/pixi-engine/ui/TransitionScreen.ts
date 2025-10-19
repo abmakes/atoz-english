@@ -19,6 +19,7 @@ export interface TransitionScreenConfig {
   triggerPowerupRoll?: boolean; // Add the flag here
   question?: { question: string; imageUrl?: string; [key: string]: unknown }; // QuestionData for question preview
   showCountdown?: boolean; // Show countdown after question preview
+  questionCounter?: { current: number; total: number }; // Question counter info
 }
 
 /**
@@ -32,6 +33,7 @@ export class TransitionScreen extends PIXI.Container {
   private questionImage: PIXI.Sprite | null = null; // For question image
   private countdownText: Text; // For countdown
   private goText: Text; // For GO! text
+  private questionCounterText: Text; // For "Question X of Y" display
   private powerupSpinWheel: PowerupSpinWheel | null = null; // Spin wheel for powerup selection
   private currentConfig: TransitionScreenConfig | null = null;
   private timeoutId: number | null = null;
@@ -137,6 +139,20 @@ export class TransitionScreen extends PIXI.Container {
     this.goText.anchor.set(0.5);
     this.addChild(this.goText);
 
+    // Question counter text
+    this.questionCounterText = new Text({ 
+      text: '', 
+      style: {
+        fontFamily: 'Grandstander',
+        fontSize: 24,
+        fontWeight: 'bold',
+        fill: 0x114257,
+        align: 'center'
+      }
+    });
+    this.questionCounterText.anchor.set(0.5);
+    this.addChild(this.questionCounterText);
+
     // Power-up Spin Wheel (will be created when needed)
     this.powerupSpinWheel = null;
 
@@ -163,9 +179,14 @@ export class TransitionScreen extends PIXI.Container {
   }
 
   private _centerMessageText(): void {
-      // Position "Get Ready" in top half of screen
+      // Position team turn message in center of screen
       this.messageText.style.wordWrapWidth = this.panelWidth * 0.9;
-      this.messageText.position.set(this.app.screen.width / 2, this.app.screen.height * 0.25); // Top quarter
+      this.messageText.position.set(this.app.screen.width / 2, this.app.screen.height * 0.4); // Center
+  }
+
+  private _centerQuestionCounterText(): void {
+      // Position question counter higher up to provide better spacing when powerups are shown
+      this.questionCounterText.position.set(this.app.screen.width / 2, this.app.screen.height * 0.25); // Higher up for better balance
   }
 
   private _centerQuestionText(): void {
@@ -176,13 +197,13 @@ export class TransitionScreen extends PIXI.Container {
 
   private _centerCountdownText(): void {
       // Position countdown in center
-      this.countdownText.position.set(this.app.screen.width / 2, this.app.screen.height / 2);
+      this.countdownText.position.set(this.app.screen.width / 2, this.app.screen.height / 2 + 30);
   }
 
   private _centerGoText(): void {
       // Position GO! in center
-      this.goText.position.set(this.app.screen.width / 2, this.app.screen.height / 2);
-  }
+      this.goText.position.set(this.app.screen.width / 2, this.app.screen.height / 2 + 30);
+  } 
 
 
   private _centerPowerupText(): void {
@@ -194,6 +215,7 @@ export class TransitionScreen extends PIXI.Container {
     this.questionText.visible = false;
     this.countdownText.visible = false;
     this.goText.visible = false;
+    // Don't hide question counter here - it will be controlled by config
     
     if (this.questionImage) {
       this.questionImage.destroy();
@@ -336,6 +358,9 @@ export class TransitionScreen extends PIXI.Container {
     this.questionText.visible = true; // Keep question visible
     this.goText.visible = true;
     
+    // Emit event when GO! appears to start timer
+    this.eventBus.emit(TRANSITION_EVENTS.GO_SHOWN);
+    
     // Add some animation to GO! text
     this.goText.scale.set(0.5);
     const targetScale = 1.2;
@@ -436,6 +461,7 @@ export class TransitionScreen extends PIXI.Container {
     this._drawPanelBackground();
     this._centerPanel();
     this._centerMessageText();
+    this._centerQuestionCounterText();
     this._centerQuestionText();
     this._centerCountdownText();
     this._centerGoText();
@@ -444,6 +470,14 @@ export class TransitionScreen extends PIXI.Container {
 
     this.messageText.text = config.message || '';
     // wordWrapWidth is set in _centerMessageText
+
+    // Set question counter text if provided
+    if (config.questionCounter) {
+      this.questionCounterText.text = `Question ${config.questionCounter.current} of ${config.questionCounter.total}`;
+      this.questionCounterText.visible = true;
+    } else {
+      this.questionCounterText.visible = false;
+    }
 
     // Handle different transition types
     this._resetUIElements();
@@ -468,8 +502,8 @@ export class TransitionScreen extends PIXI.Container {
     this.finalSelectedPowerupId = null;
     this.currentSelectablePowerups = [];
 
-    // Create power-up spin wheel if requested (only for powerup type)
-    if (config.triggerPowerupRoll && config.type === 'powerup') {
+    // Create power-up spin wheel if requested (for any transition type)
+    if (config.triggerPowerupRoll) {
         console.log('[TransitionScreen show()] Checking this.powerUpManager before getSelectablePowerups:', this.powerUpManager);
         this.currentSelectablePowerups = this.powerUpManager.getSelectablePowerups();
         console.log(`[TransitionScreen] Got ${this.currentSelectablePowerups.length} selectable powerups from manager.`);
@@ -560,6 +594,7 @@ export class TransitionScreen extends PIXI.Container {
     this._drawPanelBackground();
     this._centerPanel();
     this._centerMessageText();
+    this._centerQuestionCounterText();
     this._centerQuestionText();
     this._centerCountdownText();
     this._centerGoText();

@@ -171,6 +171,7 @@ export const TRANSITION_EVENTS = {
   START: 'transition:start',
   END: 'transition:end',
   POWERUP_SELECTED: 'transition:powerupSelected',
+  GO_SHOWN: 'transition:goShown',
 } as const;
 
 export interface TransitionStartPayload {
@@ -283,6 +284,7 @@ export interface EngineEvents {
   [TRANSITION_EVENTS.START]: (payload: TransitionStartPayload) => void;
   [TRANSITION_EVENTS.END]: (payload: TransitionEndPayload) => void;
   [TRANSITION_EVENTS.POWERUP_SELECTED]: (payload: TransitionPowerupSelectedPayload) => void;
+  [TRANSITION_EVENTS.GO_SHOWN]: () => void;
 
   // Add Game Specific Events
   [GAME_EVENTS.ANSWER_SELECTED]: (payload: AnswerSelectedPayload) => void;

@@ -327,8 +327,13 @@ export class ControlsManager {
     private updateActionState(action: string, isPressed: boolean, device: 'keyboard' | 'pointer' | 'gamepad' | 'unknown', position?: { x: number; y: number }): void {
         this.actionStates.set(action, isPressed);
 
-        // TODO: Determine playerId based on config.playerMappings and device (later)
-        const playerId = 'player1'; // Placeholder
+        // Map action to playerId for splash-dash
+        let playerId = 'player1'; // Default
+        if (action === 'MOVE_PLAYER1') {
+            playerId = 'player1';
+        } else if (action === 'MOVE_PLAYER2') {
+            playerId = 'player2';
+        }
 
         // Construct payload according to ControlsPlayerActionPayload
         const payload: ControlsPlayerActionPayload = {

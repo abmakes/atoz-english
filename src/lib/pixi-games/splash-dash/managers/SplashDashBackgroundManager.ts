@@ -2,6 +2,7 @@ import * as PIXI from 'pixi.js';
 import { AssetLoader } from '@/lib/pixi-engine/assets/AssetLoader';
 import { EventBus } from '@/lib/pixi-engine/core/EventBus';
 import { ENGINE_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
+import { SplashDashLayoutManager } from './SplashDashLayoutManager';
 
 export class SplashDashBackgroundManager {
     private view: PIXI.Container;
@@ -10,6 +11,7 @@ export class SplashDashBackgroundManager {
     private themeConfig: Record<string, unknown>;
     private eventBus: EventBus;
     private assetLoader: typeof AssetLoader;
+    private layoutManager: SplashDashLayoutManager;
     
     // Water effect properties
     private waterTexture: PIXI.Texture | null = null;
@@ -45,12 +47,13 @@ export class SplashDashBackgroundManager {
         bottomright: null
     };
 
-    constructor(app: PIXI.Application, themeConfig: Record<string, unknown>, eventBus: EventBus, assetLoader: typeof AssetLoader) {
+    constructor(app: PIXI.Application, themeConfig: Record<string, unknown>, eventBus: EventBus, assetLoader: typeof AssetLoader, layoutManager: SplashDashLayoutManager) {
         console.log('SplashDashBackgroundManager created');
         this.app = app;
         this.themeConfig = themeConfig;
         this.eventBus = eventBus;
         this.assetLoader = assetLoader;
+        this.layoutManager = layoutManager;
         
         this.view = new PIXI.Container();
         this.view.label = 'SplashDashBackground';
@@ -94,7 +97,9 @@ export class SplashDashBackgroundManager {
     }
 
     private _handleResize = (): void => {
-        // Reinitialize background when screen is resized
+        // Update layout manager first, then reinitialize background
+        const { width, height } = this.app.screen;
+        this.layoutManager.updateLayout(width, height);
         this._initBackground();
     }
 
@@ -108,7 +113,7 @@ export class SplashDashBackgroundManager {
     private async _loadCornerLeaves(width: number, height: number): Promise<void> {
         try {
             // Calculate the bottom UI height to position bottom leaves above the question box
-            const BOTTOM_UI_HEIGHT = 150; // Same as defined in UIManager
+            const BOTTOM_UI_HEIGHT = this.layoutManager.getLayoutParams().bottomUIHeight;
             const bottomY = height - BOTTOM_UI_HEIGHT;
             
             const cornerPositions = [
@@ -157,6 +162,14 @@ export class SplashDashBackgroundManager {
 
     public getView(): PIXI.Container {
         return this.view;
+    }
+
+    /**
+     * Updates the layout when screen dimensions change
+     */
+    public updateLayout(screenWidth: number, screenHeight: number): void {
+        this.layoutManager.updateLayout(screenWidth, screenHeight);
+        this._initBackground();
     }
 
     /**
@@ -277,7 +290,7 @@ export class SplashDashBackgroundManager {
     private _createContrastOverlay(screenWidth: number, screenHeight: number): void {
         try {
             // Calculate the area to cover (full screen minus bottom UI area)
-            const BOTTOM_UI_HEIGHT = 150; // Same as defined in UIManager
+            const BOTTOM_UI_HEIGHT = this.layoutManager.getLayoutParams().bottomUIHeight;
             const overlayHeight = screenHeight - BOTTOM_UI_HEIGHT;
             
             this.contrastOverlay = new PIXI.Graphics();

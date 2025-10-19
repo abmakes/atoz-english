@@ -1,7 +1,7 @@
 import { BaseGame, BaseGameState, GameState } from '@/lib/pixi-engine/game/BaseGame';
 import { PixiEngineManagers } from '@/lib/pixi-engine/core/PixiEngine';
 import { GameConfig } from '@/lib/pixi-engine/config/GameConfig';
-import { GAME_STATE_EVENTS, TIMER_EVENTS, TimerEventPayload, GAME_EVENTS, AnswerSelectedPayload, CONTROLS_EVENTS, ControlsPlayerActionPayload } from '@/lib/pixi-engine/core/EventTypes';
+import { GAME_STATE_EVENTS, TIMER_EVENTS, TimerEventPayload, CONTROLS_EVENTS, ControlsPlayerActionPayload, TRANSITION_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
 import { TimerType } from '@/lib/pixi-engine/game/TimerManager';
 import { GameSetupData as SplashDashGameConfig } from '@/types/gameTypes';
 import { QuestionData } from '@/types';
@@ -65,6 +65,7 @@ interface SplashDashGameState extends BaseGameState {
         correct: boolean;
         timer: number;
     };
+    firstCorrectAnswerer: string | null; // Track who answered correctly first per question
 }
 
 /**
@@ -79,6 +80,12 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
     private playerManager!: SplashDashPlayerManager;
     private readonly QUESTION_TIMER_ID = 'splashDashQuestionTimer';
     private readonly MOVEMENT_TIMER_ID = 'splashDashMovementTimer';
+    
+    private readonly SCORING = {
+        FIRST_CORRECT_BONUS: 5,
+        INCORRECT_PENALTY: -3,
+        TIMEOUT_PENALTY: -1
+    };
     
     constructor(config: GameConfig, managers: PixiEngineManagers) {
         super(config, managers);
@@ -133,7 +140,8 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
             currentQuestion: null,
             answerCircles: [],
             gamePhase: 'playing',
-            feedback: { show: false, x: 0, y: 0, correct: false, timer: 0 }
+            feedback: { show: false, x: 0, y: 0, correct: false, timer: 0 },
+            firstCorrectAnswerer: null
         };
     }
 
@@ -180,11 +188,10 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
             // Hide loading transition
             this.hideTransition();
 
-            // Show turn transition screen
-            const firstTeamName = this.config.teams[0]?.name || 'Team 1';
+            // Show get ready transition screen (both teams play simultaneously)
             await this.showTransition({ 
-                type: 'turn', 
-                message: `${firstTeamName}'s Turn!`, 
+                type: 'loading', 
+                message: 'Get Ready!', 
                 duration: 2000, 
                 autoHide: true 
             });
@@ -192,7 +199,7 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
 
 
             // Initialize Background Manager
-            this.backgroundManager = new SplashDashBackgroundManager(this.pixiApp.getApp(), this.themeConfig as unknown as Record<string, unknown>, this.eventBus, this.assetLoader);
+            this.backgroundManager = new SplashDashBackgroundManager(this.pixiApp.getApp(), this.themeConfig as unknown as Record<string, unknown>, this.eventBus, this.assetLoader, this.layoutManager);
             this.view.addChildAt(this.backgroundManager.getView(), 0);
 
             // Initialize Player Manager
@@ -210,7 +217,8 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
                 this.eventBus,
                 this.assetLoader,
                 this.themeConfig.pixiConfig as unknown as Record<string, unknown>,
-                this.layoutManager
+                this.layoutManager,
+                this.controlsManager
             );
             this.view.addChild(this.uiManager.getView());
 
@@ -221,7 +229,7 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
             this.dataManager.initializeSequencer(this.config.teams.length);
 
             // Show the first question with transition
-            this._showQuestionWithTransition();
+            await this._showQuestionWithTransition();
 
             // Bind game-specific events
             this._bindGameEvents();
@@ -251,6 +259,7 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
         this.registerEventListener(GAME_STATE_EVENTS.GAME_PAUSED, this._handleGamePaused.bind(this));
         this.registerEventListener(GAME_STATE_EVENTS.GAME_RESUMED, this._handleGameResumed.bind(this));
         this.registerEventListener(CONTROLS_EVENTS.PLAYER_ACTION, this._handlePlayerAction.bind(this));
+        this.registerEventListener(TRANSITION_EVENTS.GO_SHOWN, this._handleGoShown.bind(this));
         console.log("[SplashDashGame] _bindGameEvents: Listeners registered.");
     }
 
@@ -262,6 +271,7 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
         this.unregisterEventListener(GAME_STATE_EVENTS.GAME_PAUSED, this._handleGamePaused.bind(this));
         this.unregisterEventListener(GAME_STATE_EVENTS.GAME_RESUMED, this._handleGameResumed.bind(this));
         this.unregisterEventListener(CONTROLS_EVENTS.PLAYER_ACTION, this._handlePlayerAction.bind(this));
+        this.unregisterEventListener(TRANSITION_EVENTS.GO_SHOWN, this._handleGoShown.bind(this));
     }
 
     /**
@@ -278,6 +288,14 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
         
         // Start the movement timer for continuous updates
         this._startMovementTimer();
+    }
+
+    /**
+     * Handles when GO! appears in transition screen - starts the question timer
+     */
+    private _handleGoShown(): void {
+        console.log("[SplashDashGame] GO! shown - starting question timer");
+        this._startQuestionTimer();
     }
 
     /**
@@ -301,8 +319,8 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
         // Check for collisions with answer circles
         this._checkAnswerCollisions();
         
-        // Update UI elements (if needed)
-        // this.uiManager?.update(delta);
+        // Update UI proximity highlighting
+        this.uiManager?.updateAnswerProximity(this.getState().players);
         
         // Update background effects (water animation)
         this.backgroundManager?.update();
@@ -387,14 +405,14 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
             autoHide: false
         });
 
-        // After transition, show the actual question
-        this._showQuestion(question);
+        // After transition completes, show the actual question
+        await this._showQuestion(question);
     }
 
     /**
      * Shows the next question using Data and UI Managers.
      */
-    private _showQuestion(question?: QuestionData): void {
+    private async _showQuestion(question?: QuestionData): Promise<void> {
         if (!this.dataManager || !this.uiManager) {
             console.error("Cannot show question: Managers not initialized.");
             this._triggerGameOver();
@@ -457,14 +475,12 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
         this.setState({ 
             currentQuestionIndex: this.dataManager.getCurrentProgressIndex() - 1,
             currentQuestion: question,
-            answerCircles: answerCircles
+            answerCircles: answerCircles,
+            firstCorrectAnswerer: null // Reset first correct answerer for new question
         });
 
         // Setup answer rectangles in UI
-        this.uiManager.setupAnswerRectangles(question.id, answerCircles);
-
-        // Start the question timer
-        this._startQuestionTimer();
+        await this.uiManager.setupAnswerRectangles(question.id, answerCircles);
 
         // Update question counter
         const currentIndex = this.getState().currentQuestionIndex;
@@ -503,6 +519,9 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
 
         this.timerManager.createTimer(this.QUESTION_TIMER_ID, questionDuration, TimerType.COUNTDOWN);
         this.timerManager.startTimer(this.QUESTION_TIMER_ID);
+
+        // Update UI timer display
+        this.uiManager?.updateTimerDisplay(questionDuration);
 
         console.log(`Created and started timer ${this.QUESTION_TIMER_ID} for ${questionDuration}ms`);
     }
@@ -560,7 +579,11 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
         const allPlayersAnswered = this.getState().players.every(player => player.isAtAnswer);
         
         if (allPlayersAnswered) {
-            // All players have answered, wait for feedback then move to next question
+            // All players have answered, remove timer and wait for feedback then move to next question
+            if (this.timerManager && this.timerManager.getTimer(this.QUESTION_TIMER_ID)) {
+                this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
+            }
+            
             await new Promise(resolve => setTimeout(resolve, 2000)); // Longer feedback time
             
             if (this.getState().hasTriggeredGameOver) { return; }
@@ -573,7 +596,7 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
                 this._triggerGameOver();
             } else {
                 // Move to next question with transition
-                this._showQuestionWithTransition();
+                await this._showQuestionWithTransition();
             }
         } else {
             // Some players haven't answered yet, just show feedback for this player
@@ -633,38 +656,51 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
             remainingTimeMs = this.timerManager.getTimeRemaining(this.QUESTION_TIMER_ID);
         }
 
-        // Update player score based on answer correctness
+        // Calculate score based on new system
         const players = [...this.getState().players];
         const playerIndex = players.findIndex(p => p.id === teamId);
+        let pointsEarned = 0;
+        let wasFirst = false;
+
         if (playerIndex !== -1) {
             if (isCorrect) {
-                players[playerIndex] = { ...players[playerIndex], score: players[playerIndex].score + 1 };
-                console.log(`[SplashDashGame] Player ${teamId} score increased to ${players[playerIndex].score} (correct answer)`);
+                // Check if this is the first correct answer
+                const currentState = this.getState();
+                if (currentState.firstCorrectAnswerer === null) {
+                    // First correct answer - set as first and add bonus
+                    this.setState({ firstCorrectAnswerer: teamId });
+                    wasFirst = true;
+                }
+                
+                // Calculate score: remaining seconds + 5 bonus if first
+                const remainingSeconds = Math.floor(remainingTimeMs / 1000);
+                pointsEarned = remainingSeconds + (wasFirst ? this.SCORING.FIRST_CORRECT_BONUS : 0);
+                
+                // Update score using ScoringManager to emit events
+                this.scoringManager.addScore(teamId, pointsEarned);
+                
+                // Update local state for consistency
+                players[playerIndex] = { ...players[playerIndex], score: this.scoringManager.getScore(teamId) };
+                console.log(`[SplashDashGame] Player ${teamId} score increased by ${pointsEarned} (${remainingSeconds}s + ${wasFirst ? this.SCORING.FIRST_CORRECT_BONUS : 0} bonus) to ${players[playerIndex].score}`);
             } else {
-                players[playerIndex] = { ...players[playerIndex], score: Math.max(0, players[playerIndex].score - 5) };
-                console.log(`[SplashDashGame] Player ${teamId} score decreased to ${players[playerIndex].score} (incorrect answer, -5 points)`);
+                // Incorrect answer - use subtractScore for negative values
+                pointsEarned = this.SCORING.INCORRECT_PENALTY;
+                this.scoringManager.subtractScore(teamId, Math.abs(pointsEarned));
+                
+                // Update local state for consistency
+                players[playerIndex] = { ...players[playerIndex], score: this.scoringManager.getScore(teamId) };
+                console.log(`[SplashDashGame] Player ${teamId} score decreased by ${Math.abs(pointsEarned)} to ${players[playerIndex].score} (incorrect answer)`);
             }
             this.setState({ players });
         }
 
-        // Show visual feedback
-        this.uiManager?.showAnswerFeedback(answerCircle.id, isCorrect);
+        // Show visual feedback with point values
+        this.uiManager?.showAnswerFeedback(answerCircle.id, isCorrect, pointsEarned, wasFirst);
 
-        // Emit event for scoring
-        const payload: AnswerSelectedPayload = {
-            questionId: question.id,
-            selectedOptionId: answerCircle.id,
-            isCorrect,
-            teamId: teamId,
-            remainingTimeMs: remainingTimeMs,
-            scoreMultiplier: 1
-        };
-        this.emitEvent(GAME_EVENTS.ANSWER_SELECTED, payload);
+        // Note: We handle scoring directly through ScoringManager, no need to emit ANSWER_SELECTED event
+        // which would trigger RuleEngine scoring logic and cause double-scoring
 
-        // Remove question timer
-        if (this.timerManager && this.timerManager.getTimer(this.QUESTION_TIMER_ID)) {
-            this.timerManager.removeTimer(this.QUESTION_TIMER_ID);
-        }
+        // Note: Timer removal moved to _handleAnswerReached after all players check
 
         console.log(`[SplashDashGame] _processAnswerSelection finished.`);
     }
@@ -698,9 +734,12 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
         
         players.forEach((player, index) => {
             if (!player.isAtAnswer) {
+                // Use ScoringManager to subtract points for timeout
+                this.scoringManager.subtractScore(player.id, Math.abs(this.SCORING.TIMEOUT_PENALTY));
+                
                 players[index] = { 
                     ...player, 
-                    score: Math.max(0, player.score - 5),
+                    score: this.scoringManager.getScore(player.id),
                     isAtAnswer: true // Mark as answered to prevent further movement
                 };
                 anyPlayerPenalized = true;
@@ -713,7 +752,7 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
         }
 
         // Show time up feedback
-        this.uiManager?.showAnswerFeedback(null, false);
+        this.uiManager?.showAnswerFeedback(null, false, this.SCORING.TIMEOUT_PENALTY, false);
 
         // Wait for feedback delay
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -728,7 +767,7 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
             this._triggerGameOver();
         } else {
             // Move to next question with transition
-            this._showQuestionWithTransition();
+            await this._showQuestionWithTransition();
         }
     }
 

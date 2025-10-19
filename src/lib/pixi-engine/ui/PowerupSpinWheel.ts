@@ -256,7 +256,9 @@ export class PowerupSpinWheel extends PIXI.Container {
   private _showPowerupResult(powerupName: string): void {
     if (this.centerText) {
       this.centerText.text = powerupName;
-      this.centerText.style.fill = 0xFFD700; // Gold color for result
+      this.centerText.style.fontSize = 100; // Large text for powerup result
+      this.centerText.style.fill = 0xFFD700; // Yellow/gold color to match countdown timer
+      this.centerText.style.stroke = { color: 0x000000, width: 6 }; // Black outline to match countdown timer
     }
     
     this._createConfetti();

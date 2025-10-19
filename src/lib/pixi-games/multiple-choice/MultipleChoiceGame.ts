@@ -141,11 +141,12 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             // Show turn transition screen to indicate whose turn it is
             const firstTeamName = this.config.teams[0]?.name || 'Team 1';
             console.log("[MultipleChoiceGame] initImplementation: Showing turn transition for first team...");
+            
             await this.showTransition({ 
                 type: 'turn', 
                 message: `${firstTeamName}'s Turn!`, 
                 duration: 2000, 
-                autoHide: true 
+                autoHide: true
             });
             console.log("[MultipleChoiceGame] initImplementation: Turn transition completed.");
 
@@ -197,6 +198,18 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             // --- End UI Manager Init ---
 
             this.dataManager.initializeSequencer(this.config.teams.length);
+
+            // Show a brief transition with question counter before first question
+            const firstQuestionIndex = this.getState().currentQuestionIndex;
+            const totalQuestions = this.dataManager.getTotalQuestionsToAsk();
+            console.log("[MultipleChoiceGame] initImplementation: Showing question counter transition...");
+            await this.showTransition({ 
+                type: 'turn', 
+                message: 'Get Ready!', 
+                duration: 2000, 
+                autoHide: true,
+                questionCounter: { current: firstQuestionIndex + 1, total: totalQuestions }
+            });
 
             // Show the first question using the sequencer
             console.log("[MultipleChoiceGame] initImplementation: Calling _showQuestion() for first question...");
@@ -388,7 +401,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             currentQuestionIndex: this.dataManager.getCurrentProgressIndex() - 1 
         });
         
-        // Update question counter
+        // Question counter now handled in transition screen
         const currentIndex = this.getState().currentQuestionIndex;
         const totalQuestions = this.dataManager.getTotalQuestionsToAsk();
         this.uiManager.updateQuestionCounter(currentIndex, totalQuestions);
@@ -534,13 +547,22 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             // --- End calculation ---
 
             console.log(`[MultipleChoiceGame] _handleAnswerSelected: Calling showTransition (turn) for ${nextTeamName}...`);
+            
+            // Question counter now handled in transition screen
+            
+            // Get question counter info for the next question
+            const nextQuestionIndex = this.dataManager.getCurrentProgressIndex();
+            const totalQuestions = this.dataManager.getTotalQuestionsToAsk();
+            
             await this.showTransition({ 
                 type: 'turn', 
                 message: `${nextTeamName}'s Turn!`,
                 duration: 3000,
                 autoHide: true,
                 // Only trigger power-up roll if power-ups are enabled AND should trigger
-                triggerPowerupRoll: this.config.powerups.powerupsEnabled && shouldTriggerRoll 
+                triggerPowerupRoll: this.config.powerups.powerupsEnabled && shouldTriggerRoll,
+                // Add question counter info
+                questionCounter: { current: nextQuestionIndex + 1, total: totalQuestions }
             });
             console.log("[MultipleChoiceGame] _handleAnswerSelected: AFTER await showTransition (turn).");
 
@@ -765,13 +787,22 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
              // --- End calculation ---
 
              console.log(`[MultipleChoiceGame] _handleTimerComplete: Calling showTransition (turn) for ${nextTeamName}...`);
+             
+             // Question counter now handled in transition screen
+             
+             // Get question counter info for the next question
+             const nextQuestionIndex = this.dataManager.getCurrentProgressIndex();
+             const totalQuestions = this.dataManager.getTotalQuestionsToAsk();
+             
              await this.showTransition({ 
                  type: 'turn', 
                  message: `${nextTeamName}'s Turn!`, 
                  duration: 3000, 
                  autoHide: true,
                  // Only trigger power-up roll if power-ups are enabled AND should trigger
-                 triggerPowerupRoll: this.config.powerups.powerupsEnabled && shouldTriggerRoll
+                 triggerPowerupRoll: this.config.powerups.powerupsEnabled && shouldTriggerRoll,
+                 // Add question counter info
+                 questionCounter: { current: nextQuestionIndex + 1, total: totalQuestions }
              });
              console.log("[MultipleChoiceGame] _handleTimerComplete: AFTER await showTransition (turn)."); 
 

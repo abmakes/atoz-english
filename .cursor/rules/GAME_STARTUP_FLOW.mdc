@@ -1,0 +1,400 @@
+---
+globs: src/lib/**/*
+alwaysApply: false
+---
+Reference this document in any changes that are made to games or files that are dependent upon these services
+
+# Game Startup Flow Documentation
+
+This document outlines the complete initialization sequence from user interaction to game play, including all dependencies and data flow at each step.
+
+## Overview
+
+The game startup follows this high-level flow:
+1. **GameSetupPanel** - User configuration
+2. **GameContainer** - Configuration assembly and view management
+3. **GameplayView** - React wrapper for PixiJS
+4. **PixiEngine** - Core engine initialization
+5. **BaseGame** - Abstract game foundation
+6. **MultipleChoiceGame** - Specific game implementation
+
+---
+
+## 1. GameSetupPanel (User Configuration)
+
+**File:** `src/components/game_ui/GameSetupPanel.tsx`
+
+### Purpose
+
+### Dependencies
+- **Input:** `quizId`, `initialGameSlug`
+- **Output:** `GameSetupData` object
+
+### Key Data Collected
+```typescript
+interface GameSetupData {
+  teams: TeamData[];           // Player teams
+  settings: GameSettingsData;  // Audio, music settings
+  theme: string;              // Visual theme
+  gameFeatures: string;       // 'basic' | 'boosted'
+  intensityTimeLimit: number; // Question timer duration
+  limitedGuesses: number;     // Max wrong answers
+  powerups: PowerupsData;     // Power-up toggles
+}
+```
+
+### Flow
+1. Loads quiz default settings from API
+2. User configures teams, theme, game features
+3. User clicks "Play" → calls `onStartGame(setupData)`
+
+---
+
+## 2. GameContainer (Configuration Assembly)
+
+**File:** `src/components/game_ui/GameContainer.tsx`
+
+### Purpose
+Assembles the complete `GameConfig` and manages view transitions.
+
+### Dependencies
+- **Input:** `GameSetupData` from GameSetupPanel
+- **Output:** Complete `GameConfig` object
+
+### Key Configuration Assembly
+```typescript
+const fullEngineConfig: GameConfig = {
+  quizId: quizId,
+  gameSlug: gameSlug,
+  teams: setupData.teams,
+  gameMode: { type: 'score', name: 'Score Attack' },
+  powerups: powerupConfig,        // Based on user selections
+  intensityTimeLimit: setupData.intensityTimeLimit,
+  rules: ruleConfig,              // Scoring and audio rules
+  controls: controlConfig,        // Keyboard mappings
+  assets: assetConfig,           // Asset bundles
+  audio: audioConfig,            // Sound definitions
+  initialMusicMuted: !setupData.settings.music,
+  initialSfxMuted: !setupData.settings.sounds,
+  theme: setupData.theme,
+};
+```
+
+### Manager Dependencies Created
+- **RuleEngine:** Scoring rules, audio triggers
+- **ControlsManager:** Keyboard mappings for game type
+- **PowerUpManager:** Available power-ups based on selections
+- **AudioManager:** Sound files and initial mute states
+
+### Flow
+1. Receives `GameSetupData` from GameSetupPanel
+2. Assembles complete `GameConfig` with all subsystems
+3. Sets `currentView = 'playing'`
+4. Renders `GameplayView` with assembled config
+
+---
+
+## 3. GameplayView (React Wrapper)
+
+**File:** `src/components/game_ui/GameplayView.tsx`
+
+### Purpose
+React component that manages PixiJS engine lifecycle and UI overlay.
+
+### Dependencies
+- **Input:** `GameConfig`, `pixiMountPointRef`, `gameFactory`
+- **Output:** PixiEngine instance with game running
+
+### Key Responsibilities
+```typescript
+// Creates PixiEngine instance
+const engine = new PixiEngine({ 
+  targetElement: pixiMountPointRef.current 
+});
+
+// Initializes with config and game factory
+await engine.init(config, gameFactory);
+
+// Attaches event listeners for game events
+currentManagers.eventBus.on(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
+currentManagers.eventBus.on(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
+```
+
+### Manager Dependencies
+- **EventBus:** For game event communication
+- **ScoringManager:** For score updates
+- **GameStateManager:** For game state changes
+
+### Flow
+1. Creates `PixiEngine` instance with DOM mount point
+2. Calls `engine.init(config, gameFactory)`
+3. Attaches React event listeners to engine events
+4. Manages UI overlay (scores, controls, fullscreen)
+
+---
+
+## 4. PixiEngine (Core Engine)
+
+**File:** `src/lib/pixi-engine/core/PixiEngine.ts`
+
+### Purpose
+Orchestrates all engine subsystems and manages the game lifecycle.
+
+### Dependencies
+- **Input:** `GameConfig`, `GameFactory`
+- **Output:** Fully initialized engine with game running
+
+### Initialization Sequence
+
+#### Phase 1: Core Infrastructure
+```typescript
+// 1. Initialize PixiApplication (canvas, renderer)
+await this.app.init();
+
+// 2. Initialize PixiJS Assets system
+await Assets.init({ basePath, manifest });
+
+// 3. Start background asset bundle loading
+bundleLoadPromise = Promise.all(bundleNames.map(name => 
+  Assets.loadBundle(name)
+));
+```
+
+#### Phase 2: Manager Initialization
+```typescript
+// Core managers (no config dependency)
+this.eventBus = new EventBus();
+this.storageManager = new StorageManager();
+this.gameStateManager = new GameStateManager(this.eventBus);
+this.timerManager = new TimerManager(this.eventBus, this.storageManager);
+this.controlsManager = new ControlsManager();
+this.scoringManager = new ScoringManager(this.eventBus, this.storageManager);
+
+// Config-dependent managers
+this.controlsManager.init(this.config.controls, this.eventBus);
+this.scoringManager.init(this.config.teams, this.config.gameMode);
+this.powerUpManager = new PowerUpManager(this.eventBus, this.config);
+
+// AudioManager with theme and config
+this.audioManager = new AudioManager(
+  this.eventBus, 
+  this.storageManager, 
+  themeConfig.soundsBasePath,
+  this.config.initialMusicMuted,
+  this.config.initialSfxMuted
+);
+
+// RuleEngine (depends on all other managers)
+this.ruleEngine = new RuleEngine(this.eventBus, this.config, {
+  timerManager: this.timerManager,
+  gameStateManager: this.gameStateManager,
+  scoringManager: this.scoringManager,
+  powerUpManager: this.powerUpManager,
+  audioManager: this.audioManager
+});
+```
+
+#### Phase 3: Game Creation
+```typescript
+// Emit ready signal
+this.eventBus.emit(ENGINE_EVENTS.ENGINE_READY_FOR_GAME);
+
+// Create game instance
+const managers = this.getAllManagers();
+this.currentGame = gameFactory(this.config, managers);
+this.app.getStage().addChild(this.currentGame.view);
+
+// Initialize game (waits for assets)
+await this.currentGame.init(bundleLoadPromise);
+
+// Start update loop
+ticker.add(this.handleUpdate);
+```
+
+### Manager Dependencies
+- **EventBus:** Central communication hub
+- **StorageManager:** Persistent data storage
+- **GameStateManager:** Game state tracking
+- **TimerManager:** Game timers
+- **ControlsManager:** Input handling
+- **ScoringManager:** Score tracking
+- **PowerUpManager:** Power-up logic
+- **AudioManager:** Sound playback
+- **RuleEngine:** Event-driven game rules
+
+---
+
+## 5. BaseGame (Abstract Foundation)
+
+**File:** `src/lib/pixi-engine/game/BaseGame.ts`
+
+### Purpose
+Provides common game functionality and lifecycle management.
+
+### Dependencies
+- **Input:** `GameConfig`, `PixiEngineManagers`
+- **Output:** Game instance ready for initialization
+
+### Constructor Responsibilities
+```typescript
+constructor(config: GameConfig, managers: PixiEngineManagers) {
+  // 1. Validate configuration
+  const validationErrors = validateGameConfig(config);
+  
+  // 2. Store validated config and load theme
+  this.config = Object.freeze({ ...config });
+  this.themeConfig = getThemeConfig(this.config.theme);
+  
+  // 3. Assign all manager references
+  this.eventBus = managers.eventBus;
+  this.storageManager = managers.storageManager;
+  // ... all other managers
+  
+  // 4. Create game view container
+  this.view = new Container();
+  
+  // 5. Initialize game state
+  this._gameState = this.createInitialState();
+  
+  // 6. Create transition screen
+  this.transitionScreen = new TransitionScreen(
+    this.pixiApp.getApp(),
+    this.eventBus,
+    this.powerUpManager,
+    this.gameStateManager,
+    this.assetLoader
+  );
+}
+```
+
+### Manager Dependencies
+All managers from `PixiEngineManagers`:
+- **EventBus, StorageManager, ScoringManager, TimerManager**
+- **AssetLoader, PixiApp, ControlsManager, GameStateManager**
+- **RuleEngine, PowerUpManager, AudioManager**
+
+### Flow
+1. Validates and stores configuration
+2. Assigns all manager references
+3. Creates game view container
+4. Initializes game state
+5. Sets up transition screen
+6. Ready for `init()` call
+
+---
+
+## 6. MultipleChoiceGame (Game Implementation)
+
+**File:** `src/lib/pixi-games/multiple-choice/MultipleChoiceGame.ts`
+
+### Purpose
+Implements the specific multiple choice quiz game logic.
+
+### Dependencies
+- **Input:** `GameConfig`, `PixiEngineManagers`, `engineAssetsPromise`
+- **Output:** Fully initialized and running game
+
+### Initialization Sequence
+
+#### Phase 1: Loading Transition
+```typescript
+// Show loading screen
+await this.showTransition({ 
+  type: 'loading', 
+  message: 'Getting Ready...', 
+  autoHide: false 
+});
+```
+
+#### Phase 2: Data Loading
+```typescript
+// Initialize layout manager
+this.layoutManager = new MultipleChoiceLayoutManager(width, height);
+
+// Initialize data manager
+this.dataManager = new MultipleChoiceDataManager(
+  this.config.quizId,
+  this.config.questionHandling,
+  this.assetLoader
+);
+
+// Load game data and assets concurrently
+await Promise.all([engineAssetsPromise, gameDataPromise]);
+```
+
+#### Phase 3: UI Setup
+```typescript
+// Hide loading, show turn transition
+this.hideTransition();
+await this.showTransition({ 
+  type: 'turn', 
+  message: `${firstTeamName}'s Turn!`,
+  duration: 2000 
+});
+
+// Initialize UI managers
+this.backgroundManager = new GameBackgroundManager(
+  this.pixiApp, this.themeConfig, this.eventBus
+);
+this.uiManager = new MultipleChoiceUIManager(
+  this.pixiApp, this.eventBus, this.assetLoader,
+  this.themeConfig.pixiConfig, gameRef, this.layoutManager
+);
+
+// Initialize question sequencer
+this.dataManager.initializeSequencer(this.config.teams.length);
+```
+
+#### Phase 4: Game Start
+```typescript
+// Show first question
+this._showQuestion();
+
+// Bind game events
+this._bindGameEvents();
+
+// Set game state to playing
+this.setState({ phase: 'playing' });
+```
+
+### Manager Dependencies
+- **DataManager:** Question loading and sequencing
+- **UIManager:** Game interface and layout
+- **LayoutManager:** Responsive UI scaling
+- **BackgroundManager:** Visual background
+- **All BaseGame managers:** Event handling, scoring, etc.
+
+---
+
+## Critical Dependencies Summary
+
+### Configuration Dependencies
+1. **GameSetupPanel** → **GameContainer**: `GameSetupData`
+2. **GameContainer** → **GameplayView**: Complete `GameConfig`
+3. **GameplayView** → **PixiEngine**: `GameConfig` + `GameFactory`
+4. **PixiEngine** → **BaseGame**: `GameConfig` + `PixiEngineManagers`
+5. **BaseGame** → **MultipleChoiceGame**: All managers + config
+
+### Manager Dependencies
+- **EventBus**: Required by all components for communication
+- **StorageManager**: Required by TimerManager, ScoringManager
+- **GameStateManager**: Required by RuleEngine
+- **AudioManager**: Required by RuleEngine for sound actions
+- **PowerUpManager**: Required by RuleEngine, TransitionScreen
+- **AssetLoader**: Required by MultipleChoiceGame for media loading
+
+### Initialization Order
+1. **Core Infrastructure**: PixiApplication, Assets
+2. **Basic Managers**: EventBus, StorageManager, GameStateManager, TimerManager
+3. **Config-Dependent Managers**: ControlsManager, ScoringManager, PowerUpManager, AudioManager
+4. **RuleEngine**: Requires all other managers
+5. **Game Instance**: Requires all managers
+6. **Game Initialization**: Requires assets to be loaded
+
+### Error Handling
+- Configuration validation at BaseGame constructor
+- Manager null checks throughout initialization
+- Asset loading error handling
+- Game initialization error recovery
+
+This flow ensures that all dependencies are properly initialized before they are used, and provides clear separation of concerns between configuration, engine management, and game logic.

@@ -39,6 +39,16 @@ interface PlayerSprite {
         frameHeight: number;
         totalFrames: number;
     };
+    trailPositions: Array<{x: number, y: number}>;
+    trailGraphics: PIXI.Graphics;
+    splashParticles: Array<{
+        graphics: PIXI.Graphics;
+        vx: number;
+        vy: number;
+        alpha: number;
+        lifetime: number;
+    }>;
+    wasMoving: boolean; // Track previous movement state
 }
 
 export class SplashDashPlayerManager {
@@ -176,6 +186,10 @@ export class SplashDashPlayerManager {
         container.y = startPosition.y;
         container.rotation = -Math.PI / 2; // Face up initially
         
+        // Create trail graphics
+        const trailGraphics = new PIXI.Graphics();
+        container.addChild(trailGraphics);
+
         return {
             container,
             capybaraSprite: capybaraSprite!,
@@ -192,7 +206,11 @@ export class SplashDashPlayerManager {
             animationSpeed: this.STATIC_ANIMATION_SPEED,
             isAnimating: true,
             animationType: 'static',
-            spriteSheet
+            spriteSheet,
+            trailPositions: [],
+            trailGraphics,
+            splashParticles: [],
+            wasMoving: false
         };
     }
 
@@ -247,6 +265,10 @@ export class SplashDashPlayerManager {
             container.y = player.y;
             container.rotation = -Math.PI / 2;
             
+            // Create trail graphics for fallback player
+            const trailGraphics = new PIXI.Graphics();
+            container.addChild(trailGraphics);
+
             this.players.push({
                 container,
                 capybaraSprite: graphics,
@@ -262,7 +284,11 @@ export class SplashDashPlayerManager {
                 animationTimer: 0,
                 animationSpeed: this.STATIC_ANIMATION_SPEED,
                 isAnimating: true,
-                animationType: 'static'
+                animationType: 'static',
+                trailPositions: [],
+                trailGraphics,
+                splashParticles: [],
+                wasMoving: false
             });
             
             this.view.addChild(container);
@@ -294,9 +320,116 @@ export class SplashDashPlayerManager {
                 playerSprite.animationFrame = 0; // Start static animation from frame 1 (index 0)
             }
             
+            // Update trail effects
+            this.updateTrailEffect(playerSprite, isMoving);
+            
+            // Update splash effects
+            this.updateSplashEffect(playerSprite, isMoving);
+            
             // Animate based on current state
             this.updateCapybaraAnimation(playerSprite, delta);
         });
+    }
+
+    private updateTrailEffect(player: PlayerSprite, isMoving: boolean): void {
+        if (isMoving) {
+            // Add current position to trail
+            player.trailPositions.push({ x: player.container.x, y: player.container.y });
+            
+            // Keep only last 15 positions
+            if (player.trailPositions.length > 15) {
+                player.trailPositions.shift();
+            }
+            
+            // Redraw trail
+            player.trailGraphics.clear();
+            if (player.trailPositions.length > 1) {
+                const trailColor = player.playerIndex === 0 ? 0xFF0000 : 0x0000FF; // Red for P1, Blue for P2
+                
+                for (let i = 1; i < player.trailPositions.length; i++) {
+                    const prev = player.trailPositions[i - 1];
+                    const curr = player.trailPositions[i];
+                    
+                    // Calculate alpha gradient (newer positions are more opaque)
+                    const alpha = (i / player.trailPositions.length) * 0.8;
+                    
+                    player.trailGraphics.lineStyle(4, trailColor, alpha);
+                    player.trailGraphics.moveTo(prev.x - player.container.x, prev.y - player.container.y);
+                    player.trailGraphics.lineTo(curr.x - player.container.x, curr.y - player.container.y);
+                }
+            }
+        } else {
+            // Clear trail when not moving
+            player.trailGraphics.clear();
+            player.trailPositions = [];
+        }
+    }
+
+    private updateSplashEffect(player: PlayerSprite, isMoving: boolean): void {
+        // Detect movement transition (false to true)
+        if (isMoving && !player.wasMoving) {
+            // Create splash particles
+            this.createSplashParticles(player);
+        }
+        
+        // Update existing particles
+        player.splashParticles = player.splashParticles.filter(particle => {
+            // Update particle position and alpha
+            particle.graphics.x += particle.vx;
+            particle.graphics.y += particle.vy;
+            particle.vy += 0.2; // Gravity
+            particle.alpha -= 0.02; // Fade out
+            particle.lifetime -= 1;
+            
+            // Update graphics
+            particle.graphics.alpha = particle.alpha;
+            
+            // Remove if alpha is too low or lifetime expired
+            if (particle.alpha <= 0 || particle.lifetime <= 0) {
+                particle.graphics.destroy();
+                return false;
+            }
+            
+            return true;
+        });
+        
+        // Update movement state
+        player.wasMoving = isMoving;
+    }
+
+    private createSplashParticles(player: PlayerSprite): void {
+        const particleCount = 6;
+        const colors = [0x87CEEB, 0xFFFFFF]; // Blue and white
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = new PIXI.Graphics();
+            const color = colors[i % colors.length];
+            const size = 3 + Math.random() * 2; // 3-5px
+            
+            particle.circle(0, 0, size);
+            particle.fill(color);
+            particle.alpha = 0.8;
+            
+            // Position at player center
+            particle.x = 0;
+            particle.y = 0;
+            
+            // Random velocity in 180-degree arc opposite to movement direction
+            const angle = player.rotation + Math.PI + (Math.random() - 0.5) * Math.PI;
+            const speed = 2 + Math.random() * 3; // 2-5 speed
+            const vx = Math.cos(angle) * speed;
+            const vy = Math.sin(angle) * speed;
+            
+            player.container.addChild(particle);
+            
+            player.splashParticles.push({
+                graphics: particle,
+                vx,
+                vy,
+                alpha: 0.8,
+                lifetime: 25 // 0.5 seconds at 50fps
+            });
+        }
     }
 
     private updateCapybaraAnimation(player: PlayerSprite, delta: number): void {
@@ -349,6 +482,13 @@ export class SplashDashPlayerManager {
             player.container.y = player.y;
             player.container.rotation = player.rotation;
             
+            // Clear trail and splash effects
+            player.trailGraphics.clear();
+            player.trailPositions = [];
+            player.splashParticles.forEach(particle => particle.graphics.destroy());
+            player.splashParticles = [];
+            player.wasMoving = false;
+            
             // Reset sprite to first frame
             if (player.spriteSheet && player.capybaraSprite instanceof PIXI.Sprite) {
                 this.setSpriteFrame(player.capybaraSprite, player.spriteSheet, 0);
@@ -371,6 +511,13 @@ export class SplashDashPlayerManager {
         if (this.eventBus && typeof this.eventBus.off === 'function') {
             this.eventBus.off(CONTROLS_EVENTS.PLAYER_ACTION, this._handlePlayerAction.bind(this));
         }
+        
+        // Clean up all visual effects
+        this.players.forEach(player => {
+            player.splashParticles.forEach(particle => particle.graphics.destroy());
+            player.trailGraphics.destroy();
+        });
+        
         this.view.destroy({ children: true });
         this.players = [];
         console.log('SplashDashPlayerManager destroyed');

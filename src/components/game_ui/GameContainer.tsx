@@ -232,8 +232,14 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
       const controlConfig: ControlsConfig = gameSlug === 'splash-dash' ? {
           // Splash Dash specific controls for two players
           actionMap: {
-              MOVE_PLAYER1: { keyboard: 'KeyA' }, // Player 1 moves with 'A' key
-              MOVE_PLAYER2: { keyboard: 'KeyL' }, // Player 2 moves with 'L' key
+              MOVE_PLAYER1: { 
+                  keyboard: 'KeyA',
+                  touchArea: 'button-player1'  // Add touch area mapping
+              },
+              MOVE_PLAYER2: { 
+                  keyboard: 'KeyL',
+                  touchArea: 'button-player2'  // Add touch area mapping
+              },
           },
           playerMappings: [
               { playerId: 'player1', deviceType: 'keyboard' },
@@ -256,8 +262,20 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
           gamepadDeadzone: DEFAULT_GAME_CONFIG.controls.gamepadDeadzone,
       };
       
-      // --- Define Basic Assets (Example - Adapt/Make Dynamic Later) ---
-      const assetConfig = DEFAULT_GAME_CONFIG.assets; // Use default for now
+      // --- Define Game-Specific Assets ---
+      const assetConfig = gameSlug === 'splash-dash' ? {
+          bundles: [
+              {
+                  name: 'splash-dash',
+                  assets: [
+                      {
+                          key: 'crate_5_4',
+                          src: '/images/splash-dash/crate_5_4.png'
+                      }
+                  ]
+              }
+          ]
+      } : DEFAULT_GAME_CONFIG.assets; // Use default for other games
 
       // --- Define Audio Configuration ---
       const audioConfig: AudioConfiguration = {

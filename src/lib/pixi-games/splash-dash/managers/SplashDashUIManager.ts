@@ -7,7 +7,9 @@ import { AssetLoader } from '@/lib/pixi-engine/assets/AssetLoader';
 // import { PixiThemeConfig } from '@/themes';
 import { SplashDashLayoutManager } from './SplashDashLayoutManager';
 import { QuestionData } from '@/types';
-import { ENGINE_EVENTS, CONTROLS_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
+import { ENGINE_EVENTS, TIMER_EVENTS, TimerEventPayload } from '@/lib/pixi-engine/core/EventTypes';
+import { ControlsManager } from '@/lib/pixi-engine/core/ControlsManager';
+import { PixiTimer } from '../../multiple-choice/ui/PixiTimer';
 
 interface AnswerRectangleUIData {
     id: string;
@@ -19,7 +21,10 @@ interface AnswerRectangleUIData {
     height: number;
     container: PIXI.Container;
     rectangle: PIXI.Graphics;
+    crateSprite?: PIXI.Sprite; // Optional reference to the crate sprite for tinting
     label: PIXI.Text;
+    glowGraphics: PIXI.Graphics | null;
+    glowAnimation: number; // Animation timer
 }
 
 export class SplashDashUIManager {
@@ -28,6 +33,7 @@ export class SplashDashUIManager {
     private assetLoader: typeof AssetLoader;
     private themeConfig: Record<string, unknown>;
     private layoutManager: SplashDashLayoutManager;
+    private controlsManager: ControlsManager;
     private view: PIXI.Container;
 
     private bottomUIContainer: PIXI.Container;
@@ -38,6 +44,9 @@ export class SplashDashUIManager {
     private answerRectangles: AnswerRectangleUIData[] = [];
     private controlButtonA: PIXI.Container;
     private controlButtonL: PIXI.Container;
+    private pixiTimerInstance: PixiTimer;
+    private initialDurationMs: number = 0;
+    private useCrateTexture: boolean = false; // Track which rendering mode is active
     // Layout constants are now managed by SplashDashLayoutManager
 
     /**
@@ -49,13 +58,15 @@ export class SplashDashUIManager {
         eventBus: EventBus,
         assetLoader: typeof AssetLoader,
         themeConfig: Record<string, unknown>,
-        layoutManager: SplashDashLayoutManager
+        layoutManager: SplashDashLayoutManager,
+        controlsManager: ControlsManager
     ) {
         this.app = app;
         this.eventBus = eventBus;
         this.assetLoader = assetLoader;
         this.themeConfig = themeConfig;
         this.layoutManager = layoutManager;
+        this.controlsManager = controlsManager;
         this.view = new PIXI.Container();
         this.view.label = 'SplashDashUI';
 
@@ -79,6 +90,29 @@ export class SplashDashUIManager {
         this.bottomUIContainer.addChild(this.controlButtonA);
         this.bottomUIContainer.addChild(this.controlButtonL);
 
+        // Register buttons with ControlsManager for unified input handling
+        this.controlsManager.registerInteractiveArea(this.controlButtonA, 'MOVE_PLAYER1');
+        this.controlsManager.registerInteractiveArea(this.controlButtonL, 'MOVE_PLAYER2');
+
+        // Initialize timer
+        this.pixiTimerInstance = new PixiTimer({
+            radius: 48, // 20% smaller (60 * 0.8)
+            backgroundColor: 0xFFFFFF, // White background
+            backgroundAlpha: 0.8, // 50% opacity white background
+            textColor: 0x114257,
+            textSize: 38, // 20% smaller (48 * 0.8)
+            fontFamily: 'Grandstander',
+            fontWeight: 'bold',
+            progressBarWidth: 11, // 20% smaller (14 * 0.8)
+            progressBackgroundColor: 0xE0E0E0,
+            progressBackgroundAlpha: 0.0,
+            progressBarColor: 0x87CEEB, // Light blue accent color
+            progressBarAlpha: 1.0,
+            clockwise: false
+        });
+        this.pixiTimerInstance.label = 'SplashDashTimer';
+        this.view.addChild(this.pixiTimerInstance);
+
         this._bindEvents();
         console.log('SplashDashUIManager created');
     }
@@ -90,6 +124,7 @@ export class SplashDashUIManager {
     private _bindEvents(): void {
         if (this.eventBus && typeof this.eventBus.on === 'function') {
             this.eventBus.on(ENGINE_EVENTS.RESIZED, this._handleResize.bind(this));
+            this.eventBus.on(TIMER_EVENTS.TIMER_TICK, this._handleTimerTick.bind(this));
         } else {
             console.warn('SplashDashUIManager: EventBus not available, skipping event binding');
         }
@@ -103,6 +138,12 @@ export class SplashDashUIManager {
         this.layoutManager.updateLayout(payload.width, payload.height);
         this._updateLayout();
     }
+
+    private _handleTimerTick = (payload: TimerEventPayload): void => {
+        if (payload.remaining !== undefined) {
+            this.pixiTimerInstance.updateDisplay(payload.remaining, this.initialDurationMs);
+        }
+    };
 
     /**
      * Creates the main question text display with Grandstander font and proper word wrapping
@@ -206,12 +247,7 @@ export class SplashDashUIManager {
         container.eventMode = 'static';
         container.cursor = 'pointer';
         
-        // Add touch/click events
-        container.on('pointerdown', () => {
-            this._handleControlButtonPress(letter);
-        });
-        
-        // Add hover effects
+        // Add hover effects for visual feedback only
         container.on('pointerover', () => {
             circle.tint = 0xCCCCCC;
         });
@@ -225,32 +261,6 @@ export class SplashDashUIManager {
         return container;
     }
 
-    /**
-     * Handles control button press events and emits player action events to the game engine
-     * Maps button letters to player movement commands for the capybara swimming game
-     */
-    private _handleControlButtonPress(letter: string): void {
-        console.log(`[SplashDashUIManager] Control button ${letter} pressed`);
-        
-        // Emit control events for player movement
-        if (this.eventBus && typeof this.eventBus.emit === 'function') {
-            if (letter === 'A') {
-                this.eventBus.emit(CONTROLS_EVENTS.PLAYER_ACTION, {
-                    playerId: 'player1',
-                    action: 'MOVE_PLAYER1',
-                    value: true,
-                    device: 'pointer'
-                });
-            } else if (letter === 'L') {
-                this.eventBus.emit(CONTROLS_EVENTS.PLAYER_ACTION, {
-                    playerId: 'player2',
-                    action: 'MOVE_PLAYER2',
-                    value: true,
-                    device: 'pointer'
-                });
-            }
-        }
-    }
 
     /**
      * Updates the layout of all UI elements using the layout manager parameters
@@ -309,6 +319,10 @@ export class SplashDashUIManager {
         if (this.questionText.style) {
             this.questionText.style.wordWrapWidth = Math.max(200, textAreaWidth - 20); // Minimum width with margin
         }
+        
+        // Position timer below nav buttons (moved down)
+        this.pixiTimerInstance.x = screenSize.width - 80;
+        this.pixiTimerInstance.y = 120; // Moved down from 80 to 120
         
         console.log(`[SplashDashUIManager] Layout updated - Screen: ${screenSize.width}x${screenSize.height}, Available width: ${availableWidth}, Text area: ${textAreaWidth}, Bottom UI at y=${this.bottomUIContainer.y}`);
         console.log(`[SplashDashUIManager] Question container at (${this.questionContainer.x}, ${this.questionContainer.y}), Image at (${this.questionImage?.x || 'N/A'}, ${this.questionImage?.y || 'N/A'}), Text at (${this.questionText.x}, ${this.questionText.y})`);
@@ -385,7 +399,7 @@ export class SplashDashUIManager {
      * Sets up rectangular answer options for the current question with non-overlapping positioning
      * Creates interactive answer rectangles that capybaras can swim to for answering questions
      */
-    public setupAnswerRectangles(questionId: string, answerOptions: { id: string; text: string; isCorrect: boolean }[]): void {
+    public async setupAnswerRectangles(questionId: string, answerOptions: { id: string; text: string; isCorrect: boolean }[]): Promise<void> {
         console.log(`[SplashDashUIManager] setupAnswerRectangles: Setting up ${answerOptions.length} answer rectangles for question ${questionId}`);
         this.clearAnswerRectangles();
 
@@ -410,7 +424,8 @@ export class SplashDashUIManager {
         const maxBoxHeight = params.answerRectangleHeight * 2; // 2x for large boxes
         const positions = this._generateNonOverlappingPositions(answerOptions.length, answerArea, maxBoxWidth, maxBoxHeight);
         
-        answerOptions.forEach((option, index) => {
+        for (let index = 0; index < answerOptions.length; index++) {
+            const option = answerOptions[index];
             const position = positions[index];
             const container = new PIXI.Container();
             
@@ -423,16 +438,37 @@ export class SplashDashUIManager {
             const textLength = option.text.length;
             const { boxWidth, boxHeight, fontSize, wordWrapWidth } = this._calculateAnswerBoxSize(textLength, params);
 
+            // Create rectangle with crate texture
             const rectangle = new PIXI.Graphics();
-            rectangle.roundRect(0, 0, boxWidth, boxHeight, 8)
-                     .fill(0x4F46E5); // Purple (no border)
+            let crateSprite: PIXI.Sprite | undefined;
+            
+            // Try to load crate texture as normal sprite using direct Assets.load like capybara sprites
+            try {
+                const cratePath = `/images/splash-dash/crate_5_4.png`;
+                const crateTexture = await PIXI.Assets.load(cratePath);
+                
+                crateSprite = new PIXI.Sprite(crateTexture);
+                crateSprite.width = boxWidth;
+                crateSprite.height = boxHeight;
+                
+                rectangle.addChild(crateSprite);
+                this.useCrateTexture = true;
+                console.log('Using crate texture for answer boxes');
+            } catch (error) {
+                // Fallback to white rectangle
+                console.warn('Failed to load crate texture, using fallback:', error);
+                rectangle.roundRect(0, 0, boxWidth, boxHeight, 8)
+                         .fill(0xFFFFFF); // White background
+                this.useCrateTexture = false;
+                console.log('Fallback: Using white rectangles for answer boxes');
+            }
 
             const text = new PIXI.Text({
                 text: option.text,
                 style: {
                     fontFamily: 'Grandstander',
                     fontSize: fontSize,
-                    fill: 0xFFFFFF,
+                    fill: 0x000000, // Always black text for better readability
                     align: 'center',
                     wordWrap: true,
                     wordWrapWidth: wordWrapWidth
@@ -456,9 +492,12 @@ export class SplashDashUIManager {
                 height: boxHeight,
                 container,
                 rectangle,
-                label: text
+                crateSprite, // Store reference to crate sprite (optional)
+                label: text,
+                glowGraphics: null,
+                glowAnimation: 0
             });
-        });
+        }
     }
 
     /**
@@ -562,7 +601,12 @@ export class SplashDashUIManager {
      * Removes all answer options and their containers to prepare for new question
      */
     public clearAnswerRectangles(): void {
-        this.answerRectangles.forEach(ar => ar.container.destroy({ children: true }));
+        this.answerRectangles.forEach(ar => {
+            if (ar.glowGraphics) {
+                ar.glowGraphics.destroy();
+            }
+            ar.container.destroy({ children: true });
+        });
         this.answerRectangles = [];
     }
 
@@ -590,52 +634,114 @@ export class SplashDashUIManager {
 
     /**
      * Shows visual feedback for answer selection with color tinting and message display
-     * Displays correct/incorrect/time up messages in a transparent white box with proper styling
+     * Displays correct/incorrect/time up messages with point values and bonuses
      */
-    public showAnswerFeedback(selectedOptionId: string | null, isCorrect: boolean): void {
+    public showAnswerFeedback(selectedOptionId: string | null, isCorrect: boolean, pointsEarned: number = 0, wasFirst: boolean = false): void {
         this.answerRectangles.forEach(ar => {
-            if (ar.id === selectedOptionId) {
-                ar.rectangle.tint = isCorrect ? 0x00FF00 : 0xFF0000; // Green for correct, Red for incorrect
-            } else if (ar.isCorrect) {
-                ar.rectangle.tint = 0xFFFF00; // Yellow for correct answer if not selected
+            if (ar.crateSprite) {
+                // Crate sprite mode
+                if (ar.id === selectedOptionId) {
+                    ar.crateSprite.tint = isCorrect ? 0x00FF00 : 0xFF0000; // Green for correct, Red for incorrect
+                } else if (ar.isCorrect) {
+                    ar.crateSprite.tint = 0xFFFF00; // Yellow for correct answer if not selected
+                } else {
+                    ar.crateSprite.tint = 0x888888; // Dim incorrect answers
+                }
             } else {
-                ar.rectangle.tint = 0x888888; // Dim incorrect answers
+                // White rectangle fallback mode
+                if (ar.id === selectedOptionId) {
+                    ar.rectangle.tint = isCorrect ? 0xADFFAD : 0xFFADAD; // Lighter tints for white background
+                } else if (ar.isCorrect) {
+                    ar.rectangle.tint = 0xFFFFAD; // Light yellow for correct answer if not selected
+                } else {
+                    ar.rectangle.tint = 0xDDDDDD; // Light gray for incorrect answers
+                }
             }
         });
 
-        // Display feedback message in transparent white box
+        // Display feedback message with point values
         const screenSize = this.app.getScreenSize();
         const width = screenSize.width;
         const height = screenSize.height;
         const feedbackContainer = new PIXI.Container();
         
-        // Create transparent white background
-        const background = new PIXI.Graphics();
-        background.rect(-150, -40, 300, 80);
-        background.fill({ color: 0xFFFFFF, alpha: 0.8 }); // Transparent white
+        // Main feedback message
+        let mainMessage = "";
+        if (isCorrect) {
+            mainMessage = "CORRECT!";
+        } else if (selectedOptionId === null) {
+            mainMessage = "TIME UP!";
+        } else {
+            mainMessage = "INCORRECT!";
+        }
         
         const feedbackMessage = new PIXI.Text({
-            text: isCorrect ? "CORRECT!" : (selectedOptionId === null ? "TIME UP!" : "INCORRECT!"),
+            text: mainMessage,
             style: {
                 fontFamily: 'Grandstander',
-                fontSize: 48,
-                fill: isCorrect ? 0x00FF00 : 0xFF0000,
-                align: 'center'
+                fontSize: 60,
+                fill: 0xFFD700, // Yellow/gold color to match countdown timer
+                fontWeight: 'bold',
+                align: 'center',
+                stroke: { color: 0x000000, width: 6 } // Black outline to match countdown timer
             }
         });
         feedbackMessage.anchor.set(0.5);
         
-        feedbackContainer.addChild(background);
+        // Point value display
+        let pointText = "";
+        if (pointsEarned > 0) {
+            pointText = `+${pointsEarned} POINTS!`;
+            if (wasFirst) {
+                pointText += ` (+5 FIRST!)`;
+            }
+        } else if (pointsEarned < 0) {
+            pointText = `${pointsEarned} POINTS`;
+        }
+        
+        const pointMessage = new PIXI.Text({
+            text: pointText,
+            style: {
+                fontFamily: 'Grandstander',
+                fontSize: 48, // Reduced from 72 to 48 (smaller)
+                fill: pointsEarned > 0 ? 0x00FF00 : 0xFF0000, // Green for positive, red for negative
+                fontWeight: 'bold',
+                align: 'center',
+                stroke: { color: 0x000000, width: 3 } // Reduced stroke width
+            }
+        });
+        pointMessage.anchor.set(0.5);
+        
         feedbackContainer.addChild(feedbackMessage);
+        feedbackContainer.addChild(pointMessage);
+        
+        // Position messages
         feedbackContainer.x = width / 2;
         feedbackContainer.y = height / 2;
+        pointMessage.y = 60; // Moved down by 20 pixels (from 40 to 60)
         
         this.view.addChild(feedbackContainer);
 
         setTimeout(() => {
             feedbackContainer.destroy({ children: true });
-            this.answerRectangles.forEach(ar => ar.rectangle.tint = 0xFFFFFF); // Reset tints
+            this.answerRectangles.forEach(ar => {
+                if (ar.crateSprite) {
+                    ar.crateSprite.tint = 0xFFFFFF; // Reset sprite tints
+                } else {
+                    ar.rectangle.tint = 0xFFFFFF; // Reset rectangle tints
+                }
+            });
         }, 1500);
+    }
+
+    /**
+     * Updates the timer display with the given time values
+     * @param timeMs The current remaining time in milliseconds
+     */
+    public updateTimerDisplay(timeMs: number): void {
+        console.log(`[SplashDashUIManager] updateTimerDisplay called with ${timeMs}ms`);
+        this.initialDurationMs = Math.max(1, timeMs);
+        this.pixiTimerInstance.updateDisplay(timeMs, this.initialDurationMs);
     }
 
     /**
@@ -667,6 +773,61 @@ export class SplashDashUIManager {
     }
 
     /**
+     * Updates answer rectangle proximity highlighting based on player positions
+     * Adds pulsing glow effect when players are nearby
+     */
+    public updateAnswerProximity(players: Array<{id: string, x: number, y: number}>): void {
+        this.answerRectangles.forEach(ar => {
+            let nearestDistance = Infinity;
+            
+            // Find nearest player distance
+            players.forEach(player => {
+                const distance = Math.sqrt(
+                    Math.pow(player.x - (ar.x + ar.width / 2), 2) + 
+                    Math.pow(player.y - (ar.y + ar.height / 2), 2)
+                );
+                nearestDistance = Math.min(nearestDistance, distance);
+            });
+            
+            // Create or update glow effect
+            if (nearestDistance < 100) {
+                if (!ar.glowGraphics) {
+                    // Create glow graphics
+                    ar.glowGraphics = new PIXI.Graphics();
+                    ar.container.addChildAt(ar.glowGraphics, 0); // Add behind the rectangle
+                }
+                
+                // Update glow animation
+                ar.glowAnimation += 0.05; // Animation speed
+                const pulseScale = 1.0 + 0.15 * Math.sin(ar.glowAnimation * 2); // Pulse between 1.0 and 1.15
+                
+                // Clear and redraw glow
+                ar.glowGraphics.clear();
+                
+                // Determine glow color and intensity based on distance
+                let glowColor = 0xFFD700; // Gold
+                let glowAlpha = 0.3;
+                
+                if (nearestDistance < 50) {
+                    glowColor = 0xFFFF00; // Brighter yellow
+                    glowAlpha = 0.5;
+                }
+                
+                // Draw glow as rounded rectangle 8px larger than answer box
+                ar.glowGraphics.roundRect(-4, -4, ar.width + 8, ar.height + 8, 12)
+                    .fill({ color: glowColor, alpha: glowAlpha * pulseScale });
+            } else {
+                // Remove glow if too far
+                if (ar.glowGraphics) {
+                    ar.glowGraphics.destroy();
+                    ar.glowGraphics = null;
+                    ar.glowAnimation = 0;
+                }
+            }
+        });
+    }
+
+    /**
      * Returns the main UI container that holds all game interface elements
      * Provides access to the root container for adding to the main game scene
      */
@@ -681,7 +842,9 @@ export class SplashDashUIManager {
     public destroy(): void {
         if (this.eventBus && typeof this.eventBus.off === 'function') {
             this.eventBus.off(ENGINE_EVENTS.RESIZED, this._handleResize.bind(this));
+            this.eventBus.off(TIMER_EVENTS.TIMER_TICK, this._handleTimerTick.bind(this));
         }
+        this.pixiTimerInstance?.destroy();
         this.view.destroy({ children: true });
         this.answerRectangles = [];
         console.log('SplashDashUIManager destroyed');

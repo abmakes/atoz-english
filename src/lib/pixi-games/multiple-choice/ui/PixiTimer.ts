@@ -29,6 +29,11 @@ export class PixiTimer extends PIXI.Container {
     // Store last known values to redraw on resume if needed
     private lastRemainingTime: number = 0;
     private lastDuration: number = 0;
+    
+    // Store base values for resize scaling
+    private baseRadius?: number;
+    private baseTextSize?: number;
+    private baseProgressBarWidth?: number;
 
     constructor(options: PixiTimerOptions = {}) {
         super();
@@ -192,5 +197,30 @@ export class PixiTimer extends PIXI.Container {
     public getVisualBounds(): PIXI.Rectangle {
         const diameter = this.options.radius * 2;
         return new PIXI.Rectangle(-this.options.radius, -this.options.radius, diameter, diameter);
+    }
+
+    /**
+     * Resizes the timer elements by the given scale factor.
+     * @param scaleFactor The scale factor to apply (1.0 = original size, 0.8 = 80% size)
+     */
+    public resize(scaleFactor: number): void {
+        // Store base values on first call
+        if (!this.baseRadius) {
+            this.baseRadius = this.options.radius;
+            this.baseTextSize = this.options.textSize;
+            this.baseProgressBarWidth = this.options.progressBarWidth;
+        }
+        
+        // Update options with scaled values
+        this.options.radius = this.baseRadius! * scaleFactor;
+        this.options.textSize = this.baseTextSize! * scaleFactor;
+        this.options.progressBarWidth = this.baseProgressBarWidth! * scaleFactor;
+        
+        // Update text style
+        this.timeText.style.fontSize = this.options.textSize;
+        
+        // Redraw with new sizes
+        this.drawBackgroundAndTrack();
+        this.updateDisplay(this.lastRemainingTime, this.lastDuration);
     }
 }

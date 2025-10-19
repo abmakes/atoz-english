@@ -83,6 +83,8 @@ export class PixiEngine {
   private options: PixiEngineOptions;
   /** Flag indicating if the engine has been successfully initialized. */
   private initialized = false;
+  /** Flag indicating if the engine is currently in the process of initializing. */
+  private initializing = false;
   /** The active game configuration object, set during init. */
   private config: GameConfig | null = null;
   /** The currently active game instance (extends BaseGame). */
@@ -153,7 +155,22 @@ export class PixiEngine {
       return;
     }
     
-    console.log('Initializing PixiEngine with game config:', config.gameMode.name);
+    if (this.initializing) {
+      console.warn('PixiEngine initialization already in progress. Skipping duplicate call.');
+      return;
+    }
+    
+    
+    this.initializing = true;
+    
+    console.log('Initializing PixiEngine with game config:', config?.gameMode?.name || 'unknown');
+    
+    if (!config) {
+      console.error('PixiEngine.init: config parameter is null or undefined');
+      this.initializing = false;
+      throw new Error('PixiEngine.init: config parameter is required');
+    }
+    
     this.config = config;
     
     try {
@@ -196,18 +213,26 @@ export class PixiEngine {
 
       // --- Initialize Managers (Now safe to access this.app) ---
       console.log('Initializing GameConfig-dependent managers...');
+      console.log('PixiEngine: this.config at manager init:', this.config ? 'present' : 'null');
 
       // ControlsManager init
-      if (this.config.controls) {
+      if (this.config && this.config.controls) {
+        console.log('PixiEngine: Initializing ControlsManager with config');
         this.controlsManager.init(this.config.controls, this.eventBus);
         this.controlsManager.enable(); 
       } else {
         console.warn("PixiEngine: No controls configuration found in GameConfig.");
       }
       // ScoringManager init
-      this.scoringManager.init(this.config.teams, this.config.gameMode);
-      // PowerUpManager init
-      this.powerUpManager = new PowerUpManager(this.eventBus, this.config);
+      if (this.config) {
+        console.log('PixiEngine: Initializing ScoringManager and PowerUpManager with config');
+        this.scoringManager.init(this.config.teams, this.config.gameMode);
+        // PowerUpManager init
+        this.powerUpManager = new PowerUpManager(this.eventBus, this.config);
+      } else {
+        console.error("PixiEngine: this.config is null - cannot initialize managers");
+        throw new Error("PixiEngine: GameConfig is required but was not provided");
+      }
       // Create AudioManager 
       const themeConfig = getThemeConfig('default');
       this.audioManager = new AudioManager(
@@ -287,6 +312,8 @@ export class PixiEngine {
        console.error('Error during PixiEngine initialization:', error);
        await this.destroy(); 
        throw error; 
+    } finally {
+      this.initializing = false;
     }
   }
 
@@ -417,6 +444,7 @@ export class PixiEngine {
     }
     console.log("Destroying PixiEngine...");
     this.initialized = false;
+    this.initializing = false;
 
     try {
         // TODO: Define 'engineDestroyStart' event in EventBus

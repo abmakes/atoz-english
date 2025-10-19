@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import PlayerScore from './PlayerScore';
 import NavMenu, { NavMenuItemProps } from './NavMenu';
 import GameControlDropdown from './GameControlDropdown';
@@ -64,6 +64,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   const [volume, setVolume] = useState(30);
   const [musicMuted, setMusicMuted] = useState(false);
   const [sfxMuted, setSfxMuted] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(false);
 
   // --- Refs for internal engine/managers ---
   const engineInstanceRef = useRef<PixiEngine | null>(null);
@@ -74,6 +75,9 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   const { isFullscreen, toggleFullscreen, isSupported } = useFullscreen(gameContainerRef);
 
   console.log(config, 'AS GAME Confing form container !!!!!!!!!!!')
+
+  // Memoize the config to prevent unnecessary re-renders
+  const stableConfig = useMemo(() => config, [JSON.stringify(config)]);
 
   // --- PixiJS Event Handlers (using managersRef) ---
   /**
@@ -132,6 +136,17 @@ const GameplayView: React.FC<GameplayViewProps> = ({
     console.log("React activeTeamId state CHANGED TO:", activeTeamId);
   }, [activeTeamId]);
 
+  // Screen size detection for mobile view
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileView(window.innerHeight < 600);
+    };
+    
+    handleResize(); // Check on mount
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // --- Engine Initialization Effect --- 
   /**
    * Initializes the PixiEngine when the component mounts or config/factory changes.
@@ -139,12 +154,12 @@ const GameplayView: React.FC<GameplayViewProps> = ({
    */
   useEffect(() => {
     // Check if we should initialize. If there's already an engine, do nothing.
-    if (!config || !gameFactory || !pixiMountPointRef.current || engineInstanceRef.current) {
+    if (!stableConfig || !gameFactory || !pixiMountPointRef.current || engineInstanceRef.current) {
       return;
     }
 
     // Validate config structure before initialization
-    if (!config.gameMode || !config.teams || !Array.isArray(config.teams) || config.teams.length === 0) {
+    if (!stableConfig.gameMode || !stableConfig.teams || !Array.isArray(stableConfig.teams) || stableConfig.teams.length === 0) {
       console.error("GameplayView: Invalid config structure - missing required fields");
       return;
     }
@@ -153,7 +168,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
     const engine = new PixiEngine({ targetElement: pixiMountPointRef.current });
     engineInstanceRef.current = engine;
 
-    engine.init(config, gameFactory)
+    engine.init(stableConfig, gameFactory)
       .then(() => {
         console.log("GameplayView: PixiEngine initialized successfully.");
         const currentManagers = engine.getManagers();
@@ -162,10 +177,10 @@ const GameplayView: React.FC<GameplayViewProps> = ({
         // Attach listeners ONLY after managers are confirmed
         if (currentManagers) {
           console.log("GameplayView: Attaching event listeners post-init...");
-          // Use arrow functions to access the latest handlers
-          currentManagers.eventBus.on(GAME_STATE_EVENTS.GAME_ENDED, () => handlePixiGameOver());
-          currentManagers.eventBus.on(SCORING_EVENTS.SCORE_UPDATED, (payload: ScoringScoreUpdatedPayload) => handlePixiScoreUpdate(payload));
-          currentManagers.eventBus.on(GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED, (payload: GameStateActiveTeamChangedPayload) => handlePixiActiveTeamChanged(payload));
+          // Use the current handlers directly
+          currentManagers.eventBus.on(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
+          currentManagers.eventBus.on(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
+          currentManagers.eventBus.on(GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED, handlePixiActiveTeamChanged);
         } else {
           console.error("GameplayView: Managers are null after engine init!");
         }
@@ -198,7 +213,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
       engineInstanceRef.current = null;
       managersRef.current = null;
     };
-  }, [config, gameFactory, pixiMountPointRef, handlePixiGameOver, handlePixiScoreUpdate, handlePixiActiveTeamChanged]);
+  }, [stableConfig, gameFactory, pixiMountPointRef]);
   // ------------------------------------------------------
 
   // --- Settings/Audio Handlers (Connect to EventBus/AudioManager) ---
@@ -341,6 +356,8 @@ const GameplayView: React.FC<GameplayViewProps> = ({
                 playerName={player.playerName}
                 score={player.score}
                 isActive={player.teamId === activeTeamId}
+                isMobile={isMobileView}
+                isCompact={config.gameSlug === 'splash-dash'} // Make smaller for splash-dash
                 className={`${themeClassName}`}
             />
                 );

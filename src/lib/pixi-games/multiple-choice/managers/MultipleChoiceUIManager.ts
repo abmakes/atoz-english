@@ -28,7 +28,7 @@ export class MultipleChoiceUIManager {
     private currentQuestionId: string | null = null;
     private currentGeneratedOptions: AnswerOptionUIData[] = [];
     private backgroundPanelDrawRafId: number | null = null;
-    private questionCounterText: PIXI.Text | null = null;
+    // Question counter now handled in transition screen
     private visualEffectsManager: VisualEffectsManager;
     
     // Constants for button styling
@@ -115,40 +115,36 @@ export class MultipleChoiceUIManager {
     }
 
     /**
-     * Updates the question counter display
+     * Updates the question counter display (now handled in transition screen)
      */
     public updateQuestionCounter(currentIndex: number, totalQuestions: number): void {
-        if (!this.questionCounterText) {
-            this._createQuestionCounter();
-        }
-        
-        if (this.questionCounterText) {
-            this.questionCounterText.text = `Question ${currentIndex + 1} of ${totalQuestions}`;
-            console.log(`UIManager: Updated question counter to: ${this.questionCounterText.text}`);
-        }
+        // Question counter is now displayed in the transition screen
+        // This method is kept for compatibility but does nothing
+        console.log(`UIManager: Question counter now handled in transition screen - Question ${currentIndex + 1} of ${totalQuestions}`);
     }
 
     /**
-     * Creates the question counter text element
+     * Hides the question counter (now handled in transition screen)
+     */
+    public hideQuestionCounter(): void {
+        // Question counter is now displayed in the transition screen
+        // This method is kept for compatibility but does nothing
+    }
+
+    /**
+     * Shows the question counter (now handled in transition screen)
+     */
+    public showQuestionCounter(): void {
+        // Question counter is now displayed in the transition screen
+        // This method is kept for compatibility but does nothing
+    }
+
+    /**
+     * Creates the question counter text element (now handled in transition screen)
      */
     private _createQuestionCounter(): void {
-        this.questionCounterText = new PIXI.Text({
-            text: 'Question 1 of 1',
-            style: {
-                fontFamily: this.themeConfig.fontFamilyTheme || 'Grandstander',
-                fontSize: 18,
-                fill: this.themeConfig.questionTextColor,
-                align: 'center'
-            }
-        });
-        
-        this.questionCounterText.anchor.set(1, 0.5); // Right-align
-        this.scene.addChild(this.questionCounterText);
-        
-        // Position immediately to avoid (0,0) flash
-        this._positionQuestionCounter();
-        
-        console.log("UIManager: Created question counter text element");
+        // Question counter is now displayed in the transition screen
+        // This method is kept for compatibility but does nothing
     }
 
     public updateQuestionContent(question: QuestionData): void {
@@ -200,7 +196,7 @@ export class MultipleChoiceUIManager {
         // For 2x3 grid (question + 2 rows of buttons), calculate total height needed
         const totalButtonHeight = (actualButtonHeight * 3) + (buttonGap * 2 + this.shadowOffsetY * 2);
         const isMobile = screenHeight < 700; // More appropriate threshold for mobile devices
-        const isTabletNonFullscreen = screenHeight >= 600 && screenHeight <= 650; // Tablet in non-fullscreen mode
+        const isTabletNonFullscreen = screenHeight >= 600 && screenHeight <= 700; // Tablet in non-fullscreen mode
         const panelPadding = isMobile ? 10 : (isTabletNonFullscreen ? 15 : 20); // Reduce padding on mobile and tablet non-fullscreen
         const buttonContainerHeight = totalButtonHeight + (panelPadding * 2); // Padding above and below
         const buttonContainerY = screenHeight - buttonContainerHeight; // Touch bottom of screen
@@ -627,8 +623,7 @@ export class MultipleChoiceUIManager {
         // 4. Update Timer Position
         this._positionTimerElements();
 
-        // 5. Update Question Counter Position
-        this._positionQuestionCounter();
+        // 5. Question Counter now handled in transition screen
 
         // 5. Update Answer Buttons (passing bounds)
         if (this.answerButtons.length > 0 && this.currentQuestionId && this.currentGeneratedOptions.length > 0) {
@@ -660,18 +655,24 @@ export class MultipleChoiceUIManager {
     private _handleResize = (): void => {
         console.log("[UIManager._handleResize] Resize event received. Updating layout...");
         
-        // On mobile devices, add a small delay to ensure proper image loading after resize
         const screenHeight = this.pixiApp.getScreenSize().height;
-        const isMobile = screenHeight < 700;
+        const isMobile = screenHeight < 600;
+        
+        // Calculate scale factor: 80% (0.8) for mobile, 100% (1.0) for desktop
+        const timerScaleFactor = isMobile ? 0.8 : 1.0;
         
         if (isMobile) {
-            console.log("[UIManager._handleResize] Mobile device detected, adding delay for image stability...");
+            console.log("[UIManager._handleResize] Mobile device detected, scaling timer to 80%...");
             // Add a small delay to ensure the resize is complete and images can load properly
             setTimeout(() => {
                 this._updateAndApplyLayout();
+                this.pixiTimerInstance.resize(timerScaleFactor);
+                this._positionTimerElements(); // Reposition after resize
             }, 100);
         } else {
             this._updateAndApplyLayout();
+            this.pixiTimerInstance.resize(timerScaleFactor);
+            this._positionTimerElements();
         }
     };
 
@@ -740,22 +741,11 @@ export class MultipleChoiceUIManager {
     }
 
     /**
-     * Positions the question counter text element
+     * Positions the question counter text element (now handled in transition screen)
      */
     private _positionQuestionCounter(): void {
-        if (!this.questionCounterText) return;
-
-        const screenWidth = this.pixiApp.getScreenSize().width;
-        const screenHeight = this.pixiApp.getScreenSize().height;
-        
-        // Position on the right side, below navigation buttons but above timer
-        this.questionCounterText.x = screenWidth - 20; // 20px from right edge
-        this.questionCounterText.y = screenHeight * 0.13; // 13% from top, moved up 2% more
-        
-        // Right-align the text (already set in _createQuestionCounter)
-        this.questionCounterText.anchor.set(1, 0.5);
-        
-        console.log(`UIManager: Positioned question counter at (${this.questionCounterText.x}, ${this.questionCounterText.y})`);
+        // Question counter is now displayed in the transition screen
+        // This method is kept for compatibility but does nothing
     }
 
     private _repositionAnswerButtonsContainer(bounds: PIXI.Rectangle): void {

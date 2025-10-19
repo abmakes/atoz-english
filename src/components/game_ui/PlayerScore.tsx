@@ -16,6 +16,10 @@ export interface PlayerScoreProps {
   className?: string;
   /** Optional callback function to be executed when the component is clicked. */
   onClick?: () => void;
+  /** Flag to indicate mobile screen for 20% size reduction. */
+  isMobile?: boolean;
+  /** Flag indicating if this should be displayed in compact mode (smaller). */
+  isCompact?: boolean;
 }
 
 /**
@@ -27,7 +31,9 @@ const PlayerScore: React.FC<PlayerScoreProps> = ({
   score,
   isActive = false,
   className,
-  onClick
+  onClick,
+  isMobile = false,
+  isCompact = false
 }) => {
 
   return (
@@ -43,7 +49,7 @@ const PlayerScore: React.FC<PlayerScoreProps> = ({
       <div
         className={`
           grandstander
-          px-4 py-2 text-center
+          ${isMobile ? 'px-3 py-1' : 'px-4 py-2'} text-center
           ${isActive
             ? 'bg-[var(--secondary-bg)] text-[var(--text-dark)] font-bold border-2 border-[var(--primary-accent-hover)]' // Active: Blue bg, light text, bold
             : 
@@ -52,7 +58,10 @@ const PlayerScore: React.FC<PlayerScoreProps> = ({
           rounded-[var(--border-radius-xl)]
           -mb-5
           pb-6
-          text-2xl font-regular
+          ${isCompact 
+            ? (isMobile ? 'text-sm' : 'text-lg')  // Compact: 20% smaller on desktop, 40% smaller on mobile
+            : (isMobile ? 'text-lg' : 'text-2xl') // Normal: original sizes
+          } font-regular
         `}
       >
         {playerName}
@@ -62,15 +71,21 @@ const PlayerScore: React.FC<PlayerScoreProps> = ({
       <div
          className={`
           relative
-          mx-2 py-2 text-center
+          ${isMobile ? 'mx-1' : 'mx-2'} py-2 text-center
           font-[var(--font-theme)]
           ${isActive
             ? 'bg-[var(--primary-accent-hover)] text-[var(--text-dark)] font-bold' // Active: Darker blue bg, light text, bold
             : 'bg-[var(--box-bg)] text-[var(--text-dark)] font-semibold bg-gray-300' // Inactive: Grey bg, dark text, semibold
           }
           rounded-[var(--border-radius-xl)]
-          text-4xl
-          w-32
+          ${isCompact 
+            ? (isMobile ? 'text-2xl' : 'text-3xl')  // Compact: 20% smaller on desktop, 40% smaller on mobile
+            : (isMobile ? 'text-3xl' : 'text-4xl')  // Normal: original sizes
+          }
+          ${isCompact 
+            ? (isMobile ? 'w-20' : 'w-28')  // Compact: 20% smaller on desktop, 40% smaller on mobile
+            : (isMobile ? 'w-24' : 'w-32')  // Normal: original sizes
+          }
 
         `}
       >
