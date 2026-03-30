@@ -63,14 +63,19 @@ interface StoredImageResponse {
 interface ImageSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImageSelect: (imageUrl: string, metadata?: {
-    pixabayId: number;
-    pixabayUser: string;
-    tags: string[];
-    searchTerm: string;
-    width: number;
-    height: number;
-  }) => void;
+  onImageSelect: (
+    imageUrl: string,
+    metadata?: {
+      pixabayId: number;
+      pixabayUser: string;
+      tags: string[];
+      searchTerm: string;
+      width: number;
+      height: number;
+    },
+    /** When the user picks a file from disk, pass it so the quiz can upload to storage (blob: preview URLs are not persisted). */
+    localFile?: File | null
+  ) => void;
 }
 
 export default function ImageSelectModal({ isOpen, onClose, onImageSelect }: ImageSelectModalProps) {
@@ -104,7 +109,7 @@ export default function ImageSelectModal({ isOpen, onClose, onImageSelect }: Ima
       const file = event.target.files[0];
       if (file.type.startsWith('image/')) {
         const imageUrl = URL.createObjectURL(file);
-        onImageSelect(imageUrl, undefined);
+        onImageSelect(imageUrl, undefined, file);
         // onClose(); // User might want to confirm or see preview
       } else {
         console.warn("Selected file is not an image.");
@@ -139,7 +144,7 @@ export default function ImageSelectModal({ isOpen, onClose, onImageSelect }: Ima
         const file = e.dataTransfer.files[0];
         if (file.type.startsWith('image/')) {
           const imageUrl = URL.createObjectURL(file);
-          onImageSelect(imageUrl, undefined);
+          onImageSelect(imageUrl, undefined, file);
           // onClose();
         } else {
           console.warn("Dropped file is not an image.");

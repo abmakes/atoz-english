@@ -49,9 +49,9 @@ export default function QuizSetupForm({
   }, [coverImageFile, initialData.coverImageUrl]);
 
 
-  const handleImageSelect = (imageUrl: string) => {
+  const handleImageSelect = (imageUrl: string, _metadata?: unknown, localFile?: File | null) => {
     setCoverImageUrlPreview(imageUrl);
-    setCoverImageFile(null); // Clear file when using selected image
+    setCoverImageFile(localFile ?? null);
     setIsImageModalOpen(false);
     addToast('Cover image selected!', { variant: 'success' });
   };
@@ -62,10 +62,11 @@ export default function QuizSetupForm({
     onSetupComplete({
       title,
       description,
-      coverImageUrl: coverImageFile ? URL.createObjectURL(coverImageFile) : (initialData.coverImageUrl || PLACEHOLDER_IMAGE_CLIENT), // Send the preview URL or the original if no new file
-      coverImageFile, // Send the file itself
+      coverImageUrl:
+        coverImageUrlPreview || initialData.coverImageUrl || PLACEHOLDER_IMAGE_CLIENT,
+      coverImageFile,
       quizType,
-      tags: selectedTags, // Use selectedTags from props
+      tags: selectedTags,
     });
   };
 

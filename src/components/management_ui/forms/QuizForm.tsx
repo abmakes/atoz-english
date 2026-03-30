@@ -126,20 +126,16 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
     searchTerm: string;
     width: number;
     height: number;
-  }) => {
+  }, localFile?: File | null) => {
     if (activeImageIndex !== null) {
       const newQuestions = [...questions];
       newQuestions[activeImageIndex].imageUrl = imageUrl;
-      newQuestions[activeImageIndex].imageFile = null; // File uploads are handled separately
-      // Store the metadata if it's a Pixabay image
-      if (metadata && metadata.pixabayId) {
-        newQuestions[activeImageIndex].imageMetadata = metadata;
-      }
+      newQuestions[activeImageIndex].imageFile = localFile ?? null;
+      newQuestions[activeImageIndex].imageMetadata =
+        metadata && metadata.pixabayId ? metadata : undefined;
       updateQuestionsAndNotifyParent(newQuestions);
     } else {
-      // setCurrentQuizCoverImageUrl(imageUrl); // Removed
-      // setCurrentQuizCoverImageFile(file || null); // Removed
-      onQuizCoverImageChange(imageUrl, null);
+      onQuizCoverImageChange(imageUrl, localFile ?? null);
     }
     setIsImageModalOpen(false);
   };
