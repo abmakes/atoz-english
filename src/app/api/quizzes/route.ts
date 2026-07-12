@@ -7,6 +7,7 @@ import { Quiz as ITQuiz, Question as ITQuestion } from '@/types'
 import { Prisma } from '../../../../prisma/app/generated/prisma/client'
 // Use the centralized schemas for consistency
 import { quizSettingsSchema } from '@/lib/schemas'
+import { requireAuth, isUnauthorized } from '@/lib/auth'
 
 // Define Zod Schema for a Question (used in POST)
 const QuestionSchema = z.object({
@@ -29,7 +30,7 @@ const QuizCreateSchema = z.object({
     questions: z.array(QuestionSchema).min(1, "Quiz must have at least one question"),
     statistics: z.record(z.unknown()).optional(),
     defaultSettings: quizSettingsSchema.optional(), // Use the centralized schema
-    authorId: z.string().default("admin"),
+    authorId: z.string().optional(),
 })
 
 // Placeholder image URL
@@ -102,6 +103,10 @@ export async function GET() {
 export async function POST(request: Request) {
   console.log('POST /api/quizzes')
   try {
+    const authResult = await requireAuth()
+    if (isUnauthorized(authResult)) return authResult
+    const { userId } = authResult
+
     if (isDatabaseIdle()) await warmupDatabase() 
 
     const formData = await request.formData()
@@ -119,7 +124,7 @@ export async function POST(request: Request) {
       ? (quizTypeFromForm as QuestionType) 
       : QuestionType.MULTIPLE_CHOICE
 
-    parsedData.authorId = formData.get('authorId') as string || "admin";
+    parsedData.authorId = userId
     
     const statisticsString = formData.get('statistics') as string;
     if (statisticsString) {
@@ -248,7 +253,7 @@ export async function POST(request: Request) {
         statistics: validatedData.statistics ? validatedData.statistics as any : Prisma.JsonNull,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         defaultSettings: validatedData.defaultSettings ? validatedData.defaultSettings as any : Prisma.JsonNull,
-        authorId: validatedData.authorId, // authorId has a default in Zod schema
+        authorId: validatedData.authorId ?? userId,
         questions: {
           create: questionsToCreate,
         },

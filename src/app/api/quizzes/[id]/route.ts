@@ -6,6 +6,7 @@ import { put } from '@vercel/blob'
 import { updateQuiz } from '@/lib/db'
 import { QuestionType } from '@/types/question_types'
 import { Question, Quiz } from "../../../../../prisma/app/generated/prisma/client"
+import { requireAuth, isUnauthorized } from '@/lib/auth'
 
 // Define an interface for the Quiz object that includes the questions
 interface QuizWithDetails extends Quiz {
@@ -75,6 +76,9 @@ export async function DELETE(
 ) {
   const { id } = await params;
   try {
+    const authResult = await requireAuth()
+    if (isUnauthorized(authResult)) return authResult
+
     // First, delete all questions associated with the quiz
     await prisma.question.deleteMany({
       where: { quizId: id },
@@ -185,6 +189,10 @@ export async function PUT(
     console.log(`PUT /api/quizzes/${id} - Request received in [id]/route.ts`);
 
     try {
+        const authResult = await requireAuth()
+        if (isUnauthorized(authResult)) return authResult
+        const { userId } = authResult
+
         if (!id) {
              console.error('PUT /api/quizzes/[id] - Error: Quiz ID is required');
              return NextResponse.json({ error: "Quiz ID is required" }, { status: 400 })
@@ -369,7 +377,7 @@ export async function PUT(
           imageUrl: finalQuizImageUrl ?? undefined,
           statistics: validatedStatistics ? validatedStatistics as Prisma.InputJsonObject : undefined,
           defaultSettings: validatedDefaultSettings ? validatedDefaultSettings as Prisma.InputJsonObject : undefined,
-          authorId: validatedAuthorId,
+          authorId: validatedAuthorId ?? userId,
           questions: questionDataForUpdate
         });
         console.log('PUT /api/quizzes/[id] - updateQuiz function successfully returned.');

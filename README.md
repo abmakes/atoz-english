@@ -1,90 +1,96 @@
 # AtoZ PixiJS Game Platform
 
-AtoZ PixiJS Game Platform is an interactive educational web application built with Next.js, TypeScript, and PixiJS v8. It provides engaging quiz-based games designed for rich animations and visual elements, aiming to make learning fun and effective.
+Interactive educational quiz games built with **Next.js 15**, **React 19**, **TypeScript**, and **PixiJS v8**. Teachers create quizzes; students play them as animated classroom games.
 
-## Vision
+## Features
 
-To create an interactive, engaging educational platform that transforms traditional quiz-based learning into immersive game experiences using PixiJS for advanced 2D graphics and animation, combined with the robust architecture of Next.js.
-
-## Core Features
-
-*   **Multiple-Choice Quiz Games:** Interactive quizzes with animated elements, visual feedback, timers, and scoring via a flexible PixiJS engine.
-*   **Modular PixiJS Engine Core:**
-    *   Centralized game state management (`GameStateManager`).
-    *   Flexible scoring/lives logic (`ScoringManager`).
-    *   Robust timer control (`TimerManager`).
-    *   Pluggable power-up system (`PowerUpManager`).
-    *   Unified asset loading (`AssetLoader`).
-    *   Event-driven communication (`EventBus`).
-    *   Configurable rules (`RuleEngine`) and controls (`ControlsManager`).
-    *   Standardized `BaseGame` interface for diverse game types.
-*   **Responsive UI:** Designed for various devices with smooth animations.
-*   **Data Management:** Utilizes Prisma and tRPC for fetching and managing quiz data.
+- **Multiple-choice** and **Splash Dash** PixiJS games (timers, scoring, power-ups, teams)
+- Modular engine: `EventBus`, `RuleEngine`, `ScoringManager`, `TimerManager`, `PowerUpManager`, `AssetLoader`
+- Quiz CRUD with Zod-validated REST APIs and Prisma/PostgreSQL
+- Optional **Clerk** auth (UI + mutating API routes)
+- AI question generation via Google Gemini
+- Image search/caching (Pixabay → Vercel Blob)
 
 ## Tech Stack
 
-*   **Framework:** Next.js (v14.2.26+)
-*   **Language:** TypeScript
-*   **UI Library:** React
-*   **UI Components (non-canvas):** shadcn/ui, Tailwind CSS
-*   **Game Engine:** PixiJS v8
-*   **Event Handling:** EventEmitter3 (via `EventBus`)
-*   **Database/ORM:** Prisma (connecting to PostgreSQL)
-*   **API:** tRPC
-*   **Testing:** Jest
+| Layer | Technology |
+|-------|------------|
+| Framework | Next.js 15 (App Router) |
+| UI | React 19, Tailwind CSS, shadcn/ui |
+| Games | PixiJS 8, Howler |
+| State | Zustand (quiz selection), Pixi managers (gameplay) |
+| Database | Prisma → PostgreSQL (Neon-friendly) |
+| Auth | Clerk (optional via env) |
+| API | REST routes under `src/app/api/` |
+| Validation | Zod |
+| Tests | Vitest |
 
 ## Getting Started
 
-1.  Clone the repository:
-    ```bash
-    git clone https://github.com/abmakes/atoz-english.git # TODO: Update repo URL if different
-    cd atoz-english
-    ```
-2.  Set up environment variables (e.g., database connection string). Create a `.env` file based on `.env.example` if provided.
-3.  Install dependencies:
-    ```bash
-    npm install
-    ```
-4.  Initialize/migrate the database:
-    ```bash
-    npx prisma migrate dev
-    # Optional: Seed database if seed script exists
-    # npx prisma db seed
-    ```
-5.  Run the development server:
-    ```bash
-    npm run dev
-    ```
-6.  Open [http://localhost:3000](http://localhost:3000) in your browser.
+1. Clone the repo and install dependencies:
+   ```bash
+   npm install
+   ```
+2. Copy env template and fill in values:
+   ```bash
+   cp .env.example .env
+   ```
+3. Generate Prisma client and migrate:
+   ```bash
+   npx prisma generate
+   npx prisma migrate dev
+   ```
+4. Run the dev server:
+   ```bash
+   npm run dev
+   ```
+5. Open [http://localhost:3000](http://localhost:3000).
+
+Without Clerk keys, auth falls back to a local `"admin"` user so you can develop offline.
+
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `npm run dev` | Next.js dev server |
+| `npm run build` | Prisma generate + production build |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm test` | Vitest unit tests |
+| `npm run verify-assets` | Check required `public/` files |
 
 ## Project Structure
 
-*   `/prisma/` - Prisma schema and migration files.
-*   `/public/` - Static assets (images, fonts).
-*   `/scripts/` - Utility scripts (e.g., PRD source).
-*   `/src/app/` - Next.js App Router pages and API routes (including tRPC).
-*   `/src/components/` - Reusable React UI components (page layouts, forms, game UI wrappers).
-*   `/src/lib/` - Core application logic.
-    *   `/lib/pixi-engine/` - The core PixiJS game engine modules.
-        *   `/core/` - Main engine class, EventBus, managers (State, Rules, Controls, Storage).
-        *   `/config/` - TypeScript interfaces for game configuration.
-        *   `/game/` - BaseGame class, specific managers (Scoring, Timer, PowerUp).
-        *   `/assets/` - AssetLoader module.
-        *   `/ui/` - Reusable PixiJS UI components.
-        *   `/utils/` - Engine-specific utility functions.
-    *   `/lib/games/` - Implementations for specific game types (e.g., `MultipleChoiceGame`).
-    *   `/lib/prisma.ts` - Prisma client instance.
-    *   `/lib/trpc/` - tRPC router setup.
-    *   `/lib/utils/` - General utility functions.
-*   `/src/styles/` - Global styles, Tailwind CSS configuration.
-*   `/src/types/` - Shared TypeScript type definitions.
-*   `/tests/` - Unit and integration tests (Jest).
-*   `/project_docs/` - Detailed planning and architecture documents.
+```
+prisma/                 Schema and migrations
+public/                 Static assets (see public/ASSETS.md)
+scripts/                CI helpers (e.g. verify-assets)
+src/app/                App Router pages + REST API routes
+src/components/         React UI (game shell, quiz management, shadcn)
+src/lib/
+  pixi-engine/          Core Pixi engine (BaseGame, managers, UI)
+  pixi-games/           Game implementations (multiple-choice, splash-dash)
+  auth.ts               Clerk requireAuth helper
+  schemas.ts            Shared Zod schemas
+  prisma.ts             Prisma client + retry helpers
+src/stores/             Zustand stores
+src/types/              Shared TypeScript types
+tests/                  Vitest unit tests
+```
 
-## Contributing
+## Adding a Game
 
-Contributions are welcome! Please feel free to submit a Pull Request. Ensure code follows existing patterns and includes relevant tests.
+1. Implement a class extending `BaseGame` under `src/lib/pixi-games/<slug>/`.
+2. Register it in the `gameFactory` switch in `src/components/game_ui/GameContainer.tsx`.
+3. Follow `.cursor/rules/GAME_STARTUP_FLOW.mdc` for init order.
+
+## Docs
+
+- [public/ASSETS.md](public/ASSETS.md) — asset strategy
+- [AI_QUIZ_GENERATOR_SETUP.md](AI_QUIZ_GENERATOR_SETUP.md) — Gemini setup
+- [src/lib/pixi-engine/pixi-structure-doc.md](src/lib/pixi-engine/pixi-structure-doc.md) — engine architecture
+- [src/lib/pixi-games/splash-dash/README.md](src/lib/pixi-games/splash-dash/README.md) — Splash Dash
 
 ## License
 
-This project is licensed under the MIT License.
+MIT

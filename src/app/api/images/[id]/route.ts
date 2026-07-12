@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAuth, isUnauthorized } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
@@ -54,6 +55,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authResult = await requireAuth();
+    if (isUnauthorized(authResult)) return authResult;
+
     const { id } = await params;
     const body = await request.json();
     const { tags, searchTerm } = body;

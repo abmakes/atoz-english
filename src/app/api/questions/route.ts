@@ -3,6 +3,7 @@ import { QuestionType } from '@/types/question_types'
 import { z } from 'zod'
 import { errorResponse, handleApiError, successResponse } from '@/lib/api-utils'
 import { questionBaseSchema } from '@/lib/schemas'
+import { requireAuth, isUnauthorized } from '@/lib/auth'
 
 // Schema for question creation through API
 const questionCreateSchema = questionBaseSchema.extend({
@@ -30,6 +31,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const authResult = await requireAuth()
+    if (isUnauthorized(authResult)) return authResult
+
     // Parse request body
     const body = await request.json()
     

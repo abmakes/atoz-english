@@ -4,7 +4,6 @@ import { POWERUP_EVENTS, type PowerUpEventPayload } from '../core/EventTypes';
 // Import GameConfig and related types fully
 import type { GameConfig } from '../config/GameConfig';
 import type { PowerupConfig, PowerupDefinition } from '../config/PowerupConfig';
-import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating unique instance IDs
 
 /**
  * Represents the runtime state of an active power-up instance.
@@ -172,7 +171,7 @@ export class PowerUpManager {
         // TODO: Add logic for stacking/non-stacking based on definition?
         // For now, allow multiple instances of the same type for a target.
 
-        const instanceId = uuidv4();
+        const instanceId = crypto.randomUUID();
         const activationTime = Date.now();
         const remainingDurationMs = definition.durationSeconds !== undefined ? definition.durationSeconds * 1000 : undefined;
 

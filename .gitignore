@@ -29,6 +29,9 @@ yarn-error.log*
 .env*.local
 .env
 
+# Keep the template tracked for onboarding
+!.env.example
+
 # vercel
 .vercel
 
@@ -62,7 +65,6 @@ node_modules/
 # Task files
 
 README-task-master.md
-.env.example
 src/lib/tasks.ts
 src/app/task/
 

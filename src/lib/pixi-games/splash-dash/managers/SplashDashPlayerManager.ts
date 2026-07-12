@@ -101,6 +101,7 @@ export class SplashDashPlayerManager {
         console.log('Player action received:', payload);
     }
 
+
     public async initializePlayers(players: PlayerState[]): Promise<void> {
         try {
             console.log('[SplashDashPlayerManager] Initializing players...');
@@ -457,6 +458,7 @@ export class SplashDashPlayerManager {
             this.setSpriteFrame(player.capybaraSprite, player.spriteSheet, player.animationFrame);
         }
     }
+
 
     public resetPlayerPositions(): void {
         const { width, height } = this.app.getScreenSize();

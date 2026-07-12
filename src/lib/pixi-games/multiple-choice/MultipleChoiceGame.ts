@@ -10,21 +10,7 @@ import { MultipleChoiceDataManager } from './managers/MultipleChoiceDataManager'
 import { MultipleChoiceUIManager, AnswerOptionUIData } from './managers/MultipleChoiceUIManager';
 import { GameBackgroundManager } from './managers/GameBackgroundManager';
 import { MultipleChoiceLayoutManager } from './managers/MultipleChoiceLayoutManager';
-
-async function ensureFontIsLoaded(fontFamily: string, descriptor: string = '28px'): Promise<void> {
-    const fontCheckString = `${descriptor} "${fontFamily}"`;
-    try {
-        if (!document.fonts.check(fontCheckString)) {
-            console.log(`Waiting for font: ${fontFamily}...`);
-            await document.fonts.load(fontCheckString);
-            console.log(`Font ${fontFamily} loaded.`);
-        } else {
-             console.log(`Font ${fontFamily} was already loaded.`);
-        }
-    } catch (error) {
-        console.error(`Failed to load font "${fontFamily}":`, error);
-    }
-}
+import { ensureFontIsLoaded } from '@/lib/pixi-engine/utils/ensureFontIsLoaded';
 
 /**
  * Custom game state interface for MultipleChoiceGame.

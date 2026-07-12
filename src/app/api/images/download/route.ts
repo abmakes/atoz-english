@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { put } from '@vercel/blob';
+import { requireAuth, isUnauthorized } from '@/lib/auth';
 
 interface DownloadPixabayImageRequest {
   imageUrl: string;
@@ -15,6 +16,9 @@ interface DownloadPixabayImageRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth();
+    if (isUnauthorized(authResult)) return authResult;
+
     const body: DownloadPixabayImageRequest = await request.json();
     const { imageUrl, pixabayId, pixabayUser, searchTerm, tags, width, height, mimeType } = body;
 

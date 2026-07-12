@@ -6,6 +6,7 @@ import { errorResponse, handleApiError, successResponse } from '@/lib/api-utils'
 import { parseFormData } from '@/lib/formDataUtils';
 import { csvRowSchema, csvUploadSchema, CsvRowInput } from '@/lib/schemas';
 import { QuestionType } from '@/types/question_types';
+import { requireAuth, isUnauthorized } from '@/lib/auth';
 
 // Define the placeholder image path
 const PLACEHOLDER_IMAGE = '/images/placeholder.webp';
@@ -32,6 +33,10 @@ interface ExtendedCsvRowInput extends CsvRowInput {
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth();
+    if (isUnauthorized(authResult)) return authResult;
+    const { userId } = authResult;
+
     const formData = await request.formData();
     // USER NOTE: Update csvUploadSchema in @/lib/schemas.ts for: description, quizCoverImageUrl, quizType, tags.
     const formDataResult = await parseFormData(formData, csvUploadSchema);
@@ -47,7 +52,6 @@ export async function POST(request: NextRequest) {
       quizCoverImageUrl, 
       quizType,     
       tags,              
-      authorId,
       statistics,
       defaultSettings
     } = formDataResult.data as ExpectedCsvUploadData;
@@ -129,7 +133,7 @@ export async function POST(request: NextRequest) {
           imageUrl: quizCoverImageUrl || PLACEHOLDER_IMAGE,
           quizType: actualQuizType,
           tags: tags || [],
-          authorId: authorId,
+          authorId: userId,
           statistics: statistics ? statistics as Prisma.InputJsonObject : undefined,
           defaultSettings: defaultSettings ? defaultSettings as Prisma.InputJsonObject : undefined,
           questions: {

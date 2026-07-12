@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Verify required assets
+        run: node scripts/verify-assets.mjs
+
+      - name: Build
+        run: npm run build
+        env:
+          # Stub env so Next build can compile without real secrets
+          DATABASE_URL: postgresql://user:pass@localhost:5432/atoz_ci
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ''
+          CLERK_SECRET_KEY: ''

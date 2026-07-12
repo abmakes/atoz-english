@@ -11,22 +11,7 @@ import { SplashDashBackgroundManager } from './managers/SplashDashBackgroundMana
 import { SplashDashLayoutManager } from './managers/SplashDashLayoutManager';
 import { SplashDashPlayerManager } from './managers/SplashDashPlayerManager';
 import { GifAsset } from 'pixi.js/gif';
-
-// Font loading utility
-async function ensureFontIsLoaded(fontFamily: string, descriptor: string = '28px'): Promise<void> {
-    const fontCheckString = `${descriptor} "${fontFamily}"`;
-    try {
-        if (!document.fonts.check(fontCheckString)) {
-            console.log(`Waiting for font: ${fontFamily}...`);
-            await document.fonts.load(fontCheckString);
-            console.log(`Font ${fontFamily} loaded.`);
-        } else {
-             console.log(`Font ${fontFamily} was already loaded.`);
-        }
-    } catch (error) {
-        console.error(`Failed to load font "${fontFamily}":`, error);
-    }
-}
+import { ensureFontIsLoaded } from '@/lib/pixi-engine/utils/ensureFontIsLoaded';
 
 /**
  * Custom game state interface for SplashDashGame.

@@ -23,13 +23,22 @@ import {
   GameStateActiveTeamChangedPayload, 
   EngineEvents, 
   TRANSITION_EVENTS,
-  TransitionStartPayload,
-  TransitionEndPayload,
   TransitionPowerupSelectedPayload
 } from '../core/EventTypes';
-import { v4 as uuidv4 } from 'uuid';
 import * as PIXI from 'pixi.js';
 import { TransitionScreen, TransitionScreenConfig } from '../ui/TransitionScreen';
+import { GameEventRegistry } from './GameEventRegistry';
+import { GameFrameClock, type FrameTiming } from './GameFrameClock';
+import {
+  getPropertyByPath,
+  validateConfigChange as validateConfigChangeHelper,
+  applyMutableConfigChange,
+  type ConfigChangeEvent,
+  type ConfigValidationResult,
+} from './GameConfigHotReload';
+import { GameTransitionHost } from './GameTransitionHost';
+
+export type { ConfigChangeEvent, ConfigValidationResult, FrameTiming };
 
 // Extend GameConfig with missing properties used in this class
 declare module '../config/GameConfig' {
@@ -110,22 +119,6 @@ export interface BaseGameState {
 }
 
 /**
- * Represents timing information for a single frame
- */
-interface FrameTiming {
-  /** Time elapsed since the last frame in seconds */
-  deltaTime: number;
-  /** Time elapsed since the last frame in seconds, multiplied by timeScale */
-  scaledDeltaTime: number;
-  /** Current time scaling factor (for slow-motion or speed-up effects) */
-  timeScale: number;
-  /** Total game time elapsed in seconds */
-  elapsedTime: number;
-  /** Accumulated time for fixed timestep updates */
-  fixedTimeAccumulator: number;
-}
-
-/**
  * Represents a custom renderer function that can be registered with the game
  */
 type CustomRendererFunction = (renderer: PIXI.Renderer) => void;
@@ -140,30 +133,6 @@ interface CustomRenderer {
   renderer: CustomRendererFunction;
   /** Priority value (lower numbers render first) */
   priority: number;
-}
-
-/**
- * Configuration change event structure for configuration updates
- */
-export interface ConfigChangeEvent {
-  /** Path to the configuration property that changed (dot notation) */
-  path: string;
-  /** Previous value of the changed property */
-  oldValue: unknown;
-  /** New value of the changed property */
-  newValue: unknown;
-  /** Source of the configuration change */
-  source: 'user' | 'system' | 'runtime';
-}
-
-/**
- * Result of a configuration validation operation
- */
-export interface ConfigValidationResult {
-  /** Whether the configuration change is valid */
-  valid: boolean;
-  /** Optional array of error messages if validation failed */
-  errors?: string[];
 }
 
 /**
@@ -240,16 +209,19 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
   protected readonly _maxHistoryLength: number = 10;
 
   /**
-   * List of event listeners registered by this game instance.
-   * Used to track and automatically clean up listeners on destroy.
+   * Tracks EventBus subscriptions for automatic cleanup on destroy.
    */
-  private _eventListeners: Array<{
-    eventName: keyof EngineEvents;
-    // Make this compatible with all possible event listener types from EngineEvents
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    listener: any; // Will be correctly typed when used in the registerEventListener methods
-    once?: boolean;
-  }> = [];
+  private readonly eventRegistry: GameEventRegistry;
+
+  /**
+   * Fixed timestep / FPS clock for frame updates.
+   */
+  private readonly frameClock: GameFrameClock = new GameFrameClock();
+
+  /**
+   * Transition screen show/hide + phase restore helper.
+   */
+  private transitionHost!: GameTransitionHost;
 
   /**
    * Static constants documenting the required events that all game implementations
@@ -312,6 +284,8 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     this.powerUpManager = managers.powerUpManager;
     this.audioManager = managers.audioManager;
 
+    this.eventRegistry = new GameEventRegistry(this.eventBus);
+
     this.view = new Container();
     this.view.label = `GameView-${this.constructor.name}`;
 
@@ -332,6 +306,18 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     );
     // Add to the highest UI layer
     this.addToLayer(this.transitionScreen, RenderLayer.UI_FOREGROUND);
+
+    this.transitionHost = new GameTransitionHost(
+      () => this.transitionScreen,
+      () => this._gameState.phase,
+      (phase, options) => {
+        this.setState({ phase } as Partial<TGameState>, options)
+      },
+      (count) => this.getStateHistory(count),
+      (eventName, payload) => {
+        this.emitEvent(eventName, payload as never)
+      }
+    )
 
     // Add listener for the new power-up selection event
     this.registerEventListener(TRANSITION_EVENTS.POWERUP_SELECTED, this._handlePowerupSelected.bind(this));
@@ -699,19 +685,7 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    * @returns The property value or undefined if not found
    */
   protected getStateProperty<T>(propertyPath: string): T | undefined {
-    return this.getPropertyByPath(this._gameState, propertyPath) as T | undefined;
-  }
-
-  /**
-   * Helper to safely get a nested property by path
-   */
-  private getPropertyByPath(obj: Record<string, unknown>, path: string): unknown {
-    return path.split('.').reduce<unknown>((result, key) => {
-      if (result && typeof result === 'object') {
-        return (result as Record<string, unknown>)[key];
-      }
-      return undefined;
-    }, obj);
+    return getPropertyByPath(this._gameState as Record<string, unknown>, propertyPath) as T | undefined;
   }
 
   /**
@@ -806,101 +780,60 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
 
   /**
    * Registers an event listener that will be automatically cleaned up when the game is destroyed.
-   * Provides type-safe event handling with proper payload typing.
-   * 
-   * @param eventName - The name of the event to listen for
-   * @param listener - The callback function to execute when the event occurs
-   * @returns The BaseGame instance for method chaining
    */
   protected registerEventListener<K extends keyof EngineEvents>(
     eventName: K, 
     listener: EngineEvents[K]
   ): this {
-    // Add to internal tracking for cleanup
-    this._eventListeners.push({ eventName, listener });
-    // Register with EventBus
-    this.eventBus.on(eventName, listener);
+    this.eventRegistry.on(eventName, listener);
     return this;
   }
 
   /**
    * Registers a one-time event listener that will be automatically cleaned up if not triggered
    * before the game is destroyed.
-   * 
-   * @param eventName - The name of the event to listen for
-   * @param listener - The callback function to execute when the event occurs
-   * @returns The BaseGame instance for method chaining
    */
   protected registerOneTimeEventListener<K extends keyof EngineEvents>(
     eventName: K, 
     listener: EngineEvents[K]
   ): this {
-    // Add to internal tracking for cleanup
-    this._eventListeners.push({ eventName, listener, once: true });
-    // Register with EventBus
-    this.eventBus.once(eventName, listener);
+    this.eventRegistry.once(eventName, listener);
     return this;
   }
 
   /**
    * Unregisters a previously registered event listener.
-   * 
-   * @param eventName - The name of the event
-   * @param listener - The callback function to remove
-   * @returns The BaseGame instance for method chaining
    */
   protected unregisterEventListener<K extends keyof EngineEvents>(
     eventName: K, 
     listener: EngineEvents[K]
   ): this {
-    // Remove from internal tracking
-    this._eventListeners = this._eventListeners.filter(
-      entry => !(entry.eventName === eventName && entry.listener === listener)
-    );
-    
-    // Unregister from EventBus
-    this.eventBus.off(eventName, listener);
+    this.eventRegistry.off(eventName, listener);
     return this;
   }
 
   /**
    * Unregisters all event listeners registered by this game instance.
-   * Called automatically during destroy() to prevent memory leaks.
-   * 
-   * @returns The BaseGame instance for method chaining
    */
   protected unregisterAllEventListeners(): this {
-    this._eventListeners.forEach(entry => {
-      // Cast the function to the expected type to satisfy TypeScript
-      this.eventBus.off(entry.eventName, entry.listener as EngineEvents[typeof entry.eventName]);
+    this.eventRegistry.offAll(() => {
+      this.eventBus.off(TRANSITION_EVENTS.POWERUP_SELECTED, this._handlePowerupSelected.bind(this));
     });
-    // Ensure the powerup selected listener is also removed if it was added via registerEventListener
-    this.eventBus.off(TRANSITION_EVENTS.POWERUP_SELECTED, this._handlePowerupSelected.bind(this)); 
-    this._eventListeners = [];
     return this;
   }
 
   /**
    * Emits an event through the EventBus with proper type checking for the payload.
-   * 
-   * @param eventName - The name of the event to emit
-   * @param args - The payload for the event, type-checked based on the event name
-   * @returns True if the event had listeners, false otherwise
    */
   protected emitEvent<K extends keyof EngineEvents>(
     eventName: K, 
     ...args: Parameters<EngineEvents[K]>
   ): boolean {
-    return this.eventBus.emit(eventName, ...args);
+    return this.eventRegistry.emit(eventName, ...args);
   }
 
   /**
    * Emits a game-specific event, adding a namespace prefix if needed.
-   * Useful for creating custom events for specific game types.
-   * 
-   * @param eventName - The name of the game-specific event
-   * @param payload - The payload for the event
-   * @returns True if the event had listeners, false otherwise
    */
   protected emitGameEvent<T>(eventName: string, payload?: T): boolean {
     const namespacedEvent = eventName.includes(':') 
@@ -912,79 +845,22 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
 
   /**
    * Waits for an event to occur before continuing execution.
-   * Useful for synchronizing game logic with asynchronous events.
-   * 
-   * @param eventName - The name of the event to wait for
-   * @param timeout - Optional timeout in milliseconds
-   * @returns A promise that resolves when the event occurs
-   * @throws Error if the timeout is reached before the event occurs
    */
   protected waitForEvent<K extends keyof EngineEvents>(
     eventName: K, 
     timeout?: number
   ): Promise<Parameters<EngineEvents[K]>[0]> {
-    return new Promise((resolve, reject) => {
-      // Create a properly typed listener for this specific event
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const listener: EngineEvents[K] = ((...args: any) => {
-        resolve(args[0]);
-      }) as EngineEvents[K];
-      
-      this.eventBus.once(eventName, listener);
-      
-      // Set timeout if specified
-      if (timeout) {
-        const timeoutId = setTimeout(() => {
-          this.eventBus.off(eventName, listener);
-          reject(new Error(`Timeout waiting for event ${String(eventName)}`));
-        }, timeout);
-        
-        // Clear timeout if event occurs
-        this.eventBus.once(eventName, (() => clearTimeout(timeoutId)) as EngineEvents[K]);
-      }
-    });
+    return this.eventRegistry.waitFor(eventName, timeout);
   }
 
   /**
    * Creates a debounced event emitter that prevents event spam.
-   * Useful for high-frequency events like player input.
-   * 
-   * @param eventName - The name of the event to emit
-   * @param delay - The minimum delay between emissions in milliseconds
-   * @returns A function that emits the event at most once per delay period
    */
   protected createDebouncedEmitter<K extends keyof EngineEvents>(
     eventName: K, 
     delay: number
   ): (...args: Parameters<EngineEvents[K]>) => void {
-    let lastEmit = 0;
-    let timeoutId: number | null = null;
-    let pendingArgs: Parameters<EngineEvents[K]> | null = null;
-    
-    return (...args: Parameters<EngineEvents[K]>) => {
-      const now = Date.now();
-      
-      // If we haven't emitted recently, emit immediately
-      if (now - lastEmit > delay) {
-        lastEmit = now;
-        this.emitEvent(eventName, ...args);
-        return;
-      }
-      
-      // Otherwise, schedule emission for later
-      pendingArgs = args;
-      
-      if (!timeoutId) {
-        timeoutId = window.setTimeout(() => {
-          if (pendingArgs) {
-            this.emitEvent(eventName, ...pendingArgs);
-            lastEmit = Date.now();
-            pendingArgs = null;
-          }
-          timeoutId = null;
-        }, delay - (now - lastEmit));
-      }
-    };
+    return this.eventRegistry.createDebouncedEmitter(eventName, delay);
   }
 
   /**
@@ -1292,9 +1168,11 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
 
   /**
    * Accumulated time since the last fixed update.
-   * Used for frame rate independent movement.
+   * @deprecated Prefer frameClock; kept for subclasses that read _frameTimeAccumulator.
    */
-  protected _frameTimeAccumulator: number = 0;
+  protected get _frameTimeAccumulator(): number {
+    return this.frameClock.getFrameTimeAccumulator();
+  }
 
   /**
    * The fixed timestep in milliseconds for consistent physics/updates.
@@ -1304,122 +1182,36 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
 
   /**
    * Process frame timing information for the current frame.
-   * Calculates time since last frame, updates FPS tracking, and manages fixed timestep accumulation.
-   * @param delta Delta time from PixiJS ticker (in milliseconds)
-   * @returns Processed timing information for the current frame
    */
   protected processFrameTiming(delta: number): FrameTiming {
-    // Convert PixiJS delta (which is in ms) to seconds for our game logic
-    const deltaTimeMs = delta;
-    const deltaTimeSec = deltaTimeMs / 1000;
-    
-    // --- Add check for paused state ---
-    if (this.gameState === GameState.PAUSED) {
-      // If paused, we still want to track FPS but not advance game time or accumulators
-      this._fpsUpdateTime += deltaTimeSec; // Use unscaled delta for FPS calculation consistency
-      this._frameCount++;
-      if (this._fpsUpdateTime >= 1.0) {
-        this._currentFPS = this._frameCount / this._fpsUpdateTime;
-        this._frameCount = 0;
-        this._fpsUpdateTime = 0;
-        this.emitEvent(EXTENDED_ENGINE_EVENTS.FPS_UPDATED, {
-          fps: this._currentFPS,
-          targetFPS: this.config.targetFPS || 60
-        });
+    return this.frameClock.processFrame(
+      delta,
+      this.gameState === GameState.PAUSED,
+      {
+        maxFPS: this.config.maxFPS,
+        targetFPS: this.config.targetFPS,
+      },
+      (fps, targetFPS) => {
+        this.emitEvent(EXTENDED_ENGINE_EVENTS.FPS_UPDATED, { fps, targetFPS });
       }
-      // Return a timing object that reflects no progression for game logic
-      return {
-        deltaTime: 0, // No progression
-        scaledDeltaTime: 0, // No progression
-        timeScale: this._gameSpeed, // Keep current timeScale for reference
-        elapsedTime: this._elapsedTime, // Elapsed time doesn't advance
-        fixedTimeAccumulator: this._frameTimeAccumulator, // Accumulator doesn't advance
-      };
-    }
-    // --- End check for paused state ---
-
-    // Apply FPS limiting if enabled
-    let finalDeltaTime = deltaTimeSec;
-    const maxFPS = this.config.maxFPS || 0;
-    if (maxFPS > 0) {
-      const minFrameTime = 1 / maxFPS;
-      finalDeltaTime = Math.min(finalDeltaTime, minFrameTime);
-    }
-
-    // Update FPS tracking
-    this._fpsUpdateTime += finalDeltaTime;
-    this._frameCount++;
-    
-    if (this._fpsUpdateTime >= 1.0) { // Update every second
-      this._currentFPS = this._frameCount / this._fpsUpdateTime;
-      this._frameCount = 0;
-      this._fpsUpdateTime = 0;
-      
-      // Emit FPS updated event
-      this.emitEvent(EXTENDED_ENGINE_EVENTS.FPS_UPDATED, {
-        fps: this._currentFPS,
-        targetFPS: this.config.targetFPS || 60
-      });
-    }
-    
-    // Calculate time scale (for slow-motion or fast-forward effects)
-    const timeScale = this._gameSpeed;
-    
-    // Calculate fixed timestep accumulation
-    const scaledDelta = finalDeltaTime * timeScale;
-    this._frameTimeAccumulator += scaledDelta;
-    
-    return {
-      deltaTime: finalDeltaTime,
-      scaledDeltaTime: scaledDelta,
-      timeScale,
-      elapsedTime: this._elapsedTime += finalDeltaTime,
-      fixedTimeAccumulator: this._frameTimeAccumulator,
-    };
+    );
   }
 
   /**
    * Updates the game state using a fixed timestep approach.
-   * This ensures physics and game logic run at a consistent rate regardless of framerate.
-   * @param timing Frame timing information from processFrameTiming()
    */
   protected updateWithFixedTimestep(timing: FrameTiming): void {
-    // --- Add check for paused state ---
-    if (this.gameState === GameState.PAUSED || timing.deltaTime === 0) {
-      return; // Do not perform fixed updates if paused or if delta time is zero
-    }
-    // --- End check for paused state ---
-
-    const fixedUpdateFPS = this.config.fixedUpdateFPS || 60;
-    const fixedDeltaTime = 1 / fixedUpdateFPS;
-    
-    // Perform fixed updates as many times as needed to catch up
-    let updatesPerformed = 0;
-    const maxUpdatesPerFrame = this.config.maxFixedUpdatesPerFrame || 5;
-    
-    while (timing.fixedTimeAccumulator >= fixedDeltaTime && updatesPerformed < maxUpdatesPerFrame) {
-      // Emit pre-fixed update event
-      this.emitEvent(EXTENDED_ENGINE_EVENTS.BEFORE_FIXED_UPDATE, { deltaTime: fixedDeltaTime });
-      
-      // Perform fixed update
-      this.fixedUpdate(fixedDeltaTime);
-      
-      // Emit post-fixed update event
-      this.emitEvent(EXTENDED_ENGINE_EVENTS.AFTER_FIXED_UPDATE, { deltaTime: fixedDeltaTime });
-      
-      // Decrease accumulator
-      this._frameTimeAccumulator -= fixedDeltaTime;
-      updatesPerformed++;
-    }
-    
-    // If we're hitting the max updates per frame consistently, we might be in a spiral
-    // Log a warning and consider resetting the accumulator
-    if (updatesPerformed >= maxUpdatesPerFrame) {
-      console.warn(`[BaseGame] Maximum fixed updates per frame reached (${maxUpdatesPerFrame}). Game might be running too slowly.`);
-      
-      // Optional: reset accumulator to avoid death spiral (uncomment if needed)
-      // this._frameTimeAccumulator = 0;
-    }
+    this.frameClock.runFixedUpdates(
+      timing,
+      this.gameState === GameState.PAUSED,
+      {
+        fixedUpdateFPS: this.config.fixedUpdateFPS,
+        maxFixedUpdatesPerFrame: this.config.maxFixedUpdatesPerFrame,
+      },
+      (dt) => this.fixedUpdate(dt),
+      (dt) => this.emitEvent(EXTENDED_ENGINE_EVENTS.BEFORE_FIXED_UPDATE, { deltaTime: dt }),
+      (dt) => this.emitEvent(EXTENDED_ENGINE_EVENTS.AFTER_FIXED_UPDATE, { deltaTime: dt })
+    );
   }
 
   /**
@@ -1489,7 +1281,7 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     renderer: CustomRendererFunction,
     priority: number = 0
   ): string {
-    const id = uuidv4();
+    const id = crypto.randomUUID();
     this._customRenderers.push({
       id,
       renderer,
@@ -1518,7 +1310,7 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    * @returns The current FPS as calculated during processFrameTiming
    */
   public getCurrentFPS(): number {
-    return this._currentFPS;
+    return this.frameClock.getCurrentFPS();
   }
 
   /**
@@ -1527,14 +1319,12 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    * @param speed Speed multiplier (default: 1.0)
    */
   public setGameSpeed(speed: number): void {
-    this._gameSpeed = Math.max(0.1, Math.min(speed, 10.0));
+    this.frameClock.setGameSpeed(speed);
     
     this.emitEvent(EXTENDED_ENGINE_EVENTS.GAME_SPEED_CHANGED, {
-      speed: this._gameSpeed,
-      previousSpeed: this._previousGameSpeed
+      speed: this.frameClock.getGameSpeed(),
+      previousSpeed: this.frameClock.getPreviousGameSpeed()
     });
-    
-    this._previousGameSpeed = this._gameSpeed;
   }
 
   // === Layer Management ===
@@ -1582,104 +1372,65 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     container.removeChild(displayObject);
   }
 
-  // Add these properties to the class
-  private _frameCount: number = 0;
-  private _fpsUpdateTime: number = 0;
-  private _currentFPS: number = 0;
-  private _gameSpeed: number = 1.0;
-  private _previousGameSpeed: number = 1.0;
-  private _elapsedTime: number = 0;
-
   /** Custom renderers registered with this game */
   protected _customRenderers: CustomRenderer[] = [];
 
   /**
    * Gets the entire game configuration or a specific section.
-   * 
-   * @param path - Optional dot notation path to a specific config property
-   * @returns The requested configuration value or the entire config object if no path is provided
    */
   public getConfig<T = Readonly<GameConfig>>(path?: string): T {
     if (!path) {
       return this.config as unknown as T;
     }
     
-    return this.getPropertyByPath(this.config, path) as T;
+    return getPropertyByPath(this.config as unknown as Record<string, unknown>, path) as T;
   }
 
   /**
    * Registers an event listener for configuration changes.
-   * 
-   * @param path - Dot notation path to the config property to monitor 
-   *               (or empty string to monitor all changes)
-   * @param handler - Function to call when the config property changes
-   * @returns The BaseGame instance for chaining
    */
   protected registerConfigChangeHandler(
     path: string,
     handler: (event: ConfigChangeEvent) => void
   ): this {
     const eventName = path ? `config:change:${path}` : 'config:change';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    this.eventBus.on(eventName as any, handler as any);
+    this.eventBus.on(eventName as keyof EngineEvents, handler as EngineEvents[keyof EngineEvents]);
     return this;
   }
 
   /**
    * Unregisters a previously registered configuration change handler.
-   * 
-   * @param path - Dot notation path that was used to register the handler
-   * @param handler - The handler function to remove
-   * @returns The BaseGame instance for chaining
    */
   protected unregisterConfigChangeHandler(
     path: string,
     handler: (event: ConfigChangeEvent) => void
   ): this {
     const eventName = path ? `config:change:${path}` : 'config:change';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    this.eventBus.off(eventName as any, handler as any);
+    this.eventBus.off(eventName as keyof EngineEvents, handler as EngineEvents[keyof EngineEvents]);
     return this;
   }
 
   /**
    * Safely applies a configuration change at runtime.
-   * This is useful for configuration changes that can be applied without restarting the game.
-   * For changes that require a full restart, consider recreating the game instance instead.
-   * 
-   * @param path - Dot notation path to the config property to change
-   * @param newValue - The new value to apply
-   * @param source - Source of the configuration change (defaults to 'runtime')
-   * @returns Whether the change was successfully applied
    */
   protected applyConfigChange(
     path: string,
     newValue: unknown,
     source: ConfigChangeEvent['source'] = 'runtime'
   ): boolean {
-    // Validate the change first
     const validationResult = this.validateConfigChange(path, newValue);
     if (!validationResult.valid) {
       console.error(`Invalid config change at ${path}:`, validationResult.errors);
       return false;
     }
 
-    // Get current value for comparison and event emission
-    const oldValue = this.getPropertyByPath(this.config, path);
+    const oldValue = getPropertyByPath(this.config as unknown as Record<string, unknown>, path);
     
     try {
-      // Since config is readonly, we need to create a mutable copy, modify it,
-      // and then cast it back - this is a bit of a hack but allows for runtime changes
-      const mutableConfig = { ...this.config } as GameConfig;
-      
-      // Set the new value at the specified path
-      this.setPropertyByPath(mutableConfig as unknown as Record<string, unknown>, path, newValue);
-      
-      // This is safe since we're only updating a specific path
+      const nextConfig = applyMutableConfigChange(this.config, path, newValue);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (this as any).config = Object.freeze(mutableConfig);
+      (this as any).config = nextConfig;
       
-      // Create the event object
       const event: ConfigChangeEvent = {
         path,
         oldValue,
@@ -1687,13 +1438,9 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
         source
       };
       
-      // Emit events - both for the specific path and for any change
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      this.eventBus.emit(`config:change:${path}` as any, event);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      this.eventBus.emit('config:change' as any, event);
+      this.eventBus.emit(`config:change:${path}` as keyof EngineEvents, event as never);
+      this.eventBus.emit('config:change' as keyof EngineEvents, event as never);
       
-      // Apply the configuration change to the game state as needed
       this.handleConfigChange(path, oldValue, newValue, source);
       
       return true;
@@ -1705,34 +1452,13 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
 
   /**
    * Validates a proposed configuration change.
-   * Override this method in your game implementation for game-specific validation.
-   * 
-   * @param path - Dot notation path to the config property to validate
-   * @param newValue - The proposed new value
-   * @returns Validation result object with valid flag and optional error messages
    */
   protected validateConfigChange(path: string, newValue: unknown): ConfigValidationResult {
-    // Create a temporary config with the change applied
-    const tempConfig = { ...this.config } as GameConfig;
-    this.setPropertyByPath(tempConfig as unknown as Record<string, unknown>, path, newValue);
-    
-    // Use the built-in validation from GameConfig
-    const errors = validateGameConfig(tempConfig);
-    
-    return {
-      valid: errors.length === 0,
-      errors: errors.length > 0 ? errors : undefined
-    };
+    return validateConfigChangeHelper(this.config, path, newValue);
   }
 
   /**
    * Handles a configuration change by updating game state or behavior.
-   * Override this method in your game implementation to handle specific config changes.
-   * 
-   * @param path - Dot notation path to the config property that changed
-   * @param oldValue - The previous value
-   * @param newValue - The new value
-   * @param source - Source of the configuration change
    */
   protected handleConfigChange(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -1745,150 +1471,28 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     _source: ConfigChangeEvent['source']
   ): void {
     // Base implementation doesn't do anything
-    // Game implementations should override this to handle specific config changes
-  }
-
-  /**
-   * Sets a property value at the specified path in an object.
-   * Helper method for updating properties using dot notation.
-   * 
-   * @param obj - The object to modify
-   * @param path - Dot notation path to the property
-   * @param value - The value to set
-   * @private
-   */
-  private setPropertyByPath(obj: Record<string, unknown>, path: string, value: unknown): void {
-    const parts = path.split('.');
-    const lastPart = parts.pop();
-    
-    if (!lastPart) {
-      throw new Error(`Invalid property path: ${path}`);
-    }
-    
-    let current = obj;
-    
-    // Navigate to the parent object
-    for (const part of parts) {
-      if (current[part] === undefined) {
-        current[part] = {};
-      }
-      
-      if (typeof current[part] !== 'object' || current[part] === null) {
-        throw new Error(`Cannot set property at path ${path}: ${part} is not an object`);
-      }
-      
-      current = current[part] as Record<string, unknown>;
-    }
-    
-    // Set the value on the parent object
-    current[lastPart] = value;
   }
 
   // === Transition Screen Methods ===
 
   /**
    * Shows the transition screen and sets the game state to 'transition'.
-   * Emits TRANSITION_START event.
-   * 
-   * @param config - Configuration for the transition screen, including optional triggerPowerupRoll.
-   * @returns A promise that resolves when the transition screen is hidden (if autoHide is true).
    */
   protected async showTransition(config: TransitionScreenConfig): Promise<void> {
-    if (!this.transitionScreen) {
-      console.warn('Attempted to show transition screen, but it was not initialized.');
-      return Promise.resolve();
-    }
-    
-    // Store previous phase BEFORE setting to transition
-    const previousPhase = this._gameState.phase;
-    // Set phase to transition immediately
-    this.setState({ phase: 'transition' } as Partial<TGameState>, { silent: true }); // Don't trigger phase change events yet
-    
-    // Emit TRANSITION_START event
-    const startPayload: TransitionStartPayload = {
-      type: config.type,
-      message: config.message,
-      duration: config.duration,
-      triggerPowerupRoll: config.triggerPowerupRoll
-    };
-    this.emitEvent(TRANSITION_EVENTS.START, startPayload);
-
-    // Trigger the screen display, passing the full config including the roll trigger
-    const screenPromise = this.transitionScreen.show(config);
-
-    if (config.autoHide) {
-      await screenPromise;
-      // Check if the phase is still 'transition' before restoring.
-      // It might have been changed elsewhere (e.g., manual hide, game over).
-      if (this._gameState.phase === 'transition') {
-        const endPayload: TransitionEndPayload = { type: config.type };
-        this.emitEvent(TRANSITION_EVENTS.END, endPayload);
-        // Restore previous phase or default to 'playing'
-        const phaseToRestore = (previousPhase && previousPhase !== 'transition') ? previousPhase : 'playing'; 
-        this.setState({ phase: phaseToRestore } as Partial<TGameState>);
-      } else {
-        console.log(`[BaseGame.showTransition] AutoHide finished, but phase was no longer 'transition' (was ${this._gameState.phase}). Not restoring phase or emitting END.`);
-      }
-    } else {
-      // If autoHide is FALSE, DO NOT await here. Return immediately.
-      // The responsibility to call hideTransition() lies with the caller.
-      return Promise.resolve();
-    }
+    return this.transitionHost.show(config);
   }
 
   /**
    * Hides the transition screen if it is currently visible.
-   * Also handles emitting TRANSITION_END and restoring the game phase.
    */
   protected hideTransition(): void {
-    if (this.transitionScreen?.visible) {
-      const currentScreenConfig = this.transitionScreen.getCurrentConfig(); // Assuming TransitionScreen has a method to get current config
-      
-      // Hide the screen (this resolves the promise stored in TransitionScreen if manual)
-      this.transitionScreen.hide();
-
-      // Only emit END event and restore phase if we were actually in a transition phase
-      if (this._gameState.phase === 'transition') {
-          const endPayload: TransitionEndPayload = { type: currentScreenConfig?.type || 'custom' }; // Use stored type or default
-          this.emitEvent(TRANSITION_EVENTS.END, endPayload);
-
-          // Restore the phase that was active BEFORE the transition started.
-          // We need to retrieve this. Let's assume it was stored somewhere or revert to a sensible default.
-          // For simplicity now, revert to 'playing' if history is empty or previous was also 'transition'.
-          const history = this.getStateHistory(1);
-          const phaseBeforeTransition = (history.length > 0 && history[0].phase !== 'transition') ? history[0].phase : 'playing';
-
-          this.setState({ phase: phaseBeforeTransition } as Partial<TGameState>);
-          console.log(`[BaseGame.hideTransition] Transition hidden. Phase restored to: ${phaseBeforeTransition}`);
-      } else {
-          console.log(`[BaseGame.hideTransition] Transition hidden, but game phase was already '${this._gameState.phase}'. Not emitting END or changing phase.`);
-      }
-    } else {
-        // Optional: Log if hideTransition is called when not visible
-        // console.log('[BaseGame.hideTransition] Called, but transition screen was not visible.');
-    }
+    this.transitionHost.hide();
   }
 
   /**
    * Handles the power-up selection event during a transition.
-   * @param payload - The event payload containing the selected power-up ID.
    */
   protected _handlePowerupSelected(payload: TransitionPowerupSelectedPayload): void {
     console.log(`[BaseGame] Power-up selected during transition: ${payload.selectedPowerupId}`);
-    
-    // --- Placeholder Logic ---
-    // Subclasses (like MultipleChoiceGame) should override this method.
-    // Example logic:
-    // 1. Determine the target team (e.g., the team whose turn is NEXT).
-    //    You might need to look at the game state or the transition type.
-    // const targetTeamId = this.getState().activeTeam; // Or the team about to play
-    // 2. Decide whether to activate the power-up based on game rules/state.
-    //    Maybe only activate if the team doesn't already have one?
-    // 3. Call activatePowerUp if applicable.
-    // if (targetTeamId) {
-    //    this.activatePowerUp(payload.selectedPowerupId, targetTeamId);
-    // }
-    
-    // Default implementation does nothing further.
   }
 }

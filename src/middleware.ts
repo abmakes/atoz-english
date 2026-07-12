@@ -1,11 +1,23 @@
-import { clerkMiddleware } from '@clerk/nextjs/server'
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { NextResponse } from 'next/server'
 
-// Only use Clerk middleware if environment variables are available
-const middleware = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY 
-  ? clerkMiddleware()
-  : undefined
+const isClerkEnabled = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
-export default middleware
+/** Pages that require a signed-in user when Clerk is configured. */
+const isProtectedRoute = createRouteMatcher([
+  '/quizzes(.*)',
+  '/create(.*)',
+])
+
+const clerkHandler = isClerkEnabled
+  ? clerkMiddleware(async (auth, request) => {
+      if (isProtectedRoute(request)) {
+        await auth.protect()
+      }
+    })
+  : null
+
+export default clerkHandler ?? (() => NextResponse.next())
 
 export const config = {
   matcher: [

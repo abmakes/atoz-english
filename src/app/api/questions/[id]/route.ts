@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server'
 import { prisma, withDatabaseRetry } from '@/lib/prisma'
 import { createQuestion } from '@/lib/db'
 import { del } from '@vercel/blob'
+import { requireAuth, isUnauthorized } from '@/lib/auth'
 
 const PLACEHOLDER_IMAGE = '/images/placeholder.webp'
 
@@ -30,6 +31,9 @@ export async function GET(
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth()
+    if (isUnauthorized(authResult)) return authResult
+
     const data = await request.json()
     const question = await createQuestion(data)
     return NextResponse.json(question, { status: 201 })
@@ -47,6 +51,9 @@ export async function DELETE(
   const { id } = await params;
 
   try {
+    const authResult = await requireAuth()
+    if (isUnauthorized(authResult)) return authResult
+
     console.log(`Attempting to delete question with ID: ${id}`)
 
     const question = await withDatabaseRetry(() =>
@@ -95,6 +102,9 @@ export async function PUT(
 ) {
    const { id } = await params; 
    try {
+      const authResult = await requireAuth()
+      if (isUnauthorized(authResult)) return authResult
+
       const data = await request.json();
       console.log(`Attempting to update question with ID: ${id}`, data);
 

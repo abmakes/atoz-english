@@ -4,6 +4,7 @@ import { QuestionType } from '@/types/question_types';
 import wordlistData from '@/json/wordlist.json';
 import macmillanData from '@/json/macmillan_academy_stars .json';
 import cambridgeData from '@/json/cambridge_primary_path.json';
+import { requireAuth, isUnauthorized } from '@/lib/auth';
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_QUIZ_API_KEY!);
@@ -152,6 +153,9 @@ IMPORTANT:
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth();
+    if (isUnauthorized(authResult)) return authResult;
+
     const body: GenerateQuestionsRequest = await request.json();
     
     const {
