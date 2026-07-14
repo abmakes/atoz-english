@@ -136,6 +136,20 @@ exports.Prisma.QuizScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.QuizLikeScalarFieldEnum = {
+  id: 'id',
+  quizId: 'quizId',
+  userId: 'userId',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.QuizFavoriteScalarFieldEnum = {
+  id: 'id',
+  quizId: 'quizId',
+  userId: 'userId',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.QuestionScalarFieldEnum = {
   id: 'id',
   question: 'question',
@@ -210,6 +224,8 @@ exports.QuestionType = exports.$Enums.QuestionType = {
 
 exports.Prisma.ModelName = {
   Quiz: 'Quiz',
+  QuizLike: 'QuizLike',
+  QuizFavorite: 'QuizFavorite',
   Question: 'Question',
   StoredImage: 'StoredImage',
   Tag: 'Tag'

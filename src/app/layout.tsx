@@ -3,10 +3,12 @@ import "../styles/globals.css";
 import Navigation from "@/components/layout/Navigation";
 import { CustomToastProvider } from "@/components/ui/CustomToast";
 import { ClerkProvider } from "@clerk/nextjs";
+import { ClerkActiveProvider } from "@/components/auth/ClerkActiveProvider";
 
 export const metadata: Metadata = {
-  title: "AtoZ English",
-  description: "Learn English the fun way",
+  title: "PlaytoZ — English quizzes that play like fair fights",
+  description:
+    "Create English quizzes in clicks. Students compete with skill and speed in Score Attack or Splash Dash — timers, power-ups, and teams without luck replacing learning.",
 };
 
 export default function RootLayout({
@@ -14,36 +16,31 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  
-  // If Clerk key is not available, render without ClerkProvider
-  if (!clerkPublishableKey) {
-    return (
-      <html lang="en">
-        <body className="min-h-screen bg-white">
-          <CustomToastProvider>
-            <Navigation />
-            <main className="relative z-10">
-              {children}
-            </main>
-          </CustomToastProvider>
-        </body>
-      </html>
-    );
-  }
+  const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
+  const clerkActive = Boolean(clerkPublishableKey);
+
+  const body = (
+    <ClerkActiveProvider active={clerkActive}>
+      <CustomToastProvider>
+        <Navigation />
+        <main className="relative z-10">
+          {children}
+        </main>
+      </CustomToastProvider>
+    </ClerkActiveProvider>
+  );
 
   return (
-    <ClerkProvider publishableKey={clerkPublishableKey}>
-      <html lang="en">
-        <body className="min-h-screen bg-white">
-          <CustomToastProvider>
-            <Navigation />
-            <main className="relative z-10">
-              {children}
-            </main>
-          </CustomToastProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en">
+      <body className="min-h-screen bg-white">
+        {clerkActive ? (
+          <ClerkProvider publishableKey={clerkPublishableKey}>
+            {body}
+          </ClerkProvider>
+        ) : (
+          body
+        )}
+      </body>
+    </html>
   );
 }

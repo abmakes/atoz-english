@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma, withDatabaseRetry, warmupDatabase, isDatabaseIdle } from '@/lib/prisma'
 import { put } from '@vercel/blob'
 import { QuestionType } from '@/types/question_types'
 import { Quiz as ITQuiz, Question as ITQuestion } from '@/types'
 import { Prisma } from '../../../../prisma/app/generated/prisma/client'
-// Use the centralized schemas for consistency
-import { quizSettingsSchema } from '@/lib/schemas'
-import { requireAuth, isUnauthorized } from '@/lib/auth'
+import { quizSettingsSchema, quizSortSchema } from '@/lib/schemas'
+import { requireAuth, isUnauthorized, getOptionalUserId } from '@/lib/auth'
+import { getQuizStatistics, sortByStatistics, emptyStatisticsJson } from '@/lib/quiz-statistics'
 
 // Define Zod Schema for a Question (used in POST)
 const QuestionSchema = z.object({
@@ -45,9 +45,26 @@ type ParsedQuizData = z.infer<typeof QuizCreateSchema>
 // Add route segment config if needed for dynamic operations like reading request body
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   console.log('GET /api/quizzes')
   try {
+    const { searchParams } = new URL(request.url)
+    const sortParam = searchParams.get('sort') ?? 'newest'
+    const sortResult = quizSortSchema.safeParse(sortParam)
+    const sort = sortResult.success ? sortResult.data : 'newest'
+    const authorIdParam = searchParams.get('authorId')
+
+    let authorFilter: string | undefined
+    if (authorIdParam === 'me') {
+      const authResult = await requireAuth()
+      if (isUnauthorized(authResult)) return authResult
+      authorFilter = authResult.userId
+    } else if (authorIdParam) {
+      authorFilter = authorIdParam
+    }
+
+    const currentUserId = await getOptionalUserId()
+
     const selectArgs: Prisma.QuizSelect = {
         id: true,
         title: true,
@@ -72,27 +89,58 @@ export async function GET() {
         createdAt: true,
         updatedAt: true,
     };
+
     const quizzesFromDb = await withDatabaseRetry(() =>
       prisma.quiz.findMany({
-        select: selectArgs
+        select: selectArgs,
+        where: authorFilter ? { authorId: authorFilter } : undefined,
+        orderBy: { createdAt: 'desc' },
       }), 'Fetching quizzes')
 
-    const quizzesForApi: ITQuiz[] = quizzesFromDb.map(quiz => {
-        const currentQuiz = quiz as unknown as ITQuiz; 
+    let likedSet = new Set<string>()
+    let favoritedSet = new Set<string>()
+
+    if (currentUserId && quizzesFromDb.length > 0) {
+      const quizIds = quizzesFromDb.map((q) => q.id)
+      try {
+        const [likes, favorites] = await Promise.all([
+          prisma.quizLike.findMany({
+            where: { userId: currentUserId, quizId: { in: quizIds } },
+            select: { quizId: true },
+          }),
+          prisma.quizFavorite.findMany({
+            where: { userId: currentUserId, quizId: { in: quizIds } },
+            select: { quizId: true },
+          }),
+        ])
+        likedSet = new Set(likes.map((l) => l.quizId))
+        favoritedSet = new Set(favorites.map((f) => f.quizId))
+      } catch (engagementError) {
+        // Don't fail the catalog if engagement tables/client are unavailable
+        console.warn('Skipping likedByMe/favoritedByMe enrichment:', engagementError)
+      }
+    }
+
+    const quizzesForApi = quizzesFromDb.map(quiz => {
+        const currentQuiz = quiz as unknown as ITQuiz
         return {
           ...currentQuiz,
           imageUrl: currentQuiz.imageUrl ?? PLACEHOLDER_IMAGE,
-          statistics: currentQuiz.statistics ?? { favoritesCount: 0, playsCount: 0, likes: 0 },
+          statistics: getQuizStatistics(currentQuiz.statistics),
           tags: currentQuiz.tags ?? [],
           authorId: currentQuiz.authorId ?? "admin",
           createdAt: currentQuiz.createdAt ?? new Date(),
+          likedByMe: likedSet.has(currentQuiz.id),
+          favoritedByMe: favoritedSet.has(currentQuiz.id),
           questions: (currentQuiz.questions || []).map(q => ({
             ...q,
             imageUrl: q.imageUrl ?? PLACEHOLDER_IMAGE
         }))
     }})
 
-    return NextResponse.json({ data: quizzesForApi })
+    const sorted = sortByStatistics(quizzesForApi, sort)
+
+    return NextResponse.json({ data: sorted })
   } catch (error) {
     console.error('Failed to fetch quizzes:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -250,7 +298,9 @@ export async function POST(request: Request) {
         quizType: validatedData.quizType,
         tags: validatedData.tags || [],
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        statistics: validatedData.statistics ? validatedData.statistics as any : Prisma.JsonNull,
+        statistics: validatedData.statistics
+          ? (validatedData.statistics as any)
+          : emptyStatisticsJson(),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         defaultSettings: validatedData.defaultSettings ? validatedData.defaultSettings as any : Prisma.JsonNull,
         authorId: validatedData.authorId ?? userId,

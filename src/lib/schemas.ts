@@ -1,6 +1,36 @@
 import { z } from 'zod';
 import { QuestionType } from '@/types/question_types';
 
+/** Denormalized engagement counters stored on Quiz.statistics */
+export const quizStatisticsSchema = z.object({
+  likes: z.number().int().nonnegative().default(0),
+  favoritesCount: z.number().int().nonnegative().default(0),
+  playsCount: z.number().int().nonnegative().default(0),
+});
+
+export type QuizStatistics = z.infer<typeof quizStatisticsSchema>;
+
+export const DEFAULT_QUIZ_STATISTICS: QuizStatistics = {
+  likes: 0,
+  favoritesCount: 0,
+  playsCount: 0,
+};
+
+export function normalizeQuizStatistics(raw: unknown): QuizStatistics {
+  const parsed = quizStatisticsSchema.safeParse(raw ?? {});
+  if (parsed.success) {
+    return {
+      likes: parsed.data.likes ?? 0,
+      favoritesCount: parsed.data.favoritesCount ?? 0,
+      playsCount: parsed.data.playsCount ?? 0,
+    };
+  }
+  return { ...DEFAULT_QUIZ_STATISTICS };
+}
+
+export const quizSortSchema = z.enum(['newest', 'likes', 'plays', 'favorites']).default('newest');
+export type QuizSort = z.infer<typeof quizSortSchema>;
+
 // Base schemas (without relations)
 export const tagSchema = z.object({
   id: z.string().optional(),
@@ -23,12 +53,11 @@ export const quizBaseSchema = z.object({
   imageUrl: z.string().optional(),
   quizType: z.nativeEnum(QuestionType).default(QuestionType.MULTIPLE_CHOICE),
   tags: z.array(z.string()).optional(),
-  statistics: z.any().optional(),
-  defaultSettings: z.any().optional(), // This will be updated by the input schema
+  statistics: quizStatisticsSchema.optional(),
+  defaultSettings: z.any().optional(),
   authorId: z.string().optional(),
 });
 
-// Define a specific schema for the settings object
 export const quizSettingsSchema = z.object({
   theme: z.string().optional(),
   powerUps: z.array(z.string()).optional(),
@@ -39,8 +68,6 @@ export const quizSettingsSchema = z.object({
   soundEffects: z.boolean().optional(),
 });
 
-
-// Schema for API input validation (includes file uploads)
 export const questionInputSchema = questionBaseSchema.extend({
   imageFile: z.any().optional(),
   tagsString: z.string().optional(),
@@ -49,7 +76,6 @@ export const questionInputSchema = questionBaseSchema.extend({
 export const quizInputSchema = quizBaseSchema.extend({
   quizImageFile: z.any().optional(),
   questions: z.array(questionInputSchema).min(1, "Quiz must have at least one question"),
-  // Override defaultSettings to parse from a string
   defaultSettings: z.string().optional().transform((str, ctx) => {
     if (!str) return undefined;
     try {
@@ -62,7 +88,6 @@ export const quizInputSchema = quizBaseSchema.extend({
   }),
 });
 
-// Schema for database operations
 export const questionDbSchema = questionBaseSchema.extend({
   quizId: z.string().optional(),
 });
@@ -71,14 +96,12 @@ export const quizDbSchema = quizBaseSchema.extend({
   questions: z.array(questionDbSchema).optional(),
 });
 
-// API response schemas
 export const apiResponseSchema = z.object({
   data: z.unknown().optional(),
   error: z.string().optional(),
   details: z.unknown().optional(),
 });
 
-// CSV upload schema
 export const csvUploadSchema = z.object({
   title: z.string().min(1, "Quiz title is required"),
   description: z.string().optional(),
@@ -86,7 +109,7 @@ export const csvUploadSchema = z.object({
   quizType: z.nativeEnum(QuestionType).optional(),
   tags: z.array(z.string()).optional(),
   authorId: z.string().optional(),
-  statistics: z.any().optional(),
+  statistics: quizStatisticsSchema.optional(),
   defaultSettings: z.any().optional(),
   csv: z.any().refine(
     (file) => file && typeof file.name === 'string' && file.name.endsWith('.csv'),
@@ -94,7 +117,6 @@ export const csvUploadSchema = z.object({
   )
 });
 
-// CSV row schema for validation
 export const csvRowSchema = z.object({
   question: z.string().min(1, "Question text cannot be empty"),
   answer1: z.string().min(1, "Answer 1 cannot be empty"),
@@ -108,8 +130,6 @@ export const csvRowSchema = z.object({
 
 export type CsvUploadInput = z.infer<typeof csvUploadSchema>;
 export type CsvRowInput = z.infer<typeof csvRowSchema>;
-
-// Helper types
 export type QuestionInput = z.infer<typeof questionInputSchema>;
 export type QuizInput = z.infer<typeof quizInputSchema>;
 export type QuestionDb = z.infer<typeof questionDbSchema>;
@@ -118,4 +138,4 @@ export type ApiResponse<T> = {
   data?: T;
   error?: string;
   details?: unknown;
-}; 
+};

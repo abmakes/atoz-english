@@ -19,12 +19,38 @@ model Quiz {
   imageUrl  String?    // For Giphy URLs and direct uploads
   quizType  QuestionType @default(MULTIPLE_CHOICE)
   tags      String[]
-  statistics Json?     // Added: To store quiz statistics like playCount, favoritesCount
+  statistics Json?     // { likes, favoritesCount, playsCount }
   defaultSettings Json? // Added: To store default game settings for this quiz
   authorId  String     @default("admin")
   questions Question[]
+  likes     QuizLike[]
+  favorites QuizFavorite[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+}
+
+model QuizLike {
+  id        String   @id @default(cuid())
+  quizId    String
+  userId    String
+  createdAt DateTime @default(now())
+  quiz      Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@unique([quizId, userId])
+  @@index([userId])
+  @@index([quizId])
+}
+
+model QuizFavorite {
+  id        String   @id @default(cuid())
+  quizId    String
+  userId    String
+  createdAt DateTime @default(now())
+  quiz      Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@unique([quizId, userId])
+  @@index([userId])
+  @@index([quizId])
 }
 
 model Question {

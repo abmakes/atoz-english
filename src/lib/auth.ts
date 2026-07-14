@@ -22,6 +22,18 @@ export async function requireAuth(): Promise<AuthResult | NextResponse> {
   return { userId }
 }
 
+/**
+ * Return the current user id when signed in, otherwise null.
+ * Does not fall back to "admin" — used for optional personalization (likedByMe).
+ */
+export async function getOptionalUserId(): Promise<string | null> {
+  if (!isClerkEnabled) {
+    return 'admin'
+  }
+  const { userId } = await auth()
+  return userId ?? null
+}
+
 export function isUnauthorized(
   result: AuthResult | NextResponse
 ): result is NextResponse {

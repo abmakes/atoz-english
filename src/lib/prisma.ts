@@ -55,13 +55,13 @@ const prismaDbUrl = process.env.POSTGRES_PRISMA_URL
   : undefined; // Ensure it's explicitly undefined if not set
 
 
-export const prisma = global.prisma || (() => {
+function createPrismaClient(): PrismaClient {
   if (!prismaDbUrl) {
     throw new Error("Database URL (POSTGRES_PRISMA_URL) is not defined in environment variables.");
   }
   console.log('Initializing new PrismaClient...');
 
-  const client = new PrismaClient({
+  return new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
     datasources: {
       db: {
@@ -69,14 +69,26 @@ export const prisma = global.prisma || (() => {
       },
     },
   });
+}
 
-  // Optional: Initial connection attempt logging (can be noisy)
-  // client.$connect()
-  //   .then(() => console.log('PrismaClient connected.'))
-  //   .catch(e => console.error('PrismaClient initial connection failed:', e));
+/** Drop a hot-reload-cached client that predates schema models (e.g. QuizLike). */
+function isStalePrismaClient(client: PrismaClient | undefined): boolean {
+  if (!client) return true
+  const c = client as PrismaClient & {
+    quizLike?: unknown
+    quizFavorite?: unknown
+  }
+  return typeof c.quizLike === 'undefined' || typeof c.quizFavorite === 'undefined'
+}
 
-  return client;
-})();
+const cached = global.prisma
+if (cached && isStalePrismaClient(cached)) {
+  console.warn('Discarding stale PrismaClient missing QuizLike/QuizFavorite delegates; recreating...')
+  void cached.$disconnect().catch(() => {})
+  global.prisma = undefined
+}
+
+export const prisma = global.prisma ?? createPrismaClient();
 
 // Prevent multiple instances during hot reloads in development
 if (process.env.NODE_ENV !== 'production') {

@@ -19,6 +19,16 @@ export type PrismaPromise<T> = $Public.PrismaPromise<T>
  */
 export type Quiz = $Result.DefaultSelection<Prisma.$QuizPayload>
 /**
+ * Model QuizLike
+ * 
+ */
+export type QuizLike = $Result.DefaultSelection<Prisma.$QuizLikePayload>
+/**
+ * Model QuizFavorite
+ * 
+ */
+export type QuizFavorite = $Result.DefaultSelection<Prisma.$QuizFavoritePayload>
+/**
  * Model Question
  * 
  */
@@ -189,6 +199,26 @@ export class PrismaClient<
     * ```
     */
   get quiz(): Prisma.QuizDelegate<ExtArgs>;
+
+  /**
+   * `prisma.quizLike`: Exposes CRUD operations for the **QuizLike** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more QuizLikes
+    * const quizLikes = await prisma.quizLike.findMany()
+    * ```
+    */
+  get quizLike(): Prisma.QuizLikeDelegate<ExtArgs>;
+
+  /**
+   * `prisma.quizFavorite`: Exposes CRUD operations for the **QuizFavorite** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more QuizFavorites
+    * const quizFavorites = await prisma.quizFavorite.findMany()
+    * ```
+    */
+  get quizFavorite(): Prisma.QuizFavoriteDelegate<ExtArgs>;
 
   /**
    * `prisma.question`: Exposes CRUD operations for the **Question** model.
@@ -661,6 +691,8 @@ export namespace Prisma {
 
   export const ModelName: {
     Quiz: 'Quiz',
+    QuizLike: 'QuizLike',
+    QuizFavorite: 'QuizFavorite',
     Question: 'Question',
     StoredImage: 'StoredImage',
     Tag: 'Tag'
@@ -679,7 +711,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "quiz" | "question" | "storedImage" | "tag"
+      modelProps: "quiz" | "quizLike" | "quizFavorite" | "question" | "storedImage" | "tag"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -750,6 +782,146 @@ export namespace Prisma {
           count: {
             args: Prisma.QuizCountArgs<ExtArgs>
             result: $Utils.Optional<QuizCountAggregateOutputType> | number
+          }
+        }
+      }
+      QuizLike: {
+        payload: Prisma.$QuizLikePayload<ExtArgs>
+        fields: Prisma.QuizLikeFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.QuizLikeFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizLikePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.QuizLikeFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizLikePayload>
+          }
+          findFirst: {
+            args: Prisma.QuizLikeFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizLikePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.QuizLikeFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizLikePayload>
+          }
+          findMany: {
+            args: Prisma.QuizLikeFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizLikePayload>[]
+          }
+          create: {
+            args: Prisma.QuizLikeCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizLikePayload>
+          }
+          createMany: {
+            args: Prisma.QuizLikeCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.QuizLikeCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizLikePayload>[]
+          }
+          delete: {
+            args: Prisma.QuizLikeDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizLikePayload>
+          }
+          update: {
+            args: Prisma.QuizLikeUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizLikePayload>
+          }
+          deleteMany: {
+            args: Prisma.QuizLikeDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.QuizLikeUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.QuizLikeUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizLikePayload>
+          }
+          aggregate: {
+            args: Prisma.QuizLikeAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateQuizLike>
+          }
+          groupBy: {
+            args: Prisma.QuizLikeGroupByArgs<ExtArgs>
+            result: $Utils.Optional<QuizLikeGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.QuizLikeCountArgs<ExtArgs>
+            result: $Utils.Optional<QuizLikeCountAggregateOutputType> | number
+          }
+        }
+      }
+      QuizFavorite: {
+        payload: Prisma.$QuizFavoritePayload<ExtArgs>
+        fields: Prisma.QuizFavoriteFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.QuizFavoriteFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizFavoritePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.QuizFavoriteFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizFavoritePayload>
+          }
+          findFirst: {
+            args: Prisma.QuizFavoriteFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizFavoritePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.QuizFavoriteFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizFavoritePayload>
+          }
+          findMany: {
+            args: Prisma.QuizFavoriteFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizFavoritePayload>[]
+          }
+          create: {
+            args: Prisma.QuizFavoriteCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizFavoritePayload>
+          }
+          createMany: {
+            args: Prisma.QuizFavoriteCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.QuizFavoriteCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizFavoritePayload>[]
+          }
+          delete: {
+            args: Prisma.QuizFavoriteDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizFavoritePayload>
+          }
+          update: {
+            args: Prisma.QuizFavoriteUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizFavoritePayload>
+          }
+          deleteMany: {
+            args: Prisma.QuizFavoriteDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.QuizFavoriteUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.QuizFavoriteUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$QuizFavoritePayload>
+          }
+          aggregate: {
+            args: Prisma.QuizFavoriteAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateQuizFavorite>
+          }
+          groupBy: {
+            args: Prisma.QuizFavoriteGroupByArgs<ExtArgs>
+            result: $Utils.Optional<QuizFavoriteGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.QuizFavoriteCountArgs<ExtArgs>
+            result: $Utils.Optional<QuizFavoriteCountAggregateOutputType> | number
           }
         }
       }
@@ -1125,10 +1297,14 @@ export namespace Prisma {
 
   export type QuizCountOutputType = {
     questions: number
+    likes: number
+    favorites: number
   }
 
   export type QuizCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     questions?: boolean | QuizCountOutputTypeCountQuestionsArgs
+    likes?: boolean | QuizCountOutputTypeCountLikesArgs
+    favorites?: boolean | QuizCountOutputTypeCountFavoritesArgs
   }
 
   // Custom InputTypes
@@ -1147,6 +1323,20 @@ export namespace Prisma {
    */
   export type QuizCountOutputTypeCountQuestionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: QuestionWhereInput
+  }
+
+  /**
+   * QuizCountOutputType without action
+   */
+  export type QuizCountOutputTypeCountLikesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: QuizLikeWhereInput
+  }
+
+  /**
+   * QuizCountOutputType without action
+   */
+  export type QuizCountOutputTypeCountFavoritesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: QuizFavoriteWhereInput
   }
 
 
@@ -1355,6 +1545,8 @@ export namespace Prisma {
     createdAt?: boolean
     updatedAt?: boolean
     questions?: boolean | Quiz$questionsArgs<ExtArgs>
+    likes?: boolean | Quiz$likesArgs<ExtArgs>
+    favorites?: boolean | Quiz$favoritesArgs<ExtArgs>
     _count?: boolean | QuizCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["quiz"]>
 
@@ -1388,6 +1580,8 @@ export namespace Prisma {
 
   export type QuizInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     questions?: boolean | Quiz$questionsArgs<ExtArgs>
+    likes?: boolean | Quiz$likesArgs<ExtArgs>
+    favorites?: boolean | Quiz$favoritesArgs<ExtArgs>
     _count?: boolean | QuizCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type QuizIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -1396,6 +1590,8 @@ export namespace Prisma {
     name: "Quiz"
     objects: {
       questions: Prisma.$QuestionPayload<ExtArgs>[]
+      likes: Prisma.$QuizLikePayload<ExtArgs>[]
+      favorites: Prisma.$QuizFavoritePayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -1774,6 +1970,8 @@ export namespace Prisma {
   export interface Prisma__QuizClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     questions<T extends Quiz$questionsArgs<ExtArgs> = {}>(args?: Subset<T, Quiz$questionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$QuestionPayload<ExtArgs>, T, "findMany"> | Null>
+    likes<T extends Quiz$likesArgs<ExtArgs> = {}>(args?: Subset<T, Quiz$likesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$QuizLikePayload<ExtArgs>, T, "findMany"> | Null>
+    favorites<T extends Quiz$favoritesArgs<ExtArgs> = {}>(args?: Subset<T, Quiz$favoritesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$QuizFavoritePayload<ExtArgs>, T, "findMany"> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2148,6 +2346,46 @@ export namespace Prisma {
   }
 
   /**
+   * Quiz.likes
+   */
+  export type Quiz$likesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizLike
+     */
+    select?: QuizLikeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizLikeInclude<ExtArgs> | null
+    where?: QuizLikeWhereInput
+    orderBy?: QuizLikeOrderByWithRelationInput | QuizLikeOrderByWithRelationInput[]
+    cursor?: QuizLikeWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: QuizLikeScalarFieldEnum | QuizLikeScalarFieldEnum[]
+  }
+
+  /**
+   * Quiz.favorites
+   */
+  export type Quiz$favoritesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizFavorite
+     */
+    select?: QuizFavoriteSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizFavoriteInclude<ExtArgs> | null
+    where?: QuizFavoriteWhereInput
+    orderBy?: QuizFavoriteOrderByWithRelationInput | QuizFavoriteOrderByWithRelationInput[]
+    cursor?: QuizFavoriteWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: QuizFavoriteScalarFieldEnum | QuizFavoriteScalarFieldEnum[]
+  }
+
+  /**
    * Quiz without action
    */
   export type QuizDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -2159,6 +2397,1848 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: QuizInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model QuizLike
+   */
+
+  export type AggregateQuizLike = {
+    _count: QuizLikeCountAggregateOutputType | null
+    _min: QuizLikeMinAggregateOutputType | null
+    _max: QuizLikeMaxAggregateOutputType | null
+  }
+
+  export type QuizLikeMinAggregateOutputType = {
+    id: string | null
+    quizId: string | null
+    userId: string | null
+    createdAt: Date | null
+  }
+
+  export type QuizLikeMaxAggregateOutputType = {
+    id: string | null
+    quizId: string | null
+    userId: string | null
+    createdAt: Date | null
+  }
+
+  export type QuizLikeCountAggregateOutputType = {
+    id: number
+    quizId: number
+    userId: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type QuizLikeMinAggregateInputType = {
+    id?: true
+    quizId?: true
+    userId?: true
+    createdAt?: true
+  }
+
+  export type QuizLikeMaxAggregateInputType = {
+    id?: true
+    quizId?: true
+    userId?: true
+    createdAt?: true
+  }
+
+  export type QuizLikeCountAggregateInputType = {
+    id?: true
+    quizId?: true
+    userId?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type QuizLikeAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which QuizLike to aggregate.
+     */
+    where?: QuizLikeWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of QuizLikes to fetch.
+     */
+    orderBy?: QuizLikeOrderByWithRelationInput | QuizLikeOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: QuizLikeWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` QuizLikes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` QuizLikes.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned QuizLikes
+    **/
+    _count?: true | QuizLikeCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: QuizLikeMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: QuizLikeMaxAggregateInputType
+  }
+
+  export type GetQuizLikeAggregateType<T extends QuizLikeAggregateArgs> = {
+        [P in keyof T & keyof AggregateQuizLike]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateQuizLike[P]>
+      : GetScalarType<T[P], AggregateQuizLike[P]>
+  }
+
+
+
+
+  export type QuizLikeGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: QuizLikeWhereInput
+    orderBy?: QuizLikeOrderByWithAggregationInput | QuizLikeOrderByWithAggregationInput[]
+    by: QuizLikeScalarFieldEnum[] | QuizLikeScalarFieldEnum
+    having?: QuizLikeScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: QuizLikeCountAggregateInputType | true
+    _min?: QuizLikeMinAggregateInputType
+    _max?: QuizLikeMaxAggregateInputType
+  }
+
+  export type QuizLikeGroupByOutputType = {
+    id: string
+    quizId: string
+    userId: string
+    createdAt: Date
+    _count: QuizLikeCountAggregateOutputType | null
+    _min: QuizLikeMinAggregateOutputType | null
+    _max: QuizLikeMaxAggregateOutputType | null
+  }
+
+  type GetQuizLikeGroupByPayload<T extends QuizLikeGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<QuizLikeGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof QuizLikeGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], QuizLikeGroupByOutputType[P]>
+            : GetScalarType<T[P], QuizLikeGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type QuizLikeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    quizId?: boolean
+    userId?: boolean
+    createdAt?: boolean
+    quiz?: boolean | QuizDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["quizLike"]>
+
+  export type QuizLikeSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    quizId?: boolean
+    userId?: boolean
+    createdAt?: boolean
+    quiz?: boolean | QuizDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["quizLike"]>
+
+  export type QuizLikeSelectScalar = {
+    id?: boolean
+    quizId?: boolean
+    userId?: boolean
+    createdAt?: boolean
+  }
+
+  export type QuizLikeInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    quiz?: boolean | QuizDefaultArgs<ExtArgs>
+  }
+  export type QuizLikeIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    quiz?: boolean | QuizDefaultArgs<ExtArgs>
+  }
+
+  export type $QuizLikePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "QuizLike"
+    objects: {
+      quiz: Prisma.$QuizPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      quizId: string
+      userId: string
+      createdAt: Date
+    }, ExtArgs["result"]["quizLike"]>
+    composites: {}
+  }
+
+  type QuizLikeGetPayload<S extends boolean | null | undefined | QuizLikeDefaultArgs> = $Result.GetResult<Prisma.$QuizLikePayload, S>
+
+  type QuizLikeCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<QuizLikeFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: QuizLikeCountAggregateInputType | true
+    }
+
+  export interface QuizLikeDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['QuizLike'], meta: { name: 'QuizLike' } }
+    /**
+     * Find zero or one QuizLike that matches the filter.
+     * @param {QuizLikeFindUniqueArgs} args - Arguments to find a QuizLike
+     * @example
+     * // Get one QuizLike
+     * const quizLike = await prisma.quizLike.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends QuizLikeFindUniqueArgs>(args: SelectSubset<T, QuizLikeFindUniqueArgs<ExtArgs>>): Prisma__QuizLikeClient<$Result.GetResult<Prisma.$QuizLikePayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one QuizLike that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {QuizLikeFindUniqueOrThrowArgs} args - Arguments to find a QuizLike
+     * @example
+     * // Get one QuizLike
+     * const quizLike = await prisma.quizLike.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends QuizLikeFindUniqueOrThrowArgs>(args: SelectSubset<T, QuizLikeFindUniqueOrThrowArgs<ExtArgs>>): Prisma__QuizLikeClient<$Result.GetResult<Prisma.$QuizLikePayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first QuizLike that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuizLikeFindFirstArgs} args - Arguments to find a QuizLike
+     * @example
+     * // Get one QuizLike
+     * const quizLike = await prisma.quizLike.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends QuizLikeFindFirstArgs>(args?: SelectSubset<T, QuizLikeFindFirstArgs<ExtArgs>>): Prisma__QuizLikeClient<$Result.GetResult<Prisma.$QuizLikePayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first QuizLike that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuizLikeFindFirstOrThrowArgs} args - Arguments to find a QuizLike
+     * @example
+     * // Get one QuizLike
+     * const quizLike = await prisma.quizLike.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends QuizLikeFindFirstOrThrowArgs>(args?: SelectSubset<T, QuizLikeFindFirstOrThrowArgs<ExtArgs>>): Prisma__QuizLikeClient<$Result.GetResult<Prisma.$QuizLikePayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more QuizLikes that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuizLikeFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all QuizLikes
+     * const quizLikes = await prisma.quizLike.findMany()
+     * 
+     * // Get first 10 QuizLikes
+     * const quizLikes = await prisma.quizLike.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const quizLikeWithIdOnly = await prisma.quizLike.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends QuizLikeFindManyArgs>(args?: SelectSubset<T, QuizLikeFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$QuizLikePayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a QuizLike.
+     * @param {QuizLikeCreateArgs} args - Arguments to create a QuizLike.
+     * @example
+     * // Create one QuizLike
+     * const QuizLike = await prisma.quizLike.create({
+     *   data: {
+     *     // ... data to create a QuizLike
+     *   }
+     * })
+     * 
+     */
+    create<T extends QuizLikeCreateArgs>(args: SelectSubset<T, QuizLikeCreateArgs<ExtArgs>>): Prisma__QuizLikeClient<$Result.GetResult<Prisma.$QuizLikePayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many QuizLikes.
+     * @param {QuizLikeCreateManyArgs} args - Arguments to create many QuizLikes.
+     * @example
+     * // Create many QuizLikes
+     * const quizLike = await prisma.quizLike.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends QuizLikeCreateManyArgs>(args?: SelectSubset<T, QuizLikeCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many QuizLikes and returns the data saved in the database.
+     * @param {QuizLikeCreateManyAndReturnArgs} args - Arguments to create many QuizLikes.
+     * @example
+     * // Create many QuizLikes
+     * const quizLike = await prisma.quizLike.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many QuizLikes and only return the `id`
+     * const quizLikeWithIdOnly = await prisma.quizLike.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends QuizLikeCreateManyAndReturnArgs>(args?: SelectSubset<T, QuizLikeCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$QuizLikePayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a QuizLike.
+     * @param {QuizLikeDeleteArgs} args - Arguments to delete one QuizLike.
+     * @example
+     * // Delete one QuizLike
+     * const QuizLike = await prisma.quizLike.delete({
+     *   where: {
+     *     // ... filter to delete one QuizLike
+     *   }
+     * })
+     * 
+     */
+    delete<T extends QuizLikeDeleteArgs>(args: SelectSubset<T, QuizLikeDeleteArgs<ExtArgs>>): Prisma__QuizLikeClient<$Result.GetResult<Prisma.$QuizLikePayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one QuizLike.
+     * @param {QuizLikeUpdateArgs} args - Arguments to update one QuizLike.
+     * @example
+     * // Update one QuizLike
+     * const quizLike = await prisma.quizLike.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends QuizLikeUpdateArgs>(args: SelectSubset<T, QuizLikeUpdateArgs<ExtArgs>>): Prisma__QuizLikeClient<$Result.GetResult<Prisma.$QuizLikePayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more QuizLikes.
+     * @param {QuizLikeDeleteManyArgs} args - Arguments to filter QuizLikes to delete.
+     * @example
+     * // Delete a few QuizLikes
+     * const { count } = await prisma.quizLike.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends QuizLikeDeleteManyArgs>(args?: SelectSubset<T, QuizLikeDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more QuizLikes.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuizLikeUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many QuizLikes
+     * const quizLike = await prisma.quizLike.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends QuizLikeUpdateManyArgs>(args: SelectSubset<T, QuizLikeUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one QuizLike.
+     * @param {QuizLikeUpsertArgs} args - Arguments to update or create a QuizLike.
+     * @example
+     * // Update or create a QuizLike
+     * const quizLike = await prisma.quizLike.upsert({
+     *   create: {
+     *     // ... data to create a QuizLike
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the QuizLike we want to update
+     *   }
+     * })
+     */
+    upsert<T extends QuizLikeUpsertArgs>(args: SelectSubset<T, QuizLikeUpsertArgs<ExtArgs>>): Prisma__QuizLikeClient<$Result.GetResult<Prisma.$QuizLikePayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of QuizLikes.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuizLikeCountArgs} args - Arguments to filter QuizLikes to count.
+     * @example
+     * // Count the number of QuizLikes
+     * const count = await prisma.quizLike.count({
+     *   where: {
+     *     // ... the filter for the QuizLikes we want to count
+     *   }
+     * })
+    **/
+    count<T extends QuizLikeCountArgs>(
+      args?: Subset<T, QuizLikeCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], QuizLikeCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a QuizLike.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuizLikeAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends QuizLikeAggregateArgs>(args: Subset<T, QuizLikeAggregateArgs>): Prisma.PrismaPromise<GetQuizLikeAggregateType<T>>
+
+    /**
+     * Group by QuizLike.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuizLikeGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends QuizLikeGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: QuizLikeGroupByArgs['orderBy'] }
+        : { orderBy?: QuizLikeGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, QuizLikeGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetQuizLikeGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the QuizLike model
+   */
+  readonly fields: QuizLikeFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for QuizLike.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__QuizLikeClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    quiz<T extends QuizDefaultArgs<ExtArgs> = {}>(args?: Subset<T, QuizDefaultArgs<ExtArgs>>): Prisma__QuizClient<$Result.GetResult<Prisma.$QuizPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the QuizLike model
+   */ 
+  interface QuizLikeFieldRefs {
+    readonly id: FieldRef<"QuizLike", 'String'>
+    readonly quizId: FieldRef<"QuizLike", 'String'>
+    readonly userId: FieldRef<"QuizLike", 'String'>
+    readonly createdAt: FieldRef<"QuizLike", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * QuizLike findUnique
+   */
+  export type QuizLikeFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizLike
+     */
+    select?: QuizLikeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizLikeInclude<ExtArgs> | null
+    /**
+     * Filter, which QuizLike to fetch.
+     */
+    where: QuizLikeWhereUniqueInput
+  }
+
+  /**
+   * QuizLike findUniqueOrThrow
+   */
+  export type QuizLikeFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizLike
+     */
+    select?: QuizLikeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizLikeInclude<ExtArgs> | null
+    /**
+     * Filter, which QuizLike to fetch.
+     */
+    where: QuizLikeWhereUniqueInput
+  }
+
+  /**
+   * QuizLike findFirst
+   */
+  export type QuizLikeFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizLike
+     */
+    select?: QuizLikeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizLikeInclude<ExtArgs> | null
+    /**
+     * Filter, which QuizLike to fetch.
+     */
+    where?: QuizLikeWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of QuizLikes to fetch.
+     */
+    orderBy?: QuizLikeOrderByWithRelationInput | QuizLikeOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for QuizLikes.
+     */
+    cursor?: QuizLikeWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` QuizLikes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` QuizLikes.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of QuizLikes.
+     */
+    distinct?: QuizLikeScalarFieldEnum | QuizLikeScalarFieldEnum[]
+  }
+
+  /**
+   * QuizLike findFirstOrThrow
+   */
+  export type QuizLikeFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizLike
+     */
+    select?: QuizLikeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizLikeInclude<ExtArgs> | null
+    /**
+     * Filter, which QuizLike to fetch.
+     */
+    where?: QuizLikeWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of QuizLikes to fetch.
+     */
+    orderBy?: QuizLikeOrderByWithRelationInput | QuizLikeOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for QuizLikes.
+     */
+    cursor?: QuizLikeWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` QuizLikes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` QuizLikes.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of QuizLikes.
+     */
+    distinct?: QuizLikeScalarFieldEnum | QuizLikeScalarFieldEnum[]
+  }
+
+  /**
+   * QuizLike findMany
+   */
+  export type QuizLikeFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizLike
+     */
+    select?: QuizLikeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizLikeInclude<ExtArgs> | null
+    /**
+     * Filter, which QuizLikes to fetch.
+     */
+    where?: QuizLikeWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of QuizLikes to fetch.
+     */
+    orderBy?: QuizLikeOrderByWithRelationInput | QuizLikeOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing QuizLikes.
+     */
+    cursor?: QuizLikeWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` QuizLikes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` QuizLikes.
+     */
+    skip?: number
+    distinct?: QuizLikeScalarFieldEnum | QuizLikeScalarFieldEnum[]
+  }
+
+  /**
+   * QuizLike create
+   */
+  export type QuizLikeCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizLike
+     */
+    select?: QuizLikeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizLikeInclude<ExtArgs> | null
+    /**
+     * The data needed to create a QuizLike.
+     */
+    data: XOR<QuizLikeCreateInput, QuizLikeUncheckedCreateInput>
+  }
+
+  /**
+   * QuizLike createMany
+   */
+  export type QuizLikeCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many QuizLikes.
+     */
+    data: QuizLikeCreateManyInput | QuizLikeCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * QuizLike createManyAndReturn
+   */
+  export type QuizLikeCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizLike
+     */
+    select?: QuizLikeSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many QuizLikes.
+     */
+    data: QuizLikeCreateManyInput | QuizLikeCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizLikeIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * QuizLike update
+   */
+  export type QuizLikeUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizLike
+     */
+    select?: QuizLikeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizLikeInclude<ExtArgs> | null
+    /**
+     * The data needed to update a QuizLike.
+     */
+    data: XOR<QuizLikeUpdateInput, QuizLikeUncheckedUpdateInput>
+    /**
+     * Choose, which QuizLike to update.
+     */
+    where: QuizLikeWhereUniqueInput
+  }
+
+  /**
+   * QuizLike updateMany
+   */
+  export type QuizLikeUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update QuizLikes.
+     */
+    data: XOR<QuizLikeUpdateManyMutationInput, QuizLikeUncheckedUpdateManyInput>
+    /**
+     * Filter which QuizLikes to update
+     */
+    where?: QuizLikeWhereInput
+  }
+
+  /**
+   * QuizLike upsert
+   */
+  export type QuizLikeUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizLike
+     */
+    select?: QuizLikeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizLikeInclude<ExtArgs> | null
+    /**
+     * The filter to search for the QuizLike to update in case it exists.
+     */
+    where: QuizLikeWhereUniqueInput
+    /**
+     * In case the QuizLike found by the `where` argument doesn't exist, create a new QuizLike with this data.
+     */
+    create: XOR<QuizLikeCreateInput, QuizLikeUncheckedCreateInput>
+    /**
+     * In case the QuizLike was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<QuizLikeUpdateInput, QuizLikeUncheckedUpdateInput>
+  }
+
+  /**
+   * QuizLike delete
+   */
+  export type QuizLikeDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizLike
+     */
+    select?: QuizLikeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizLikeInclude<ExtArgs> | null
+    /**
+     * Filter which QuizLike to delete.
+     */
+    where: QuizLikeWhereUniqueInput
+  }
+
+  /**
+   * QuizLike deleteMany
+   */
+  export type QuizLikeDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which QuizLikes to delete
+     */
+    where?: QuizLikeWhereInput
+  }
+
+  /**
+   * QuizLike without action
+   */
+  export type QuizLikeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizLike
+     */
+    select?: QuizLikeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizLikeInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model QuizFavorite
+   */
+
+  export type AggregateQuizFavorite = {
+    _count: QuizFavoriteCountAggregateOutputType | null
+    _min: QuizFavoriteMinAggregateOutputType | null
+    _max: QuizFavoriteMaxAggregateOutputType | null
+  }
+
+  export type QuizFavoriteMinAggregateOutputType = {
+    id: string | null
+    quizId: string | null
+    userId: string | null
+    createdAt: Date | null
+  }
+
+  export type QuizFavoriteMaxAggregateOutputType = {
+    id: string | null
+    quizId: string | null
+    userId: string | null
+    createdAt: Date | null
+  }
+
+  export type QuizFavoriteCountAggregateOutputType = {
+    id: number
+    quizId: number
+    userId: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type QuizFavoriteMinAggregateInputType = {
+    id?: true
+    quizId?: true
+    userId?: true
+    createdAt?: true
+  }
+
+  export type QuizFavoriteMaxAggregateInputType = {
+    id?: true
+    quizId?: true
+    userId?: true
+    createdAt?: true
+  }
+
+  export type QuizFavoriteCountAggregateInputType = {
+    id?: true
+    quizId?: true
+    userId?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type QuizFavoriteAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which QuizFavorite to aggregate.
+     */
+    where?: QuizFavoriteWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of QuizFavorites to fetch.
+     */
+    orderBy?: QuizFavoriteOrderByWithRelationInput | QuizFavoriteOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: QuizFavoriteWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` QuizFavorites from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` QuizFavorites.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned QuizFavorites
+    **/
+    _count?: true | QuizFavoriteCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: QuizFavoriteMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: QuizFavoriteMaxAggregateInputType
+  }
+
+  export type GetQuizFavoriteAggregateType<T extends QuizFavoriteAggregateArgs> = {
+        [P in keyof T & keyof AggregateQuizFavorite]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateQuizFavorite[P]>
+      : GetScalarType<T[P], AggregateQuizFavorite[P]>
+  }
+
+
+
+
+  export type QuizFavoriteGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: QuizFavoriteWhereInput
+    orderBy?: QuizFavoriteOrderByWithAggregationInput | QuizFavoriteOrderByWithAggregationInput[]
+    by: QuizFavoriteScalarFieldEnum[] | QuizFavoriteScalarFieldEnum
+    having?: QuizFavoriteScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: QuizFavoriteCountAggregateInputType | true
+    _min?: QuizFavoriteMinAggregateInputType
+    _max?: QuizFavoriteMaxAggregateInputType
+  }
+
+  export type QuizFavoriteGroupByOutputType = {
+    id: string
+    quizId: string
+    userId: string
+    createdAt: Date
+    _count: QuizFavoriteCountAggregateOutputType | null
+    _min: QuizFavoriteMinAggregateOutputType | null
+    _max: QuizFavoriteMaxAggregateOutputType | null
+  }
+
+  type GetQuizFavoriteGroupByPayload<T extends QuizFavoriteGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<QuizFavoriteGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof QuizFavoriteGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], QuizFavoriteGroupByOutputType[P]>
+            : GetScalarType<T[P], QuizFavoriteGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type QuizFavoriteSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    quizId?: boolean
+    userId?: boolean
+    createdAt?: boolean
+    quiz?: boolean | QuizDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["quizFavorite"]>
+
+  export type QuizFavoriteSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    quizId?: boolean
+    userId?: boolean
+    createdAt?: boolean
+    quiz?: boolean | QuizDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["quizFavorite"]>
+
+  export type QuizFavoriteSelectScalar = {
+    id?: boolean
+    quizId?: boolean
+    userId?: boolean
+    createdAt?: boolean
+  }
+
+  export type QuizFavoriteInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    quiz?: boolean | QuizDefaultArgs<ExtArgs>
+  }
+  export type QuizFavoriteIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    quiz?: boolean | QuizDefaultArgs<ExtArgs>
+  }
+
+  export type $QuizFavoritePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "QuizFavorite"
+    objects: {
+      quiz: Prisma.$QuizPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      quizId: string
+      userId: string
+      createdAt: Date
+    }, ExtArgs["result"]["quizFavorite"]>
+    composites: {}
+  }
+
+  type QuizFavoriteGetPayload<S extends boolean | null | undefined | QuizFavoriteDefaultArgs> = $Result.GetResult<Prisma.$QuizFavoritePayload, S>
+
+  type QuizFavoriteCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<QuizFavoriteFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: QuizFavoriteCountAggregateInputType | true
+    }
+
+  export interface QuizFavoriteDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['QuizFavorite'], meta: { name: 'QuizFavorite' } }
+    /**
+     * Find zero or one QuizFavorite that matches the filter.
+     * @param {QuizFavoriteFindUniqueArgs} args - Arguments to find a QuizFavorite
+     * @example
+     * // Get one QuizFavorite
+     * const quizFavorite = await prisma.quizFavorite.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends QuizFavoriteFindUniqueArgs>(args: SelectSubset<T, QuizFavoriteFindUniqueArgs<ExtArgs>>): Prisma__QuizFavoriteClient<$Result.GetResult<Prisma.$QuizFavoritePayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one QuizFavorite that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {QuizFavoriteFindUniqueOrThrowArgs} args - Arguments to find a QuizFavorite
+     * @example
+     * // Get one QuizFavorite
+     * const quizFavorite = await prisma.quizFavorite.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends QuizFavoriteFindUniqueOrThrowArgs>(args: SelectSubset<T, QuizFavoriteFindUniqueOrThrowArgs<ExtArgs>>): Prisma__QuizFavoriteClient<$Result.GetResult<Prisma.$QuizFavoritePayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first QuizFavorite that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuizFavoriteFindFirstArgs} args - Arguments to find a QuizFavorite
+     * @example
+     * // Get one QuizFavorite
+     * const quizFavorite = await prisma.quizFavorite.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends QuizFavoriteFindFirstArgs>(args?: SelectSubset<T, QuizFavoriteFindFirstArgs<ExtArgs>>): Prisma__QuizFavoriteClient<$Result.GetResult<Prisma.$QuizFavoritePayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first QuizFavorite that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuizFavoriteFindFirstOrThrowArgs} args - Arguments to find a QuizFavorite
+     * @example
+     * // Get one QuizFavorite
+     * const quizFavorite = await prisma.quizFavorite.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends QuizFavoriteFindFirstOrThrowArgs>(args?: SelectSubset<T, QuizFavoriteFindFirstOrThrowArgs<ExtArgs>>): Prisma__QuizFavoriteClient<$Result.GetResult<Prisma.$QuizFavoritePayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more QuizFavorites that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuizFavoriteFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all QuizFavorites
+     * const quizFavorites = await prisma.quizFavorite.findMany()
+     * 
+     * // Get first 10 QuizFavorites
+     * const quizFavorites = await prisma.quizFavorite.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const quizFavoriteWithIdOnly = await prisma.quizFavorite.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends QuizFavoriteFindManyArgs>(args?: SelectSubset<T, QuizFavoriteFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$QuizFavoritePayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a QuizFavorite.
+     * @param {QuizFavoriteCreateArgs} args - Arguments to create a QuizFavorite.
+     * @example
+     * // Create one QuizFavorite
+     * const QuizFavorite = await prisma.quizFavorite.create({
+     *   data: {
+     *     // ... data to create a QuizFavorite
+     *   }
+     * })
+     * 
+     */
+    create<T extends QuizFavoriteCreateArgs>(args: SelectSubset<T, QuizFavoriteCreateArgs<ExtArgs>>): Prisma__QuizFavoriteClient<$Result.GetResult<Prisma.$QuizFavoritePayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many QuizFavorites.
+     * @param {QuizFavoriteCreateManyArgs} args - Arguments to create many QuizFavorites.
+     * @example
+     * // Create many QuizFavorites
+     * const quizFavorite = await prisma.quizFavorite.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends QuizFavoriteCreateManyArgs>(args?: SelectSubset<T, QuizFavoriteCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many QuizFavorites and returns the data saved in the database.
+     * @param {QuizFavoriteCreateManyAndReturnArgs} args - Arguments to create many QuizFavorites.
+     * @example
+     * // Create many QuizFavorites
+     * const quizFavorite = await prisma.quizFavorite.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many QuizFavorites and only return the `id`
+     * const quizFavoriteWithIdOnly = await prisma.quizFavorite.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends QuizFavoriteCreateManyAndReturnArgs>(args?: SelectSubset<T, QuizFavoriteCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$QuizFavoritePayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a QuizFavorite.
+     * @param {QuizFavoriteDeleteArgs} args - Arguments to delete one QuizFavorite.
+     * @example
+     * // Delete one QuizFavorite
+     * const QuizFavorite = await prisma.quizFavorite.delete({
+     *   where: {
+     *     // ... filter to delete one QuizFavorite
+     *   }
+     * })
+     * 
+     */
+    delete<T extends QuizFavoriteDeleteArgs>(args: SelectSubset<T, QuizFavoriteDeleteArgs<ExtArgs>>): Prisma__QuizFavoriteClient<$Result.GetResult<Prisma.$QuizFavoritePayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one QuizFavorite.
+     * @param {QuizFavoriteUpdateArgs} args - Arguments to update one QuizFavorite.
+     * @example
+     * // Update one QuizFavorite
+     * const quizFavorite = await prisma.quizFavorite.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends QuizFavoriteUpdateArgs>(args: SelectSubset<T, QuizFavoriteUpdateArgs<ExtArgs>>): Prisma__QuizFavoriteClient<$Result.GetResult<Prisma.$QuizFavoritePayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more QuizFavorites.
+     * @param {QuizFavoriteDeleteManyArgs} args - Arguments to filter QuizFavorites to delete.
+     * @example
+     * // Delete a few QuizFavorites
+     * const { count } = await prisma.quizFavorite.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends QuizFavoriteDeleteManyArgs>(args?: SelectSubset<T, QuizFavoriteDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more QuizFavorites.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuizFavoriteUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many QuizFavorites
+     * const quizFavorite = await prisma.quizFavorite.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends QuizFavoriteUpdateManyArgs>(args: SelectSubset<T, QuizFavoriteUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one QuizFavorite.
+     * @param {QuizFavoriteUpsertArgs} args - Arguments to update or create a QuizFavorite.
+     * @example
+     * // Update or create a QuizFavorite
+     * const quizFavorite = await prisma.quizFavorite.upsert({
+     *   create: {
+     *     // ... data to create a QuizFavorite
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the QuizFavorite we want to update
+     *   }
+     * })
+     */
+    upsert<T extends QuizFavoriteUpsertArgs>(args: SelectSubset<T, QuizFavoriteUpsertArgs<ExtArgs>>): Prisma__QuizFavoriteClient<$Result.GetResult<Prisma.$QuizFavoritePayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of QuizFavorites.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuizFavoriteCountArgs} args - Arguments to filter QuizFavorites to count.
+     * @example
+     * // Count the number of QuizFavorites
+     * const count = await prisma.quizFavorite.count({
+     *   where: {
+     *     // ... the filter for the QuizFavorites we want to count
+     *   }
+     * })
+    **/
+    count<T extends QuizFavoriteCountArgs>(
+      args?: Subset<T, QuizFavoriteCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], QuizFavoriteCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a QuizFavorite.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuizFavoriteAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends QuizFavoriteAggregateArgs>(args: Subset<T, QuizFavoriteAggregateArgs>): Prisma.PrismaPromise<GetQuizFavoriteAggregateType<T>>
+
+    /**
+     * Group by QuizFavorite.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {QuizFavoriteGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends QuizFavoriteGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: QuizFavoriteGroupByArgs['orderBy'] }
+        : { orderBy?: QuizFavoriteGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, QuizFavoriteGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetQuizFavoriteGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the QuizFavorite model
+   */
+  readonly fields: QuizFavoriteFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for QuizFavorite.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__QuizFavoriteClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    quiz<T extends QuizDefaultArgs<ExtArgs> = {}>(args?: Subset<T, QuizDefaultArgs<ExtArgs>>): Prisma__QuizClient<$Result.GetResult<Prisma.$QuizPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the QuizFavorite model
+   */ 
+  interface QuizFavoriteFieldRefs {
+    readonly id: FieldRef<"QuizFavorite", 'String'>
+    readonly quizId: FieldRef<"QuizFavorite", 'String'>
+    readonly userId: FieldRef<"QuizFavorite", 'String'>
+    readonly createdAt: FieldRef<"QuizFavorite", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * QuizFavorite findUnique
+   */
+  export type QuizFavoriteFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizFavorite
+     */
+    select?: QuizFavoriteSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizFavoriteInclude<ExtArgs> | null
+    /**
+     * Filter, which QuizFavorite to fetch.
+     */
+    where: QuizFavoriteWhereUniqueInput
+  }
+
+  /**
+   * QuizFavorite findUniqueOrThrow
+   */
+  export type QuizFavoriteFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizFavorite
+     */
+    select?: QuizFavoriteSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizFavoriteInclude<ExtArgs> | null
+    /**
+     * Filter, which QuizFavorite to fetch.
+     */
+    where: QuizFavoriteWhereUniqueInput
+  }
+
+  /**
+   * QuizFavorite findFirst
+   */
+  export type QuizFavoriteFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizFavorite
+     */
+    select?: QuizFavoriteSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizFavoriteInclude<ExtArgs> | null
+    /**
+     * Filter, which QuizFavorite to fetch.
+     */
+    where?: QuizFavoriteWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of QuizFavorites to fetch.
+     */
+    orderBy?: QuizFavoriteOrderByWithRelationInput | QuizFavoriteOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for QuizFavorites.
+     */
+    cursor?: QuizFavoriteWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` QuizFavorites from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` QuizFavorites.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of QuizFavorites.
+     */
+    distinct?: QuizFavoriteScalarFieldEnum | QuizFavoriteScalarFieldEnum[]
+  }
+
+  /**
+   * QuizFavorite findFirstOrThrow
+   */
+  export type QuizFavoriteFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizFavorite
+     */
+    select?: QuizFavoriteSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizFavoriteInclude<ExtArgs> | null
+    /**
+     * Filter, which QuizFavorite to fetch.
+     */
+    where?: QuizFavoriteWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of QuizFavorites to fetch.
+     */
+    orderBy?: QuizFavoriteOrderByWithRelationInput | QuizFavoriteOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for QuizFavorites.
+     */
+    cursor?: QuizFavoriteWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` QuizFavorites from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` QuizFavorites.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of QuizFavorites.
+     */
+    distinct?: QuizFavoriteScalarFieldEnum | QuizFavoriteScalarFieldEnum[]
+  }
+
+  /**
+   * QuizFavorite findMany
+   */
+  export type QuizFavoriteFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizFavorite
+     */
+    select?: QuizFavoriteSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizFavoriteInclude<ExtArgs> | null
+    /**
+     * Filter, which QuizFavorites to fetch.
+     */
+    where?: QuizFavoriteWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of QuizFavorites to fetch.
+     */
+    orderBy?: QuizFavoriteOrderByWithRelationInput | QuizFavoriteOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing QuizFavorites.
+     */
+    cursor?: QuizFavoriteWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` QuizFavorites from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` QuizFavorites.
+     */
+    skip?: number
+    distinct?: QuizFavoriteScalarFieldEnum | QuizFavoriteScalarFieldEnum[]
+  }
+
+  /**
+   * QuizFavorite create
+   */
+  export type QuizFavoriteCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizFavorite
+     */
+    select?: QuizFavoriteSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizFavoriteInclude<ExtArgs> | null
+    /**
+     * The data needed to create a QuizFavorite.
+     */
+    data: XOR<QuizFavoriteCreateInput, QuizFavoriteUncheckedCreateInput>
+  }
+
+  /**
+   * QuizFavorite createMany
+   */
+  export type QuizFavoriteCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many QuizFavorites.
+     */
+    data: QuizFavoriteCreateManyInput | QuizFavoriteCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * QuizFavorite createManyAndReturn
+   */
+  export type QuizFavoriteCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizFavorite
+     */
+    select?: QuizFavoriteSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many QuizFavorites.
+     */
+    data: QuizFavoriteCreateManyInput | QuizFavoriteCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizFavoriteIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * QuizFavorite update
+   */
+  export type QuizFavoriteUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizFavorite
+     */
+    select?: QuizFavoriteSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizFavoriteInclude<ExtArgs> | null
+    /**
+     * The data needed to update a QuizFavorite.
+     */
+    data: XOR<QuizFavoriteUpdateInput, QuizFavoriteUncheckedUpdateInput>
+    /**
+     * Choose, which QuizFavorite to update.
+     */
+    where: QuizFavoriteWhereUniqueInput
+  }
+
+  /**
+   * QuizFavorite updateMany
+   */
+  export type QuizFavoriteUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update QuizFavorites.
+     */
+    data: XOR<QuizFavoriteUpdateManyMutationInput, QuizFavoriteUncheckedUpdateManyInput>
+    /**
+     * Filter which QuizFavorites to update
+     */
+    where?: QuizFavoriteWhereInput
+  }
+
+  /**
+   * QuizFavorite upsert
+   */
+  export type QuizFavoriteUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizFavorite
+     */
+    select?: QuizFavoriteSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizFavoriteInclude<ExtArgs> | null
+    /**
+     * The filter to search for the QuizFavorite to update in case it exists.
+     */
+    where: QuizFavoriteWhereUniqueInput
+    /**
+     * In case the QuizFavorite found by the `where` argument doesn't exist, create a new QuizFavorite with this data.
+     */
+    create: XOR<QuizFavoriteCreateInput, QuizFavoriteUncheckedCreateInput>
+    /**
+     * In case the QuizFavorite was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<QuizFavoriteUpdateInput, QuizFavoriteUncheckedUpdateInput>
+  }
+
+  /**
+   * QuizFavorite delete
+   */
+  export type QuizFavoriteDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizFavorite
+     */
+    select?: QuizFavoriteSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizFavoriteInclude<ExtArgs> | null
+    /**
+     * Filter which QuizFavorite to delete.
+     */
+    where: QuizFavoriteWhereUniqueInput
+  }
+
+  /**
+   * QuizFavorite deleteMany
+   */
+  export type QuizFavoriteDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which QuizFavorites to delete
+     */
+    where?: QuizFavoriteWhereInput
+  }
+
+  /**
+   * QuizFavorite without action
+   */
+  export type QuizFavoriteDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the QuizFavorite
+     */
+    select?: QuizFavoriteSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: QuizFavoriteInclude<ExtArgs> | null
   }
 
 
@@ -5083,6 +7163,26 @@ export namespace Prisma {
   export type QuizScalarFieldEnum = (typeof QuizScalarFieldEnum)[keyof typeof QuizScalarFieldEnum]
 
 
+  export const QuizLikeScalarFieldEnum: {
+    id: 'id',
+    quizId: 'quizId',
+    userId: 'userId',
+    createdAt: 'createdAt'
+  };
+
+  export type QuizLikeScalarFieldEnum = (typeof QuizLikeScalarFieldEnum)[keyof typeof QuizLikeScalarFieldEnum]
+
+
+  export const QuizFavoriteScalarFieldEnum: {
+    id: 'id',
+    quizId: 'quizId',
+    userId: 'userId',
+    createdAt: 'createdAt'
+  };
+
+  export type QuizFavoriteScalarFieldEnum = (typeof QuizFavoriteScalarFieldEnum)[keyof typeof QuizFavoriteScalarFieldEnum]
+
+
   export const QuestionScalarFieldEnum: {
     id: 'id',
     question: 'question',
@@ -5270,6 +7370,8 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"Quiz"> | Date | string
     updatedAt?: DateTimeFilter<"Quiz"> | Date | string
     questions?: QuestionListRelationFilter
+    likes?: QuizLikeListRelationFilter
+    favorites?: QuizFavoriteListRelationFilter
   }
 
   export type QuizOrderByWithRelationInput = {
@@ -5285,6 +7387,8 @@ export namespace Prisma {
     createdAt?: SortOrder
     updatedAt?: SortOrder
     questions?: QuestionOrderByRelationAggregateInput
+    likes?: QuizLikeOrderByRelationAggregateInput
+    favorites?: QuizFavoriteOrderByRelationAggregateInput
   }
 
   export type QuizWhereUniqueInput = Prisma.AtLeast<{
@@ -5303,6 +7407,8 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"Quiz"> | Date | string
     updatedAt?: DateTimeFilter<"Quiz"> | Date | string
     questions?: QuestionListRelationFilter
+    likes?: QuizLikeListRelationFilter
+    favorites?: QuizFavoriteListRelationFilter
   }, "id">
 
   export type QuizOrderByWithAggregationInput = {
@@ -5337,6 +7443,108 @@ export namespace Prisma {
     authorId?: StringWithAggregatesFilter<"Quiz"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Quiz"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Quiz"> | Date | string
+  }
+
+  export type QuizLikeWhereInput = {
+    AND?: QuizLikeWhereInput | QuizLikeWhereInput[]
+    OR?: QuizLikeWhereInput[]
+    NOT?: QuizLikeWhereInput | QuizLikeWhereInput[]
+    id?: StringFilter<"QuizLike"> | string
+    quizId?: StringFilter<"QuizLike"> | string
+    userId?: StringFilter<"QuizLike"> | string
+    createdAt?: DateTimeFilter<"QuizLike"> | Date | string
+    quiz?: XOR<QuizRelationFilter, QuizWhereInput>
+  }
+
+  export type QuizLikeOrderByWithRelationInput = {
+    id?: SortOrder
+    quizId?: SortOrder
+    userId?: SortOrder
+    createdAt?: SortOrder
+    quiz?: QuizOrderByWithRelationInput
+  }
+
+  export type QuizLikeWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    quizId_userId?: QuizLikeQuizIdUserIdCompoundUniqueInput
+    AND?: QuizLikeWhereInput | QuizLikeWhereInput[]
+    OR?: QuizLikeWhereInput[]
+    NOT?: QuizLikeWhereInput | QuizLikeWhereInput[]
+    quizId?: StringFilter<"QuizLike"> | string
+    userId?: StringFilter<"QuizLike"> | string
+    createdAt?: DateTimeFilter<"QuizLike"> | Date | string
+    quiz?: XOR<QuizRelationFilter, QuizWhereInput>
+  }, "id" | "quizId_userId">
+
+  export type QuizLikeOrderByWithAggregationInput = {
+    id?: SortOrder
+    quizId?: SortOrder
+    userId?: SortOrder
+    createdAt?: SortOrder
+    _count?: QuizLikeCountOrderByAggregateInput
+    _max?: QuizLikeMaxOrderByAggregateInput
+    _min?: QuizLikeMinOrderByAggregateInput
+  }
+
+  export type QuizLikeScalarWhereWithAggregatesInput = {
+    AND?: QuizLikeScalarWhereWithAggregatesInput | QuizLikeScalarWhereWithAggregatesInput[]
+    OR?: QuizLikeScalarWhereWithAggregatesInput[]
+    NOT?: QuizLikeScalarWhereWithAggregatesInput | QuizLikeScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"QuizLike"> | string
+    quizId?: StringWithAggregatesFilter<"QuizLike"> | string
+    userId?: StringWithAggregatesFilter<"QuizLike"> | string
+    createdAt?: DateTimeWithAggregatesFilter<"QuizLike"> | Date | string
+  }
+
+  export type QuizFavoriteWhereInput = {
+    AND?: QuizFavoriteWhereInput | QuizFavoriteWhereInput[]
+    OR?: QuizFavoriteWhereInput[]
+    NOT?: QuizFavoriteWhereInput | QuizFavoriteWhereInput[]
+    id?: StringFilter<"QuizFavorite"> | string
+    quizId?: StringFilter<"QuizFavorite"> | string
+    userId?: StringFilter<"QuizFavorite"> | string
+    createdAt?: DateTimeFilter<"QuizFavorite"> | Date | string
+    quiz?: XOR<QuizRelationFilter, QuizWhereInput>
+  }
+
+  export type QuizFavoriteOrderByWithRelationInput = {
+    id?: SortOrder
+    quizId?: SortOrder
+    userId?: SortOrder
+    createdAt?: SortOrder
+    quiz?: QuizOrderByWithRelationInput
+  }
+
+  export type QuizFavoriteWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    quizId_userId?: QuizFavoriteQuizIdUserIdCompoundUniqueInput
+    AND?: QuizFavoriteWhereInput | QuizFavoriteWhereInput[]
+    OR?: QuizFavoriteWhereInput[]
+    NOT?: QuizFavoriteWhereInput | QuizFavoriteWhereInput[]
+    quizId?: StringFilter<"QuizFavorite"> | string
+    userId?: StringFilter<"QuizFavorite"> | string
+    createdAt?: DateTimeFilter<"QuizFavorite"> | Date | string
+    quiz?: XOR<QuizRelationFilter, QuizWhereInput>
+  }, "id" | "quizId_userId">
+
+  export type QuizFavoriteOrderByWithAggregationInput = {
+    id?: SortOrder
+    quizId?: SortOrder
+    userId?: SortOrder
+    createdAt?: SortOrder
+    _count?: QuizFavoriteCountOrderByAggregateInput
+    _max?: QuizFavoriteMaxOrderByAggregateInput
+    _min?: QuizFavoriteMinOrderByAggregateInput
+  }
+
+  export type QuizFavoriteScalarWhereWithAggregatesInput = {
+    AND?: QuizFavoriteScalarWhereWithAggregatesInput | QuizFavoriteScalarWhereWithAggregatesInput[]
+    OR?: QuizFavoriteScalarWhereWithAggregatesInput[]
+    NOT?: QuizFavoriteScalarWhereWithAggregatesInput | QuizFavoriteScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"QuizFavorite"> | string
+    quizId?: StringWithAggregatesFilter<"QuizFavorite"> | string
+    userId?: StringWithAggregatesFilter<"QuizFavorite"> | string
+    createdAt?: DateTimeWithAggregatesFilter<"QuizFavorite"> | Date | string
   }
 
   export type QuestionWhereInput = {
@@ -5573,6 +7781,8 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     questions?: QuestionCreateNestedManyWithoutQuizInput
+    likes?: QuizLikeCreateNestedManyWithoutQuizInput
+    favorites?: QuizFavoriteCreateNestedManyWithoutQuizInput
   }
 
   export type QuizUncheckedCreateInput = {
@@ -5588,6 +7798,8 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     questions?: QuestionUncheckedCreateNestedManyWithoutQuizInput
+    likes?: QuizLikeUncheckedCreateNestedManyWithoutQuizInput
+    favorites?: QuizFavoriteUncheckedCreateNestedManyWithoutQuizInput
   }
 
   export type QuizUpdateInput = {
@@ -5603,6 +7815,8 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     questions?: QuestionUpdateManyWithoutQuizNestedInput
+    likes?: QuizLikeUpdateManyWithoutQuizNestedInput
+    favorites?: QuizFavoriteUpdateManyWithoutQuizNestedInput
   }
 
   export type QuizUncheckedUpdateInput = {
@@ -5618,6 +7832,8 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     questions?: QuestionUncheckedUpdateManyWithoutQuizNestedInput
+    likes?: QuizLikeUncheckedUpdateManyWithoutQuizNestedInput
+    favorites?: QuizFavoriteUncheckedUpdateManyWithoutQuizNestedInput
   }
 
   export type QuizCreateManyInput = {
@@ -5660,6 +7876,102 @@ export namespace Prisma {
     authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type QuizLikeCreateInput = {
+    id?: string
+    userId: string
+    createdAt?: Date | string
+    quiz: QuizCreateNestedOneWithoutLikesInput
+  }
+
+  export type QuizLikeUncheckedCreateInput = {
+    id?: string
+    quizId: string
+    userId: string
+    createdAt?: Date | string
+  }
+
+  export type QuizLikeUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    quiz?: QuizUpdateOneRequiredWithoutLikesNestedInput
+  }
+
+  export type QuizLikeUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    quizId?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type QuizLikeCreateManyInput = {
+    id?: string
+    quizId: string
+    userId: string
+    createdAt?: Date | string
+  }
+
+  export type QuizLikeUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type QuizLikeUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    quizId?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type QuizFavoriteCreateInput = {
+    id?: string
+    userId: string
+    createdAt?: Date | string
+    quiz: QuizCreateNestedOneWithoutFavoritesInput
+  }
+
+  export type QuizFavoriteUncheckedCreateInput = {
+    id?: string
+    quizId: string
+    userId: string
+    createdAt?: Date | string
+  }
+
+  export type QuizFavoriteUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    quiz?: QuizUpdateOneRequiredWithoutFavoritesNestedInput
+  }
+
+  export type QuizFavoriteUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    quizId?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type QuizFavoriteCreateManyInput = {
+    id?: string
+    quizId: string
+    userId: string
+    createdAt?: Date | string
+  }
+
+  export type QuizFavoriteUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type QuizFavoriteUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    quizId?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type QuestionCreateInput = {
@@ -5997,12 +8309,32 @@ export namespace Prisma {
     none?: QuestionWhereInput
   }
 
+  export type QuizLikeListRelationFilter = {
+    every?: QuizLikeWhereInput
+    some?: QuizLikeWhereInput
+    none?: QuizLikeWhereInput
+  }
+
+  export type QuizFavoriteListRelationFilter = {
+    every?: QuizFavoriteWhereInput
+    some?: QuizFavoriteWhereInput
+    none?: QuizFavoriteWhereInput
+  }
+
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
   }
 
   export type QuestionOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type QuizLikeOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type QuizFavoriteOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -6125,6 +8457,63 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedDateTimeFilter<$PrismaModel>
     _max?: NestedDateTimeFilter<$PrismaModel>
+  }
+
+  export type QuizRelationFilter = {
+    is?: QuizWhereInput
+    isNot?: QuizWhereInput
+  }
+
+  export type QuizLikeQuizIdUserIdCompoundUniqueInput = {
+    quizId: string
+    userId: string
+  }
+
+  export type QuizLikeCountOrderByAggregateInput = {
+    id?: SortOrder
+    quizId?: SortOrder
+    userId?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type QuizLikeMaxOrderByAggregateInput = {
+    id?: SortOrder
+    quizId?: SortOrder
+    userId?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type QuizLikeMinOrderByAggregateInput = {
+    id?: SortOrder
+    quizId?: SortOrder
+    userId?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type QuizFavoriteQuizIdUserIdCompoundUniqueInput = {
+    quizId: string
+    userId: string
+  }
+
+  export type QuizFavoriteCountOrderByAggregateInput = {
+    id?: SortOrder
+    quizId?: SortOrder
+    userId?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type QuizFavoriteMaxOrderByAggregateInput = {
+    id?: SortOrder
+    quizId?: SortOrder
+    userId?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type QuizFavoriteMinOrderByAggregateInput = {
+    id?: SortOrder
+    quizId?: SortOrder
+    userId?: SortOrder
+    createdAt?: SortOrder
   }
 
   export type QuizNullableRelationFilter = {
@@ -6315,11 +8704,39 @@ export namespace Prisma {
     connect?: QuestionWhereUniqueInput | QuestionWhereUniqueInput[]
   }
 
+  export type QuizLikeCreateNestedManyWithoutQuizInput = {
+    create?: XOR<QuizLikeCreateWithoutQuizInput, QuizLikeUncheckedCreateWithoutQuizInput> | QuizLikeCreateWithoutQuizInput[] | QuizLikeUncheckedCreateWithoutQuizInput[]
+    connectOrCreate?: QuizLikeCreateOrConnectWithoutQuizInput | QuizLikeCreateOrConnectWithoutQuizInput[]
+    createMany?: QuizLikeCreateManyQuizInputEnvelope
+    connect?: QuizLikeWhereUniqueInput | QuizLikeWhereUniqueInput[]
+  }
+
+  export type QuizFavoriteCreateNestedManyWithoutQuizInput = {
+    create?: XOR<QuizFavoriteCreateWithoutQuizInput, QuizFavoriteUncheckedCreateWithoutQuizInput> | QuizFavoriteCreateWithoutQuizInput[] | QuizFavoriteUncheckedCreateWithoutQuizInput[]
+    connectOrCreate?: QuizFavoriteCreateOrConnectWithoutQuizInput | QuizFavoriteCreateOrConnectWithoutQuizInput[]
+    createMany?: QuizFavoriteCreateManyQuizInputEnvelope
+    connect?: QuizFavoriteWhereUniqueInput | QuizFavoriteWhereUniqueInput[]
+  }
+
   export type QuestionUncheckedCreateNestedManyWithoutQuizInput = {
     create?: XOR<QuestionCreateWithoutQuizInput, QuestionUncheckedCreateWithoutQuizInput> | QuestionCreateWithoutQuizInput[] | QuestionUncheckedCreateWithoutQuizInput[]
     connectOrCreate?: QuestionCreateOrConnectWithoutQuizInput | QuestionCreateOrConnectWithoutQuizInput[]
     createMany?: QuestionCreateManyQuizInputEnvelope
     connect?: QuestionWhereUniqueInput | QuestionWhereUniqueInput[]
+  }
+
+  export type QuizLikeUncheckedCreateNestedManyWithoutQuizInput = {
+    create?: XOR<QuizLikeCreateWithoutQuizInput, QuizLikeUncheckedCreateWithoutQuizInput> | QuizLikeCreateWithoutQuizInput[] | QuizLikeUncheckedCreateWithoutQuizInput[]
+    connectOrCreate?: QuizLikeCreateOrConnectWithoutQuizInput | QuizLikeCreateOrConnectWithoutQuizInput[]
+    createMany?: QuizLikeCreateManyQuizInputEnvelope
+    connect?: QuizLikeWhereUniqueInput | QuizLikeWhereUniqueInput[]
+  }
+
+  export type QuizFavoriteUncheckedCreateNestedManyWithoutQuizInput = {
+    create?: XOR<QuizFavoriteCreateWithoutQuizInput, QuizFavoriteUncheckedCreateWithoutQuizInput> | QuizFavoriteCreateWithoutQuizInput[] | QuizFavoriteUncheckedCreateWithoutQuizInput[]
+    connectOrCreate?: QuizFavoriteCreateOrConnectWithoutQuizInput | QuizFavoriteCreateOrConnectWithoutQuizInput[]
+    createMany?: QuizFavoriteCreateManyQuizInputEnvelope
+    connect?: QuizFavoriteWhereUniqueInput | QuizFavoriteWhereUniqueInput[]
   }
 
   export type StringFieldUpdateOperationsInput = {
@@ -6357,6 +8774,34 @@ export namespace Prisma {
     deleteMany?: QuestionScalarWhereInput | QuestionScalarWhereInput[]
   }
 
+  export type QuizLikeUpdateManyWithoutQuizNestedInput = {
+    create?: XOR<QuizLikeCreateWithoutQuizInput, QuizLikeUncheckedCreateWithoutQuizInput> | QuizLikeCreateWithoutQuizInput[] | QuizLikeUncheckedCreateWithoutQuizInput[]
+    connectOrCreate?: QuizLikeCreateOrConnectWithoutQuizInput | QuizLikeCreateOrConnectWithoutQuizInput[]
+    upsert?: QuizLikeUpsertWithWhereUniqueWithoutQuizInput | QuizLikeUpsertWithWhereUniqueWithoutQuizInput[]
+    createMany?: QuizLikeCreateManyQuizInputEnvelope
+    set?: QuizLikeWhereUniqueInput | QuizLikeWhereUniqueInput[]
+    disconnect?: QuizLikeWhereUniqueInput | QuizLikeWhereUniqueInput[]
+    delete?: QuizLikeWhereUniqueInput | QuizLikeWhereUniqueInput[]
+    connect?: QuizLikeWhereUniqueInput | QuizLikeWhereUniqueInput[]
+    update?: QuizLikeUpdateWithWhereUniqueWithoutQuizInput | QuizLikeUpdateWithWhereUniqueWithoutQuizInput[]
+    updateMany?: QuizLikeUpdateManyWithWhereWithoutQuizInput | QuizLikeUpdateManyWithWhereWithoutQuizInput[]
+    deleteMany?: QuizLikeScalarWhereInput | QuizLikeScalarWhereInput[]
+  }
+
+  export type QuizFavoriteUpdateManyWithoutQuizNestedInput = {
+    create?: XOR<QuizFavoriteCreateWithoutQuizInput, QuizFavoriteUncheckedCreateWithoutQuizInput> | QuizFavoriteCreateWithoutQuizInput[] | QuizFavoriteUncheckedCreateWithoutQuizInput[]
+    connectOrCreate?: QuizFavoriteCreateOrConnectWithoutQuizInput | QuizFavoriteCreateOrConnectWithoutQuizInput[]
+    upsert?: QuizFavoriteUpsertWithWhereUniqueWithoutQuizInput | QuizFavoriteUpsertWithWhereUniqueWithoutQuizInput[]
+    createMany?: QuizFavoriteCreateManyQuizInputEnvelope
+    set?: QuizFavoriteWhereUniqueInput | QuizFavoriteWhereUniqueInput[]
+    disconnect?: QuizFavoriteWhereUniqueInput | QuizFavoriteWhereUniqueInput[]
+    delete?: QuizFavoriteWhereUniqueInput | QuizFavoriteWhereUniqueInput[]
+    connect?: QuizFavoriteWhereUniqueInput | QuizFavoriteWhereUniqueInput[]
+    update?: QuizFavoriteUpdateWithWhereUniqueWithoutQuizInput | QuizFavoriteUpdateWithWhereUniqueWithoutQuizInput[]
+    updateMany?: QuizFavoriteUpdateManyWithWhereWithoutQuizInput | QuizFavoriteUpdateManyWithWhereWithoutQuizInput[]
+    deleteMany?: QuizFavoriteScalarWhereInput | QuizFavoriteScalarWhereInput[]
+  }
+
   export type QuestionUncheckedUpdateManyWithoutQuizNestedInput = {
     create?: XOR<QuestionCreateWithoutQuizInput, QuestionUncheckedCreateWithoutQuizInput> | QuestionCreateWithoutQuizInput[] | QuestionUncheckedCreateWithoutQuizInput[]
     connectOrCreate?: QuestionCreateOrConnectWithoutQuizInput | QuestionCreateOrConnectWithoutQuizInput[]
@@ -6369,6 +8814,62 @@ export namespace Prisma {
     update?: QuestionUpdateWithWhereUniqueWithoutQuizInput | QuestionUpdateWithWhereUniqueWithoutQuizInput[]
     updateMany?: QuestionUpdateManyWithWhereWithoutQuizInput | QuestionUpdateManyWithWhereWithoutQuizInput[]
     deleteMany?: QuestionScalarWhereInput | QuestionScalarWhereInput[]
+  }
+
+  export type QuizLikeUncheckedUpdateManyWithoutQuizNestedInput = {
+    create?: XOR<QuizLikeCreateWithoutQuizInput, QuizLikeUncheckedCreateWithoutQuizInput> | QuizLikeCreateWithoutQuizInput[] | QuizLikeUncheckedCreateWithoutQuizInput[]
+    connectOrCreate?: QuizLikeCreateOrConnectWithoutQuizInput | QuizLikeCreateOrConnectWithoutQuizInput[]
+    upsert?: QuizLikeUpsertWithWhereUniqueWithoutQuizInput | QuizLikeUpsertWithWhereUniqueWithoutQuizInput[]
+    createMany?: QuizLikeCreateManyQuizInputEnvelope
+    set?: QuizLikeWhereUniqueInput | QuizLikeWhereUniqueInput[]
+    disconnect?: QuizLikeWhereUniqueInput | QuizLikeWhereUniqueInput[]
+    delete?: QuizLikeWhereUniqueInput | QuizLikeWhereUniqueInput[]
+    connect?: QuizLikeWhereUniqueInput | QuizLikeWhereUniqueInput[]
+    update?: QuizLikeUpdateWithWhereUniqueWithoutQuizInput | QuizLikeUpdateWithWhereUniqueWithoutQuizInput[]
+    updateMany?: QuizLikeUpdateManyWithWhereWithoutQuizInput | QuizLikeUpdateManyWithWhereWithoutQuizInput[]
+    deleteMany?: QuizLikeScalarWhereInput | QuizLikeScalarWhereInput[]
+  }
+
+  export type QuizFavoriteUncheckedUpdateManyWithoutQuizNestedInput = {
+    create?: XOR<QuizFavoriteCreateWithoutQuizInput, QuizFavoriteUncheckedCreateWithoutQuizInput> | QuizFavoriteCreateWithoutQuizInput[] | QuizFavoriteUncheckedCreateWithoutQuizInput[]
+    connectOrCreate?: QuizFavoriteCreateOrConnectWithoutQuizInput | QuizFavoriteCreateOrConnectWithoutQuizInput[]
+    upsert?: QuizFavoriteUpsertWithWhereUniqueWithoutQuizInput | QuizFavoriteUpsertWithWhereUniqueWithoutQuizInput[]
+    createMany?: QuizFavoriteCreateManyQuizInputEnvelope
+    set?: QuizFavoriteWhereUniqueInput | QuizFavoriteWhereUniqueInput[]
+    disconnect?: QuizFavoriteWhereUniqueInput | QuizFavoriteWhereUniqueInput[]
+    delete?: QuizFavoriteWhereUniqueInput | QuizFavoriteWhereUniqueInput[]
+    connect?: QuizFavoriteWhereUniqueInput | QuizFavoriteWhereUniqueInput[]
+    update?: QuizFavoriteUpdateWithWhereUniqueWithoutQuizInput | QuizFavoriteUpdateWithWhereUniqueWithoutQuizInput[]
+    updateMany?: QuizFavoriteUpdateManyWithWhereWithoutQuizInput | QuizFavoriteUpdateManyWithWhereWithoutQuizInput[]
+    deleteMany?: QuizFavoriteScalarWhereInput | QuizFavoriteScalarWhereInput[]
+  }
+
+  export type QuizCreateNestedOneWithoutLikesInput = {
+    create?: XOR<QuizCreateWithoutLikesInput, QuizUncheckedCreateWithoutLikesInput>
+    connectOrCreate?: QuizCreateOrConnectWithoutLikesInput
+    connect?: QuizWhereUniqueInput
+  }
+
+  export type QuizUpdateOneRequiredWithoutLikesNestedInput = {
+    create?: XOR<QuizCreateWithoutLikesInput, QuizUncheckedCreateWithoutLikesInput>
+    connectOrCreate?: QuizCreateOrConnectWithoutLikesInput
+    upsert?: QuizUpsertWithoutLikesInput
+    connect?: QuizWhereUniqueInput
+    update?: XOR<XOR<QuizUpdateToOneWithWhereWithoutLikesInput, QuizUpdateWithoutLikesInput>, QuizUncheckedUpdateWithoutLikesInput>
+  }
+
+  export type QuizCreateNestedOneWithoutFavoritesInput = {
+    create?: XOR<QuizCreateWithoutFavoritesInput, QuizUncheckedCreateWithoutFavoritesInput>
+    connectOrCreate?: QuizCreateOrConnectWithoutFavoritesInput
+    connect?: QuizWhereUniqueInput
+  }
+
+  export type QuizUpdateOneRequiredWithoutFavoritesNestedInput = {
+    create?: XOR<QuizCreateWithoutFavoritesInput, QuizUncheckedCreateWithoutFavoritesInput>
+    connectOrCreate?: QuizCreateOrConnectWithoutFavoritesInput
+    upsert?: QuizUpsertWithoutFavoritesInput
+    connect?: QuizWhereUniqueInput
+    update?: XOR<XOR<QuizUpdateToOneWithWhereWithoutFavoritesInput, QuizUpdateWithoutFavoritesInput>, QuizUncheckedUpdateWithoutFavoritesInput>
   }
 
   export type QuestionCreateanswersInput = {
@@ -6645,6 +9146,50 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type QuizLikeCreateWithoutQuizInput = {
+    id?: string
+    userId: string
+    createdAt?: Date | string
+  }
+
+  export type QuizLikeUncheckedCreateWithoutQuizInput = {
+    id?: string
+    userId: string
+    createdAt?: Date | string
+  }
+
+  export type QuizLikeCreateOrConnectWithoutQuizInput = {
+    where: QuizLikeWhereUniqueInput
+    create: XOR<QuizLikeCreateWithoutQuizInput, QuizLikeUncheckedCreateWithoutQuizInput>
+  }
+
+  export type QuizLikeCreateManyQuizInputEnvelope = {
+    data: QuizLikeCreateManyQuizInput | QuizLikeCreateManyQuizInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type QuizFavoriteCreateWithoutQuizInput = {
+    id?: string
+    userId: string
+    createdAt?: Date | string
+  }
+
+  export type QuizFavoriteUncheckedCreateWithoutQuizInput = {
+    id?: string
+    userId: string
+    createdAt?: Date | string
+  }
+
+  export type QuizFavoriteCreateOrConnectWithoutQuizInput = {
+    where: QuizFavoriteWhereUniqueInput
+    create: XOR<QuizFavoriteCreateWithoutQuizInput, QuizFavoriteUncheckedCreateWithoutQuizInput>
+  }
+
+  export type QuizFavoriteCreateManyQuizInputEnvelope = {
+    data: QuizFavoriteCreateManyQuizInput | QuizFavoriteCreateManyQuizInput[]
+    skipDuplicates?: boolean
+  }
+
   export type QuestionUpsertWithWhereUniqueWithoutQuizInput = {
     where: QuestionWhereUniqueInput
     update: XOR<QuestionUpdateWithoutQuizInput, QuestionUncheckedUpdateWithoutQuizInput>
@@ -6674,6 +9219,218 @@ export namespace Prisma {
     quizId?: StringNullableFilter<"Question"> | string | null
   }
 
+  export type QuizLikeUpsertWithWhereUniqueWithoutQuizInput = {
+    where: QuizLikeWhereUniqueInput
+    update: XOR<QuizLikeUpdateWithoutQuizInput, QuizLikeUncheckedUpdateWithoutQuizInput>
+    create: XOR<QuizLikeCreateWithoutQuizInput, QuizLikeUncheckedCreateWithoutQuizInput>
+  }
+
+  export type QuizLikeUpdateWithWhereUniqueWithoutQuizInput = {
+    where: QuizLikeWhereUniqueInput
+    data: XOR<QuizLikeUpdateWithoutQuizInput, QuizLikeUncheckedUpdateWithoutQuizInput>
+  }
+
+  export type QuizLikeUpdateManyWithWhereWithoutQuizInput = {
+    where: QuizLikeScalarWhereInput
+    data: XOR<QuizLikeUpdateManyMutationInput, QuizLikeUncheckedUpdateManyWithoutQuizInput>
+  }
+
+  export type QuizLikeScalarWhereInput = {
+    AND?: QuizLikeScalarWhereInput | QuizLikeScalarWhereInput[]
+    OR?: QuizLikeScalarWhereInput[]
+    NOT?: QuizLikeScalarWhereInput | QuizLikeScalarWhereInput[]
+    id?: StringFilter<"QuizLike"> | string
+    quizId?: StringFilter<"QuizLike"> | string
+    userId?: StringFilter<"QuizLike"> | string
+    createdAt?: DateTimeFilter<"QuizLike"> | Date | string
+  }
+
+  export type QuizFavoriteUpsertWithWhereUniqueWithoutQuizInput = {
+    where: QuizFavoriteWhereUniqueInput
+    update: XOR<QuizFavoriteUpdateWithoutQuizInput, QuizFavoriteUncheckedUpdateWithoutQuizInput>
+    create: XOR<QuizFavoriteCreateWithoutQuizInput, QuizFavoriteUncheckedCreateWithoutQuizInput>
+  }
+
+  export type QuizFavoriteUpdateWithWhereUniqueWithoutQuizInput = {
+    where: QuizFavoriteWhereUniqueInput
+    data: XOR<QuizFavoriteUpdateWithoutQuizInput, QuizFavoriteUncheckedUpdateWithoutQuizInput>
+  }
+
+  export type QuizFavoriteUpdateManyWithWhereWithoutQuizInput = {
+    where: QuizFavoriteScalarWhereInput
+    data: XOR<QuizFavoriteUpdateManyMutationInput, QuizFavoriteUncheckedUpdateManyWithoutQuizInput>
+  }
+
+  export type QuizFavoriteScalarWhereInput = {
+    AND?: QuizFavoriteScalarWhereInput | QuizFavoriteScalarWhereInput[]
+    OR?: QuizFavoriteScalarWhereInput[]
+    NOT?: QuizFavoriteScalarWhereInput | QuizFavoriteScalarWhereInput[]
+    id?: StringFilter<"QuizFavorite"> | string
+    quizId?: StringFilter<"QuizFavorite"> | string
+    userId?: StringFilter<"QuizFavorite"> | string
+    createdAt?: DateTimeFilter<"QuizFavorite"> | Date | string
+  }
+
+  export type QuizCreateWithoutLikesInput = {
+    id?: string
+    title: string
+    description?: string | null
+    imageUrl?: string | null
+    quizType?: $Enums.QuestionType
+    tags?: QuizCreatetagsInput | string[]
+    statistics?: NullableJsonNullValueInput | InputJsonValue
+    defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    authorId?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    questions?: QuestionCreateNestedManyWithoutQuizInput
+    favorites?: QuizFavoriteCreateNestedManyWithoutQuizInput
+  }
+
+  export type QuizUncheckedCreateWithoutLikesInput = {
+    id?: string
+    title: string
+    description?: string | null
+    imageUrl?: string | null
+    quizType?: $Enums.QuestionType
+    tags?: QuizCreatetagsInput | string[]
+    statistics?: NullableJsonNullValueInput | InputJsonValue
+    defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    authorId?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    questions?: QuestionUncheckedCreateNestedManyWithoutQuizInput
+    favorites?: QuizFavoriteUncheckedCreateNestedManyWithoutQuizInput
+  }
+
+  export type QuizCreateOrConnectWithoutLikesInput = {
+    where: QuizWhereUniqueInput
+    create: XOR<QuizCreateWithoutLikesInput, QuizUncheckedCreateWithoutLikesInput>
+  }
+
+  export type QuizUpsertWithoutLikesInput = {
+    update: XOR<QuizUpdateWithoutLikesInput, QuizUncheckedUpdateWithoutLikesInput>
+    create: XOR<QuizCreateWithoutLikesInput, QuizUncheckedCreateWithoutLikesInput>
+    where?: QuizWhereInput
+  }
+
+  export type QuizUpdateToOneWithWhereWithoutLikesInput = {
+    where?: QuizWhereInput
+    data: XOR<QuizUpdateWithoutLikesInput, QuizUncheckedUpdateWithoutLikesInput>
+  }
+
+  export type QuizUpdateWithoutLikesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    quizType?: EnumQuestionTypeFieldUpdateOperationsInput | $Enums.QuestionType
+    tags?: QuizUpdatetagsInput | string[]
+    statistics?: NullableJsonNullValueInput | InputJsonValue
+    defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    authorId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    questions?: QuestionUpdateManyWithoutQuizNestedInput
+    favorites?: QuizFavoriteUpdateManyWithoutQuizNestedInput
+  }
+
+  export type QuizUncheckedUpdateWithoutLikesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    quizType?: EnumQuestionTypeFieldUpdateOperationsInput | $Enums.QuestionType
+    tags?: QuizUpdatetagsInput | string[]
+    statistics?: NullableJsonNullValueInput | InputJsonValue
+    defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    authorId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    questions?: QuestionUncheckedUpdateManyWithoutQuizNestedInput
+    favorites?: QuizFavoriteUncheckedUpdateManyWithoutQuizNestedInput
+  }
+
+  export type QuizCreateWithoutFavoritesInput = {
+    id?: string
+    title: string
+    description?: string | null
+    imageUrl?: string | null
+    quizType?: $Enums.QuestionType
+    tags?: QuizCreatetagsInput | string[]
+    statistics?: NullableJsonNullValueInput | InputJsonValue
+    defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    authorId?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    questions?: QuestionCreateNestedManyWithoutQuizInput
+    likes?: QuizLikeCreateNestedManyWithoutQuizInput
+  }
+
+  export type QuizUncheckedCreateWithoutFavoritesInput = {
+    id?: string
+    title: string
+    description?: string | null
+    imageUrl?: string | null
+    quizType?: $Enums.QuestionType
+    tags?: QuizCreatetagsInput | string[]
+    statistics?: NullableJsonNullValueInput | InputJsonValue
+    defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    authorId?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    questions?: QuestionUncheckedCreateNestedManyWithoutQuizInput
+    likes?: QuizLikeUncheckedCreateNestedManyWithoutQuizInput
+  }
+
+  export type QuizCreateOrConnectWithoutFavoritesInput = {
+    where: QuizWhereUniqueInput
+    create: XOR<QuizCreateWithoutFavoritesInput, QuizUncheckedCreateWithoutFavoritesInput>
+  }
+
+  export type QuizUpsertWithoutFavoritesInput = {
+    update: XOR<QuizUpdateWithoutFavoritesInput, QuizUncheckedUpdateWithoutFavoritesInput>
+    create: XOR<QuizCreateWithoutFavoritesInput, QuizUncheckedCreateWithoutFavoritesInput>
+    where?: QuizWhereInput
+  }
+
+  export type QuizUpdateToOneWithWhereWithoutFavoritesInput = {
+    where?: QuizWhereInput
+    data: XOR<QuizUpdateWithoutFavoritesInput, QuizUncheckedUpdateWithoutFavoritesInput>
+  }
+
+  export type QuizUpdateWithoutFavoritesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    quizType?: EnumQuestionTypeFieldUpdateOperationsInput | $Enums.QuestionType
+    tags?: QuizUpdatetagsInput | string[]
+    statistics?: NullableJsonNullValueInput | InputJsonValue
+    defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    authorId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    questions?: QuestionUpdateManyWithoutQuizNestedInput
+    likes?: QuizLikeUpdateManyWithoutQuizNestedInput
+  }
+
+  export type QuizUncheckedUpdateWithoutFavoritesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    quizType?: EnumQuestionTypeFieldUpdateOperationsInput | $Enums.QuestionType
+    tags?: QuizUpdatetagsInput | string[]
+    statistics?: NullableJsonNullValueInput | InputJsonValue
+    defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    authorId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    questions?: QuestionUncheckedUpdateManyWithoutQuizNestedInput
+    likes?: QuizLikeUncheckedUpdateManyWithoutQuizNestedInput
+  }
+
   export type QuizCreateWithoutQuestionsInput = {
     id?: string
     title: string
@@ -6686,6 +9443,8 @@ export namespace Prisma {
     authorId?: string
     createdAt?: Date | string
     updatedAt?: Date | string
+    likes?: QuizLikeCreateNestedManyWithoutQuizInput
+    favorites?: QuizFavoriteCreateNestedManyWithoutQuizInput
   }
 
   export type QuizUncheckedCreateWithoutQuestionsInput = {
@@ -6700,6 +9459,8 @@ export namespace Prisma {
     authorId?: string
     createdAt?: Date | string
     updatedAt?: Date | string
+    likes?: QuizLikeUncheckedCreateNestedManyWithoutQuizInput
+    favorites?: QuizFavoriteUncheckedCreateNestedManyWithoutQuizInput
   }
 
   export type QuizCreateOrConnectWithoutQuestionsInput = {
@@ -6730,6 +9491,8 @@ export namespace Prisma {
     authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    likes?: QuizLikeUpdateManyWithoutQuizNestedInput
+    favorites?: QuizFavoriteUpdateManyWithoutQuizNestedInput
   }
 
   export type QuizUncheckedUpdateWithoutQuestionsInput = {
@@ -6744,6 +9507,8 @@ export namespace Prisma {
     authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    likes?: QuizLikeUncheckedUpdateManyWithoutQuizNestedInput
+    favorites?: QuizFavoriteUncheckedUpdateManyWithoutQuizNestedInput
   }
 
   export type QuestionCreateManyQuizInput = {
@@ -6753,6 +9518,18 @@ export namespace Prisma {
     answers?: QuestionCreateanswersInput | string[]
     correctAnswer: string
     type?: $Enums.QuestionType
+  }
+
+  export type QuizLikeCreateManyQuizInput = {
+    id?: string
+    userId: string
+    createdAt?: Date | string
+  }
+
+  export type QuizFavoriteCreateManyQuizInput = {
+    id?: string
+    userId: string
+    createdAt?: Date | string
   }
 
   export type QuestionUpdateWithoutQuizInput = {
@@ -6782,6 +9559,42 @@ export namespace Prisma {
     type?: EnumQuestionTypeFieldUpdateOperationsInput | $Enums.QuestionType
   }
 
+  export type QuizLikeUpdateWithoutQuizInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type QuizLikeUncheckedUpdateWithoutQuizInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type QuizLikeUncheckedUpdateManyWithoutQuizInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type QuizFavoriteUpdateWithoutQuizInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type QuizFavoriteUncheckedUpdateWithoutQuizInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type QuizFavoriteUncheckedUpdateManyWithoutQuizInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
 
 
   /**
@@ -6795,6 +9608,14 @@ export namespace Prisma {
      * @deprecated Use QuizDefaultArgs instead
      */
     export type QuizArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = QuizDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use QuizLikeDefaultArgs instead
+     */
+    export type QuizLikeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = QuizLikeDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use QuizFavoriteDefaultArgs instead
+     */
+    export type QuizFavoriteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = QuizFavoriteDefaultArgs<ExtArgs>
     /**
      * @deprecated Use QuestionDefaultArgs instead
      */

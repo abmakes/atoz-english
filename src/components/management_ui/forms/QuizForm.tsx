@@ -436,6 +436,7 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
   }));
 
   return (
+    <>
     <form onSubmit={handleSubmit} className={`space-y-8 pt-4 p-6 ${className} border-none shadow-none`}>
 
       {/* {onConfirmQuestions && questions.length > 0 && (
@@ -536,6 +537,7 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
           <Plus className="h-5 w-5 mr-2 mb-0.5" /> Add New Question
         </Button>
       </div>
+    </form>
 
       {isImageModalOpen && (
         <ImageSelectModal 
@@ -544,7 +546,7 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
           onImageSelect={handleImageSelect} 
         />
       )}
-    </form>
+    </>
   );
 });
 

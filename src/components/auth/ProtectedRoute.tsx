@@ -4,12 +4,13 @@ import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import LoadingSpinner from '@/components/loading_spinner';
+import { useIsClerkActive } from '@/components/auth/ClerkActiveProvider';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+function ClerkProtectedRoute({ children }: ProtectedRouteProps) {
   const { isLoaded, isSignedIn } = useAuth();
   const router = useRouter();
 
@@ -28,8 +29,22 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!isSignedIn) {
-    return null; // Will redirect in useEffect
+    return null;
   }
 
   return <>{children}</>;
+}
+
+/**
+ * When Clerk is not configured, allow access (local/dev fallback).
+ * When Clerk is active, require a signed-in session.
+ */
+export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const clerkActive = useIsClerkActive();
+
+  if (!clerkActive) {
+    return <>{children}</>;
+  }
+
+  return <ClerkProtectedRoute>{children}</ClerkProtectedRoute>;
 }

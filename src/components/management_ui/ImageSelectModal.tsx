@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { UploadCloud, Search, Loader2 } from 'lucide-react';
-import GiphyGrid from './GiphyModal';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { UploadCloud, Search, Loader2, ChevronDown, ChevronUp, X } from 'lucide-react';
 import Image from 'next/image';
 import { useCustomToast } from '@/components/ui/CustomToast';
+import { GiphyFetch } from '@giphy/js-fetch-api';
+import type { IGif } from '@giphy/js-types';
 
 interface PixabayImage {
   id: number;
@@ -73,201 +73,81 @@ interface ImageSelectModalProps {
       width: number;
       height: number;
     },
-    /** When the user picks a file from disk, pass it so the quiz can upload to storage (blob: preview URLs are not persisted). */
     localFile?: File | null
   ) => void;
 }
 
+const PREVIEW_COUNT = 4;
+const PAGE_SIZE = 12;
+
+type SectionKey = 'stored' | 'giphy' | 'pixabay';
+
+function takeVisible<T>(items: T[], expanded: boolean): T[] {
+  return expanded ? items : items.slice(0, PREVIEW_COUNT);
+}
+
 export default function ImageSelectModal({ isOpen, onClose, onImageSelect }: ImageSelectModalProps) {
   const { addToast } = useCustomToast();
-  const [activeTab, setActiveTab] = useState("stored");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  
-  // Pixabay state
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<PixabayImage[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMoreResults, setHasMoreResults] = useState(false);
-  
-  // Stored images state
-  const [storedImages, setStoredImages] = useState<StoredImage[]>([]);
-  const [isLoadingStored, setIsLoadingStored] = useState(false);
-  const [storedSearchQuery, setStoredSearchQuery] = useState("");
-  const [storedCurrentPage, setStoredCurrentPage] = useState(1);
-  const [storedHasMore, setStoredHasMore] = useState(false);
-  
-  // Top used images state
+
+  const [query, setQuery] = useState('');
+  const [activeQuery, setActiveQuery] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
+
   const [topUsedImages, setTopUsedImages] = useState<StoredImage[]>([]);
   const [isLoadingTopUsed, setIsLoadingTopUsed] = useState(false);
-  
-  // Get Pixabay API key from environment
+
+  const [storedImages, setStoredImages] = useState<StoredImage[]>([]);
+  const [storedPage, setStoredPage] = useState(1);
+  const [storedHasMore, setStoredHasMore] = useState(false);
+  const [isLoadingStored, setIsLoadingStored] = useState(false);
+
+  const [giphyResults, setGiphyResults] = useState<IGif[]>([]);
+  const [giphyOffset, setGiphyOffset] = useState(0);
+  const [giphyHasMore, setGiphyHasMore] = useState(false);
+  const [isLoadingGiphy, setIsLoadingGiphy] = useState(false);
+
+  const [pixabayResults, setPixabayResults] = useState<PixabayImage[]>([]);
+  const [pixabayPage, setPixabayPage] = useState(1);
+  const [pixabayHasMore, setPixabayHasMore] = useState(false);
+  const [isLoadingPixabay, setIsLoadingPixabay] = useState(false);
+
+  const [expanded, setExpanded] = useState<Record<SectionKey, boolean>>({
+    stored: false,
+    giphy: false,
+    pixabay: false,
+  });
+
   const pixabayApiKey = process.env.NEXT_PUBLIC_PIXABAY_API_KEY;
+  const giphyApiKey = process.env.NEXT_PUBLIC_GIPHY_API_KEY;
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
-      if (file.type.startsWith('image/')) {
-        const imageUrl = URL.createObjectURL(file);
-        onImageSelect(imageUrl, undefined, file);
-        // onClose(); // User might want to confirm or see preview
-      } else {
-        console.warn("Selected file is not an image.");
-        // Consider adding a toast notification here
-      }
-    }
-  };
-
-  const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
+  const resetSearchState = useCallback(() => {
+    setQuery('');
+    setActiveQuery('');
+    setHasSearched(false);
+    setStoredImages([]);
+    setGiphyResults([]);
+    setPixabayResults([]);
+    setExpanded({ stored: false, giphy: false, pixabay: false });
   }, []);
 
-  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsDragging(false);
-      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-        const file = e.dataTransfer.files[0];
-        if (file.type.startsWith('image/')) {
-          const imageUrl = URL.createObjectURL(file);
-          onImageSelect(imageUrl, undefined, file);
-          // onClose();
-        } else {
-          console.warn("Dropped file is not an image.");
-          // Consider adding a toast notification here
-        }
-      }
-    },
-    [onImageSelect]
-  );
-  
-  const handleGiphySelect = (url: string) => {
-    onImageSelect(url, undefined);
-    // onClose(); // Keep modal open to allow changing selection before confirming with "Done"
-  };
-
-  const handlePixabaySelect = (image: PixabayImage) => {
-    // Store the Pixabay URL temporarily for display during quiz creation
-    // The image will be downloaded and stored when the quiz is published
-    // Pass the full image metadata as a custom object
-    const imageMetadata = {
-      url: image.webformatURL,
-      pixabayId: image.id,
-      pixabayUser: image.user,
-      tags: image.tags.split(', ').filter(tag => tag.trim() !== ''), // Convert comma-separated string to array
-      searchTerm: searchQuery, // Use the current search query
-      width: image.webformatWidth,
-      height: image.webformatHeight
-    };
-    
-    onImageSelect(image.webformatURL, imageMetadata);
-    addToast('Image selected! It will be saved when you publish the quiz.', { variant: 'success' });
-  };
-
-  const handleStoredImageSelect = (image: StoredImage) => {
-    // Use the blob URL for stored images
-    onImageSelect(image.blobUrl, undefined);
-  };
-
-    const searchPixabay = async (query: string, page: number = 1) => {
-    if (!pixabayApiKey || !query.trim()) {
+  useEffect(() => {
+    if (!isOpen) {
+      resetSearchState();
       return;
     }
-
-    setIsSearching(true);
-    try {
-      const url = `https://pixabay.com/api/?key=${pixabayApiKey}&q=${encodeURIComponent(query)}&image_type=photo&orientation=all&editors_choice=true&safeSearch=true&per_page=20`;
-      
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data: PixabayResponse = await response.json();
-      setSearchResults(data.hits);
-      setHasMoreResults(data.hits.length === 20); // If we got 20 results, there might be more
-      setCurrentPage(page);
-    } catch (error) {
-      console.error('Error searching Pixabay:', error);
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-
-
-  const loadMoreResults = () => {
-    if (searchQuery.trim() && hasMoreResults) {
-      searchPixabay(searchQuery.trim(), currentPage + 1);
-    }
-  };
-
-  const searchStoredImages = async (query: string, page: number = 1) => {
-    setIsLoadingStored(true);
-    try {
-      const params = new URLSearchParams({
-        q: query,
-        page: page.toString(),
-        limit: '20'
-      });
-
-      const response = await fetch(`/api/images/search?${params}`);
-      if (!response.ok) {
-        throw new Error('Failed to search stored images');
-      }
-
-      const result: StoredImageResponse = await response.json();
-      if (result.success) {
-        if (page === 1) {
-          setStoredImages(result.data.images);
-        } else {
-          setStoredImages(prev => [...prev, ...result.data.images]);
-        }
-        setStoredHasMore(result.data.pagination.hasNext);
-        setStoredCurrentPage(page);
-      }
-    } catch (error) {
-      console.error('Error searching stored images:', error);
-      setStoredImages([]);
-    } finally {
-      setIsLoadingStored(false);
-    }
-  };
-
-  const loadMoreStoredImages = () => {
-    if (storedSearchQuery.trim() && storedHasMore) {
-      searchStoredImages(storedSearchQuery.trim(), storedCurrentPage + 1);
-    }
-  };
+    void loadTopUsedImages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const loadTopUsedImages = async () => {
     setIsLoadingTopUsed(true);
     try {
-      const response = await fetch('/api/images/top-used?limit=30');
-      if (!response.ok) {
-        throw new Error('Failed to fetch top used images');
-      }
-
+      const response = await fetch('/api/images/top-used?limit=24');
+      if (!response.ok) throw new Error('Failed to fetch top used images');
       const result = await response.json();
-      if (result.success) {
-        setTopUsedImages(result.data.images);
-      }
+      if (result.success) setTopUsedImages(result.data.images);
     } catch (error) {
       console.error('Error loading top used images:', error);
       setTopUsedImages([]);
@@ -276,324 +156,474 @@ export default function ImageSelectModal({ isOpen, onClose, onImageSelect }: Ima
     }
   };
 
-  // Load top used images when modal opens and stored tab is active
-  useEffect(() => {
-    if (isOpen && activeTab === 'stored' && topUsedImages.length === 0) {
-      loadTopUsedImages();
+  const searchStored = async (q: string, page: number, append: boolean) => {
+    setIsLoadingStored(true);
+    try {
+      const params = new URLSearchParams({
+        q,
+        page: String(page),
+        limit: String(PAGE_SIZE),
+      });
+      const response = await fetch(`/api/images/search?${params}`);
+      if (!response.ok) throw new Error('Failed to search stored images');
+      const result: StoredImageResponse = await response.json();
+      if (result.success) {
+        setStoredImages((prev) =>
+          append ? [...prev, ...result.data.images] : result.data.images
+        );
+        setStoredHasMore(result.data.pagination.hasNext);
+        setStoredPage(page);
+      }
+    } catch (error) {
+      console.error('Error searching stored images:', error);
+      if (!append) setStoredImages([]);
+    } finally {
+      setIsLoadingStored(false);
     }
-  }, [isOpen, activeTab, topUsedImages.length]);
+  };
+
+  const searchGiphy = async (q: string, offset: number, append: boolean) => {
+    if (!giphyApiKey) {
+      setGiphyResults([]);
+      setGiphyHasMore(false);
+      return;
+    }
+    setIsLoadingGiphy(true);
+    try {
+      const gf = new GiphyFetch(giphyApiKey);
+      const { data, pagination } = await gf.search(q, {
+        offset,
+        limit: PAGE_SIZE,
+        rating: 'pg',
+      });
+      setGiphyResults((prev) => (append ? [...prev, ...data] : data));
+      const nextOffset = offset + data.length;
+      setGiphyOffset(nextOffset);
+      setGiphyHasMore(nextOffset < (pagination?.total_count ?? 0));
+    } catch (error) {
+      console.error('Error searching Giphy:', error);
+      if (!append) setGiphyResults([]);
+    } finally {
+      setIsLoadingGiphy(false);
+    }
+  };
+
+  const searchPixabay = async (q: string, page: number, append: boolean) => {
+    if (!pixabayApiKey) {
+      setPixabayResults([]);
+      setPixabayHasMore(false);
+      return;
+    }
+    setIsLoadingPixabay(true);
+    try {
+      const url =
+        `https://pixabay.com/api/?key=${pixabayApiKey}` +
+        `&q=${encodeURIComponent(q)}` +
+        `&image_type=photo&orientation=all&editors_choice=true&safeSearch=true` +
+        `&per_page=${PAGE_SIZE}&page=${page}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data: PixabayResponse = await response.json();
+      setPixabayResults((prev) => (append ? [...prev, ...data.hits] : data.hits));
+      setPixabayHasMore(data.hits.length === PAGE_SIZE && page * PAGE_SIZE < data.totalHits);
+      setPixabayPage(page);
+    } catch (error) {
+      console.error('Error searching Pixabay:', error);
+      if (!append) setPixabayResults([]);
+    } finally {
+      setIsLoadingPixabay(false);
+    }
+  };
+
+  const runUnifiedSearch = async (raw: string) => {
+    const q = raw.trim();
+    if (!q) return;
+    setActiveQuery(q);
+    setHasSearched(true);
+    setExpanded({ stored: false, giphy: false, pixabay: false });
+    await Promise.all([
+      searchStored(q, 1, false),
+      searchGiphy(q, 0, false),
+      searchPixabay(q, 1, false),
+    ]);
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      addToast('Please choose an image file.', { variant: 'error' });
+      return;
+    }
+    onImageSelect(URL.createObjectURL(file), undefined, file);
+  };
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+      const file = e.dataTransfer.files?.[0];
+      if (!file?.type.startsWith('image/')) return;
+      onImageSelect(URL.createObjectURL(file), undefined, file);
+    },
+    [onImageSelect]
+  );
+
+  const handleGiphySelect = (gif: IGif) => {
+    const imageUrl = gif.images?.downsized?.url || gif.images?.original?.url;
+    if (imageUrl) onImageSelect(imageUrl, undefined);
+  };
+
+  const handlePixabaySelect = (image: PixabayImage) => {
+    onImageSelect(image.webformatURL, {
+      pixabayId: image.id,
+      pixabayUser: image.user,
+      tags: image.tags.split(', ').filter((tag) => tag.trim() !== ''),
+      searchTerm: activeQuery || query,
+      width: image.webformatWidth,
+      height: image.webformatHeight,
+    });
+    addToast('Image selected! It will be saved when you publish the quiz.', { variant: 'success' });
+  };
+
+  const handleStoredImageSelect = (image: StoredImage) => {
+    onImageSelect(image.blobUrl, undefined);
+  };
+
+  const toggleExpand = (key: SectionKey) => {
+    setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const isSearchingAny = isLoadingStored || isLoadingGiphy || isLoadingPixabay;
+
+  const renderStoredGrid = (images: StoredImage[]) => (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      {images.map((image) => (
+        <button
+          type="button"
+          key={image.id}
+          className="group text-left rounded-xl overflow-hidden border border-slate-200 hover:border-[#49c8ff] hover:shadow-md transition-all bg-white"
+          onClick={() => handleStoredImageSelect(image)}
+        >
+          <div className="aspect-square relative">
+            <Image
+              src={image.blobUrl}
+              alt={image.searchTerm || 'Stored image'}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-200"
+              sizes="160px"
+              unoptimized
+            />
+            <span className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded">
+              {image.usageCount} uses
+            </span>
+          </div>
+        </button>
+      ))}
+    </div>
+  );
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl grandstander max-h-[90vh] overflow-clip">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">Select Image</DialogTitle>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-3xl grandstander max-h-[88vh] overflow-hidden flex flex-col p-0 gap-0">
+        <DialogHeader className="px-8 pt-8 pb-2">
+          <DialogTitle className="text-2xl text-center text-[#114257]">Find an image</DialogTitle>
         </DialogHeader>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full h-12 grid-cols-4 bg-slate-100 p-1 rounded-lg">
-            <TabsTrigger value="stored" className="data-[state=active]:bg-white data-[state=active]:text-[--primary-accent] data-[state=active]:font-semibold data-[state=active]:shadow-md rounded-md h-10">Top Picks</TabsTrigger>
-            <TabsTrigger value="upload" className="data-[state=active]:bg-white data-[state=active]:text-[--primary-accent] data-[state=active]:font-semibold data-[state=active]:shadow-md rounded-md h-10">Upload</TabsTrigger>
-            <TabsTrigger value="giphy" className="data-[state=active]:bg-white data-[state=active]:text-[--primary-accent] data-[state=active]:font-semibold data-[state=active]:shadow-md rounded-md h-10">Giphy</TabsTrigger>
-            <TabsTrigger value="pixabay" className="data-[state=active]:bg-white data-[state=active]:text-[--primary-accent] data-[state=active]:font-semibold data-[state=active]:shadow-md rounded-md h-10">Pixabay</TabsTrigger>
-          </TabsList>
-          <TabsContent value="upload" className="py-4">
-            <div 
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              className={`flex flex-col items-center justify-center w-full h-64 p-6 
-                          border-2 border-dashed rounded-lg cursor-pointer 
-                          transition-colors duration-200 ease-in-out 
-                          ${isDragging ? 'border-violet-500 bg-violet-50' : 'border-slate-300 hover:border-slate-400 bg-slate-50'}`}
-            >
-              <UploadCloud size={48} className={`mb-3 ${isDragging ? 'text-violet-600' : 'text-slate-400'}`} />
-              <p className={`mb-2 text-sm ${isDragging ? 'text-violet-700' : 'text-slate-500'}`}>
-                <span className="font-semibold">Drag & drop an image</span> or click to browse
-              </p>
+
+        <div className="px-8 pt-6 pb-4">
+          <div className="mx-auto max-w-xl">
+            <div className="relative flex items-center rounded-full border-2 border-[#1E5167] bg-white shadow-[3px_3px_0px_0px_#1E5167] focus-within:ring-2 focus-within:ring-[#49c8ff]">
+              <Search className="absolute left-4 h-5 w-5 text-slate-400 pointer-events-none" />
               <Input
-                id="fileUploadModal"
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="sr-only" 
+                type="text"
+                placeholder="Search collection, Giphy, and Pixabay..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  // Stop Enter from submitting any parent quiz form
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    void runUnifiedSearch(query);
+                  }
+                }}
+                className="h-14 border-0 bg-transparent pl-12 pr-24 rounded-full text-base focus-visible:ring-0 focus-visible:ring-offset-0"
+                autoFocus
               />
-              <label 
-                  htmlFor="fileUploadModal" 
-                  className={`
-                    mt-2 cursor-pointer rounded-lg border-0 text-base font-semibold 
-                    bg-violet-100 text-violet-700 hover:bg-violet-200 
-                    px-4 py-2 transition-colors
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
-                  `}
-              >Choose File</label>
-               <p className={`mt-2 text-xs ${isDragging ? 'text-violet-600' : 'text-slate-400'}`}>SVG, PNG, JPG or GIF</p>
-            </div>
-          </TabsContent>
-          <TabsContent value="stored" className="py-4 h-[500px] overflow-clip">
-            <div className="space-y-4">
-              {/* Search Form */}
-              <div className="flex gap-2">
-                <Input
-                  type="text"
-                  placeholder="Search our collection..."
-                  value={storedSearchQuery}
-                  onChange={(e) => setStoredSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      if (storedSearchQuery.trim()) {
-                        searchStoredImages(storedSearchQuery.trim(), 1);
-                      }
-                    }
-                  }}
-                  className="flex-1"
-                />
-                <Button 
+              <div className="absolute right-2 flex items-center gap-1">
+                {query ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 rounded-full"
+                    onClick={() => {
+                      resetSearchState();
+                    }}
+                    aria-label="Clear search"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                ) : null}
+                <Button
                   type="button"
-                  onClick={() => {
-                    if (storedSearchQuery.trim()) {
-                      searchStoredImages(storedSearchQuery.trim(), 1);
-                    }
-                  }}
-                  disabled={isLoadingStored}
-                  className="bg-violet-600 hover:bg-violet-700"
+                  disabled={!query.trim() || isSearchingAny}
+                  onClick={() => void runUnifiedSearch(query)}
+                  className="h-10 rounded-full px-4 bg-[#114257] hover:bg-[#1E5167] text-white"
                 >
-                  {isLoadingStored ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Search className="h-4 w-4" />
-                  )}
-                  Search
+                  {isSearchingAny ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Search'}
                 </Button>
               </div>
+            </div>
+          </div>
 
-              {/* Show search results if searching, otherwise show top used images */}
-              {storedSearchQuery ? (
-                // Search Results
-                <>
-                  {storedImages.length > 0 && (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[400px] overflow-y-auto">
-                        {storedImages.map((image) => (
-                          <div
-                            key={image.id}
-                            className="group cursor-pointer rounded-lg overflow-hidden border border-slate-200 hover:border-violet-300 hover:shadow-md transition-all duration-200"
-                            onClick={() => handleStoredImageSelect(image)}
-                          >
-                            <div className="aspect-square relative">
-                              <Image
-                                src={image.blobUrl}
-                                alt={image.searchTerm || 'Stored image'}
-                                width={200}
-                                height={200}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                              />
-                              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200" />
-                              <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                                {image.usageCount} uses
-                              </div>
-                            </div>
-                            <div className="p-2">
-                              <p className="text-xs text-slate-600 truncate">
-                                {image.searchTerm || 'No search term'}
-                              </p>
-                              <p className="text-xs text-slate-400">
-                                {image.width}×{image.height}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      
-                      {/* Load More Button */}
-                      {storedHasMore && (
-                        <div className="text-center">
-                          <Button
-                            onClick={loadMoreStoredImages}
-                            disabled={isLoadingStored}
-                            variant="outline"
-                            className="border-violet-300 text-violet-700 hover:bg-violet-50"
-                          >
-                            {isLoadingStored ? (
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            ) : null}
-                            Load More
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+          <div className="mt-5 flex justify-center">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-2 text-sm text-[#114257] hover:underline"
+            >
+              <UploadCloud className="h-4 w-4" />
+              Or upload from your device
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={handleFileChange}
+            />
+          </div>
+        </div>
 
-                  {/* No Search Results */}
-                  {storedSearchQuery && !isLoadingStored && storedImages.length === 0 && (
-                    <div className="text-center py-8 text-slate-500">
-                      <p>No stored images found for &quot;{storedSearchQuery}&quot;</p>
-                      <p className="text-sm mt-1">Try a different search term or search Pixabay to add images</p>
-                    </div>
-                  )}
-                </>
+        <div
+          className="flex-1 overflow-y-auto px-8 pb-8 space-y-8"
+          onDragEnter={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            setIsDragging(false);
+          }}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={handleDrop}
+        >
+          {isDragging ? (
+            <div className="rounded-xl border-2 border-dashed border-[#49c8ff] bg-[#e8f8ff] p-8 text-center text-[#114257]">
+              Drop an image to use it
+            </div>
+          ) : null}
+
+          {!hasSearched ? (
+            <section className="space-y-5 pt-2">
+              <div className="text-center space-y-1">
+                <h3 className="text-lg font-semibold text-[#114257]">Most used</h3>
+                <p className="text-sm text-slate-500 inclusive-sans">
+                  Popular images from our collection - or search above
+                </p>
+              </div>
+              {isLoadingTopUsed ? (
+                <div className="py-12 text-center text-slate-500">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                  Loading...
+                </div>
+              ) : topUsedImages.length > 0 ? (
+                renderStoredGrid(topUsedImages)
               ) : (
-                // Top Used Images (Default View)
-                <>
-                  {isLoadingTopUsed ? (
-                    <div className="text-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                      <p className="text-slate-500">Loading most used images...</p>
-                    </div>
-                  ) : topUsedImages.length > 0 ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-slate-700">Most Used Images</h3>
-                        <p className="text-sm text-slate-500">Top 30 by usage</p>
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[400px] overflow-y-auto">
-                        {topUsedImages.map((image) => (
-                          <div
-                            key={image.id}
-                            className="group cursor-pointer rounded-lg overflow-hidden border border-slate-200 hover:border-violet-300 hover:shadow-md transition-all duration-200"
-                            onClick={() => handleStoredImageSelect(image)}
-                          >
-                            <div className="aspect-square relative">
-                              <Image
-                                src={image.blobUrl}
-                                alt={image.searchTerm || 'Stored image'}
-                                width={200}
-                                height={200}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                              />
-                              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200" />
-                              <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                                {image.usageCount} uses
-                              </div>
-                            </div>
-                            <div className="p-2">
-                              <p className="text-xs text-slate-600 truncate">
-                                {image.searchTerm || 'No search term'}
-                              </p>
-                              <p className="text-xs text-slate-400">
-                                {image.width}×{image.height}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-slate-500">
-                      <p>No images found in your collection</p>
-                      <p className="text-sm mt-1">Search Pixabay to add images to your collection</p>
-                    </div>
-                  )}
-                </>
+                <p className="text-center text-slate-500 py-10 inclusive-sans">
+                  No images in our collection yet. Try searching Giphy or Pixabay.
+                </p>
               )}
-            </div>
-          </TabsContent>
-          <TabsContent value="giphy" className="py-4 h-[500px] overflow-clip">
-            <GiphyGrid onGifSelect={handleGiphySelect} />
-          </TabsContent>
-          <TabsContent value="pixabay" className="py-4 h-[500px] overflow-clip">
-            <div className="space-y-4">
-                             {/* Search Form */}
-               <div className="flex gap-2">
-                 <Input
-                   type="text"
-                   placeholder="Search for images..."
-                   value={searchQuery}
-                   onChange={(e) => setSearchQuery(e.target.value)}
-                   onKeyDown={(e) => {
-                     if (e.key === 'Enter') {
-                       e.preventDefault();
-                       if (searchQuery.trim()) {
-                         searchPixabay(searchQuery.trim(), 1);
-                       }
-                     }
-                   }}
-                   className="flex-1"
-                 />
-                 <Button 
-                   type="button"
-                   onClick={() => {
-                     if (searchQuery.trim()) {
-                       searchPixabay(searchQuery.trim(), 1);
-                     }
-                   }}
-                   disabled={!pixabayApiKey || isSearching}
-                   className="bg-violet-600 hover:bg-violet-700"
-                 >
-                   {isSearching ? (
-                     <Loader2 className="h-4 w-4 animate-spin" />
-                   ) : (
-                     <Search className="h-4 w-4" />
-                   )}
-                   Search
-                 </Button>
-               </div>
+            </section>
+          ) : (
+            <>
+              <ResultSection
+                title="Our collection"
+                subtitle={activeQuery}
+                loading={isLoadingStored && storedImages.length === 0}
+                empty={!isLoadingStored && storedImages.length === 0}
+                emptyText="No matches in our collection"
+                expanded={expanded.stored}
+                canExpand={storedImages.length > PREVIEW_COUNT}
+                onToggleExpand={() => toggleExpand('stored')}
+                hasMore={expanded.stored && storedHasMore}
+                onLoadMore={() => void searchStored(activeQuery, storedPage + 1, true)}
+                loadingMore={isLoadingStored && storedImages.length > 0}
+              >
+                {renderStoredGrid(takeVisible(storedImages, expanded.stored))}
+              </ResultSection>
 
-              {/* API Key Warning */}
-              {!pixabayApiKey && (
-                <div className="text-center py-8 text-slate-500">
-                  <p>Pixabay API key is missing.</p>
-                  <p className="text-sm mt-1">
-                    Please set NEXT_PUBLIC_PIXABAY_API_KEY in your .env.local file. Pixabay search will not be available.
-                  </p>
-                </div>
-              )}
-
-              {/* Search Results */}
-              {searchResults.length > 0 && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[400px] overflow-y-auto">
-                    {searchResults.map((image) => (
-                      <div
-                        key={image.id}
-                        className="group cursor-pointer rounded-lg overflow-hidden border border-slate-200 hover:border-violet-300 hover:shadow-md transition-all duration-200"
-                        onClick={() => handlePixabaySelect(image)}
+              <ResultSection
+                title="Giphy"
+                subtitle={activeQuery}
+                loading={isLoadingGiphy && giphyResults.length === 0}
+                empty={!isLoadingGiphy && (giphyResults.length === 0 || !giphyApiKey)}
+                emptyText={
+                  !giphyApiKey ? 'Giphy API key is not configured' : 'No GIFs found'
+                }
+                expanded={expanded.giphy}
+                canExpand={giphyResults.length > PREVIEW_COUNT}
+                onToggleExpand={() => toggleExpand('giphy')}
+                hasMore={expanded.giphy && giphyHasMore}
+                onLoadMore={() => void searchGiphy(activeQuery, giphyOffset, true)}
+                loadingMore={isLoadingGiphy && giphyResults.length > 0}
+              >
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {takeVisible(giphyResults, expanded.giphy).map((gif) => {
+                    const thumb =
+                      gif.images?.fixed_width_small?.url ||
+                      gif.images?.preview_gif?.url ||
+                      gif.images?.downsized?.url;
+                    if (!thumb) return null;
+                    return (
+                      <button
+                        type="button"
+                        key={gif.id}
+                        className="group rounded-xl overflow-hidden border border-slate-200 hover:border-[#49c8ff] hover:shadow-md transition-all bg-white aspect-square relative"
+                        onClick={() => handleGiphySelect(gif)}
                       >
-                        <div className="aspect-square relative">
-                          <Image
-                            src={image.webformatURL}
-                            alt={image.tags}
-                            width={200}
-                            height={200}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                          />
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* Load More Button */}
-                  {hasMoreResults && (
-                    <div className="text-center">
-                      <Button
-                        onClick={loadMoreResults}
-                        disabled={isSearching}
-                        variant="outline"
-                        className="border-violet-300 text-violet-700 hover:bg-violet-50"
-                      >
-                        {isSearching ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        ) : null}
-                        Load More
-                      </Button>
-                    </div>
-                  )}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={thumb}
+                          alt={gif.title || 'GIF'}
+                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
+              </ResultSection>
 
-              {/* No Results */}
-              {searchQuery && !isSearching && searchResults.length === 0 && (
-                <div className="text-center py-8 text-slate-500">
-                  <p>No images found for &quot;{searchQuery}&quot;</p>
-                  <p className="text-sm mt-1">Try a different search term</p>
+              <ResultSection
+                title="Pixabay"
+                subtitle={activeQuery}
+                loading={isLoadingPixabay && pixabayResults.length === 0}
+                empty={!isLoadingPixabay && (pixabayResults.length === 0 || !pixabayApiKey)}
+                emptyText={
+                  !pixabayApiKey ? 'Pixabay API key is not configured' : 'No photos found'
+                }
+                expanded={expanded.pixabay}
+                canExpand={pixabayResults.length > PREVIEW_COUNT}
+                onToggleExpand={() => toggleExpand('pixabay')}
+                hasMore={expanded.pixabay && pixabayHasMore}
+                onLoadMore={() => void searchPixabay(activeQuery, pixabayPage + 1, true)}
+                loadingMore={isLoadingPixabay && pixabayResults.length > 0}
+              >
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {takeVisible(pixabayResults, expanded.pixabay).map((image) => (
+                    <button
+                      type="button"
+                      key={image.id}
+                      className="group rounded-xl overflow-hidden border border-slate-200 hover:border-[#49c8ff] hover:shadow-md transition-all bg-white"
+                      onClick={() => handlePixabaySelect(image)}
+                    >
+                      <div className="aspect-square relative">
+                        <Image
+                          src={image.webformatURL}
+                          alt={image.tags}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-200"
+                          sizes="160px"
+                          unoptimized
+                        />
+                      </div>
+                    </button>
+                  ))}
                 </div>
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
+              </ResultSection>
+            </>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ResultSection({
+  title,
+  subtitle,
+  loading,
+  empty,
+  emptyText,
+  expanded,
+  canExpand,
+  onToggleExpand,
+  hasMore,
+  onLoadMore,
+  loadingMore,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  loading: boolean;
+  empty: boolean;
+  emptyText: string;
+  expanded: boolean;
+  canExpand: boolean;
+  onToggleExpand: () => void;
+  hasMore: boolean;
+  onLoadMore: () => void;
+  loadingMore: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-4 border-t border-slate-100 pt-6 first:border-t-0 first:pt-2">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold text-[#114257]">{title}</h3>
+          <p className="text-xs text-slate-500 inclusive-sans">
+            Results for &quot;{subtitle}&quot;
+          </p>
+        </div>
+        {canExpand && !empty ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onToggleExpand}
+            className="rounded-full border-[#1E5167] text-[#114257] shrink-0"
+          >
+            {expanded ? (
+              <>
+                Show less <ChevronUp className="h-4 w-4 ml-1" />
+              </>
+            ) : (
+              <>
+                Expand <ChevronDown className="h-4 w-4 ml-1" />
+              </>
+            )}
+          </Button>
+        ) : null}
+      </div>
+
+      {loading ? (
+        <div className="py-8 text-center text-slate-500">
+          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+          Searching...
+        </div>
+      ) : empty ? (
+        <p className="text-sm text-slate-500 py-4 inclusive-sans">{emptyText}</p>
+      ) : (
+        <>
+          {children}
+          {hasMore ? (
+            <div className="flex justify-center pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onLoadMore}
+                disabled={loadingMore}
+                className="rounded-full border-[#1E5167] text-[#114257]"
+              >
+                {loadingMore ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Load more
+              </Button>
+            </div>
+          ) : null}
+        </>
+      )}
+    </section>
   );
 }

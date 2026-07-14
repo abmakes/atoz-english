@@ -71,6 +71,7 @@ export default function QuizSetupForm({
   };
 
   return (
+    <>
     <form onSubmit={handleSubmit} className="flex flex-col grandstander gap-4 mt-4 space-y-2 bg-white p-2 lg:p-6 rounded-lg w-full max-w-screen-lg border border-[--border-dark] shadow-[4px_4px_0px_0px_var(--border-dark)]">
       
       <div className='flex flex-col gap-8 bg-gray-50 p-4 rounded-lg text-[--text-color]'>        
@@ -193,12 +194,15 @@ export default function QuizSetupForm({
  
 
       <div className="flex justify-end">
-        <Button variant='outline' 
+        <Button
+          type="submit"
+          variant='outline' 
           className="flex items-center px-8 h-full text-lg font-semibold border border-[#1F6E91] gap-2 bg-[--text-color] text-white shadow-[4px_4px_0px_0px_#1F6E91] hover:bg-white hover:text-[--text-color] hover:border-[#1F6E91] hover:shadow-[4px_6px_0px_0px_#1F6E91] hover:scale-105 transition-all duration-300"
         >
             Create Questions <ArrowRight className="-mt-0.5" size={20} /> 
         </Button>
       </div>
+    </form>
 
       {isImageModalOpen && (
         <ImageSelectModal 
@@ -207,6 +211,6 @@ export default function QuizSetupForm({
           onImageSelect={handleImageSelect} 
         />
       )}
-    </form>
+    </>
   )
 } 

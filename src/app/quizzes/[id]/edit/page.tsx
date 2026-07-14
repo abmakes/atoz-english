@@ -97,7 +97,7 @@ export default function EditQuizPage() {
 
   const handleSuccess = (updatedQuizId: string) => {
     // Redirect to the quiz view or list after successful update
-    router.push(`/games/${updatedQuizId}/multiple-choice`);
+    router.push(`/games/${updatedQuizId}`);
   };
 
   if (loading) {
