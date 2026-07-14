@@ -16,10 +16,12 @@ export interface TransitionScreenConfig {
   message?: string;
   duration?: number; // Duration in ms for auto-hide
   autoHide?: boolean;
-  triggerPowerupRoll?: boolean; // Add the flag here
-  question?: { question: string; imageUrl?: string; [key: string]: unknown }; // QuestionData for question preview
-  showCountdown?: boolean; // Show countdown after question preview
-  questionCounter?: { current: number; total: number }; // Question counter info
+  triggerPowerupRoll?: boolean;
+  /** Ordered wheel slots for this spin (dynamic pool). Falls back to manager list. */
+  powerupWheelSegments?: SelectablePowerupInfo[];
+  question?: { question: string; imageUrl?: string; [key: string]: unknown };
+  showCountdown?: boolean;
+  questionCounter?: { current: number; total: number };
 }
 
 /**
@@ -47,7 +49,8 @@ export class TransitionScreen extends PIXI.Container {
 
   // State for power-up selection
   private finalSelectedPowerupId: string | null = null;
-  private currentSelectablePowerups: SelectablePowerupInfo[] = []; // <-- Store selectable powerups for the current roll
+  private powerupSelectionEmitted = false;
+  private currentSelectablePowerups: SelectablePowerupInfo[] = [];
 
   // Panel Dimensions (will be calculated dynamically)
   private panelWidth: number = 0;
@@ -386,32 +389,8 @@ export class TransitionScreen extends PIXI.Container {
   }
 
   /**
-   * Selects a random powerup immediately and activates it.
-   */
-  private selectRandomPowerup(): void {
-    if (this.currentSelectablePowerups.length === 0) {
-      console.log('[TransitionScreen] No powerups available for random selection');
-      return;
-    }
-
-    // Select random powerup
-    const randomIndex = Math.floor(Math.random() * this.currentSelectablePowerups.length);
-    const selectedPowerup = this.currentSelectablePowerups[randomIndex];
-    this.finalSelectedPowerupId = selectedPowerup.id;
-    
-    console.log(`[TransitionScreen] Randomly selected powerup: ${selectedPowerup.displayName}`);
-    
-    // Emit the POWERUP_SELECTED event immediately
-    const payload: TransitionPowerupSelectedPayload = {
-      selectedPowerupId: selectedPowerup.id,
-      transitionType: this.currentConfig?.type || 'custom'
-    };
-    this.eventBus.emit(TRANSITION_EVENTS.POWERUP_SELECTED, payload);
-    console.log(`[TransitionScreen] Emitted POWERUP_SELECTED event for ${selectedPowerup.id}`);
-  }
-
-  /**
-   * Creates the powerup spin wheel for visual display only.
+   * Creates the spin wheel. Selection is determined by whichever segment the
+   * top arrow points at when the wheel stops — then POWERUP_SELECTED is emitted.
    */
   private createPowerupSpinWheel(): void {
     if (this.powerupSpinWheel) {
@@ -419,28 +398,52 @@ export class TransitionScreen extends PIXI.Container {
       this.powerupSpinWheel.destroy();
     }
 
-    console.log('[TransitionScreen] Creating spin wheel with preselectedPowerupId:', this.finalSelectedPowerupId);
-    console.log('[TransitionScreen] Available powerups:', this.currentSelectablePowerups.map(p => p.id));
-    
+    // Predetermine a fair landing segment so animation can ease onto it;
+    // the reported result still comes from the arrow/segment under the pointer.
+    const filledIndexes = this.currentSelectablePowerups
+      .map((p, i) => (p && p.id !== 'none' ? i : -1))
+      .filter((i) => i >= 0);
+    const preselectedSegmentIndex =
+      filledIndexes.length > 0
+        ? filledIndexes[Math.floor(Math.random() * filledIndexes.length)]
+        : Math.floor(Math.random() * Math.max(this.currentSelectablePowerups.length, 1));
+
+    console.log(
+      '[TransitionScreen] Creating spin wheel. Segments:',
+      this.currentSelectablePowerups.map((p) => p.displayName),
+      'landing index:',
+      preselectedSegmentIndex
+    );
+
     this.powerupSpinWheel = new PowerupSpinWheel({
       powerups: this.currentSelectablePowerups,
-      preselectedPowerupId: this.finalSelectedPowerupId, // Pass the pre-selected powerup
+      preselectedSegmentIndex,
       onSelection: (selectedPowerup) => {
-        // This is now just for visual feedback - powerup is already selected
-        console.log(`[TransitionScreen] Visual selection: ${selectedPowerup.displayName}`);
+        this.finalSelectedPowerupId = selectedPowerup.id;
+        console.log(
+          `[TransitionScreen] Arrow landed on: ${selectedPowerup.displayName} (${selectedPowerup.id})`
+        );
+
+        if (!this.powerupSelectionEmitted) {
+          this.powerupSelectionEmitted = true;
+          const payload: TransitionPowerupSelectedPayload = {
+            selectedPowerupId: selectedPowerup.id,
+            transitionType: this.currentConfig?.type || 'custom',
+            slotId: selectedPowerup.slotId,
+          };
+          this.eventBus.emit(TRANSITION_EVENTS.POWERUP_SELECTED, payload);
+        }
       },
       onSpinComplete: () => {
         console.log('[TransitionScreen] Spin wheel completed');
-        // Show result for 1.5 seconds total (shorter since powerup is already active)
         setTimeout(() => {
           this.hide();
-          // Resolve the manual hide promise if it exists
           if (this._manualHideResolve) {
             this._manualHideResolve();
             this._manualHideResolve = null;
           }
-        }, 1500); // Total 1.5 seconds for result display
-      }
+        }, 1500);
+      },
     });
 
     this.powerupSpinWheel.initialize(this.panelWidth, this.panelHeight);
@@ -500,26 +503,32 @@ export class TransitionScreen extends PIXI.Container {
     this.visible = true;
     this.alpha = 1;
     this.finalSelectedPowerupId = null;
+    this.powerupSelectionEmitted = false;
     this.currentSelectablePowerups = [];
+
+    let powerupRollActive = false;
 
     // Create power-up spin wheel if requested (for any transition type)
     if (config.triggerPowerupRoll) {
-        console.log('[TransitionScreen show()] Checking this.powerUpManager before getSelectablePowerups:', this.powerUpManager);
-        this.currentSelectablePowerups = this.powerUpManager.getSelectablePowerups();
-        console.log(`[TransitionScreen] Got ${this.currentSelectablePowerups.length} selectable powerups from manager.`);
+        this.currentSelectablePowerups =
+          config.powerupWheelSegments && config.powerupWheelSegments.length > 0
+            ? config.powerupWheelSegments
+            : this.powerUpManager.getSelectablePowerups();
+
+        console.log(
+          `[TransitionScreen] Got ${this.currentSelectablePowerups.length} wheel segments.`
+        );
 
         if (this.currentSelectablePowerups.length > 0) {
-            // Select powerup immediately and randomly
-            this.selectRandomPowerup();
-            // Create visual spin wheel
             this.createPowerupSpinWheel();
+            powerupRollActive = true;
         } else {
              console.log("[TransitionScreen] No selectable powerups available for this mode. Skipping roll.");
         }
     }
 
-    // Handle auto-hide logic - but not when there's a powerup roll
-    if (config.autoHide && config.duration && !config.triggerPowerupRoll) {
+    // Handle auto-hide logic - but not when there's an active powerup roll
+    if (config.autoHide && config.duration && !powerupRollActive) {
       console.log(`[TransitionScreen] show(): Starting auto-hide timer for ${config.duration}ms`);
       return new Promise(resolve => {
         // Use window.setTimeout for browser compatibility
@@ -560,16 +569,17 @@ export class TransitionScreen extends PIXI.Container {
       }
       // Spin wheel cleanup is handled in the wheel's onSpinComplete callback
 
-      // Emit power-up event if one was selected (backup in case immediate emission failed)
-      if (this.finalSelectedPowerupId) {
-          console.log(`[TransitionScreen] hide(): Emitting POWERUP_SELECTED (${this.finalSelectedPowerupId})`);
+      // Backup emit only if the wheel never reported (should be rare)
+      if (this.finalSelectedPowerupId && !this.powerupSelectionEmitted) {
+          this.powerupSelectionEmitted = true;
           const payload: TransitionPowerupSelectedPayload = {
               selectedPowerupId: this.finalSelectedPowerupId,
               transitionType: this.currentConfig?.type || 'custom'
           };
           this.eventBus.emit(TRANSITION_EVENTS.POWERUP_SELECTED, payload);
-          console.log(`[TransitionScreen] hide(): Power-up ${this.finalSelectedPowerupId} event emitted`);
-          this.finalSelectedPowerupId = null; // Clear after emitting
+          this.finalSelectedPowerupId = null;
+      } else {
+          this.finalSelectedPowerupId = null;
       }
 
       this.visible = false;

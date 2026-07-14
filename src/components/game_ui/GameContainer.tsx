@@ -115,18 +115,13 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
       const powerupConfig: PowerupConfig = {
           // Check if any powerup is enabled in UI selections
           powerupsEnabled: Object.values(setupData.powerups).some(enabled => enabled),
-          // Filter STANDARD_SCORE_MODE_POWERUPS based on UI selections
+          // Filter catalog based on UI selections (buffs + power-downs)
           availablePowerups: STANDARD_SCORE_MODE_POWERUPS.filter(powerup => {
-              // Match powerup.id to corresponding key in setupData.powerups
-              switch (powerup.id) {
-                  case 'fifty_fifty': return setupData.powerups.fiftyFifty;
-                  case 'double_points': return setupData.powerups.doublePoints;
-                  case 'time_extension': return setupData.powerups.timeExtension;
-                  case 'comeback': return setupData.powerups.comeback;
-                  default: return false;
-              }
+              if (!powerup.setupKey) return false;
+              const toggles = setupData.powerups as unknown as Record<string, boolean>;
+              return Boolean(toggles[powerup.setupKey]);
           }),
-          spawnMechanic: {}, // Keep empty for now, activation is via transition/rules
+          spawnMechanic: {},
       };
       
       console.log("GameContainer: Enabled powerups:", powerupConfig.availablePowerups.map(p => p.id));

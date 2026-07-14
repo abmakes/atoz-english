@@ -527,6 +527,33 @@ export class MultipleChoiceUIManager {
          });
      }
 
+    /**
+     * Blurred Vision power-down: answers start heavily blurred and gradually
+     * clear over `clearDurationMs` until fully visible.
+     */
+    public applyBlurredVision(clearDurationMs: number = 10000): void {
+        const optionsContainer = this.scene.getAnswerOptionContainer();
+        if (!optionsContainer) return;
+
+        const blurFilter = new PIXI.BlurFilter();
+        blurFilter.strength = 18;
+        optionsContainer.filters = [blurFilter];
+
+        const start = performance.now();
+        const tick = () => {
+            const elapsed = performance.now() - start;
+            const t = Math.min(1, elapsed / clearDurationMs);
+            blurFilter.strength = 18 * (1 - t);
+
+            if (t >= 1) {
+                optionsContainer.filters = [];
+                return;
+            }
+            requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    }
+
     private _positionTimerElements(): void {
         const { width: screenWidth, height: screenHeight } = this.pixiApp.getScreenSize();
         const params = this.layoutManager.getLayoutParams();

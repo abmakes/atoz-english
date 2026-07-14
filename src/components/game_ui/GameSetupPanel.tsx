@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useGameStore } from '@/stores/useGameStore';
 // Import only necessary types from central location
 import { TeamData, GameSettingsData, PowerupsData, GameSetupData } from '@/types/gameTypes';
+import { getScoreModeSetupPowerOptions } from '@/lib/pixi-engine/config/PowerupConfig';
 import { Switch } from "@/components/ui/switch"; // Import Switch
 import { Button } from '@/components/ui/button';
 import {
@@ -95,8 +96,19 @@ const mapPowerUpsArrayToObject = (powerUpsArray: string[]): LocalPowerups => {
     fiftyFifty: powerUpsArray.includes('fiftyFifty'),
     doublePoints: powerUpsArray.includes('doublePoints'),
     timeExtension: powerUpsArray.includes('timeExtension'),
-    comeback: powerUpsArray.includes('comeback')
+    comeback: powerUpsArray.includes('comeback'),
+    fasterClock: powerUpsArray.includes('fasterClock'),
+    blurredVision: powerUpsArray.includes('blurredVision'),
   };
+};
+
+const DEFAULT_POWERUPS: LocalPowerups = {
+  fiftyFifty: false,
+  doublePoints: false,
+  timeExtension: false,
+  comeback: false,
+  fasterClock: true,
+  blurredVision: true,
 };
 
 // --- Component ---
@@ -128,12 +140,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
   const [selectedGameFeatures, setSelectedGameFeatures] = useState<string>('basic');
   const [intensityTimeLimit, setIntensityTimeLimit] = useState<number>(15);
   const [limitedGuesses, setLimitedGuesses] = useState<number | null>(3);
-  const [powerups, setPowerups] = useState<LocalPowerups>({
-    fiftyFifty: false,
-    doublePoints: false,
-    timeExtension: false,
-    comeback: false,
-  });
+  const [powerups, setPowerups] = useState<LocalPowerups>({ ...DEFAULT_POWERUPS });
   const [splashPowerups, setSplashPowerups] = useState<SplashPowerupsConfig>({
     ...DEFAULT_SPLASH_POWERUPS,
   });
@@ -310,7 +317,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
       setSelectedGameFeatures(finalSettings.gameFeatures);
       setIntensityTimeLimit(finalSettings.intensityTimeLimit);
       setLimitedGuesses(finalSettings.limitedGuesses);
-      setPowerups(finalSettings.powerups);
+      setPowerups({ ...DEFAULT_POWERUPS, ...finalSettings.powerups });
       
       // Update audio settings (merge with existing localStorage logic)
       setSettings(prev => ({
@@ -761,26 +768,31 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
             </div>
             <h3 className={`font-semibold mb-2 text-md text-[var(--text-color)]`}>Activate power-ups</h3>
             <div className={`buttonGroup`}>
-              {Object.keys(powerups).map(key => {
-                let displayName = '';
-                switch (key) {
-                  case 'fiftyFifty': displayName = '50/50'; break;
-                  case 'doublePoints': displayName = 'Double Points'; break;
-                  case 'timeExtension': displayName = 'Extra time'; break;
-                  case 'comeback': displayName = 'Comeback'; break;
-                  default: displayName = key;
-                }
-                
-                return (
+              {getScoreModeSetupPowerOptions()
+                .filter((opt) => opt.polarity === 'buff')
+                .map((opt) => (
                   <button
-                    key={key}
-                    onClick={() => handlePowerupToggle(key as keyof LocalPowerups)}
-                    className={`buttonChoice ${powerups[key as keyof LocalPowerups] ? 'buttonChoiceActive' : ''}`}
+                    key={opt.setupKey}
+                    onClick={() => handlePowerupToggle(opt.setupKey as keyof LocalPowerups)}
+                    className={`buttonChoice ${powerups[opt.setupKey as keyof LocalPowerups] ? 'buttonChoiceActive' : ''}`}
                   >
-                    {displayName}
+                    {opt.name}
                   </button>
-                );
-              })}
+                ))}
+            </div>
+            <h3 className={`font-semibold mb-2 mt-4 text-md text-[var(--text-color)]`}>Power-downs (replace spent buffs)</h3>
+            <div className={`buttonGroup`}>
+              {getScoreModeSetupPowerOptions()
+                .filter((opt) => opt.polarity === 'debuff')
+                .map((opt) => (
+                  <button
+                    key={opt.setupKey}
+                    onClick={() => handlePowerupToggle(opt.setupKey as keyof LocalPowerups)}
+                    className={`buttonChoice ${powerups[opt.setupKey as keyof LocalPowerups] ? 'buttonChoiceActive' : ''}`}
+                  >
+                    {opt.name}
+                  </button>
+                ))}
             </div>
           </div>
           </>

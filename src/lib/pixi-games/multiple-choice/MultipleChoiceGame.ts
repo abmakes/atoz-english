@@ -379,6 +379,15 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         // UI Manager handles creating and displaying buttons
         this.uiManager.setupAnswerButtons(question.id, generatedOptions);
 
+        // Blurred Vision: answers start blurred and clear over ~10s
+        const activeTeamId = this.getState().activeTeam;
+        if (activeTeamId && this.isPowerUpActive('blurred_vision', activeTeamId)) {
+            const definition = this.powerUpManager.getPowerupDefinition('blurred_vision');
+            const clearMs = (definition?.effectParams?.clearDurationMs as number) ?? 10000;
+            this.uiManager.applyBlurredVision(clearMs);
+            this.powerUpManager.deactivatePowerUpByTypeAndTarget('blurred_vision', activeTeamId);
+        }
+
         // Start the timer (Engine Manager)
         this._startQuestionTimer(); // This also updates the UI via UIManager's listener
 
@@ -444,6 +453,15 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                  const definition = this.powerUpManager.getPowerupDefinition('time_extension');
                  const extraTimeMs = (definition?.effectParams?.amount as number || 0) * 1000;
                  questionDuration += extraTimeMs;
+                 this.powerUpManager.deactivatePowerUpByTypeAndTarget('time_extension', currentTeamId);
+             }
+
+             const fasterClockActive = this.isPowerUpActive('faster_clock', currentTeamId);
+             if (fasterClockActive) {
+                 const definition = this.powerUpManager.getPowerupDefinition('faster_clock');
+                 const factor = (definition?.effectParams?.durationFactor as number) ?? 0.8;
+                 questionDuration = Math.max(1000, Math.floor(questionDuration * factor));
+                 this.powerUpManager.deactivatePowerUpByTypeAndTarget('faster_clock', currentTeamId);
              }
         }
 
@@ -547,6 +565,10 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                 autoHide: true,
                 // Only trigger power-up roll if power-ups are enabled AND should trigger
                 triggerPowerupRoll: this.config.powerups.powerupsEnabled && shouldTriggerRoll,
+                powerupWheelSegments:
+                  this.config.powerups.powerupsEnabled && shouldTriggerRoll
+                    ? this._getPowerupWheelSegmentsForTeam(nextTeamId)
+                    : undefined,
                 // Add question counter info
                 questionCounter: { current: nextQuestionIndex + 1, total: totalQuestions }
             });
@@ -617,6 +639,16 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                 }
             }
             // --- Deactivate Double Points Instance --- END ---
+        }
+
+        // Comeback: multi-round 1.5× points while its own timer is running
+        if (currentTeamId && isCorrect && this.isPowerUpActive('comeback', currentTeamId)) {
+            const definition = this.powerUpManager.getPowerupDefinition('comeback');
+            const boost = (definition?.effectParams?.multiplier as number) ?? 1.5;
+            scoreMultiplier *= boost;
+            console.log(
+                `[MultipleChoiceGame] Comeback active (${this.powerUpManager.getRemainingDurationMs('comeback', currentTeamId)}ms left). Multiplier now ${scoreMultiplier}`
+            );
         }
         
         // Calculate score modification if applicable (e.g., for progressive scoring)
@@ -787,6 +819,10 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                  autoHide: true,
                  // Only trigger power-up roll if power-ups are enabled AND should trigger
                  triggerPowerupRoll: this.config.powerups.powerupsEnabled && shouldTriggerRoll,
+                 powerupWheelSegments:
+                   this.config.powerups.powerupsEnabled && shouldTriggerRoll
+                     ? this._getPowerupWheelSegmentsForTeam(nextTeamId)
+                     : undefined,
                  // Add question counter info
                  questionCounter: { current: nextQuestionIndex + 1, total: totalQuestions }
              });
@@ -850,40 +886,48 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
     }
 
     /**
+     * Builds standings-aware wheel segments for the team about to play.
+     */
+    private _getPowerupWheelSegmentsForTeam(teamId: string | number) {
+        const scores = this.scoringManager.getAllScores();
+        return this.powerUpManager.getWheelSegmentsForSpin(teamId, scores);
+    }
+
+    /**
      * Overrides BaseGame method to handle the power-up selected during transition.
      * Activates the selected power-up for the team whose turn is about to begin.
      */
     protected override _handlePowerupSelected(payload: TransitionPowerupSelectedPayload): void {
-        super._handlePowerupSelected(payload); // Call base class log if needed
+        super._handlePowerupSelected(payload);
 
-        // Determine the target team: It should be the team stored in the current game state,
-        // as the state is updated *before* _showQuestion and the transition happens.
         const targetTeamId = this.getState().activeTeam;
-        console.log(`[MultipleChoiceGame._handlePowerupSelected] Received selected power-up: ${payload.selectedPowerupId}. Target team determined as: ${targetTeamId}`); // DEBUG LOG
+        console.log(
+          `[MultipleChoiceGame._handlePowerupSelected] Arrow selected '${payload.selectedPowerupId}' for team ${targetTeamId}`
+        );
 
-        if (targetTeamId !== undefined) {
-            console.log(`[MultipleChoiceGame] Attempting to activate randomly selected power-up '${payload.selectedPowerupId}' for team ${targetTeamId}`); // DEBUG LOG
-            // Activate the power-up using the PowerUpManager
-            // Optional: Add logic here to check if the team can receive this power-up
-            // (e.g., maybe they can only have one active at a time)
-            
-            // Special handling for 50/50: Don't deactivate here, it deactivates upon use in _setupAnswerButtons
-            if (payload.selectedPowerupId !== 'fifty_fifty') {
-                const activationResult = this.activatePowerUp(payload.selectedPowerupId, targetTeamId); // Store result
-                console.log(`[MultipleChoiceGame] Power-up activation result:`, activationResult ? `Instance ID ${activationResult.instanceId}` : activationResult); // DEBUG LOG
-            } else {
-                // For 50/50, just activate it. It will be used and deactivated when the next question buttons are set up.
-                console.log(`[MultipleChoiceGame] Activating 50/50 powerup for team ${targetTeamId}`);
-                const activationResult = this.activatePowerUp(payload.selectedPowerupId, targetTeamId); // Store result
-                console.log(`[MultipleChoiceGame] 50/50 activation result (will deactivate on use):`, activationResult ? `Instance ID ${activationResult.instanceId}` : activationResult); // DEBUG LOG
-                
-                // Verify the powerup is active
-                const activePowerups = this.powerUpManager.getActivePowerupsForTarget(targetTeamId);
-                console.log(`[MultipleChoiceGame] Active powerups for team ${targetTeamId}:`, activePowerups.map(p => p.id));
-            }
-        } else {
-            console.warn(`[MultipleChoiceGame] Could not determine target team ID to activate selected power-up '${payload.selectedPowerupId}'. State activeTeam: ${this.getState().activeTeam}`);
+        if (payload.selectedPowerupId === 'none') {
+            return;
         }
+
+        // Replace spent buff slots with power-downs for future spins
+        this.powerUpManager.consumeWheelSlot({
+            id: payload.selectedPowerupId,
+            displayName: payload.selectedPowerupId,
+            slotId: payload.slotId,
+        });
+
+        if (targetTeamId === undefined) {
+            console.warn(
+              `[MultipleChoiceGame] Could not determine target team for '${payload.selectedPowerupId}'.`
+            );
+            return;
+        }
+
+        const activationResult = this.activatePowerUp(payload.selectedPowerupId, targetTeamId);
+        console.log(
+          `[MultipleChoiceGame] Power-up activation result:`,
+          activationResult ? `Instance ID ${activationResult.instanceId}` : activationResult
+        );
     }
 
     // --- Add Pause/Resume Handlers for Game Logic ---

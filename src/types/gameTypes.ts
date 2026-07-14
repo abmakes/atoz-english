@@ -41,6 +41,10 @@ export interface PowerupsData {
     doublePoints: boolean;
     timeExtension: boolean;
     comeback: boolean;
+    /** Power-down: question timer expires 20% faster */
+    fasterClock: boolean;
+    /** Power-down: answers blur then clear over 10s */
+    blurredVision: boolean;
 }
 
 /** Splash Dash pickup power-ups (setup → GameConfig). */

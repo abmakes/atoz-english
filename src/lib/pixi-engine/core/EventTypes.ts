@@ -186,10 +186,12 @@ export interface TransitionEndPayload {
 }
 
 export interface TransitionPowerupSelectedPayload {
-  /** The ID of the power-up type that was randomly selected */
+  /** The ID of the power-up type the arrow landed on */
   selectedPowerupId: string;
   /** The type of transition during which the selection occurred */
   transitionType: TransitionStartPayload['type'];
+  /** Wheel slot id for dynamic pool replacement (buff → power-down). */
+  slotId?: string;
 }
 
 // --- Game Specific Events ---
