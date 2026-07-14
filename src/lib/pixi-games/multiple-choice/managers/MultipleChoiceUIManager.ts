@@ -528,16 +528,17 @@ export class MultipleChoiceUIManager {
      }
 
     /**
-     * Blurred Vision power-down: answers start heavily blurred and gradually
-     * clear over `clearDurationMs` until fully visible.
+     * Blurred Vision power-down: only answer buttons start blurred and gradually
+     * clear over `clearDurationMs` (question text stays readable).
      */
-    public applyBlurredVision(clearDurationMs: number = 10000): void {
-        const optionsContainer = this.scene.getAnswerOptionContainer();
-        if (!optionsContainer) return;
+    public applyBlurredVision(clearDurationMs: number = 5000): void {
+        if (this.answerButtons.length === 0) return;
 
         const blurFilter = new PIXI.BlurFilter();
         blurFilter.strength = 18;
-        optionsContainer.filters = [blurFilter];
+        this.answerButtons.forEach((button) => {
+            button.view.filters = [blurFilter];
+        });
 
         const start = performance.now();
         const tick = () => {
@@ -546,7 +547,9 @@ export class MultipleChoiceUIManager {
             blurFilter.strength = 18 * (1 - t);
 
             if (t >= 1) {
-                optionsContainer.filters = [];
+                this.answerButtons.forEach((button) => {
+                    button.view.filters = [];
+                });
                 return;
             }
             requestAnimationFrame(tick);

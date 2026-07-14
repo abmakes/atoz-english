@@ -269,16 +269,12 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
      * @param delta Time elapsed since last frame
      */
     public update(delta: number): void {
-        // Current implementation doesn't need per-frame updates
-        // But we could add animations or other time-based effects here
-        
-        // Update power-ups (handles durations)
-        const deltaTimeMs = delta * 1000; // Assuming delta is in seconds, convert to ms
+        // PixiEngine passes milliseconds; tolerate seconds if a caller sends them.
+        const deltaTimeMs = delta > 5 ? delta : delta * 1000;
         this.powerUpManager.update(deltaTimeMs);
-        
-        // Update transition screen (for spin wheel animation)
+
         if (this.transitionScreen) {
-            this.transitionScreen.update(delta);
+            this.transitionScreen.update(deltaTimeMs);
         }
     }
 
@@ -383,7 +379,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         const activeTeamId = this.getState().activeTeam;
         if (activeTeamId && this.isPowerUpActive('blurred_vision', activeTeamId)) {
             const definition = this.powerUpManager.getPowerupDefinition('blurred_vision');
-            const clearMs = (definition?.effectParams?.clearDurationMs as number) ?? 10000;
+            const clearMs = (definition?.effectParams?.clearDurationMs as number) ?? 5000;
             this.uiManager.applyBlurredVision(clearMs);
             this.powerUpManager.deactivatePowerUpByTypeAndTarget('blurred_vision', activeTeamId);
         }

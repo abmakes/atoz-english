@@ -41,12 +41,15 @@ export class PowerupSpinWheel extends PIXI.Container {
   private onSpinComplete?: () => void;
 
   private spinning = false;
-  private spinVelocity = 0;
   private currentRotation = 0;
-  private targetRotation?: number;
   private hasReportedSelection = false;
 
-  private centerText: PIXI.Text | null = null;
+  /** Time-based spin (delta is milliseconds). */
+  private spinElapsedMs = 0;
+  private spinDurationMs = 4500;
+  private spinStartRotation = 0;
+  private spinEndRotation = 0;
+
   private confettiContainer: PIXI.Container | null = null;
 
   private centerX = 0;
@@ -113,20 +116,27 @@ export class PowerupSpinWheel extends PIXI.Container {
   }
 
   public initialize(screenWidth: number, screenHeight: number): void {
-    this.centerX = screenWidth / 2;
-    // Half-wheel peeking up from bottom of screen
-    this.centerY = screenHeight + screenHeight * 0.05;
-    this.radius = Math.min(screenWidth * 0.75, screenHeight * 0.4);
+    this.layoutForScreen(screenWidth, screenHeight);
 
     this.createWheel();
     this.createPointer();
-    this._createCenterText();
 
     setTimeout(() => {
       if (!this.spinning) {
         this.spin();
       }
     }, 500);
+  }
+
+  /** Full wheel on screen — centered in the lower half with room for the pointer. */
+  private layoutForScreen(screenWidth: number, screenHeight: number): void {
+    this.centerX = screenWidth / 2;
+    this.radius = Math.min(screenWidth * 0.38, screenHeight * 0.34);
+    // Keep the full circle + pointer tip visible
+    this.centerY = screenHeight * 0.58;
+    const minCenterY = this.radius + 56;
+    const maxCenterY = screenHeight - this.radius - 24;
+    this.centerY = Math.min(maxCenterY, Math.max(minCenterY, this.centerY));
   }
 
   /**
@@ -193,52 +203,30 @@ export class PowerupSpinWheel extends PIXI.Container {
 
     this.spinning = true;
     this.hasReportedSelection = false;
-    this.spinVelocity = Math.random() * 0.35 + 0.45;
+    this.spinElapsedMs = 0;
+    // Long enough to read labels: ~4–5.5s including ease-out
+    this.spinDurationMs = 4000 + Math.random() * 1500;
 
     const targetIndex = this.resolveTargetSegmentIndex();
-    const extraSpins = 3 + Math.floor(Math.random() * 3);
-    // Continue forward from current rotation
+    const extraSpins = 4 + Math.floor(Math.random() * 3); // 4–6 full turns
     const base = this.rotationForSegment(targetIndex, extraSpins);
     const currentMod = ((this.currentRotation % TWO_PI) + TWO_PI) % TWO_PI;
     const baseMod = ((base % TWO_PI) + TWO_PI) % TWO_PI;
     let forward = baseMod - currentMod;
-    if (forward < TWO_PI * 2) {
+    if (forward < TWO_PI * extraSpins) {
       forward += TWO_PI * extraSpins;
     }
-    this.targetRotation = this.currentRotation + forward;
+
+    this.spinStartRotation = this.currentRotation;
+    this.spinEndRotation = this.currentRotation + forward;
     this.preselectedSegmentIndex = targetIndex;
 
     this.cursor = 'not-allowed';
     this.eventMode = 'none';
   }
 
-  private _createCenterText(): void {
-    if (this.centerText) {
-      this.removeChild(this.centerText);
-    }
-
-    this.centerText = new PIXI.Text('Get Ready!', {
-      fontFamily: 'Grandstander',
-      fontSize: 48,
-      fill: 0x114257,
-      fontWeight: 'bold',
-      align: 'center',
-    });
-
-    this.centerText.anchor.set(0.5);
-    this.centerText.x = this.centerX;
-    this.centerText.y = this.centerY - this.radius - 60;
-    this.addChild(this.centerText);
-  }
-
-  private _showPowerupResult(powerupName: string): void {
-    if (this.centerText) {
-      this.centerText.text = powerupName;
-      this.centerText.style.fontSize = 72;
-      this.centerText.style.fill = 0xffd700;
-      this.centerText.style.stroke = { color: 0x000000, width: 6 };
-    }
-    this._createConfetti();
+  private easeOutCubic(t: number): number {
+    return 1 - Math.pow(1 - t, 3);
   }
 
   private _createConfetti(): void {
@@ -256,7 +244,7 @@ export class PowerupSpinWheel extends PIXI.Container {
       confetti.endFill();
 
       confetti.x = this.centerX + (Math.random() - 0.5) * 150;
-      confetti.y = this.centerY - this.radius - 60;
+      confetti.y = this.centerY - this.radius - 20;
 
       this.confettiContainer.addChild(confetti);
 
@@ -285,14 +273,12 @@ export class PowerupSpinWheel extends PIXI.Container {
 
     const winningIndex = this.segmentIndexAtPointer(this.currentRotation);
     const selectedSegment = this.wheelSegments[winningIndex];
-    const label = selectedSegment?.powerup?.displayName ?? selectedSegment?.text ?? 'No Power-up';
 
-    this._showPowerupResult(label);
+    this._createConfetti();
 
     if (selectedSegment?.powerup && this.onSelection) {
       this.onSelection(selectedSegment.powerup, winningIndex);
     } else if (this.onSelection && selectedSegment) {
-      // Blank segment — still notify with a synthetic "none"
       this.onSelection(
         { id: 'none', displayName: 'No Power-up' },
         winningIndex
@@ -429,15 +415,16 @@ export class PowerupSpinWheel extends PIXI.Container {
   private createSparkles(): void {
     if (!this.spinning) return;
 
-    const velocityRatio = Math.max(0, this.spinVelocity / 0.9);
+    const progress = Math.min(1, this.spinElapsedMs / this.spinDurationMs);
+    const velocityRatio = Math.max(0, 1 - progress);
     const particleIntensity = Math.pow(velocityRatio, 2);
-    const shouldCreateParticle = Math.random() < particleIntensity * 4;
+    const shouldCreateParticle = Math.random() < particleIntensity * 3;
 
     if (shouldCreateParticle) {
-      const burstSize = Math.ceil(particleIntensity * 16);
+      const burstSize = Math.ceil(particleIntensity * 10);
       for (let i = 0; i < burstSize; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const sparkleRadius = this.radius + (Math.random() - 0.5) * 100;
+        const sparkleRadius = this.radius + (Math.random() - 0.5) * 80;
         const x = this.centerX + Math.cos(angle) * sparkleRadius;
         const y = this.centerY + Math.sin(angle) * sparkleRadius;
         this.sparkles.push(new Sparkle(x, y, this.sparkleContainer));
@@ -445,45 +432,27 @@ export class PowerupSpinWheel extends PIXI.Container {
     }
   }
 
-  public update(delta: number): void {
+  /**
+   * @param deltaMs Frame delta in milliseconds.
+   */
+  public update(deltaMs: number): void {
     if (this.spinning) {
-      this.currentRotation += this.spinVelocity * delta;
+      this.spinElapsedMs += Math.max(0, deltaMs);
+      const t = Math.min(1, this.spinElapsedMs / this.spinDurationMs);
+      const eased = this.easeOutCubic(t);
+      this.currentRotation =
+        this.spinStartRotation + (this.spinEndRotation - this.spinStartRotation) * eased;
       this.wheel.rotation = this.currentRotation;
       this.createSparkles();
 
-      if (this.targetRotation !== undefined) {
-        const remaining = this.targetRotation - this.currentRotation;
-        if (remaining <= 0.02) {
-          // Snap exactly onto target so the arrow and result match
-          this.currentRotation = this.targetRotation;
-          this.wheel.rotation = this.currentRotation;
-          this.spinVelocity = 0;
-          this.spinning = false;
-          this.cursor = 'pointer';
-          this.eventMode = 'static';
-          this._reportSelectionFromPointer();
-          setTimeout(() => this.onSpinComplete?.(), 1000);
-          return;
-        }
-
-        // Ease down as we approach the target (exciting slowdown)
-        if (remaining < Math.PI) {
-          this.spinVelocity = Math.max(0.01, remaining * 0.06);
-        } else if (remaining < Math.PI * 2.5) {
-          this.spinVelocity = Math.max(0.04, Math.min(this.spinVelocity, remaining * 0.08));
-        } else {
-          this.spinVelocity = Math.max(0.15, this.spinVelocity * 0.992);
-        }
-      } else {
-        this.spinVelocity *= 0.95;
-        if (this.spinVelocity < 0.001) {
-          this.spinVelocity = 0;
-          this.spinning = false;
-          this.cursor = 'pointer';
-          this.eventMode = 'static';
-          this._reportSelectionFromPointer();
-          setTimeout(() => this.onSpinComplete?.(), 1000);
-        }
+      if (t >= 1) {
+        this.currentRotation = this.spinEndRotation;
+        this.wheel.rotation = this.currentRotation;
+        this.spinning = false;
+        this.cursor = 'pointer';
+        this.eventMode = 'static';
+        this._reportSelectionFromPointer();
+        setTimeout(() => this.onSpinComplete?.(), 1000);
       }
     }
 
@@ -499,16 +468,13 @@ export class PowerupSpinWheel extends PIXI.Container {
   }
 
   public resize(screenWidth: number, screenHeight: number): void {
-    this.centerX = screenWidth / 2;
-    this.centerY = screenHeight + screenHeight * 0.05;
-    this.radius = Math.min(screenWidth * 0.75, screenHeight * 0.4);
+    this.layoutForScreen(screenWidth, screenHeight);
 
     this.sparkles.forEach((sparkle) => sparkle.destroy());
     this.sparkles = [];
 
     this.createWheel();
     this.createPointer();
-    this._createCenterText();
   }
 
   public destroy(options?: boolean | PIXI.DestroyOptions | undefined): void {

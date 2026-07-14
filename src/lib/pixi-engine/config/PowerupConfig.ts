@@ -30,10 +30,10 @@ export interface PowerupDefinition {
    */
   setupKey?: string;
   /**
-   * Copies placed on the dynamic spin wheel at match start.
-   * Comeback uses 0 — it is injected only when a team is far enough behind.
+   * Relative weight when filling the spin wheel (higher = more common).
+   * Comeback / catch-up powers can omit this and use standings injection instead.
    */
-  initialWheelCopies?: number;
+  wheelWeight?: number;
   /**
    * Minimum points behind the leader required before this can appear on the wheel.
    * Used by comeback (and any future catch-up powers).
@@ -50,9 +50,15 @@ export interface PowerupConfig {
   powerupsEnabled?: boolean;
 }
 
+/** How many wedges the Score Attack spin wheel shows each roll. */
+export const SCORE_MODE_WHEEL_SEGMENT_COUNT = 8;
+
 /**
  * Catalog of Score Attack spin-wheel powers.
  * Swap, add, or disable entries here — setup UI and wheel pool derive from this list.
+ *
+ * Rarity (wheelWeight): Double Points is rarest; 50/50 is most common filler.
+ * Power-downs are not always on the wheel — PowerUpManager injects them by standings.
  */
 export const STANDARD_SCORE_MODE_POWERUPS: PowerupDefinition[] = [
   {
@@ -64,7 +70,7 @@ export const STANDARD_SCORE_MODE_POWERUPS: PowerupDefinition[] = [
     assetKey: 'double-points-icon',
     polarity: 'buff',
     setupKey: 'doublePoints',
-    initialWheelCopies: 2,
+    wheelWeight: 1,
   },
   {
     id: 'time_extension',
@@ -76,7 +82,7 @@ export const STANDARD_SCORE_MODE_POWERUPS: PowerupDefinition[] = [
     assetKey: 'time-extension-icon',
     polarity: 'buff',
     setupKey: 'timeExtension',
-    initialWheelCopies: 2,
+    wheelWeight: 3,
   },
   {
     id: 'fifty_fifty',
@@ -87,7 +93,7 @@ export const STANDARD_SCORE_MODE_POWERUPS: PowerupDefinition[] = [
     assetKey: 'fifty-fifty-icon',
     polarity: 'buff',
     setupKey: 'fiftyFifty',
-    initialWheelCopies: 2,
+    wheelWeight: 5,
   },
   {
     id: 'comeback',
@@ -99,7 +105,7 @@ export const STANDARD_SCORE_MODE_POWERUPS: PowerupDefinition[] = [
     assetKey: 'comeback-icon',
     polarity: 'buff',
     setupKey: 'comeback',
-    initialWheelCopies: 0,
+    wheelWeight: 4,
     minPointsBehind: 100,
   },
   {
@@ -111,18 +117,18 @@ export const STANDARD_SCORE_MODE_POWERUPS: PowerupDefinition[] = [
     assetKey: 'faster-clock-icon',
     polarity: 'debuff',
     setupKey: 'fasterClock',
-    initialWheelCopies: 0,
+    wheelWeight: 2,
   },
   {
     id: 'blurred_vision',
     name: 'Blurred Vision',
-    description: 'Answers start blurred and clear over 10 seconds.',
+    description: 'Answer options start blurred and clear over 5 seconds.',
     effectType: 'vision_blur',
-    effectParams: { clearDurationMs: 10000 },
+    effectParams: { clearDurationMs: 5000 },
     assetKey: 'blurred-vision-icon',
     polarity: 'debuff',
     setupKey: 'blurredVision',
-    initialWheelCopies: 0,
+    wheelWeight: 2,
   },
 ];
 

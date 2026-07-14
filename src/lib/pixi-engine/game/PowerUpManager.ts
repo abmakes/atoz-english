@@ -1,7 +1,12 @@
 import type { EventBus } from '../core/EventBus';
 import { POWERUP_EVENTS, type PowerUpEventPayload } from '../core/EventTypes';
 import type { GameConfig } from '../config/GameConfig';
-import type { PowerupConfig, PowerupDefinition, PowerPolarity } from '../config/PowerupConfig';
+import type {
+  PowerupConfig,
+  PowerupDefinition,
+  PowerPolarity,
+} from '../config/PowerupConfig';
+import { SCORE_MODE_WHEEL_SEGMENT_COUNT } from '../config/PowerupConfig';
 
 /**
  * Runtime state of an active power-up instance.
@@ -19,32 +24,23 @@ export interface ActivePowerUp extends PowerupDefinition {
 export interface SelectablePowerupInfo {
   id: string;
   displayName: string;
-  /** Stable id for this wheel slot — used when replacing a buff with a debuff. */
   slotId?: string;
   polarity?: PowerPolarity;
 }
 
-interface WheelSlot {
-  powerupId: string;
-  slotId: string;
-}
-
 /**
- * Manages power-up definitions, activation, timed expiry, and the dynamic spin-wheel pool.
+ * Manages power-up definitions, activation, timed expiry, and spin-wheel composition.
  *
- * Wheel rules:
- * - Starts with `initialWheelCopies` of each enabled buff (except catch-up powers like comeback).
- * - After a buff is won, that slot is permanently replaced by a random enabled power-down.
- * - Comeback is injected only when the spinning team is behind by more than minPointsBehind.
+ * Wheel economy (fresh each spin — no permanent drain):
+ * - Buff wedges are weighted (50/50 common, Double Points rare).
+ * - Power-downs appear based on how far ahead the spinning team is.
+ * - Comeback appears only when behind by more than minPointsBehind.
  */
 export class PowerUpManager {
   private eventBus: EventBus;
   private config: GameConfig;
   private availablePowerups: Map<string, PowerupDefinition> = new Map();
   private activePowerups: Map<string, ActivePowerUp> = new Map();
-
-  private wheelSlots: WheelSlot[] = [];
-  private wheelInitialized = false;
 
   constructor(eventBus: EventBus, config: GameConfig) {
     this.eventBus = eventBus;
@@ -60,8 +56,6 @@ export class PowerUpManager {
         this.availablePowerups.set(def.id, def);
       }
     });
-    this.wheelSlots = [];
-    this.wheelInitialized = false;
   }
 
   /**
@@ -71,140 +65,141 @@ export class PowerUpManager {
     if (!this.config.powerups?.powerupsEnabled) {
       return [];
     }
-    return this.getEnabledBuffDefinitions()
-      .filter((d) => (d.initialWheelCopies ?? 2) > 0)
-      .map((d) => ({
-        id: d.id,
-        displayName: d.name || d.id,
-        polarity: d.polarity,
-      }));
+    return this.getStandardBuffDefinitions().map((d) => ({
+      id: d.id,
+      displayName: d.name || d.id,
+      polarity: d.polarity,
+    }));
   }
 
-  private getEnabledBuffDefinitions(): PowerupDefinition[] {
-    return Array.from(this.availablePowerups.values()).filter((d) => d.polarity === 'buff');
-  }
-
-  private getEnabledDebuffDefinitions(): PowerupDefinition[] {
-    return Array.from(this.availablePowerups.values()).filter((d) => d.polarity === 'debuff');
-  }
-
-  /**
-   * Builds the persistent wheel pool once: N copies of each standard buff.
-   */
-  public ensureWheelInitialized(): void {
-    if (this.wheelInitialized) return;
-    if (!this.config.powerups?.powerupsEnabled) {
-      this.wheelInitialized = true;
-      return;
-    }
-
-    this.wheelSlots = [];
-    for (const def of this.getEnabledBuffDefinitions()) {
-      const copies = def.initialWheelCopies ?? 0;
-      for (let i = 0; i < copies; i++) {
-        this.wheelSlots.push({
-          powerupId: def.id,
-          slotId: `${def.id}-${i}`,
-        });
-      }
-    }
-
-    this.wheelInitialized = true;
-    console.log(
-      '[PowerUpManager] Wheel pool initialized:',
-      this.wheelSlots.map((s) => s.powerupId)
+  /** Standard buffs that always compete for wheel slots (excludes standings-gated comeback). */
+  private getStandardBuffDefinitions(): PowerupDefinition[] {
+    return Array.from(this.availablePowerups.values()).filter(
+      (d) => d.polarity === 'buff' && d.id !== 'comeback' && (d.wheelWeight ?? 0) > 0
     );
   }
 
+  private getEnabledDebuffDefinitions(): PowerupDefinition[] {
+    return Array.from(this.availablePowerups.values()).filter(
+      (d) => d.polarity === 'debuff' && (d.wheelWeight ?? 0) > 0
+    );
+  }
+
+  private toSelectable(def: PowerupDefinition, slotId: string): SelectablePowerupInfo {
+    return {
+      id: def.id,
+      displayName: def.name || def.id,
+      slotId,
+      polarity: def.polarity,
+    };
+  }
+
+  private pickWeighted(defs: PowerupDefinition[]): PowerupDefinition | null {
+    if (defs.length === 0) return null;
+    const total = defs.reduce((sum, d) => sum + Math.max(0, d.wheelWeight ?? 1), 0);
+    if (total <= 0) return defs[Math.floor(Math.random() * defs.length)];
+    let roll = Math.random() * total;
+    for (const def of defs) {
+      roll -= Math.max(0, def.wheelWeight ?? 1);
+      if (roll <= 0) return def;
+    }
+    return defs[defs.length - 1];
+  }
+
+  private shuffle<T>(items: T[]): T[] {
+    const arr = [...items];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
   /**
-   * Segments for the next spin for a given team, based on current standings.
-   * Comeback slots are added temporarily when the team is far enough behind.
+   * How many power-down wedges to put on this spin for the current team.
+   * Leaders soak more risk; trailing / tied teams mostly see buffs.
+   */
+  private getDebuffSlotCount(leadMargin: number, pointsBehind: number): number {
+    if (pointsBehind > 0) return 0;
+    if (leadMargin >= 100) return 3;
+    if (leadMargin >= 40) return 2;
+    if (leadMargin > 0) return 1;
+    return Math.random() < 0.2 ? 1 : 0;
+  }
+
+  /**
+   * Fresh wheel composition for the team about to play, based on standings.
    */
   public getWheelSegmentsForSpin(
     teamId: string | number,
     scores: Record<string | number, number>
   ): SelectablePowerupInfo[] {
-    this.ensureWheelInitialized();
+    if (!this.config.powerups?.powerupsEnabled) {
+      return [];
+    }
 
-    const segments: SelectablePowerupInfo[] = this.wheelSlots.map((slot) => {
-      const def = this.getPowerupDefinition(slot.powerupId);
-      return {
-        id: slot.powerupId,
-        displayName: def?.name ?? (slot.powerupId === 'none' ? 'No Power-up' : slot.powerupId),
-        slotId: slot.slotId,
-        polarity: def?.polarity ?? (slot.powerupId === 'none' ? undefined : 'buff'),
-      };
-    });
+    const teamScore = Number(scores[teamId] ?? 0);
+    const scoreValues = Object.values(scores).map(Number);
+    const leaderScore = scoreValues.length > 0 ? Math.max(...scoreValues) : 0;
+    const pointsBehind = Math.max(0, leaderScore - teamScore);
+    const sorted = [...scoreValues].sort((a, b) => b - a);
+    const leadMargin =
+      teamScore >= leaderScore && sorted.length > 1
+        ? Math.max(0, teamScore - (sorted[1] ?? 0))
+        : 0;
 
+    const buffs = this.getStandardBuffDefinitions();
+    const debuffs = this.getEnabledDebuffDefinitions();
     const comeback = this.availablePowerups.get('comeback');
-    if (comeback) {
-      const teamScore = Number(scores[teamId] ?? 0);
-      const scoreValues = Object.values(scores).map(Number);
-      const leaderScore = scoreValues.length > 0 ? Math.max(...scoreValues) : 0;
-      const pointsBehind = leaderScore - teamScore;
-      const minBehind =
-        comeback.minPointsBehind ??
-        (comeback.effectParams?.minPointsBehind as number | undefined) ??
-        100;
+    const minBehind =
+      comeback?.minPointsBehind ??
+      (comeback?.effectParams?.minPointsBehind as number | undefined) ??
+      100;
+    const comebackEligible = Boolean(comeback) && pointsBehind > minBehind;
 
-      if (pointsBehind > minBehind) {
-        // Two comeback wedges so trailing teams feel the advantage
-        segments.push({
-          id: comeback.id,
-          displayName: comeback.name,
-          slotId: 'comeback-spin-a',
-          polarity: 'buff',
-        });
-        segments.push({
-          id: comeback.id,
-          displayName: comeback.name,
-          slotId: 'comeback-spin-b',
-          polarity: 'buff',
-        });
+    let remaining = SCORE_MODE_WHEEL_SEGMENT_COUNT;
+    const segments: SelectablePowerupInfo[] = [];
+    let slotCounter = 0;
+
+    if (comebackEligible && comeback) {
+      const comebackSlots = pointsBehind > 200 ? 2 : 1;
+      for (let i = 0; i < comebackSlots && remaining > 0; i++) {
+        segments.push(this.toSelectable(comeback, `comeback-${slotCounter++}`));
+        remaining--;
       }
     }
 
-    return segments;
+    let debuffSlots = this.getDebuffSlotCount(leadMargin, pointsBehind);
+    debuffSlots = Math.min(debuffSlots, remaining, debuffs.length > 0 ? remaining : 0);
+    for (let i = 0; i < debuffSlots && remaining > 0; i++) {
+      const pick = this.pickWeighted(debuffs);
+      if (!pick) break;
+      segments.push(this.toSelectable(pick, `${pick.id}-${slotCounter++}`));
+      remaining--;
+    }
+
+    while (remaining > 0) {
+      if (buffs.length === 0) break;
+      const pick = this.pickWeighted(buffs);
+      if (!pick) break;
+      segments.push(this.toSelectable(pick, `${pick.id}-${slotCounter++}`));
+      remaining--;
+    }
+
+    while (segments.length < SCORE_MODE_WHEEL_SEGMENT_COUNT && debuffs.length > 0) {
+      const pick = this.pickWeighted(debuffs);
+      if (!pick) break;
+      segments.push(this.toSelectable(pick, `${pick.id}-${slotCounter++}`));
+    }
+
+    return this.shuffle(segments);
   }
 
   /**
-   * After a spin lands on a buff slot, replace that permanent pool slot with a power-down.
-   * Comeback temporary slots and existing debuffs are left unchanged.
+   * @deprecated No longer drains the pool — kept as a no-op for call-site compatibility.
    */
-  public consumeWheelSlot(selected: SelectablePowerupInfo): void {
-    if (!selected.slotId || selected.id === 'none' || selected.id === 'comeback') {
-      return;
-    }
-
-    const def = this.getPowerupDefinition(selected.id);
-    if (def?.polarity === 'debuff') {
-      return;
-    }
-
-    const idx = this.wheelSlots.findIndex((s) => s.slotId === selected.slotId);
-    const targetIndex =
-      idx !== -1 ? idx : this.wheelSlots.findIndex((s) => s.powerupId === selected.id);
-
-    if (targetIndex === -1) return;
-
-    const debuffs = this.getEnabledDebuffDefinitions();
-    if (debuffs.length === 0) {
-      this.wheelSlots[targetIndex] = {
-        powerupId: 'none',
-        slotId: `none-${Date.now()}`,
-      };
-      return;
-    }
-
-    const pick = debuffs[Math.floor(Math.random() * debuffs.length)];
-    this.wheelSlots[targetIndex] = {
-      powerupId: pick.id,
-      slotId: `${pick.id}-${Date.now()}`,
-    };
-    console.log(
-      `[PowerUpManager] Replaced wheel slot with power-down '${pick.id}'. Pool:`,
-      this.wheelSlots.map((s) => s.powerupId)
-    );
+  public consumeWheelSlot(_selected: SelectablePowerupInfo): void {
+    // Wheel is rebuilt each spin from weights + standings; nothing to consume.
   }
 
   public getPointsBehind(teamId: string | number, scores: Record<string | number, number>): number {
@@ -337,7 +332,5 @@ export class PowerUpManager {
   destroy(): void {
     this.availablePowerups.clear();
     this.activePowerups.clear();
-    this.wheelSlots = [];
-    this.wheelInitialized = false;
   }
 }
