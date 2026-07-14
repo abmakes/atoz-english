@@ -195,13 +195,6 @@ export class PowerUpManager {
     return this.shuffle(segments);
   }
 
-  /**
-   * @deprecated No longer drains the pool — kept as a no-op for call-site compatibility.
-   */
-  public consumeWheelSlot(_selected: SelectablePowerupInfo): void {
-    // Wheel is rebuilt each spin from weights + standings; nothing to consume.
-  }
-
   public getPointsBehind(teamId: string | number, scores: Record<string | number, number>): number {
     const teamScore = Number(scores[teamId] ?? 0);
     const scoreValues = Object.values(scores).map(Number);

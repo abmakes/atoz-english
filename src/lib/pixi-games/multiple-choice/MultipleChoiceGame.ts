@@ -905,13 +905,6 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             return;
         }
 
-        // Replace spent buff slots with power-downs for future spins
-        this.powerUpManager.consumeWheelSlot({
-            id: payload.selectedPowerupId,
-            displayName: payload.selectedPowerupId,
-            slotId: payload.slotId,
-        });
-
         if (targetTeamId === undefined) {
             console.warn(
               `[MultipleChoiceGame] Could not determine target team for '${payload.selectedPowerupId}'.`
