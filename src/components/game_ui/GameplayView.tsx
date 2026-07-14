@@ -74,10 +74,12 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   // --- Fullscreen functionality ---
   const { isFullscreen, toggleFullscreen, isSupported } = useFullscreen(gameContainerRef);
 
-  console.log(config, 'AS GAME Confing form container !!!!!!!!!!!')
-
-  // Memoize the config to prevent unnecessary re-renders
-  const stableConfig = useMemo(() => config, [JSON.stringify(config)]);
+  // Deep-compare key so parent re-renders with an equivalent config don't remount the engine
+  const configKey = JSON.stringify(config);
+  const stableConfig = useMemo(
+    () => JSON.parse(configKey) as GameConfig,
+    [configKey]
+  );
 
   // Keep factory stable across parent re-renders so init isn't torn down mid-flight
   const gameFactoryRef = useRef(gameFactory);
