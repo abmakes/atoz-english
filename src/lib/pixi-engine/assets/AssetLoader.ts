@@ -1,6 +1,42 @@
 import { Assets, type ProgressCallback, Texture, Spritesheet, Sprite, AnimatedSprite } from 'pixi.js';
-import { GifSprite } from 'pixi.js/gif'; // Keep for direct GifSprite handling
+// Side-effect: registers GifAsset so Assets.load('.gif') returns GifSource
+import { GifSprite, GifSource } from 'pixi.js/gif';
 
+/**
+ * True when a cached Assets entry can be turned into a displayable question image.
+ */
+export function isUsableQuestionMedia(resource: unknown): boolean {
+	if (!resource) return false;
+	if (resource instanceof Texture) return true;
+	if (resource instanceof GifSource) return true;
+	if (resource instanceof GifSprite) return true;
+	if (resource instanceof Spritesheet) return true;
+	// Duck-type GifSource if instanceof fails across duplicate module copies
+	if (
+		typeof resource === 'object' &&
+		resource !== null &&
+		'totalFrames' in resource &&
+		'frames' in resource &&
+		Array.isArray((resource as { frames: unknown }).frames)
+	) {
+		return true;
+	}
+	return false;
+}
+
+function isGifSourceLike(resource: unknown): resource is GifSource {
+	if (resource instanceof GifSource) return true;
+	return (
+		typeof resource === 'object' &&
+		resource !== null &&
+		'totalFrames' in resource &&
+		'frames' in resource &&
+		'width' in resource &&
+		'height' in resource &&
+		!(resource instanceof Texture) &&
+		!(resource instanceof Spritesheet)
+	);
+}
 
 /**
  * Static class providing centralized management for loading and retrieving game assets using PixiJS v8 Assets.
@@ -238,10 +274,16 @@ export class AssetLoader {
 				return null;
 			}
 
-			// [Existing Check 1] Check for GifSprite (if pixi.js/gif is used and Assets returns it directly)
+			// Pixi v8 Assets.load('.gif') caches GifSource — always create a fresh GifSprite
+			if (isGifSourceLike(resource)) {
+				console.log(`AssetLoader.getDisplayObject: Creating GifSprite from GifSource for key "${key}".`);
+				return new GifSprite({ source: resource as GifSource, autoPlay: false });
+			}
+
+			// If a GifSprite was somehow cached, clone via its source — never return the singleton
 			if (resource instanceof GifSprite) {
-				console.log(`AssetLoader.getDisplayObject: Returning GifSprite for key "${key}".`);
-				return resource;
+				console.log(`AssetLoader.getDisplayObject: Cloning GifSprite for key "${key}".`);
+				return new GifSprite({ source: resource.source, autoPlay: false });
 			}
 
 			// [NEW Check 2] Check for Spritesheet instance directly

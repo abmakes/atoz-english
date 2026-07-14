@@ -79,6 +79,10 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   // Memoize the config to prevent unnecessary re-renders
   const stableConfig = useMemo(() => config, [JSON.stringify(config)]);
 
+  // Keep factory stable across parent re-renders so init isn't torn down mid-flight
+  const gameFactoryRef = useRef(gameFactory);
+  gameFactoryRef.current = gameFactory;
+
   // --- PixiJS Event Handlers (using managersRef) ---
   /**
    * Handles the GAME_ENDED event from the PixiEngine.
@@ -154,7 +158,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
    */
   useEffect(() => {
     // Check if we should initialize. If there's already an engine, do nothing.
-    if (!stableConfig || !gameFactory || !pixiMountPointRef.current || engineInstanceRef.current) {
+    if (!stableConfig || !pixiMountPointRef.current || engineInstanceRef.current) {
       return;
     }
 
@@ -164,12 +168,18 @@ const GameplayView: React.FC<GameplayViewProps> = ({
       return;
     }
 
+    let cancelled = false;
     console.log("GameplayView: Initializing PixiEngine...");
     const engine = new PixiEngine({ targetElement: pixiMountPointRef.current });
     engineInstanceRef.current = engine;
 
-    engine.init(stableConfig, gameFactory)
+    engine.init(stableConfig, (cfg, managers) => gameFactoryRef.current(cfg, managers))
       .then(() => {
+        if (cancelled) {
+          console.warn("GameplayView: Init finished after unmount; destroying engine.");
+          void engine.destroy();
+          return;
+        }
         console.log("GameplayView: PixiEngine initialized successfully.");
         const currentManagers = engine.getManagers();
         managersRef.current = currentManagers;
@@ -186,6 +196,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
         }
       })
       .catch(error => {
+        if (cancelled) return;
         console.error("GameplayView: Failed to initialize PixiEngine:", error);
         engineInstanceRef.current = null;
         managersRef.current = null;
@@ -194,6 +205,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
     // --- Cleanup function ---
     // This cleanup function closes over the `engine` instance created in this effect.
     return () => {
+      cancelled = true;
       console.log("GameplayView: Cleanup effect running...");
       
       // Check managersRef.current. This ref is only set AFTER init succeeds,
@@ -208,12 +220,12 @@ const GameplayView: React.FC<GameplayViewProps> = ({
       }
       
       console.log("GameplayView: Destroying PixiEngine instance.");
-      engine.destroy();
+      void engine.destroy();
       
       engineInstanceRef.current = null;
       managersRef.current = null;
     };
-  }, [stableConfig, gameFactory, pixiMountPointRef]);
+  }, [stableConfig, pixiMountPointRef, handlePixiGameOver, handlePixiScoreUpdate, handlePixiActiveTeamChanged]);
   // ------------------------------------------------------
 
   // --- Settings/Audio Handlers (Connect to EventBus/AudioManager) ---

@@ -18,6 +18,7 @@ const REQUIRED_ASSETS = [
   'public/images/placeholder.webp',
   // Splash Dash
   'public/images/splash-dash/crate_5_4.png',
+  'public/images/splash-dash/crate_square.png',
   'public/images/splash-dash/capy_spritesheet.png',
   // Fonts
   'public/fonts/GrandstanderVF.ttf',

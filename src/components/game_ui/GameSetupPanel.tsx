@@ -1,13 +1,25 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 // Remove Zustand import
 import { useGameStore } from '@/stores/useGameStore';
 // Import only necessary types from central location
 import { TeamData, GameSettingsData, PowerupsData, GameSetupData } from '@/types/gameTypes';
 import { Switch } from "@/components/ui/switch"; // Import Switch
 import { Button } from '@/components/ui/button';
+import {
+  extractQuestionImageUrls,
+  warmGameAssets,
+} from '@/lib/game-asset-warmup';
+import {
+  DEFAULT_SPLASH_POWERUPS,
+  SPLASH_POWERUP_DEFINITIONS,
+  SPLASH_POWERUP_INTERVAL_OPTIONS,
+  formatSplashIntervalLabel,
+  type SplashPowerupIntervalSeconds,
+  type SplashPowerupsConfig,
+} from '@/lib/pixi-games/splash-dash/splashPowerups';
+import type { SplashPowerupsData } from '@/types/gameTypes';
 
 // Define props explicitly, using imported types
 /**
@@ -92,10 +104,14 @@ const mapPowerUpsArrayToObject = (powerUpsArray: string[]): LocalPowerups => {
  * Allows users to configure game settings before starting,
  * including teams, theme, intensity, and powerups.
  */
-const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, quizId }) => {
+const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, initialGameSlug, quizId }) => {
   // Remove Zustand usage
   const selectedQuiz = useGameStore((state) => state.selectedQuiz);
-  const router = useRouter();
+  const isSplashDash = initialGameSlug === 'splash-dash';
+
+  const [assetsReady, setAssetsReady] = useState(false);
+  const [assetsProgress, setAssetsProgress] = useState(0);
+  const [assetsStatus, setAssetsStatus] = useState('Loading game assets…');
 
   // --- State ---
   const [teams, setTeams] = useState<LocalTeam[]>([
@@ -118,9 +134,24 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
     timeExtension: false,
     comeback: false,
   });
+  const [splashPowerups, setSplashPowerups] = useState<SplashPowerupsConfig>({
+    ...DEFAULT_SPLASH_POWERUPS,
+  });
 
   // State to hold the theme class name
   const [themeClassName, setThemeClassName] = useState<string>('');
+
+  // Splash Dash: exactly two players
+  useEffect(() => {
+    if (!isSplashDash) return;
+    setTeams((prev) => {
+      const next = prev.slice(0, 2);
+      while (next.length < 2) {
+        next.push({ id: `t${next.length + 1}`, name: `Team ${next.length + 1}` });
+      }
+      return next;
+    });
+  }, [isSplashDash]);
 
 
   // Effect to update the theme class name when selectedTheme changes
@@ -166,6 +197,76 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
         // Keep default settings if error occurs
     }
   }, []); // Empty dependency array ensures this runs only once on mount
+
+  // Warm question + scene assets before enabling Play
+  useEffect(() => {
+    let cancelled = false;
+
+    const runWarmup = async () => {
+      setAssetsReady(false);
+      setAssetsProgress(0);
+      setAssetsStatus('Loading game assets…');
+
+      try {
+        let imageUrls: string[] = [];
+        const storeQuestions = selectedQuiz?.questions as Array<{ imageUrl?: string }> | undefined;
+        if (storeQuestions?.length) {
+          imageUrls = extractQuestionImageUrls(storeQuestions);
+        } else if (quizId) {
+          const res = await fetch(`/api/quizzes/${quizId}`);
+          const json = await res.json();
+          if (res.ok) {
+            imageUrls = extractQuestionImageUrls(json.data?.questions);
+          }
+        }
+
+        if (cancelled) return;
+
+        const result = await warmGameAssets({
+          gameSlug: initialGameSlug,
+          questionImageUrls: imageUrls,
+          onProgress: (p) => {
+            if (!cancelled) {
+              setAssetsProgress(p.fraction);
+              setAssetsStatus(
+                p.total === 0
+                  ? 'Ready'
+                  : `Loading assets… ${Math.round(p.fraction * 100)}%`
+              );
+            }
+          },
+        });
+
+        if (cancelled) return;
+
+        if (result.ready) {
+          setAssetsReady(true);
+          setAssetsStatus('Assets ready');
+        } else {
+          // Allow play with warning — question images may still load in-game if cache partially filled
+          console.warn('GameSetupPanel: Some assets failed to warm:', result.failed);
+          setAssetsReady(true);
+          setAssetsStatus(
+            result.failed.length
+              ? `Ready (some assets failed: ${result.failed.length})`
+              : 'Assets ready'
+          );
+        }
+      } catch (error) {
+        console.error('GameSetupPanel: Asset warmup error:', error);
+        if (!cancelled) {
+          // Don't permanently block Play on warmup errors
+          setAssetsReady(true);
+          setAssetsStatus('Ready (warmup error — game will retry loads)');
+        }
+      }
+    };
+
+    void runWarmup();
+    return () => {
+      cancelled = true;
+    };
+  }, [quizId, initialGameSlug, selectedQuiz?.id, selectedQuiz?.questions]);
 
   // Effect to load quiz default settings with priority system
   useEffect(() => {
@@ -225,6 +326,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
 
   // --- Handlers (Placeholders) ---
   const handleAddTeam = () => {
+    if (isSplashDash) return;
     if (newTeamName.trim()) {
       setTeams([
         ...teams,
@@ -239,6 +341,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
   };
 
   const handleRemoveTeam = (id: string) => {
+    if (isSplashDash) return;
     setTeams(teams.filter(team => team.id !== id));
   };
 
@@ -333,20 +436,27 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
    * and calls the onStartGame prop.
    */
   const handlePlayGame = () => {
-    // Construct the config object matching the Omit type expected by onStartGame
+    if (!assetsReady) return;
+    const splashPayload: SplashPowerupsData | undefined = isSplashDash
+      ? {
+          enabled: splashPowerups.enabled,
+          intervalSeconds: splashPowerups.intervalSeconds,
+          radioactive: splashPowerups.radioactive,
+          immunity: splashPowerups.immunity,
+        }
+      : undefined;
     const config: LocalConfig = {
-      teams,
+      teams: isSplashDash ? teams.slice(0, 2) : teams,
       settings,
-      theme: selectedTheme, // Ensure property name matches GameSetupData
+      theme: selectedTheme,
       gameFeatures: selectedGameFeatures,
       intensityTimeLimit,
       limitedGuesses,
       powerups,
-      // Include selected game slug if it becomes changeable
-      // gameSlug: currentGameSlug
+      splashPowerups: splashPayload,
     };
     console.log('Calling onStartGame with setup config:', config);
-    onStartGame(config); // Pass the correctly typed object
+    onStartGame(config);
   };
 
   /**
@@ -355,11 +465,6 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
   const handleBackClick = () => {
       console.log("Back button clicked - calling onGoBack");
       onGoBack();
-  }
-
-  const handleSplashDashClick = () => {
-      console.log("SplashDash link clicked - navigating to splash-dash");
-      router.push(`/games/${quizId}/splash-dash`);
   }
 
   // --- Render ---
@@ -373,20 +478,10 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
        <button
         onClick={handleBackClick}
         className={`buttonIcon`}
-        aria-label="Back to Quiz Selection"
+        aria-label="Back to game mode selection"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
       </button>
-
-      {/* SplashDash Beta Link */}
-      <div className="mb-4">
-        <button
-          onClick={handleSplashDashClick}
-          className="text-sm text-[var(--text-color)] hover:text-[var(--accent-color)] underline transition-colors duration-200"
-        >
-          Try Splash Dash Beta
-        </button>
-      </div>
 
       <div className={`max-w-4xl mx-auto bg-[var(--panel-bg)] filter-blur-sm rounded-[32px] p-8 border-2 border-[var(--border-dark)] shadow-solid z-20`}>
 
@@ -396,17 +491,43 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
               {selectedQuiz.title}
             </h2>
         )}
+        {isSplashDash && (
+          <p className="text-center text-sm text-[var(--text-color)] mb-4 opacity-80">
+            Splash Dash · 2-player race
+          </p>
+        )}
 
-        {/* Play Button */}
+        {/* Play Button / loading fill bar */}
         <div className={`text-center mb-4 flex flex-col justify-center items-center`}>
-          <button onClick={handlePlayGame} className={`grandstander buttonXLarge w-72`}>
-            Play
-          </button>
+          {assetsReady ? (
+            <button
+              onClick={handlePlayGame}
+              className="grandstander buttonXLarge w-72"
+            >
+              Play
+            </button>
+          ) : (
+            <div
+              className="relative w-72 h-[4.25rem] rounded-full border-[6px] border-[var(--primary-accent-600)] bg-white overflow-hidden shadow-[4px_6px_0px_0px_var(--primary-accent-hover)]"
+              role="progressbar"
+              aria-valuenow={Math.round(assetsProgress * 100)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Loading game assets"
+            >
+              <div
+                className="absolute inset-y-0 left-0 bg-[#114257] transition-[width] duration-150 ease-out"
+                style={{ width: `${Math.max(0, Math.min(100, assetsProgress * 100))}%` }}
+              />
+              <span className="relative z-10 flex h-full items-center justify-center text-2xl font-bold grandstander text-[#114257] mix-blend-difference">
+                {Math.round(assetsProgress * 100)}%
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Teams Section */}
         <div className={"mb-4 flex flex-col justify-center items-center"}>
-          {/* <h2 className={`grandstander text-2xl font-semibold text-[var(--text-color)] mb-2 pt-2`}>Teams:</h2> */}
           <ul className={`flex flex-row flex-wrap gap-2 justify-center items-center mb-3 text-3xl`}>
             {teams.map((team, index) => (
               <li key={team.id} className={`flex flex-row justify-center items-center`}>
@@ -418,10 +539,13 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
                   className={`py-2 px-6 ml-3 mr-1 rounded-[12px] text-lg border-2 border-[var(--input-border)] inputfield text-[var(--heading-color)]`}
                   aria-label={`Team ${index + 1} name`}
                 />
-                 <button onClick={() => handleRemoveTeam(team.id)} className={`buttonRemoveTeam`} aria-label={`Remove team ${team.name}`}>&times;</button>
+                 {!isSplashDash && (
+                   <button onClick={() => handleRemoveTeam(team.id)} className={`buttonRemoveTeam`} aria-label={`Remove team ${team.name}`}>&times;</button>
+                 )}
               </li>
             ))}
           </ul>
+          {!isSplashDash && (
           <div className={`flex items-center`}>
             <input
               type="text"
@@ -438,6 +562,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
               add
             </Button>
           </div>
+          )}
         </div>
 
         {/* Settings Section */}
@@ -478,7 +603,8 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
               </select>
             </div>
 
-            {/* Game Features Selection */}
+            {/* Game Features Selection — Score Attack only */}
+            {!isSplashDash && (
             <div className={`flex flex-row gap-4 items-center mb-4 justify-center`}>
               <label htmlFor="features-select" className={`text-[var(--text-color)]`}>Game Mode:</label>
               <select
@@ -492,33 +618,33 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
                 {/* Add other feature set options here */}
               </select>
             </div>
+            )}
           </div>
         </div>
 
 
-        {/* Power-up/Options Boxes Section */}
-        <div className={`optionsGrid`}>
-          {/* Box 1: Intensity */}
+        {/* Options grid */}
+        <div className={`optionsGrid ${isSplashDash ? 'md:max-w-4xl md:mx-auto' : ''}`}>
+          {/* Box 1: Intensity — used by Score Attack and Splash Dash question timers */}
           <div className={'optionBox'}>
-            {/* Make container relative */}
             <div className={`relative mb-2 text-lg`}> 
               <svg className={`w-12 h-12`} xmlns="http://www.w3.org/2000/svg" width="75" height="78" viewBox="0 0 75 78" fill="none">
                 <path d="M0 38C0 17.5655 16.5655 1 37 1C57.4345 1 74 17.5655 74 38V41C74 61.4345 57.4345 78 37 78C16.5655 78 0 61.4345 0 41V38Z" fill="var(--primary-accent)"/>
                 <path d="M8 39.5C8 23.7599 20.7599 11 36.5 11H37.5C53.2401 11 66 23.7599 66 39.5C66 55.2401 53.2401 68 37.5 68H36.5C20.7599 68 8 55.2401 8 39.5Z" fill="white"/>
                 <path d="M75 38.5C75 33.4441 74.0559 28.4377 72.2216 23.7667C70.3873 19.0957 67.6987 14.8514 64.3094 11.2764C60.9201 7.70133 56.8963 4.86544 52.4679 2.93064C48.0396 0.995831 43.2932 -2.21e-07 38.5 0V38.5H75Z" fill="white"/>
               </svg>
-              {/* Center span using absolute, top/left 50%, and translate */}
               <span className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl font-bold text-gray-700'> 
                 {intensityTimeLimit}
               </span>
             </div>
-            <h3 className={`font-semibold mb-2 text-md text-[var(--text-color)]`}>Increase intensity with a time limit</h3>
+            <h3 className={`font-semibold mb-2 text-md text-[var(--text-color)]`}>
+              {isSplashDash ? 'Time per question' : 'Increase intensity with a time limit'}
+            </h3>
             <div className={`buttonGroup`}>
               {[10, 15, 20].map(time => (
                 <button
                   key={time}
                   onClick={() => handleIntensityClick(time)}
-                  // Conditionally apply active class
                   className={`buttonChoice ${intensityTimeLimit === time ? 'buttonChoiceActive' : ''}`}
                 >
                   {time}
@@ -527,13 +653,88 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
             </div>
           </div>
 
+          {isSplashDash ? (
+          <>
+          {/* Splash: Power-ups master + interval */}
+          <div className={'optionBox'}>
+            <div className={`mb-2 text-lg`}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 512 512" fill="var(--primary-accent)"><path d="M218.4 24.72c-14.2 0-30.5 3.56-49.5 11.88c77.2 8.6 65.9 91.4 14.1 106.2c-65.4 18.7-131.31-23.7-98.34-99.2c-39.67 18.95-42.17 80.8-12.93 111.5C141.3 227.9 56.9 279 37.25 200.7C-1.929 326.2 60.34 489.5 258.7 489.5c250.7 0 282-374.7 129.2-415.04c26.5 43.04-13.1 70.94-24.9 73.14c-51.3 9.9-58.1-122.89-144.6-122.88m37.5 118.08c4.5 0 9.4 1.1 12.8 2.9l115.9 67.1c7.4 4.1 7.4 10.9 0 15.2l-115.9 66.9c-7.2 4.3-18.5 4.3-25.7 0L126.8 228c-7.3-4.3-7.3-11.1 0-15.2L243 145.7c3.4-1.8 7.9-2.9 12.9-2.9m-89 62.6c-21.6-.4-33.1 15-18.2 24.3c9.6 4.8 23.7 4.4 32.7-.8c8.8-5.3 9.5-13.7 1.5-19.4c-4.3-2.5-10-4-16-4.1m178.6.1c-20.8.4-31.3 15.5-16.3 24.5c9.6 4.9 23.9 4.6 33-.7c8.9-5.3 9.5-13.9 1.2-19.6c-4.2-2.4-9.9-4-15.9-4.2zm-89 0c-6.6-.1-13 1.5-17.7 4.2c-10.2 5.6-10.4 15.1-.6 20.9c9.9 5.8 25.8 5.6 35.1-.6c15-9 4.6-24.3-16.8-24.5m-141 41c1.5.1 3.4.5 5.6 1.6l111.5 64.5c7.2 4.1 12.9 14.2 12.9 22.5v119.7c0 8.3-5.7 11.7-12.9 7.6L121.2 398c-7.4-4.3-13.2-14.2-13.2-22.6V255.7c0-6.2 3-9.2 7.5-9.2m281.3 0c4.2 0 7.2 3 7.2 9.2v119.7c0 8.4-6 18.3-13 22.6l-111.5 64.4c-7.2 4.1-12.9.7-12.9-7.6V335.1c0-8.3 5.7-18.4 12.9-22.5L391 248.1c2.1-1.1 4.2-1.5 5.8-1.6m-185 65.5h-1.1c-5.3.4-8.5 4.8-8.5 11.6c-.6 10.4 7.2 24.1 16.9 29.8c9.8 5.6 17.6 1.1 17.2-9.9c.2-14.2-13.3-31.1-24.5-31.5m130.9 21.8c-11.2.1-24.8 17.2-24.7 31.4c.1 10.4 7.7 14.4 17.2 8.9c9.4-5.5 17-18.3 17.1-28.8c0-6.7-3.3-11.1-8.5-11.5zm-216.9 22.5c-5.4.3-8.7 4.7-8.7 11.6c-.5 10.5 7.3 24.1 17 29.8c9.8 5.5 17.6 1 17.2-10.1c0-14.5-14.1-31.8-25.5-31.3"/></svg>
+            </div>
+            <h3 className={`font-semibold mb-2 text-md text-[var(--text-color)]`}>Power-ups</h3>
+            <div className={`buttonGroup mb-3`}>
+              <button
+                type="button"
+                onClick={() => setSplashPowerups((p) => ({ ...p, enabled: true }))}
+                className={`buttonChoice ${splashPowerups.enabled ? 'buttonChoiceActive' : ''}`}
+              >
+                On
+              </button>
+              <button
+                type="button"
+                onClick={() => setSplashPowerups((p) => ({ ...p, enabled: false }))}
+                className={`buttonChoice ${!splashPowerups.enabled ? 'buttonChoiceActive' : ''}`}
+              >
+                Off
+              </button>
+            </div>
+            <p className="text-sm text-[var(--text-color)] mb-2 opacity-80">How often pickups appear</p>
+            <div className={`buttonGroup`}>
+              {SPLASH_POWERUP_INTERVAL_OPTIONS.map((sec) => (
+                <button
+                  key={sec}
+                  type="button"
+                  onClick={() =>
+                    setSplashPowerups((p) => ({
+                      ...p,
+                      intervalSeconds: sec as SplashPowerupIntervalSeconds,
+                    }))
+                  }
+                  className={`buttonChoice ${
+                    splashPowerups.intervalSeconds === sec ? 'buttonChoiceActive' : ''
+                  }`}
+                >
+                  {formatSplashIntervalLabel(sec)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Splash: which power-ups — same toggle style as Score Attack */}
+          <div className={'optionBox'}>
+            <div className={`mb-2 text-lg`}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 512 512" fill="var(--primary-accent)"><path d="M218.4 24.72c-14.2 0-30.5 3.56-49.5 11.88c77.2 8.6 65.9 91.4 14.1 106.2c-65.4 18.7-131.31-23.7-98.34-99.2c-39.67 18.95-42.17 80.8-12.93 111.5C141.3 227.9 56.9 279 37.25 200.7C-1.929 326.2 60.34 489.5 258.7 489.5c250.7 0 282-374.7 129.2-415.04c26.5 43.04-13.1 70.94-24.9 73.14c-51.3 9.9-58.1-122.89-144.6-122.88m37.5 118.08c4.5 0 9.4 1.1 12.8 2.9l115.9 67.1c7.4 4.1 7.4 10.9 0 15.2l-115.9 66.9c-7.2 4.3-18.5 4.3-25.7 0L126.8 228c-7.3-4.3-7.3-11.1 0-15.2L243 145.7c3.4-1.8 7.9-2.9 12.9-2.9m-89 62.6c-21.6-.4-33.1 15-18.2 24.3c9.6 4.8 23.7 4.4 32.7-.8c8.8-5.3 9.5-13.7 1.5-19.4c-4.3-2.5-10-4-16-4.1m178.6.1c-20.8.4-31.3 15.5-16.3 24.5c9.6 4.9 23.9 4.6 33-.7c8.9-5.3 9.5-13.9 1.2-19.6c-4.2-2.4-9.9-4-15.9-4.2zm-89 0c-6.6-.1-13 1.5-17.7 4.2c-10.2 5.6-10.4 15.1-.6 20.9c9.9 5.8 25.8 5.6 35.1-.6c15-9 4.6-24.3-16.8-24.5m-141 41c1.5.1 3.4.5 5.6 1.6l111.5 64.5c7.2 4.1 12.9 14.2 12.9 22.5v119.7c0 8.3-5.7 11.7-12.9 7.6L121.2 398c-7.4-4.3-13.2-14.2-13.2-22.6V255.7c0-6.2 3-9.2 7.5-9.2m281.3 0c4.2 0 7.2 3 7.2 9.2v119.7c0 8.4-6 18.3-13 22.6l-111.5 64.4c-7.2 4.1-12.9.7-12.9-7.6V335.1c0-8.3 5.7-18.4 12.9-22.5L391 248.1c2.1-1.1 4.2-1.5 5.8-1.6m-185 65.5h-1.1c-5.3.4-8.5 4.8-8.5 11.6c-.6 10.4 7.2 24.1 16.9 29.8c9.8 5.6 17.6 1.1 17.2-9.9c.2-14.2-13.3-31.1-24.5-31.5m130.9 21.8c-11.2.1-24.8 17.2-24.7 31.4c.1 10.4 7.7 14.4 17.2 8.9c9.4-5.5 17-18.3 17.1-28.8c0-6.7-3.3-11.1-8.5-11.5zm-216.9 22.5c-5.4.3-8.7 4.7-8.7 11.6c-.5 10.5 7.3 24.1 17 29.8c9.8 5.5 17.6 1 17.2-10.1c0-14.5-14.1-31.8-25.5-31.3"/></svg>
+            </div>
+            <h3 className={`font-semibold mb-2 text-md text-[var(--text-color)]`}>Activate power-ups</h3>
+            <div className={`buttonGroup`}>
+              {SPLASH_POWERUP_DEFINITIONS.map((def) => {
+                const active = splashPowerups[def.id];
+                return (
+                  <button
+                    key={def.id}
+                    type="button"
+                    onClick={() =>
+                      setSplashPowerups((p) => ({
+                        ...p,
+                        [def.id]: !p[def.id],
+                      }))
+                    }
+                    className={`buttonChoice ${active ? 'buttonChoiceActive' : ''}`}
+                  >
+                    {def.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          </>
+          ) : (
+          <>
           {/* Box 2: Limited Guesses */}
           <div className={'optionBox'}>
             <div className={`flex flex-row text-lg justify-center items-center gap-1 mb-2 min-h-[24px]`}> 
-              {/* Dynamically render hearts based on limitedGuesses state */}
               {limitedGuesses !== null && limitedGuesses > 0 ? (
                 Array.from({ length: limitedGuesses }).map((_, index) => (
-                  <svg className={`w-8 h-8`} key={`heart-${index}`} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="var(--primary-accent)"> {/* Added explicit color */}
+                  <svg className={`w-8 h-8`} key={`heart-${index}`} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="var(--primary-accent)">
                     <path d="M21.19 12.683c-2.5 5.41-8.62 8.2-8.88 8.32a.85.85 0 0 1-.62 0c-.25-.12-6.38-2.91-8.88-8.32c-1.55-3.37-.69-7 1-8.56a4.93 4.93 0 0 1 4.36-1.05a6.16 6.16 0 0 1 3.78 2.62a6.15 6.15 0 0 1 3.79-2.62a4.93 4.93 0 0 1 4.36 1.05c1.78 1.56 2.65 5.19 1.09 8.56"/>
                   </svg>
                 ))
@@ -545,7 +746,6 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
                 <button
                   key={guess}
                   onClick={() => handleGuessesClick(guess)}
-                  // Conditionally apply active class
                   className={`buttonChoice ${limitedGuesses === guess ? 'buttonChoiceActive' : ''}`}
                 >
                   {guess}
@@ -562,14 +762,13 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
             <h3 className={`font-semibold mb-2 text-md text-[var(--text-color)]`}>Activate power-ups</h3>
             <div className={`buttonGroup`}>
               {Object.keys(powerups).map(key => {
-                // Map key to display name
                 let displayName = '';
                 switch (key) {
                   case 'fiftyFifty': displayName = '50/50'; break;
                   case 'doublePoints': displayName = 'Double Points'; break;
                   case 'timeExtension': displayName = 'Extra time'; break;
                   case 'comeback': displayName = 'Comeback'; break;
-                  default: displayName = key; // Fallback
+                  default: displayName = key;
                 }
                 
                 return (
@@ -584,6 +783,8 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
               })}
             </div>
           </div>
+          </>
+          )}
         </div>
 
       </div>

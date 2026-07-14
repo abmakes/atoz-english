@@ -47,6 +47,14 @@ export class SplashDashUIManager {
     private pixiTimerInstance: PixiTimer;
     private initialDurationMs: number = 0;
     private useCrateTexture: boolean = false; // Track which rendering mode is active
+    private powerupPickup: {
+        type: 'radioactive' | 'immunity';
+        container: PIXI.Container;
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    } | null = null;
     // Layout constants are now managed by SplashDashLayoutManager
 
     /**
@@ -690,10 +698,14 @@ export class SplashDashUIManager {
         
         // Point value display
         let pointText = "";
+        let subtitleText = "";
         if (pointsEarned > 0) {
             pointText = `+${pointsEarned} POINTS!`;
-            if (wasFirst) {
-                pointText += ` (+5 FIRST!)`;
+            if (wasFirst && pointsEarned > 5) {
+                const timePts = pointsEarned - 5;
+                subtitleText = `${timePts} time + 5 first`;
+            } else if (wasFirst) {
+                subtitleText = `includes +5 first`;
             }
         } else if (pointsEarned < 0) {
             pointText = `${pointsEarned} POINTS`;
@@ -707,18 +719,39 @@ export class SplashDashUIManager {
                 fill: pointsEarned > 0 ? 0x00FF00 : 0xFF0000, // Green for positive, red for negative
                 fontWeight: 'bold',
                 align: 'center',
-                stroke: { color: 0x000000, width: 3 } // Reduced stroke width
+                stroke: { color: 0x000000, width: 4 }
             }
         });
         pointMessage.anchor.set(0.5);
-        
-        feedbackContainer.addChild(feedbackMessage);
-        feedbackContainer.addChild(pointMessage);
-        
-        // Position messages
+
+        if (subtitleText) {
+            const subtitle = new PIXI.Text({
+                text: subtitleText,
+                style: {
+                    fontFamily: 'Grandstander',
+                    fontSize: 28,
+                    fill: 0xFFD700,
+                    fontWeight: 'bold',
+                    align: 'center',
+                    stroke: { color: 0x000000, width: 3 }
+                }
+            });
+            subtitle.anchor.set(0.5);
+            feedbackContainer.addChild(feedbackMessage);
+            feedbackContainer.addChild(pointMessage);
+            feedbackContainer.addChild(subtitle);
+            feedbackMessage.y = -50;
+            pointMessage.y = 10;
+            subtitle.y = 55;
+        } else {
+            feedbackContainer.addChild(feedbackMessage);
+            feedbackContainer.addChild(pointMessage);
+            feedbackMessage.y = -40;
+            pointMessage.y = 30;
+        }
+
         feedbackContainer.x = width / 2;
         feedbackContainer.y = height / 2;
-        pointMessage.y = 60; // Moved down by 20 pixels (from 40 to 60)
         
         this.view.addChild(feedbackContainer);
 
@@ -828,6 +861,76 @@ export class SplashDashUIManager {
     }
 
     /**
+     * Spawns a floating power-up pickup crate in the playable water area.
+     */
+    public async spawnPowerupPickup(
+        type: 'radioactive' | 'immunity',
+        x: number,
+        y: number,
+        width: number,
+        height: number
+    ): Promise<void> {
+        this.clearPowerupPickup();
+
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        container.label = `powerup-${type}`;
+
+        try {
+            const crateTexture = await PIXI.Assets.load('/images/splash-dash/crate_square.png');
+            const sprite = new PIXI.Sprite(crateTexture);
+            sprite.width = width;
+            sprite.height = height;
+            container.addChild(sprite);
+        } catch {
+            const fallback = new PIXI.Graphics()
+                .roundRect(0, 0, width, height, 8)
+                .fill(type === 'radioactive' ? 0x88ff00 : 0x88ccff);
+            container.addChild(fallback);
+        }
+
+        const glyph = new PIXI.Text({
+            text: type === 'radioactive' ? '☢' : '🛡',
+            style: {
+                fontFamily: 'Grandstander',
+                fontSize: Math.floor(height * 0.45),
+                fill: type === 'radioactive' ? 0xffff00 : 0xffffff,
+                fontWeight: 'bold',
+                stroke: { color: 0x000000, width: 4 },
+            },
+        });
+        glyph.anchor.set(0.5);
+        glyph.x = width / 2;
+        glyph.y = height / 2;
+        container.addChild(glyph);
+
+        this.view.addChild(container);
+        this.powerupPickup = { type, container, x, y, width, height };
+        // Keep pickups above answer crates / question UI within this view
+        this.view.setChildIndex(container, this.view.children.length - 1);
+    }
+
+    public clearPowerupPickup(): void {
+        if (this.powerupPickup) {
+            this.powerupPickup.container.destroy({ children: true });
+            this.powerupPickup = null;
+        }
+    }
+
+    public getPowerupPickup(): {
+        type: 'radioactive' | 'immunity';
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    } | null {
+        if (!this.powerupPickup) return null;
+        const { type, x, y, width, height } = this.powerupPickup;
+        return { type, x, y, width, height };
+    }
+
+    /**
      * Returns the main UI container that holds all game interface elements
      * Provides access to the root container for adding to the main game scene
      */
@@ -845,6 +948,7 @@ export class SplashDashUIManager {
             this.eventBus.off(TIMER_EVENTS.TIMER_TICK, this._handleTimerTick.bind(this));
         }
         this.pixiTimerInstance?.destroy();
+        this.clearPowerupPickup();
         this.view.destroy({ children: true });
         this.answerRectangles = [];
         console.log('SplashDashUIManager destroyed');

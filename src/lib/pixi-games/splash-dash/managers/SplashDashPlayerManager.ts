@@ -15,6 +15,9 @@ export interface PlayerState {
     score: number;
     isMoving: boolean;
     isAtAnswer: boolean;
+    /** Active until game-elapsed ms (optional buffs). */
+    radioactiveUntilMs?: number;
+    immunityUntilMs?: number;
 }
 
 interface PlayerSprite {
@@ -49,6 +52,8 @@ interface PlayerSprite {
         lifetime: number;
     }>;
     wasMoving: boolean; // Track previous movement state
+    huePhase: number;
+    shimmerOverlay: PIXI.Graphics | null;
 }
 
 export class SplashDashPlayerManager {
@@ -211,7 +216,9 @@ export class SplashDashPlayerManager {
             trailPositions: [],
             trailGraphics,
             splashParticles: [],
-            wasMoving: false
+            wasMoving: false,
+            huePhase: 0,
+            shimmerOverlay: null,
         };
     }
 
@@ -289,7 +296,9 @@ export class SplashDashPlayerManager {
                 trailPositions: [],
                 trailGraphics,
                 splashParticles: [],
-                wasMoving: false
+                wasMoving: false,
+                huePhase: 0,
+                shimmerOverlay: null,
             });
             
             this.view.addChild(container);
@@ -298,7 +307,7 @@ export class SplashDashPlayerManager {
         console.log('[SplashDashPlayerManager] Fallback players created');
     }
 
-    public update(delta: number, playersState: PlayerState[]): void {
+    public update(delta: number, playersState: PlayerState[], gameElapsedMs: number = 0): void {
         playersState.forEach((playerState, index) => {
             const playerSprite = this.players[index];
             if (!playerSprite) return;
@@ -329,7 +338,71 @@ export class SplashDashPlayerManager {
             
             // Animate based on current state
             this.updateCapybaraAnimation(playerSprite, delta);
+
+            // Buff visuals: radioactive hue cycle + immunity glossy shimmer
+            this.updateBuffVisuals(playerSprite, playerState, delta, gameElapsedMs);
         });
+    }
+
+    private updateBuffVisuals(
+        player: PlayerSprite,
+        state: PlayerState,
+        delta: number,
+        gameElapsedMs: number
+    ): void {
+        const radioactiveActive =
+            typeof state.radioactiveUntilMs === 'number' &&
+            gameElapsedMs < state.radioactiveUntilMs;
+        const immunityActive =
+            typeof state.immunityUntilMs === 'number' &&
+            gameElapsedMs < state.immunityUntilMs;
+
+        const sprite = player.capybaraSprite;
+        if (sprite instanceof PIXI.Sprite) {
+            if (radioactiveActive) {
+                player.huePhase = (player.huePhase + delta * 0.004) % 1;
+                sprite.tint = this.hueToTint(player.huePhase);
+            } else {
+                sprite.tint = 0xffffff;
+                player.huePhase = 0;
+            }
+        }
+
+        if (immunityActive) {
+            if (!player.shimmerOverlay) {
+                const overlay = new PIXI.Graphics();
+                player.container.addChild(overlay);
+                player.shimmerOverlay = overlay;
+            }
+            const pulse = 0.12 + 0.18 * (0.5 + 0.5 * Math.sin(performance.now() * 0.008));
+            player.shimmerOverlay.clear();
+            player.shimmerOverlay.circle(0, 0, 38);
+            player.shimmerOverlay.fill({ color: 0xa8e6ff, alpha: pulse });
+            player.shimmerOverlay.stroke({ width: 3, color: 0xffffff, alpha: Math.min(1, pulse + 0.15) });
+        } else if (player.shimmerOverlay) {
+            player.shimmerOverlay.destroy();
+            player.shimmerOverlay = null;
+        }
+    }
+
+    /** Map 0–1 hue phase to a bright RGB tint for radioactive cycling. */
+    private hueToTint(phase: number): number {
+        const h = phase * 6;
+        const i = Math.floor(h);
+        const f = h - i;
+        const q = 1 - f;
+        let r = 0;
+        let g = 0;
+        let b = 0;
+        switch (i % 6) {
+            case 0: r = 1; g = f; b = 0; break;
+            case 1: r = q; g = 1; b = 0; break;
+            case 2: r = 0; g = 1; b = f; break;
+            case 3: r = 0; g = q; b = 1; break;
+            case 4: r = f; g = 0; b = 1; break;
+            default: r = 1; g = 0; b = q; break;
+        }
+        return (Math.round(r * 255) << 16) | (Math.round(g * 255) << 8) | Math.round(b * 255);
     }
 
     private updateTrailEffect(player: PlayerSprite, isMoving: boolean): void {

@@ -12,6 +12,12 @@ import { SplashDashLayoutManager } from './managers/SplashDashLayoutManager';
 import { SplashDashPlayerManager } from './managers/SplashDashPlayerManager';
 import { GifAsset } from 'pixi.js/gif';
 import { ensureFontIsLoaded } from '@/lib/pixi-engine/utils/ensureFontIsLoaded';
+import {
+    DEFAULT_SPLASH_POWERUPS,
+    getEnabledSplashPickupTypes,
+    SplashPowerupId,
+    SplashPowerupsConfig,
+} from './splashPowerups';
 
 /**
  * Custom game state interface for SplashDashGame.
@@ -33,6 +39,10 @@ interface SplashDashGameState extends BaseGameState {
         isMoving: boolean;
         isAtAnswer: boolean;
         currentAnswerId?: string;
+        /** Game-elapsed ms when radioactive buff ends. */
+        radioactiveUntilMs?: number;
+        /** Game-elapsed ms when immunity buff ends. */
+        immunityUntilMs?: number;
     }>;
     currentQuestion: QuestionData | null;
     answerCircles: Array<{
@@ -71,11 +81,30 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
         INCORRECT_PENALTY: -3,
         TIMEOUT_PENALTY: -1
     };
+
+    /** Sync first-correct tracker — setState alone can race same-frame dual collisions. */
+    private firstCorrectTeamId: string | null = null;
+
+    private gameElapsedMs = 0;
+    private nextPickupAtMs = 0;
+    private pickupSpawnInFlight = false;
+    private splashPowerupsConfig: SplashPowerupsConfig = { ...DEFAULT_SPLASH_POWERUPS };
+    private readonly RADIOACTIVE_DURATION_MS = 60_000;
+    private readonly IMMUNITY_DURATION_MS = 30_000;
     
     constructor(config: GameConfig, managers: PixiEngineManagers) {
         super(config, managers);
 
         console.log("SplashDashGame constructor - Config received:", this.config);
+
+        if (this.config.splashPowerups) {
+            this.splashPowerupsConfig = {
+                ...DEFAULT_SPLASH_POWERUPS,
+                ...this.config.splashPowerups,
+            };
+        }
+        const intervalMs = this.splashPowerupsConfig.intervalSeconds * 1000;
+        this.nextPickupAtMs = intervalMs;
 
         if (typeof GifAsset !== 'undefined') {
             console.log("GIF Asset handler registered.");
@@ -269,7 +298,14 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
         }
 
         this.gameState = GameState.STARTED;
-        console.log(`${this.constructor.name}: Game started`);
+        // Pickup schedule is wall-clock of the whole match (not per question).
+        this.gameElapsedMs = 0;
+        this.nextPickupAtMs = this.splashPowerupsConfig.intervalSeconds * 1000;
+        this.pickupSpawnInFlight = false;
+        console.log(
+            `${this.constructor.name}: Game started (splash pickups every ${this.splashPowerupsConfig.intervalSeconds}s)`,
+            this.splashPowerupsConfig
+        );
         
         // Start the movement timer for continuous updates
         this._startMovementTimer();
@@ -285,13 +321,14 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
 
     /**
      * Update game logic each frame
-     * @param delta Time elapsed since last frame
+     * @param delta Time elapsed since last frame in milliseconds (from PixiEngine)
      */
     public update(delta: number): void {
-        // Update power-ups
-        const deltaTimeMs = delta * 1000;
-        this.powerUpManager.update(deltaTimeMs);
-        
+        // Engine already updates powerUpManager; delta is milliseconds.
+        if (this.gameState === GameState.STARTED) {
+            this.gameElapsedMs += delta;
+        }
+
         // Update transition screen
         if (this.transitionScreen) {
             this.transitionScreen.update(delta);
@@ -299,14 +336,18 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
 
         // Update player positions and animations
         this._updatePlayerMovement(delta);
-        this.playerManager?.update(delta, this.getState().players);
-        
+        this.playerManager?.update(delta, this.getState().players, this.gameElapsedMs);
+
+        // Floating Splash Dash pickups (match-elapsed, not per-question)
+        this._updateSplashPowerupSpawns();
+        this._checkPowerupCollisions();
+
         // Check for collisions with answer circles
         this._checkAnswerCollisions();
-        
+
         // Update UI proximity highlighting
         this.uiManager?.updateAnswerProximity(this.getState().players);
-        
+
         // Update background effects (water animation)
         this.backgroundManager?.update();
     }
@@ -336,6 +377,7 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
         
         // Clear UI state
         this.uiManager?.clearQuestionState();
+        this.uiManager?.clearPowerupPickup();
     }
 
     /**
@@ -463,6 +505,7 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
             answerCircles: answerCircles,
             firstCorrectAnswerer: null // Reset first correct answerer for new question
         });
+        this.firstCorrectTeamId = null;
 
         // Setup answer rectangles in UI
         await this.uiManager.setupAnswerRectangles(question.id, answerCircles);
@@ -649,21 +692,21 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
 
         if (playerIndex !== -1) {
             if (isCorrect) {
-                // Check if this is the first correct answer
-                const currentState = this.getState();
-                if (currentState.firstCorrectAnswerer === null) {
-                    // First correct answer - set as first and add bonus
+                // Sync first-correct check (same-frame safe)
+                if (this.firstCorrectTeamId === null) {
+                    this.firstCorrectTeamId = teamId;
                     this.setState({ firstCorrectAnswerer: teamId });
                     wasFirst = true;
                 }
-                
-                // Calculate score: remaining seconds + 5 bonus if first
+
+                // Score: remaining seconds, then +5 first-correct as separate add for clarity
                 const remainingSeconds = Math.floor(remainingTimeMs / 1000);
+                this.scoringManager.addScore(teamId, remainingSeconds);
+                if (wasFirst) {
+                    this.scoringManager.addScore(teamId, this.SCORING.FIRST_CORRECT_BONUS);
+                }
                 pointsEarned = remainingSeconds + (wasFirst ? this.SCORING.FIRST_CORRECT_BONUS : 0);
-                
-                // Update score using ScoringManager to emit events
-                this.scoringManager.addScore(teamId, pointsEarned);
-                
+
                 // Update local state for consistency
                 players[playerIndex] = { ...players[playerIndex], score: this.scoringManager.getScore(teamId) };
                 console.log(`[SplashDashGame] Player ${teamId} score increased by ${pointsEarned} (${remainingSeconds}s + ${wasFirst ? this.SCORING.FIRST_CORRECT_BONUS : 0} bonus) to ${players[playerIndex].score}`);
@@ -812,20 +855,23 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
         const ROTATION_SPEED = (Math.PI * 2) / 160; // Full rotation in ~2.67 seconds (50% faster)
         const MOVEMENT_SPEED = width / (7 * 60); // Move across screen in 7 seconds at 60fps
         const PLAYER_SIZE = 30;
+        const now = this.gameElapsedMs;
 
         players.forEach((player, index) => {
             let { x, y, rotation } = player;
             const { isMoving } = player;
+            const radioactive =
+                typeof player.radioactiveUntilMs === 'number' && now < player.radioactiveUntilMs;
+            const rotMul = radioactive ? 1.5 : 1;
+            const speedMul = radioactive ? 1.2 : 1;
 
             if (!isMoving) {
                 // Rotate continuously when not moving
-                rotation += ROTATION_SPEED * (delta / 16.66);
+                rotation += ROTATION_SPEED * rotMul * (delta / 16.66);
             } else {
                 // Move forward when moving
-                const oldX = x;
-                const oldY = y;
-                x += Math.cos(rotation) * MOVEMENT_SPEED * (delta / 16.66);
-                y += Math.sin(rotation) * MOVEMENT_SPEED * (delta / 16.66);
+                x += Math.cos(rotation) * MOVEMENT_SPEED * speedMul * (delta / 16.66);
+                y += Math.sin(rotation) * MOVEMENT_SPEED * speedMul * (delta / 16.66);
 
                 // Keep player within bounds - prevent going under question area
                 const BOTTOM_UI_HEIGHT = 150; // Height of bottom question area
@@ -834,8 +880,6 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
                 
                 x = Math.max(PLAYER_SIZE, Math.min(width - PLAYER_SIZE, x));
                 y = Math.max(minY, Math.min(maxY, y));
-                
-                console.log(`[SplashDashGame] Player ${index} moving: ${oldX.toFixed(1)},${oldY.toFixed(1)} -> ${x.toFixed(1)},${y.toFixed(1)}`);
             }
 
             // Update player state
@@ -884,9 +928,14 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
     private _checkAnswerCollisions(): void {
         const players = this.getState().players;
         const answerRectangles = this.uiManager?.getAnswerRectangles() || [];
+        const answerCircles = this.getState().answerCircles;
+        const now = this.gameElapsedMs;
 
         players.forEach(player => {
             if (player.isAtAnswer) return; // Already at an answer
+
+            const immunityActive =
+                typeof player.immunityUntilMs === 'number' && now < player.immunityUntilMs;
 
             answerRectangles.forEach(answerRect => {
                 // Check if player is within the rectangle bounds
@@ -905,13 +954,222 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
                 // Check if player center is within expanded rectangle
                 if (player.x >= expandedLeft && player.x <= expandedRight &&
                     player.y >= expandedTop && player.y <= expandedBottom) {
-                    // Collision detected
+                    const circle = answerCircles.find(c => c.id === answerRect.id);
+                    // Immunity: pass through wrong answers without locking
+                    if (immunityActive && circle && !circle.isCorrect) {
+                        return;
+                    }
                     this._handleAnswerReached(player.id, answerRect.id);
                 }
             });
         });
     }
 
+    private _updateSplashPowerupSpawns(): void {
+        const types = getEnabledSplashPickupTypes(this.splashPowerupsConfig);
+        if (types.length === 0) return;
+        if (this.gameState !== GameState.STARTED) return;
+        if (!this.uiManager) return;
+        if (this.pickupSpawnInFlight) return;
+        if (this.uiManager.getPowerupPickup()) return;
+        if (this.gameElapsedMs < this.nextPickupAtMs) return;
 
+        const type = types[Math.floor(Math.random() * types.length)] as SplashPowerupId;
+        const pickupW = 96;
+        const pickupH = 96;
+        const position = this._findClearPickupPosition(pickupW, pickupH);
+        if (!position) {
+            // Crowded board — try again next frame without advancing the schedule
+            return;
+        }
+
+        this.pickupSpawnInFlight = true;
+        this.nextPickupAtMs = this.gameElapsedMs + this.splashPowerupsConfig.intervalSeconds * 1000;
+        console.log(
+            `[SplashDashGame] Spawning ${type} pickup at (${position.x.toFixed(0)}, ${position.y.toFixed(0)}) ` +
+            `t=${(this.gameElapsedMs / 1000).toFixed(1)}s; next at ${(this.nextPickupAtMs / 1000).toFixed(1)}s`
+        );
+
+        void this.uiManager
+            .spawnPowerupPickup(type, position.x, position.y, pickupW, pickupH)
+            .catch((err) => {
+                console.error('[SplashDashGame] Failed to spawn power-up pickup:', err);
+            })
+            .finally(() => {
+                this.pickupSpawnInFlight = false;
+            });
+    }
+
+    /**
+     * Finds a spawn point in the playable water that clears answer crates, top-left UI,
+     * and player spawn pads. Returns null if no clear spot is found this frame.
+     */
+    private _findClearPickupPosition(
+        pickupW: number,
+        pickupH: number
+    ): { x: number; y: number } | null {
+        const { width, height } = this.pixiApp.getScreenSize();
+        const BOTTOM_UI_HEIGHT = 150;
+        const margin = 48;
+        const clearance = 28; // gap between pickup and answer crate edges
+        const playerClearance = 80;
+        const spawnPadClearance = 130; // keep off default capybara spawn pads
+
+        // Top-left score / leaf UI reserved zone (matches answer-layout reservation)
+        const topLeftUi = {
+            x: 0,
+            y: 0,
+            width: Math.min(320, width * 0.32),
+            height: 140,
+        };
+
+        const spawnPads = [
+            { x: width * 0.25, y: height * (2 / 3) },
+            { x: width * 0.75, y: height * (2 / 3) },
+        ];
+
+        const areaX = margin;
+        // Start below top UI band globally (not only top-left), then also reject top-left AABB
+        const areaY = Math.max(margin, topLeftUi.height + 12);
+        const areaW = Math.max(0, width - pickupW - margin * 2);
+        const areaH = Math.max(0, height - BOTTOM_UI_HEIGHT - pickupH - areaY - margin);
+        if (areaW <= 0 || areaH <= 0) return null;
+
+        const answers = this.uiManager?.getAnswerRectangles() ?? [];
+        const players = this.getState().players;
+
+        const overlapsRect = (
+            x: number,
+            y: number,
+            rect: { x: number; y: number; width: number; height: number },
+            pad: number
+        ): boolean => {
+            const left = x - pad;
+            const right = x + pickupW + pad;
+            const top = y - pad;
+            const bottom = y + pickupH + pad;
+            return (
+                left < rect.x + rect.width &&
+                right > rect.x &&
+                top < rect.y + rect.height &&
+                bottom > rect.y
+            );
+        };
+
+        const overlapsAnswer = (x: number, y: number): boolean =>
+            answers.some((ar) => overlapsRect(x, y, ar, clearance));
+
+        const overlapsTopLeftUi = (x: number, y: number): boolean =>
+            overlapsRect(x, y, topLeftUi, 8);
+
+        const tooCloseToPoint = (
+            x: number,
+            y: number,
+            px: number,
+            py: number,
+            radius: number
+        ): boolean => {
+            const cx = x + pickupW / 2;
+            const cy = y + pickupH / 2;
+            const dx = px - cx;
+            const dy = py - cy;
+            return dx * dx + dy * dy < radius * radius;
+        };
+
+        const tooCloseToPlayers = (x: number, y: number): boolean =>
+            players.some((p) => tooCloseToPoint(x, y, p.x, p.y, playerClearance));
+
+        const tooCloseToSpawnPads = (x: number, y: number): boolean =>
+            spawnPads.some((pad) =>
+                tooCloseToPoint(x, y, pad.x, pad.y, spawnPadClearance)
+            );
+
+        const isBlocked = (x: number, y: number, includePlayers: boolean): boolean => {
+            if (overlapsTopLeftUi(x, y)) return true;
+            if (overlapsAnswer(x, y)) return true;
+            if (tooCloseToSpawnPads(x, y)) return true;
+            if (includePlayers && tooCloseToPlayers(x, y)) return true;
+            return false;
+        };
+
+        // Prefer fully clear spots (answers + UI + spawn pads + live players)
+        const maxAttempts = 50;
+        for (let i = 0; i < maxAttempts; i++) {
+            const x = areaX + Math.random() * areaW;
+            const y = areaY + Math.random() * areaH;
+            if (!isBlocked(x, y, true)) return { x, y };
+        }
+
+        // Fallback: still avoid UI, answers, and spawn pads (players move)
+        for (let i = 0; i < 30; i++) {
+            const x = areaX + Math.random() * areaW;
+            const y = areaY + Math.random() * areaH;
+            if (!isBlocked(x, y, false)) return { x, y };
+        }
+
+        // Last resort: farthest from answers + spawn pads, still outside top-left UI
+        let best: { x: number; y: number; score: number } | null = null;
+        for (let i = 0; i < 32; i++) {
+            const x = areaX + Math.random() * areaW;
+            const y = areaY + Math.random() * areaH;
+            if (overlapsTopLeftUi(x, y)) continue;
+            const cx = x + pickupW / 2;
+            const cy = y + pickupH / 2;
+            let minDist = Infinity;
+            for (const ar of answers) {
+                minDist = Math.min(
+                    minDist,
+                    Math.hypot(cx - (ar.x + ar.width / 2), cy - (ar.y + ar.height / 2))
+                );
+            }
+            for (const pad of spawnPads) {
+                minDist = Math.min(minDist, Math.hypot(cx - pad.x, cy - pad.y));
+            }
+            if (!best || minDist > best.score) {
+                best = { x, y, score: minDist };
+            }
+        }
+        return best ? { x: best.x, y: best.y } : null;
+    }
+
+    private _checkPowerupCollisions(): void {
+        const pickup = this.uiManager?.getPowerupPickup();
+        if (!pickup) return;
+
+        const players = [...this.getState().players];
+        const playerRadius = 30;
+        let claimed = false;
+
+        for (let i = 0; i < players.length; i++) {
+            const player = players[i];
+            if (player.isAtAnswer) continue;
+
+            const cx = pickup.x + pickup.width / 2;
+            const cy = pickup.y + pickup.height / 2;
+            const dx = player.x - cx;
+            const dy = player.y - cy;
+            const hitR = playerRadius + Math.min(pickup.width, pickup.height) / 2;
+            if (dx * dx + dy * dy > hitR * hitR) continue;
+
+            if (pickup.type === 'radioactive') {
+                players[i] = {
+                    ...player,
+                    radioactiveUntilMs: this.gameElapsedMs + this.RADIOACTIVE_DURATION_MS,
+                };
+            } else {
+                players[i] = {
+                    ...player,
+                    immunityUntilMs: this.gameElapsedMs + this.IMMUNITY_DURATION_MS,
+                };
+            }
+            claimed = true;
+            break;
+        }
+
+        if (claimed) {
+            this.setState({ players });
+            this.uiManager?.clearPowerupPickup();
+        }
+    }
 
 }

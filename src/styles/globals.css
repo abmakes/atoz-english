@@ -35,6 +35,36 @@
     box-shadow: 6px 6px 0px var(--text-color);
     transform: translateY(-2px);
   }
+
+  /* Games catalog loading — themed placeholders that cascade in */
+  .quiz-skel-cascade {
+    opacity: 0;
+    animation: quiz-skel-drop 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .quiz-skel-shimmer {
+    background-image: linear-gradient(
+      110deg,
+      rgba(191, 219, 254, 0.35) 0%,
+      rgba(224, 242, 254, 0.95) 40%,
+      rgba(255, 255, 255, 0.75) 50%,
+      rgba(224, 242, 254, 0.95) 60%,
+      rgba(191, 219, 254, 0.35) 100%
+    );
+    background-size: 200% 100%;
+    animation: quiz-skel-shimmer 1.6s ease-in-out infinite;
+  }
+
+  .quiz-skel-thumb {
+    background-color: #bfdbfe;
+  }
+
+  .quiz-skel-blur-text {
+    filter: blur(5px);
+    user-select: none;
+    color: #1e5167;
+    opacity: 0.45;
+  }
   
   .slider-white [data-radix-slider-thumb] {
     background-color: white !important;
@@ -455,10 +485,16 @@
   background-color: var(--inactive-button-hover-bg);
 }
 .buttonChoiceActive {
-  /* Note: Higher specificity might be needed if base .button styles interfere */
   background-color: var(--active-button-bg);
   color: var(--active-button-text);
-  border-color: transparent; /* Remove border when active */
+  border-color: transparent;
+}
+/* Active must win over .buttonChoice:hover (higher specificity) or selected stays gray while hovered */
+.buttonChoice.buttonChoiceActive,
+.buttonChoice.buttonChoiceActive:hover {
+  background-color: var(--active-button-bg);
+  color: var(--active-button-text);
+  border-color: transparent;
 }
 
 /****************************/ 
@@ -605,3 +641,23 @@
 /* Ensure Poppins and Space Mono are loaded if used (or remove definitions if unused) */
 /* Add @font-face for Poppins if needed */
 /* Add @font-face for Space Mono if needed */
+
+@keyframes quiz-skel-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-28px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes quiz-skel-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}

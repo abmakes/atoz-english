@@ -123,33 +123,30 @@ export class SplashDashBackgroundManager {
                 { key: 'bottomright', x: width, y: bottomY, anchor: { x: 1, y: 1 } }
             ];
 
-            for (const corner of cornerPositions) {
-                const assetPath = `/images/splash-dash/${corner.key}.png`;
-                console.log(`SplashDashBackgroundManager: Loading corner leaf: ${assetPath}`);
-                
-                try {
-                    const texture = await PIXI.Assets.load(assetPath);
-                    const sprite = PIXI.Sprite.from(texture);
-                    
-                    // Position sprite in corner
-                    sprite.x = corner.x;
-                    sprite.y = corner.y;
-                    sprite.anchor.set(corner.anchor.x, corner.anchor.y);
-                    
-                    // Reduce size by 20% (scale to 0.8)
-                    sprite.scale.set(0.8);
-                    
-                    // Add slight transparency for water effect
-                    sprite.alpha = 0.9;
-                    
-                    this.view.addChild(sprite);
-                    this.cornerLeaves[corner.key as keyof typeof this.cornerLeaves] = sprite;
-                    
-                    console.log(`SplashDashBackgroundManager: Loaded ${corner.key} leaf at (${corner.x}, ${corner.y})`);
-                } catch (error) {
-                    console.warn(`SplashDashBackgroundManager: Failed to load ${corner.key} leaf:`, error);
-                }
-            }
+            await Promise.all(
+                cornerPositions.map(async (corner) => {
+                    const assetPath = `/images/splash-dash/${corner.key}.png`;
+                    console.log(`SplashDashBackgroundManager: Loading corner leaf: ${assetPath}`);
+
+                    try {
+                        const texture = await PIXI.Assets.load(assetPath);
+                        const sprite = PIXI.Sprite.from(texture);
+
+                        sprite.x = corner.x;
+                        sprite.y = corner.y;
+                        sprite.anchor.set(corner.anchor.x, corner.anchor.y);
+                        sprite.scale.set(0.8);
+                        sprite.alpha = 0.9;
+
+                        this.view.addChild(sprite);
+                        this.cornerLeaves[corner.key as keyof typeof this.cornerLeaves] = sprite;
+
+                        console.log(`SplashDashBackgroundManager: Loaded ${corner.key} leaf at (${corner.x}, ${corner.y})`);
+                    } catch (error) {
+                        console.warn(`SplashDashBackgroundManager: Failed to load ${corner.key} leaf:`, error);
+                    }
+                })
+            );
         } catch (error) {
             console.error('SplashDashBackgroundManager: Error loading corner leaves:', error);
         }
@@ -179,19 +176,24 @@ export class SplashDashBackgroundManager {
         console.log('SplashDashBackgroundManager: Loading water animation textures...');
         
         this.waterTextures = [];
-        
-        // Load all 40 frames (0000.png to 0039.png)
-        for (let i = 0; i < 40; i++) {
+
+        const texturePaths = Array.from({ length: 40 }, (_, i) => {
             const frameNumber = i.toString().padStart(4, '0');
-            const texturePath = `/images/splash-dash/water/${frameNumber}.png`;
-            
-            try {
-                const texture = await PIXI.Assets.load(texturePath);
-                this.waterTextures.push(texture);
-            } catch (error) {
-                console.error(`Failed to load water frame ${frameNumber}:`, error);
-            }
-        }
+            return `/images/splash-dash/water/${frameNumber}.png`;
+        });
+
+        const results = await Promise.all(
+            texturePaths.map(async (texturePath, index) => {
+                try {
+                    return await PIXI.Assets.load(texturePath);
+                } catch (error) {
+                    console.error(`Failed to load water frame ${index.toString().padStart(4, '0')}:`, error);
+                    return null;
+                }
+            })
+        );
+
+        this.waterTextures = results.filter((t): t is PIXI.Texture => t != null);
         
         console.log(`SplashDashBackgroundManager: Loaded ${this.waterTextures.length} water textures`);
     }

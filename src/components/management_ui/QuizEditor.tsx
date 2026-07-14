@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import QuizForm, { QuizFormHandle } from "@/components/management_ui/forms/QuizForm"
 import UploadForm from "@/components/management_ui/forms/UploadForm"
 import QuizSetupForm from "@/components/management_ui/forms/QuizSetupForm"
@@ -14,6 +14,19 @@ import { QuestionType } from '@/types/question_types'
 import QuizFinalizeForm from "@/components/management_ui/forms/QuizFinalizeForm"
 import { useCustomToast } from '@/components/ui/CustomToast'
 import { Sparkles, Upload, Pencil, ArrowRight, Check, ArrowLeft } from 'lucide-react'
+import {
+  clearWorkingDraft,
+  deleteQuizDraft,
+  draftHasContent,
+  getQuizDraft,
+  getWorkingDraftId,
+  upsertQuizDraft,
+  type QuizDraftSnapshot,
+} from '@/lib/quiz-draft-storage'
+import {
+  hasAnswersTooLongForSplashDash,
+  SPLASH_DASH_MAX_ANSWER_LENGTH,
+} from '@/lib/game-mode-eligibility'
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -76,6 +89,8 @@ export interface QuizSettingsData {
 interface QuizEditorProps {
   mode: 'create' | 'edit';
   quizId?: string;
+  /** Resume a specific local draft (from Profile → Drafts) */
+  resumeDraftId?: string;
   initialData?: {
     quizSetup: QuizSetupData;
     questions: Question[];
@@ -100,7 +115,7 @@ interface QuizEditorProps {
  * - 'create': For new quizzes
  * - 'edit': For updating existing quizzes (pre-populated with initial data)
  */
-export default function QuizEditor({ mode, quizId, initialData, onSuccess }: QuizEditorProps) {
+export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, onSuccess }: QuizEditorProps) {
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
@@ -142,19 +157,130 @@ export default function QuizEditor({ mode, quizId, initialData, onSuccess }: Qui
   // Current view in the content step (create, upload, or AI generation)
   const [contentView, setContentView] = useState<'create' | 'upload' | 'ai-generation'>('create')
 
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
+  const draftHydrated = useRef(false)
+  const workingDraftId = getWorkingDraftId(mode, quizId)
+
+  const buildDraftSnapshot = useCallback((): QuizDraftSnapshot => {
+    return {
+      id: resumeDraftId || workingDraftId,
+      mode,
+      quizId,
+      updatedAt: new Date().toISOString(),
+      creationStep,
+      contentView,
+      quizSetup: {
+        title: quizSetupData.title,
+        description: quizSetupData.description,
+        coverImageUrl: quizSetupData.coverImageUrl,
+        quizType: quizSetupData.quizType,
+        tags: quizSetupData.tags,
+      },
+      questions: questionsList.map((q) => ({
+        id: q.id,
+        question: q.question,
+        answers: q.answers,
+        correctAnswer: q.correctAnswer,
+        imageUrl: q.imageUrl,
+        imageMetadata: q.imageMetadata,
+        type: q.type,
+      })),
+      settings: quizSettings,
+    }
+  }, [
+    resumeDraftId,
+    workingDraftId,
+    mode,
+    quizId,
+    creationStep,
+    contentView,
+    quizSetupData,
+    questionsList,
+    quizSettings,
+  ])
+
+  const persistDraft = useCallback((reason: 'auto' | 'manual' | 'pre-submit' = 'auto') => {
+    const snapshot = buildDraftSnapshot()
+    if (!draftHasContent(snapshot) && reason === 'auto') return
+    upsertQuizDraft(snapshot)
+    setDraftSavedAt(snapshot.updatedAt)
+    if (reason === 'manual') {
+      addToast('Draft saved on this device.', { variant: 'success', position: 'top-center' })
+    }
+  }, [buildDraftSnapshot, addToast])
+
+  // Restore local draft once on mount (create, or edit with matching draft)
+  useEffect(() => {
+    if (draftHydrated.current) return
+    draftHydrated.current = true
+
+    const draftId = resumeDraftId || workingDraftId
+    const draft = getQuizDraft(draftId)
+    if (!draft || !draftHasContent(draft)) {
+      if (mode === 'edit' && initialData && (initialData.questions?.length ?? 0) > 0) {
+        setCreationStep('content')
+      }
+      return
+    }
+
+    // Don't overwrite a fresh edit load with a stale draft unless resuming explicitly
+    if (mode === 'edit' && !resumeDraftId && initialData) {
+      // Prefer newer local draft if user had unsaved edits
+      const draftTime = new Date(draft.updatedAt).getTime()
+      // Always restore edit drafts — they represent unsaved work
+      if (Number.isNaN(draftTime)) return
+    }
+
+    setQuizSetupData({
+      title: draft.quizSetup.title,
+      description: draft.quizSetup.description,
+      coverImageUrl: draft.quizSetup.coverImageUrl || '/images/placeholder.webp',
+      coverImageFile: null,
+      quizType: draft.quizSetup.quizType,
+      tags: draft.quizSetup.tags || [],
+    })
+    setQuestionsList(
+      draft.questions.map((q) => ({
+        ...q,
+        imageFile: null,
+        imageUrl: q.imageUrl || '/images/placeholder.webp',
+      }))
+    )
+    setQuizSettings(draft.settings || { theme: 'default', powerUps: [] })
+    setCreationStep(draft.creationStep || 'setup')
+    setContentView(draft.contentView || 'create')
+    setDraftSavedAt(draft.updatedAt)
+    addToast('Restored your saved draft from this device.', {
+      variant: 'info',
+      position: 'top-center',
+    })
+  }, [mode, quizId, resumeDraftId, workingDraftId, initialData, addToast])
+
+  // Debounced autosave — keeps partial work if publish fails or the tab closes
+  useEffect(() => {
+    if (!draftHydrated.current) return
+    const timer = window.setTimeout(() => {
+      persistDraft('auto')
+    }, 800)
+    return () => window.clearTimeout(timer)
+  }, [persistDraft])
+
+  // Warn before leaving with unsaved/in-progress work
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!draftHasContent(buildDraftSnapshot())) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [buildDraftSnapshot])
+
   // ============================================================================
   // EFFECTS & INITIALIZATION
   // ============================================================================
   
-  /**
-   * Initialize the editor based on mode and initial data
-   * If editing an existing quiz with questions, start at the content step
-   */
-  useEffect(() => {
-    if (mode === 'edit' && initialData && questionsList.length > 0) {
-      setCreationStep('content');
-    }
-  }, [mode, initialData, questionsList.length]);
+  // (edit-mode step init moved into draft hydrate effect above)
 
   // ============================================================================
   // EVENT HANDLERS
@@ -571,6 +697,8 @@ export default function QuizEditor({ mode, quizId, initialData, onSuccess }: Qui
 
     const { quizSetup, questions, settings } = finalizedData;
     setQuizSettings(settings);
+    // Snapshot immediately so a failed publish never loses the finished quiz
+    persistDraft('pre-submit');
 
     // Download and store Pixabay images before submitting
     const updatedQuestions = await downloadPixabayImages(questions);
@@ -651,6 +779,12 @@ export default function QuizEditor({ mode, quizId, initialData, onSuccess }: Qui
       
       const result = await response.json();
       console.log(`Quiz ${mode === 'create' ? 'created' : 'updated'} successfully:`, result);
+
+      clearWorkingDraft(mode, quizId)
+      if (resumeDraftId) {
+        deleteQuizDraft(resumeDraftId)
+      }
+      setDraftSavedAt(null)
       
       const successMessage = mode === 'create' ? 'Quiz Published Successfully!' : 'Quiz Updated Successfully!';
       addToast(successMessage, { variant: 'success', position: 'top-center' });
@@ -661,7 +795,11 @@ export default function QuizEditor({ mode, quizId, initialData, onSuccess }: Qui
       }
     } catch (error) {
       console.error(`Failed to ${mode === 'create' ? 'submit' : 'update'} quiz:`, error);
-      addToast(`Error ${mode === 'create' ? 'submitting' : 'updating'} quiz: ${error instanceof Error ? error.message : 'Unknown error'}`, { variant: 'error', position: 'top-center' });
+      persistDraft('pre-submit');
+      addToast(
+        `Error ${mode === 'create' ? 'submitting' : 'updating'} quiz: ${error instanceof Error ? error.message : 'Unknown error'}. Your draft was kept on this device.`,
+        { variant: 'error', position: 'top-center' }
+      );
     } 
   };
 
@@ -766,10 +904,24 @@ export default function QuizEditor({ mode, quizId, initialData, onSuccess }: Qui
          * Main area for adding/editing questions and quiz content
          * ======================================================================== */}
         { creationStep === 'content' && (
-          <div className="max-w-screen-xl w-full flex flex-col lg:flex-row flex-grow gap-4 mt-6">
-            
+          <div className="max-w-screen-xl w-full flex flex-col flex-grow gap-4 mt-6">
+            {hasAnswersTooLongForSplashDash(questionsList) && (
+              <div
+                role="status"
+                className="w-full rounded-lg border-2 border-[#1E5167] bg-amber-50 px-4 py-3 text-[--text-color] shadow-[3px_3px_0px_0px_#1E5167] grandstander"
+              >
+                <p className="font-bold text-base mb-0.5">Long answers limit game modes</p>
+                <p className="text-sm inclusive-sans font-normal text-slate-700">
+                  Keep each answer at {SPLASH_DASH_MAX_ANSWER_LENGTH} characters or fewer if you want
+                  this quiz playable in Splash Dash as well as Score Attack. Longer answers still
+                  work in Score Attack.
+                </p>
+              </div>
+            )}
+
+            <div className="flex flex-col lg:flex-row flex-grow gap-4">
             {/* SIDEBAR - Quiz Information and Navigation */}
-            <div className={`basis-1/4 flex flex-col h-full gap-2 grandstander text-[--text-color] bg-white p-4 items-center align-middle border rounded-lg border-[--border-dark] shadow-[4px_4px_0px_0px_var(--border-dark)]`}>
+            <div className={`basis-1/4 flex flex-col h-full min-h-[420px] gap-2 grandstander text-[--text-color] bg-white p-4 items-center align-middle border rounded-lg border-[--border-dark] shadow-[4px_4px_0px_0px_var(--border-dark)]`}>
               <div className='flex flex-row lg:flex-col gap-2 w-full'>
                 {/* Quiz Title */}
                 <div className='flex flex-col w-full justify-center lg:items-center gap-0 '>
@@ -826,6 +978,54 @@ export default function QuizEditor({ mode, quizId, initialData, onSuccess }: Qui
                   onClick={handleGoToPublishStep}>
                     {mode === 'create' ? 'Publish Quiz' : 'Update Quiz'} <ArrowRight className="-mt-0.5" size={20} /> 
                 </Button>
+              </div>
+
+              {/* Draft controls — use leftover sidebar height without cluttering the main editor */}
+              <div className="mt-auto w-full pt-4 border-t border-slate-200 space-y-2">
+                <p className="text-xs text-center text-slate-500 inclusive-sans px-1">
+                  {draftSavedAt
+                    ? `Last saved ${new Date(draftSavedAt).toLocaleString([], {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}`
+                    : 'Edits autosave on this device'}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full grandstander border-2 border-[#1E5167] text-[#114257]"
+                  onClick={() => persistDraft('manual')}
+                >
+                  Save draft
+                </Button>
+                {draftSavedAt ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full grandstander text-red-600"
+                    onClick={() => {
+                      clearWorkingDraft(mode, quizId)
+                      if (resumeDraftId) deleteQuizDraft(resumeDraftId)
+                      setDraftSavedAt(null)
+                      setQuizSetupData({
+                        title: '',
+                        description: '',
+                        coverImageUrl: '/images/placeholder.webp',
+                        coverImageFile: null,
+                        quizType: QuestionType.MULTIPLE_CHOICE,
+                        tags: [],
+                      })
+                      setQuestionsList([])
+                      setQuizSettings({ theme: 'default', powerUps: [] })
+                      setCreationStep('setup')
+                      addToast('Draft discarded.', { variant: 'info', position: 'top-center' })
+                    }}
+                  >
+                    Discard draft
+                  </Button>
+                ) : null}
               </div>
             </div>
 
@@ -898,6 +1098,7 @@ export default function QuizEditor({ mode, quizId, initialData, onSuccess }: Qui
                   />
                 )}
               </div>
+            </div>
             </div>
           </div>
         )}

@@ -85,6 +85,8 @@ export class PixiEngine {
   private initialized = false;
   /** Flag indicating if the engine is currently in the process of initializing. */
   private initializing = false;
+  /** Set when destroy() runs so in-flight init can abort safely after awaits. */
+  private destroyRequested = false;
   /** The active game configuration object, set during init. */
   private config: GameConfig | null = null;
   /** The currently active game instance (extends BaseGame). */
@@ -162,6 +164,7 @@ export class PixiEngine {
     
     
     this.initializing = true;
+    this.destroyRequested = false;
     
     console.log('Initializing PixiEngine with game config:', config?.gameMode?.name || 'unknown');
     
@@ -170,28 +173,50 @@ export class PixiEngine {
       this.initializing = false;
       throw new Error('PixiEngine.init: config parameter is required');
     }
-    
-    this.config = config;
+
+    // Keep a local reference — destroy() may clear this.config during async gaps (React Strict Mode / remount).
+    const activeConfig = config;
+    this.config = activeConfig;
     
     try {
       // --- Initialize the core PixiApplication FIRST ---
       await this.app.init();
+      if (this.destroyRequested) {
+        console.warn('PixiEngine: init aborted after PixiApplication.init (destroy requested).');
+        return;
+      }
       console.log('PixiApplication core initialized.');
       // -------------------------------------------------
 
       // --- Initialize PixiJS Assets EARLY (Requires PixiApplication) ---
       console.log('Initializing PixiJS Assets...');
       let bundleLoadPromise: Promise<unknown> = Promise.resolve(); 
-      if (this.config && this.config.assets) {
-         const manifest = { bundles: this.config.assets.bundles };
+      if (activeConfig.assets) {
+         const manifest = { bundles: activeConfig.assets.bundles };
          await Assets.init({
-            basePath: this.config.assets.basePath,
+            basePath: activeConfig.assets.basePath,
             manifest: manifest
          });
+         if (this.destroyRequested) {
+           console.warn('PixiEngine: init aborted after Assets.init (destroy requested).');
+           return;
+         }
          console.log('PixiJS Assets initialized.');
          
-         if (this.config.assets.bundles && this.config.assets.bundles.length > 0) {
-             const bundleNames = this.config.assets.bundles.map(b => b.name);
+         if (activeConfig.assets.bundles && activeConfig.assets.bundles.length > 0) {
+             // If Assets was already initialized by setup warmup, init() no-ops and
+             // the manifest was skipped — register bundles explicitly.
+             for (const bundle of activeConfig.assets.bundles) {
+               try {
+                 Assets.addBundle(
+                   bundle.name,
+                   bundle.assets.map((a) => ({ alias: a.key, src: a.src, data: a.data }))
+                 );
+               } catch (err) {
+                 console.warn(`PixiEngine: addBundle(${bundle.name}) note:`, err);
+               }
+             }
+             const bundleNames = activeConfig.assets.bundles.map(b => b.name);
              console.log('Starting background loading of asset bundles:', bundleNames);
              bundleLoadPromise = Promise.all(bundleNames.map(bundleName =>
                  Assets.loadBundle(bundleName)
@@ -207,40 +232,38 @@ export class PixiEngine {
       } else {
           console.warn('PixiEngine: No assets configuration found in GameConfig.');
           await Assets.init({});
+          if (this.destroyRequested) {
+            console.warn('PixiEngine: init aborted after empty Assets.init (destroy requested).');
+            return;
+          }
           console.log('PixiJS Assets initialized (no config).');
       }
       // --- End Asset Init/Start Loading ---
 
       // --- Initialize Managers (Now safe to access this.app) ---
       console.log('Initializing GameConfig-dependent managers...');
-      console.log('PixiEngine: this.config at manager init:', this.config ? 'present' : 'null');
 
       // ControlsManager init
-      if (this.config && this.config.controls) {
+      if (activeConfig.controls) {
         console.log('PixiEngine: Initializing ControlsManager with config');
-        this.controlsManager.init(this.config.controls, this.eventBus);
+        this.controlsManager.init(activeConfig.controls, this.eventBus);
         this.controlsManager.enable(); 
       } else {
         console.warn("PixiEngine: No controls configuration found in GameConfig.");
       }
       // ScoringManager init
-      if (this.config) {
-        console.log('PixiEngine: Initializing ScoringManager and PowerUpManager with config');
-        this.scoringManager.init(this.config.teams, this.config.gameMode);
-        // PowerUpManager init
-        this.powerUpManager = new PowerUpManager(this.eventBus, this.config);
-      } else {
-        console.error("PixiEngine: this.config is null - cannot initialize managers");
-        throw new Error("PixiEngine: GameConfig is required but was not provided");
-      }
+      console.log('PixiEngine: Initializing ScoringManager and PowerUpManager with config');
+      this.scoringManager.init(activeConfig.teams, activeConfig.gameMode);
+      // PowerUpManager init
+      this.powerUpManager = new PowerUpManager(this.eventBus, activeConfig);
       // Create AudioManager 
       const themeConfig = getThemeConfig('default');
       this.audioManager = new AudioManager(
         this.eventBus, 
         this.storageManager, 
         themeConfig.soundsBasePath, 
-        this.config.initialMusicMuted, 
-        this.config.initialSfxMuted   
+        activeConfig.initialMusicMuted, 
+        activeConfig.initialSfxMuted   
       );
       // Register Default Sounds 
       const defaultSounds: AudioConfig[] = [
@@ -270,7 +293,7 @@ export class PixiEngine {
           this.audioManager.setSfxMuted(muted);
       });
       // RuleEngine init (needs other managers)
-      this.ruleEngine = new RuleEngine(this.eventBus, this.config, { 
+      this.ruleEngine = new RuleEngine(this.eventBus, activeConfig, { 
           timerManager: this.timerManager,
           gameStateManager: this.gameStateManager,
           scoringManager: this.scoringManager,
@@ -278,6 +301,11 @@ export class PixiEngine {
           audioManager: this.audioManager 
       });
       // --- End Manager Init ---
+
+      if (this.destroyRequested) {
+        console.warn('PixiEngine: init aborted after manager setup (destroy requested).');
+        return;
+      }
 
       // --- Emit Engine Ready Event ---
       console.log('PixiEngine: Emitting ENGINE_READY_FOR_GAME');
@@ -288,13 +316,20 @@ export class PixiEngine {
       console.log('Creating game instance...');
       // Now create managers object AFTER all managers are initialized
       const managers = this.getAllManagers(); 
-      this.currentGame = gameFactory(this.config, managers);
+      this.currentGame = gameFactory(activeConfig, managers);
       this.app.getStage().addChild(this.currentGame.view);
 
       console.log('Initializing game...');
       // Pass the bundle loading promise 
-      await this.currentGame.init(bundleLoadPromise); 
+      await this.currentGame.init(bundleLoadPromise);
+      if (this.destroyRequested) {
+        console.warn('PixiEngine: init aborted after game.init (destroy requested).');
+        return;
+      }
       console.log('Game initialization complete.');
+      // Begin gameplay (sets GameState.STARTED — required for Splash Dash pickups, etc.)
+      this.currentGame.start();
+      console.log('Game start() complete.');
       // ---------------------------------------
 
       // Add update listener with null check
@@ -306,9 +341,14 @@ export class PixiEngine {
       }
 
       this.initialized = true;
+      this.config = activeConfig;
       console.log('PixiEngine initialization complete.');
       
     } catch (error) {
+       if (this.destroyRequested) {
+         console.warn('PixiEngine: init ended after destroy was requested.', error);
+         return;
+       }
        console.error('Error during PixiEngine initialization:', error);
        await this.destroy(); 
        throw error; 
@@ -438,6 +478,8 @@ export class PixiEngine {
    * @returns {Promise<void>} A promise that resolves when destruction is complete.
    */
   public async destroy(): Promise<void> {
+    this.destroyRequested = true;
+
     if (!this.initialized && !this.app) {
         console.warn("PixiEngine already destroyed or never initialized.");
         return;

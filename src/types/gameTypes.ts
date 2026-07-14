@@ -12,9 +12,10 @@ export interface QuizListItem {
   authorId: string;
   createdAt: Date;
   questions: Question[];
-  likes: number;
+  likedByMe?: boolean;
+  favoritedByMe?: boolean;
   level?: string;
-  defaultSettings?: QuizDefaultSettings; // Quiz default settings
+  defaultSettings?: QuizDefaultSettings;
 }
 
 export interface Question {
@@ -42,6 +43,15 @@ export interface PowerupsData {
     comeback: boolean;
 }
 
+/** Splash Dash pickup power-ups (setup → GameConfig). */
+export interface SplashPowerupsData {
+  enabled: boolean;
+  /** 30 | 60 | 120 */
+  intervalSeconds: 30 | 60 | 120;
+  radioactive: boolean;
+  immunity: boolean;
+}
+
 export interface QuizDefaultSettings {
   theme: string;
   powerUps: string[];
@@ -62,6 +72,7 @@ export interface GameSetupData {
   intensityTimeLimit: number;
   limitedGuesses: number | null;
   powerups: PowerupsData;
+  splashPowerups?: SplashPowerupsData;
 }
 
 export interface PlayerScoreData {

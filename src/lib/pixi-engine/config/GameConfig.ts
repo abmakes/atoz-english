@@ -275,6 +275,14 @@ export interface GameConfig {
    */
   intensityTimeLimit: number;
 
+  /** Splash Dash floating pickup power-ups (ignored by Score Attack). */
+  splashPowerups?: {
+    enabled: boolean;
+    intervalSeconds: 30 | 60 | 120;
+    radioactive: boolean;
+    immunity: boolean;
+  };
+
   /** Audio configuration */
   audio?: AudioConfiguration;
   

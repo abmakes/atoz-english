@@ -2,7 +2,7 @@ import * as PIXI from 'pixi.js'
 import { QuestionData } from '@/types'
 import { QuestionSequencer } from '@/lib/pixi-engine/game/QuestionSequencer'
 import { QuestionHandlingConfig } from '@/lib/pixi-engine/config/GameConfig'
-import { AssetLoader } from '@/lib/pixi-engine/assets/AssetLoader'
+import { isUsableQuestionMedia } from '@/lib/pixi-engine/assets/AssetLoader'
 
 /**
  * Shared quiz data loading, media preload, and question sequencing
@@ -202,8 +202,15 @@ export class BaseQuizDataManager {
       const loadPromises = uniqueImageUrls.map(async (url) => {
         try {
           await PIXI.Assets.load(url)
+          const cached = PIXI.Assets.get(url)
+          if (!isUsableQuestionMedia(cached)) {
+            console.error(
+              `${this.logPrefix}: Loaded ${url} but cache entry is not displayable.`,
+              (cached as { constructor?: { name?: string } })?.constructor?.name
+            )
+          }
         } catch (error) {
-          console.warn(`${this.logPrefix}: Failed to load image ${url}:`, error)
+          console.error(`${this.logPrefix}: Failed to load image ${url}:`, error)
         }
       })
 

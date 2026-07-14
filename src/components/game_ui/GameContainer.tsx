@@ -80,6 +80,11 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
   const pixiMountPointRef = useRef<HTMLDivElement>(null);
   const setSelectedQuiz = useGameStore((state) => state.setSelectedQuiz);
 
+  const createGameInstance = useCallback(
+    (config: GameConfig, managers: PixiEngineManagers) => gameFactory(config, managers, gameSlug),
+    [gameSlug]
+  );
+
   useEffect(() => {
       setSelectedQuiz(quizId);
   }, [quizId, setSelectedQuiz]);
@@ -96,6 +101,11 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
           router.push('/games');
           return;
       }
+
+      // Fire-and-forget play count (once per browser session)
+      void import('@/lib/record-quiz-play').then(({ recordQuizPlay }) => {
+        void recordQuizPlay(quizId);
+      });
 
       const gameMode: ScoreModeConfig = {
           type: 'score',
@@ -271,6 +281,10 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
                       {
                           key: 'crate_5_4',
                           src: '/images/splash-dash/crate_5_4.png'
+                      },
+                      {
+                          key: 'crate_square',
+                          src: '/images/splash-dash/crate_square.png'
                       }
                   ]
               }
@@ -316,6 +330,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
           gameMode: gameMode,
           powerups: powerupConfig,
           intensityTimeLimit: setupData.intensityTimeLimit,
+          splashPowerups: setupData.splashPowerups,
           rules: ruleConfig, // Assign the RuleConfig object
           controls: controlConfig, // Assign the ControlsConfig object
           assets: assetConfig,
@@ -381,27 +396,33 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
 
   /**
    * Callback triggered when the user chooses to play again from the game over screen.
-   * Resets state and navigates back to the game selection or setup.
+   * Returns to setup for the same quiz/mode so they can rematch without leaving the route.
    */
   const handlePlayAgain = useCallback(() => {
     setGameConfig(null);
     setFinalScores([]);
     setWinnerName(undefined);
-    router.push('/games');
-    setThemeClassName(''); // Reset theme class name to default (empty string)
-  }, [router]);
+    setCelebrationImage(undefined);
+    setThemeClassName('');
+    setCurrentView('setup');
+  }, []);
 
   /**
    * Callback triggered when the user chooses to exit the game (from game over or during play).
    */
   const handleExit = useCallback(() => {
     console.log("GameContainer: Exiting game.");
-    handlePlayAgain();
-  }, [handlePlayAgain]);
+    setGameConfig(null);
+    setFinalScores([]);
+    setWinnerName(undefined);
+    setCelebrationImage(undefined);
+    setThemeClassName('');
+    router.push(`/games/${quizId}`);
+  }, [router, quizId]);
 
   const handleBackFromSetup = useCallback(() => {
-      router.push('/games');
-  }, [router]);
+      router.push(`/games/${quizId}`);
+  }, [router, quizId]);
 
   const renderView = () => {
     switch (currentView) {
@@ -425,7 +446,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
                     onGameOver={handleGameOver}
                     onExit={handleExit}
                     pixiMountPointRef={pixiMountPointRef as React.RefObject<HTMLDivElement>}
-                    gameFactory={(config, managers) => gameFactory(config, managers, gameSlug)}
+                    gameFactory={createGameInstance}
                 />
             </>
         );
