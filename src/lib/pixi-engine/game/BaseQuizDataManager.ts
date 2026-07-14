@@ -2,7 +2,10 @@ import * as PIXI from 'pixi.js'
 import { QuestionData } from '@/types'
 import { QuestionSequencer } from '@/lib/pixi-engine/game/QuestionSequencer'
 import { QuestionHandlingConfig } from '@/lib/pixi-engine/config/GameConfig'
-import { isUsableQuestionMedia } from '@/lib/pixi-engine/assets/AssetLoader'
+import {
+  AssetLoader,
+  isUsableQuestionMedia,
+} from '@/lib/pixi-engine/assets/AssetLoader'
 
 /**
  * Shared quiz data loading, media preload, and question sequencing
