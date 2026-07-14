@@ -1,5 +1,7 @@
 # API Architecture Guide
 
+> Hub: [CONTEXT.md](../../CONTEXT.md)
+
 This document outlines the best practices and structure for our Next.js API routes.
 
 ## Key Components

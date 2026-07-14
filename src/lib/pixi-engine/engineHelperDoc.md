@@ -1,5 +1,7 @@
 # PixiJS Game Engine - Architecture Overview & Context
 
+> Hub: [CONTEXT.md](../../../CONTEXT.md) · Startup flow: [GAME_STARTUP_FLOW.mdc](../../../.cursor/rules/GAME_STARTUP_FLOW.mdc)
+
 This document provides a high-level overview of the PixiJS game engine architecture used in this project. Its purpose is to help understand the roles of different components and how they interact, aiding in debugging and expansion without needing to read the entire codebase for every query.
 
 ## Core Concepts

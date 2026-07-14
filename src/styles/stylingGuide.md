@@ -1,5 +1,7 @@
 # Styling and Theming Guide
 
+> Hub: [CONTEXT.md](../../CONTEXT.md) · Doc updates: [DOCUMENTATION_MAINTENANCE.md](../../project_docs/DOCUMENTATION_MAINTENANCE.md)
+
 This document outlines the styling approach used in the application, combining Tailwind CSS, global CSS variables, CSS Modules, and direct PixiJS styling configuration. Understanding this structure helps determine where to make changes when modifying the visual appearance of different parts of the application.
 
 ## Core Styling Technologies

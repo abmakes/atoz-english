@@ -1,8 +1,9 @@
 ---
-globs: src/lib/**/*
+description: Canonical game startup and GameConfig handoff (Setup → Engine → BaseGame)
+globs: src/lib/**/*,src/components/game_ui/**/*
 alwaysApply: false
 ---
-Reference this document in any changes that are made to games or files that are dependent upon these services
+Reference this document in any changes that are made to games or files that are dependent upon these services. Hub: CONTEXT.md
 
 # Game Startup Flow Documentation
 

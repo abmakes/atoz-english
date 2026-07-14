@@ -1,5 +1,7 @@
 # SplashDash Game Integration
 
+> Hub: [CONTEXT.md](../../../../CONTEXT.md) · Mechanics: [SPLASH_DASH_MECHANICS.md](./SPLASH_DASH_MECHANICS.md)
+
 ## Overview
 
 The SplashDash game is a two-player competitive quiz game where players control capybara characters swimming through water to reach correct answer circles. This game integrates with the existing PixiJS engine architecture.

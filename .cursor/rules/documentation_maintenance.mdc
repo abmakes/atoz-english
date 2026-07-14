@@ -1,0 +1,14 @@
+---
+description: After commits or architectural changes — update canon docs via DOCUMENTATION_MAINTENANCE checklist
+alwaysApply: false
+---
+
+# Documentation maintenance
+
+When the user asks to commit, or when you have finished a structural change (engine, games, API, themes, assets, stack):
+
+1. Follow [project_docs/DOCUMENTATION_MAINTENANCE.md](mdc:project_docs/DOCUMENTATION_MAINTENANCE.md).
+2. Start from [CONTEXT.md](mdc:CONTEXT.md); fix links/stack/folders if stale.
+3. Edit the **canonical** deep doc for the touched area — do not add a new parallel architecture essay.
+4. Add recurring pitfalls to [project_docs/lessons-learned.md](mdc:project_docs/lessons-learned.md).
+5. Never reintroduce Taskmaster, Jest, `@pixi/react`, or Phaser planning docs.

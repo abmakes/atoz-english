@@ -1,0 +1,19 @@
+---
+description: AtoZ Pixi project identity — always read CONTEXT.md hub before structural work
+alwaysApply: true
+---
+
+# Project context
+
+- This is **AtoZ Pixi**: Next.js 15 + React 19 + **PixiJS v8** classroom quiz games (not `@pixi/react`, not Phaser).
+- **Hub:** [CONTEXT.md](mdc:CONTEXT.md) — stack, directory map, links to all canon docs.
+- Before changing engine, games, themes, APIs, or folder layout: open `CONTEXT.md`, then the linked canon for that area.
+- After structural commits: follow [DOCUMENTATION_MAINTENANCE.md](mdc:project_docs/DOCUMENTATION_MAINTENANCE.md).
+- Tests are **Vitest** in `/tests`. Do not introduce Jest or Taskmaster workflows.
+
+## Pixi non-negotiables
+
+- Theme colors/fonts for canvas come from `src/lib/themes.ts`, not CSS variables.
+- Respect manager init order in [GAME_STARTUP_FLOW.mdc](mdc:.cursor/rules/GAME_STARTUP_FLOW.mdc); RuleEngine last.
+- One `PixiEngine` lifecycle in `GameplayView`; destroy on unmount.
+- Prefer `PIXI.Assets.unload` for Assets-managed textures; score via RuleEngine events.
