@@ -1,5 +1,7 @@
 # Public Assets
 
+> Hub: [CONTEXT.md](../CONTEXT.md)
+
 Game and UI assets live under `public/` and are served statically by Next.js.
 
 ## Strategy

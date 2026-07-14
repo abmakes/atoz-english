@@ -86,10 +86,18 @@ tests/                  Vitest unit tests
 
 ## Docs
 
-- [public/ASSETS.md](public/ASSETS.md) — asset strategy
-- [AI_QUIZ_GENERATOR_SETUP.md](AI_QUIZ_GENERATOR_SETUP.md) — Gemini setup
-- [src/lib/pixi-engine/pixi-structure-doc.md](src/lib/pixi-engine/pixi-structure-doc.md) — engine architecture
-- [src/lib/pixi-games/splash-dash/README.md](src/lib/pixi-games/splash-dash/README.md) — Splash Dash
+**Start here:** [CONTEXT.md](CONTEXT.md) — stack snapshot, directory map, and links to all canon docs.
+
+| Doc | Purpose |
+|-----|---------|
+| [CONTEXT.md](CONTEXT.md) | Project hub for agents/contributors |
+| [project_docs/DOCUMENTATION_MAINTENANCE.md](project_docs/DOCUMENTATION_MAINTENANCE.md) | How to update docs after commits |
+| [project_docs/lessons-learned.md](project_docs/lessons-learned.md) | Pixi / TS hard lessons |
+| [project_docs/game-development-guide.md](project_docs/game-development-guide.md) | Adding a new game |
+| [src/lib/pixi-engine/engineHelperDoc.md](src/lib/pixi-engine/engineHelperDoc.md) | Engine architecture |
+| [src/styles/stylingGuide.md](src/styles/stylingGuide.md) | React + Pixi theming |
+| [public/ASSETS.md](public/ASSETS.md) | Asset strategy |
+| [AI_QUIZ_GENERATOR_SETUP.md](AI_QUIZ_GENERATOR_SETUP.md) | Gemini setup |
 
 ## License
 

@@ -1,6 +1,6 @@
 ---
-description: 
-globs: 
+description: Prefer explicit TypeScript interfaces over index signatures for public event/config maps
+globs: src/lib/pixi-engine/**/*.ts,src/types/**/*.ts
 alwaysApply: false
 ---
 - **Prefer Explicit Properties over Index Signatures:**

@@ -1,5 +1,7 @@
 # Multiple Choice Game - Application Flow and Component Purposes
 
+> Hub: [CONTEXT.md](../../../../CONTEXT.md) · Startup: [GAME_STARTUP_FLOW.mdc](../../../../.cursor/rules/GAME_STARTUP_FLOW.mdc)
+
 This document outlines the typical execution flow and the responsibilities of the key files involved in the Multiple Choice PixiJS game application.
 
 ## Overall Application Flow
