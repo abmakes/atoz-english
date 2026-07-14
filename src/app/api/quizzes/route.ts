@@ -297,12 +297,12 @@ export async function POST(request: Request) {
         imageUrl: finalQuizImageUrl,
         quizType: validatedData.quizType,
         tags: validatedData.tags || [],
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         statistics: validatedData.statistics
-          ? (validatedData.statistics as any)
+          ? (validatedData.statistics as Prisma.InputJsonValue)
           : emptyStatisticsJson(),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        defaultSettings: validatedData.defaultSettings ? validatedData.defaultSettings as any : Prisma.JsonNull,
+        defaultSettings: validatedData.defaultSettings
+          ? (validatedData.defaultSettings as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
         authorId: validatedData.authorId ?? userId,
         questions: {
           create: questionsToCreate,

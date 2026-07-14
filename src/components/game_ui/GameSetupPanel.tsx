@@ -123,7 +123,6 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
 
   const [assetsReady, setAssetsReady] = useState(false);
   const [assetsProgress, setAssetsProgress] = useState(0);
-  const [assetsStatus, setAssetsStatus] = useState('Loading game assets…');
 
   // --- State ---
   const [teams, setTeams] = useState<LocalTeam[]>([
@@ -212,7 +211,6 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
     const runWarmup = async () => {
       setAssetsReady(false);
       setAssetsProgress(0);
-      setAssetsStatus('Loading game assets…');
 
       try {
         let imageUrls: string[] = [];
@@ -235,11 +233,6 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
           onProgress: (p) => {
             if (!cancelled) {
               setAssetsProgress(p.fraction);
-              setAssetsStatus(
-                p.total === 0
-                  ? 'Ready'
-                  : `Loading assets… ${Math.round(p.fraction * 100)}%`
-              );
             }
           },
         });
@@ -248,23 +241,16 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({ onStartGame, onGoBack, 
 
         if (result.ready) {
           setAssetsReady(true);
-          setAssetsStatus('Assets ready');
         } else {
           // Allow play with warning — question images may still load in-game if cache partially filled
           console.warn('GameSetupPanel: Some assets failed to warm:', result.failed);
           setAssetsReady(true);
-          setAssetsStatus(
-            result.failed.length
-              ? `Ready (some assets failed: ${result.failed.length})`
-              : 'Assets ready'
-          );
         }
       } catch (error) {
         console.error('GameSetupPanel: Asset warmup error:', error);
         if (!cancelled) {
           // Don't permanently block Play on warmup errors
           setAssetsReady(true);
-          setAssetsStatus('Ready (warmup error — game will retry loads)');
         }
       }
     };
