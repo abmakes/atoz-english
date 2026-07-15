@@ -181,15 +181,42 @@ export class TransitionScreen extends PIXI.Container {
       this.panelBackground.y = 0;
   }
 
-  private _centerMessageText(): void {
-      // Position team turn message in center of screen
+  private _centerMessageText(powerupRoll = false): void {
       this.messageText.style.wordWrapWidth = this.panelWidth * 0.9;
-      this.messageText.position.set(this.app.screen.width / 2, this.app.screen.height * 0.4); // Center
+      if (powerupRoll) {
+        // Top band — keep clear of the fully visible spinner
+        this.messageText.style.fontSize = 36;
+        this.messageText.position.set(this.app.screen.width / 2, this.app.screen.height * 0.12);
+      } else {
+        this.messageText.style.fontSize = 64;
+        this.messageText.position.set(this.app.screen.width / 2, this.app.screen.height * 0.4);
+      }
   }
 
-  private _centerQuestionCounterText(): void {
-      // Position question counter higher up to provide better spacing when powerups are shown
-      this.questionCounterText.position.set(this.app.screen.width / 2, this.app.screen.height * 0.25); // Higher up for better balance
+  private _centerQuestionCounterText(powerupRoll = false): void {
+      if (powerupRoll) {
+        this.questionCounterText.position.set(
+          this.app.screen.width / 2,
+          this.app.screen.height * 0.06
+        );
+      } else {
+        this.questionCounterText.position.set(
+          this.app.screen.width / 2,
+          this.app.screen.height * 0.25
+        );
+      }
+  }
+
+  /** Keep turn + counter in the top band while the spinner owns the center. */
+  private _layoutForPowerupRoll(): void {
+    this._centerMessageText(true);
+    this._centerQuestionCounterText(true);
+    this.messageText.zIndex = 10;
+    this.questionCounterText.zIndex = 10;
+    if (this.powerupSpinWheel) {
+      this.powerupSpinWheel.zIndex = 50;
+    }
+    this.sortableChildren = true;
   }
 
   private _centerQuestionText(): void {
@@ -435,19 +462,16 @@ export class TransitionScreen extends PIXI.Container {
         }
       },
       onSpinComplete: () => {
-        console.log('[TransitionScreen] Spin wheel completed');
-        setTimeout(() => {
-          this.hide();
-          if (this._manualHideResolve) {
-            this._manualHideResolve();
-            this._manualHideResolve = null;
-          }
-        }, 1500);
+        // Wheel already held the result card ~2.5–3s — dismiss immediately
+        console.log('[TransitionScreen] Spin wheel reveal complete — hiding');
+        this.hide();
       },
     });
 
     this.powerupSpinWheel.initialize(this.panelWidth, this.panelHeight);
+    this.powerupSpinWheel.zIndex = 50;
     this.addChild(this.powerupSpinWheel);
+    this._layoutForPowerupRoll();
   }
 
   /**
@@ -459,12 +483,14 @@ export class TransitionScreen extends PIXI.Container {
     console.log(`[TransitionScreen] show() called. Config:`, config);
     this.currentConfig = config;
 
+    const willRollPowerups = Boolean(config.triggerPowerupRoll);
+
     // *** Calculate dimensions and position elements HERE ***
     this._updatePanelDimensions();
     this._drawPanelBackground();
     this._centerPanel();
-    this._centerMessageText();
-    this._centerQuestionCounterText();
+    this._centerMessageText(willRollPowerups);
+    this._centerQuestionCounterText(willRollPowerups);
     this._centerQuestionText();
     this._centerCountdownText();
     this._centerGoText();
@@ -524,6 +550,9 @@ export class TransitionScreen extends PIXI.Container {
             powerupRollActive = true;
         } else {
              console.log("[TransitionScreen] No selectable powerups available for this mode. Skipping roll.");
+             // No wheel — restore normal mid-screen turn layout
+             this._centerMessageText(false);
+             this._centerQuestionCounterText(false);
         }
     }
 
@@ -600,11 +629,12 @@ export class TransitionScreen extends PIXI.Container {
    * Adjusts layout when the screen resizes.
    */
   public onResize(): void { // Now doesn't need parameters
+    const powerupRoll = Boolean(this.powerupSpinWheel);
     this._updatePanelDimensions();
     this._drawPanelBackground();
     this._centerPanel();
-    this._centerMessageText();
-    this._centerQuestionCounterText();
+    this._centerMessageText(powerupRoll);
+    this._centerQuestionCounterText(powerupRoll);
     this._centerQuestionText();
     this._centerCountdownText();
     this._centerGoText();
@@ -627,6 +657,7 @@ export class TransitionScreen extends PIXI.Container {
     // Resize spin wheel if it exists
     if (this.powerupSpinWheel) {
       this.powerupSpinWheel.resize(this.panelWidth, this.panelHeight);
+      this._layoutForPowerupRoll();
     }
   }
 

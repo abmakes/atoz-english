@@ -24,15 +24,19 @@ interface WheelSegment {
 }
 
 const TWO_PI = Math.PI * 2;
+const WEDGE_FLASH_MS = 400;
+const RESULT_HOLD_MS = 2800;
 
 /**
  * Spin wheel for powerup selection.
  * A fixed pointer at the top of the wheel indicates the winning segment when spin stops.
+ * After stop: brief wedge flash, then a centered result card for classroom visibility.
  */
 export class PowerupSpinWheel extends PIXI.Container {
   private wheel: PIXI.Container;
   private pointer: PIXI.Graphics;
   private sparkleContainer: PIXI.Container;
+  private overlayContainer: PIXI.Container;
   private sparkles: Sparkle[] = [];
   private powerups: SelectablePowerupInfo[];
   private preselectedPowerupId?: string | null;
@@ -43,6 +47,7 @@ export class PowerupSpinWheel extends PIXI.Container {
   private spinning = false;
   private currentRotation = 0;
   private hasReportedSelection = false;
+  private revealInProgress = false;
 
   /** Time-based spin (delta is milliseconds). */
   private spinElapsedMs = 0;
@@ -51,6 +56,8 @@ export class PowerupSpinWheel extends PIXI.Container {
   private spinEndRotation = 0;
 
   private confettiContainer: PIXI.Container | null = null;
+  private wedgeHighlight: PIXI.Graphics | null = null;
+  private resultCard: PIXI.Container | null = null;
 
   private centerX = 0;
   private centerY = 0;
@@ -71,14 +78,17 @@ export class PowerupSpinWheel extends PIXI.Container {
     this.onSpinComplete = config.onSpinComplete;
 
     this.themeConfig = getThemeConfig('default').pixiConfig;
+    void this.themeConfig;
 
     this.wheel = new PIXI.Container();
     this.pointer = new PIXI.Graphics();
     this.sparkleContainer = new PIXI.Container();
+    this.overlayContainer = new PIXI.Container();
 
     this.addChild(this.wheel);
     this.addChild(this.pointer);
     this.addChild(this.sparkleContainer);
+    this.addChild(this.overlayContainer);
 
     this.eventMode = 'static';
     this.cursor = 'default';
@@ -95,10 +105,6 @@ export class PowerupSpinWheel extends PIXI.Container {
     return TWO_PI / this.segmentCount;
   }
 
-  /**
-   * Builds segments from the provided slot list (one segment per slot).
-   * Pads to at least 4 segments with blanks so the wheel still looks full.
-   */
   private createWheelSegments(): void {
     this.wheelSegments = [];
 
@@ -122,7 +128,7 @@ export class PowerupSpinWheel extends PIXI.Container {
     this.createPointer();
 
     setTimeout(() => {
-      if (!this.spinning) {
+      if (!this.spinning && !this.revealInProgress) {
         this.spin();
       }
     }, 500);
@@ -132,43 +138,27 @@ export class PowerupSpinWheel extends PIXI.Container {
   private layoutForScreen(screenWidth: number, screenHeight: number): void {
     this.centerX = screenWidth / 2;
     this.radius = Math.min(screenWidth * 0.38, screenHeight * 0.34);
-    // Keep the full circle + pointer tip visible
     this.centerY = screenHeight * 0.58;
     const minCenterY = this.radius + 56;
     const maxCenterY = screenHeight - this.radius - 24;
     this.centerY = Math.min(maxCenterY, Math.max(minCenterY, this.centerY));
   }
 
-  /**
-   * Local angle of a segment's center (0 rotation = segment 0 centered at top).
-   * Segments are drawn starting at -PI/2 (top).
-   */
   private segmentCenterLocalAngle(index: number): number {
     return -Math.PI / 2 + (index + 0.5) * this.segmentAngle;
   }
 
-  /**
-   * Wheel rotation that places segment `index` under the top pointer.
-   * Pointer sits at world angle -PI/2; with rotation R, local θ maps to θ + R.
-   */
   private rotationForSegment(index: number, extraSpins = 4): number {
     const localCenter = this.segmentCenterLocalAngle(index);
-    // localCenter + R ≡ -PI/2  (mod 2π)  →  R ≡ -PI/2 - localCenter
     let delta = -Math.PI / 2 - localCenter;
-    // Normalize to negative direction (spin clockwise visually via positive R in Pixi Y-down)
-    // We spin with positive velocity; pick a large positive target.
     while (delta <= 0) {
       delta += TWO_PI;
     }
     return delta + TWO_PI * extraSpins;
   }
 
-  /**
-   * Which segment is under the top pointer for the given wheel rotation.
-   */
   private segmentIndexAtPointer(rotation: number): number {
     const rot = ((rotation % TWO_PI) + TWO_PI) % TWO_PI;
-    // Local angle currently under the pointer (world -PI/2)
     const localUnderPointer = (((-Math.PI / 2 - rot) % TWO_PI) + TWO_PI) % TWO_PI;
     const fromSeg0Start = (((localUnderPointer - (-Math.PI / 2)) % TWO_PI) + TWO_PI) % TWO_PI;
     return Math.floor(fromSeg0Start / this.segmentAngle) % this.segmentCount;
@@ -188,7 +178,6 @@ export class PowerupSpinWheel extends PIXI.Container {
       if (idx !== -1) return idx;
     }
 
-    // Prefer a non-blank segment when picking randomly
     const filled = this.wheelSegments
       .map((s, i) => (s.powerup ? i : -1))
       .filter((i) => i >= 0);
@@ -199,16 +188,15 @@ export class PowerupSpinWheel extends PIXI.Container {
   }
 
   public spin(): void {
-    if (this.spinning) return;
+    if (this.spinning || this.revealInProgress) return;
 
     this.spinning = true;
     this.hasReportedSelection = false;
     this.spinElapsedMs = 0;
-    // Long enough to read labels: ~4–5.5s including ease-out
     this.spinDurationMs = 4000 + Math.random() * 1500;
 
     const targetIndex = this.resolveTargetSegmentIndex();
-    const extraSpins = 4 + Math.floor(Math.random() * 3); // 4–6 full turns
+    const extraSpins = 4 + Math.floor(Math.random() * 3);
     const base = this.rotationForSegment(targetIndex, extraSpins);
     const currentMod = ((this.currentRotation % TWO_PI) + TWO_PI) % TWO_PI;
     const baseMod = ((base % TWO_PI) + TWO_PI) % TWO_PI;
@@ -229,42 +217,180 @@ export class PowerupSpinWheel extends PIXI.Container {
     return 1 - Math.pow(1 - t, 3);
   }
 
-  private _createConfetti(): void {
+  private _flashWinningWedge(index: number): void {
+    if (this.wedgeHighlight) {
+      this.wedgeHighlight.destroy();
+      this.wedgeHighlight = null;
+    }
+
+    const startAngle = index * this.segmentAngle - Math.PI / 2;
+    const endAngle = (index + 1) * this.segmentAngle - Math.PI / 2;
+
+    // Draw in local wheel space so it rotates with the stopped wheel
+    const highlight = new PIXI.Graphics();
+    highlight.beginFill(0xffd700, 0.35);
+    highlight.moveTo(this.centerX, this.centerY);
+    highlight.arc(this.centerX, this.centerY, this.radius, startAngle, endAngle);
+    highlight.lineTo(this.centerX, this.centerY);
+    highlight.endFill();
+
+    highlight.lineStyle(8, 0xffd700, 1);
+    highlight.moveTo(this.centerX, this.centerY);
+    highlight.arc(this.centerX, this.centerY, this.radius, startAngle, endAngle);
+    highlight.lineTo(this.centerX, this.centerY);
+
+    this.wheel.addChild(highlight);
+    this.wedgeHighlight = highlight;
+
+    // Pulse opacity
+    let elapsed = 0;
+    const pulse = () => {
+      if (!this.wedgeHighlight) return;
+      elapsed += 16;
+      const t = (elapsed % 200) / 200;
+      this.wedgeHighlight.alpha = 0.55 + 0.45 * Math.sin(t * Math.PI);
+      if (elapsed < WEDGE_FLASH_MS) {
+        requestAnimationFrame(pulse);
+      } else if (this.wedgeHighlight) {
+        this.wedgeHighlight.alpha = 0.7;
+      }
+    };
+    requestAnimationFrame(pulse);
+  }
+
+  private _showResultCard(powerup: SelectablePowerupInfo): void {
+    if (this.resultCard) {
+      this.overlayContainer.removeChild(this.resultCard);
+      this.resultCard.destroy({ children: true });
+      this.resultCard = null;
+    }
+
+    // Dim the wheel slightly so the card owns focus
+    this.wheel.alpha = 0.45;
+    this.pointer.alpha = 0.5;
+
+    const isDebuff = powerup.polarity === 'debuff';
+    const cardBg = isDebuff ? 0xb91c1c : 0x0f766e;
+    const accent = isDebuff ? 0xfca5a5 : 0x5eead4;
+
+    const card = new PIXI.Container();
+    const padX = 48;
+    const padY = 28;
+
+    const label = new Text(powerup.displayName, {
+      fontFamily: 'Grandstander',
+      fontSize: 56,
+      fontWeight: 'bold',
+      fill: 0xffffff,
+      align: 'center',
+      stroke: { color: 0x000000, width: 5 },
+    });
+    label.anchor.set(0.5);
+
+    const subtitle = new Text(isDebuff ? 'Power-down!' : 'Power-up!', {
+      fontFamily: 'Grandstander',
+      fontSize: 22,
+      fontWeight: 'bold',
+      fill: accent,
+      align: 'center',
+    });
+    subtitle.anchor.set(0.5);
+
+    const cardWidth = Math.max(label.width, subtitle.width) + padX * 2;
+    const cardHeight = label.height + subtitle.height + padY * 2 + 12;
+
+    const bg = new PIXI.Graphics();
+    bg.beginFill(cardBg, 0.96);
+    bg.drawRoundedRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 20);
+    bg.endFill();
+    bg.lineStyle(5, 0xffd700, 1);
+    bg.drawRoundedRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 20);
+
+    subtitle.y = -cardHeight / 2 + padY + subtitle.height / 2;
+    label.y = subtitle.y + subtitle.height / 2 + 10 + label.height / 2;
+
+    card.addChild(bg);
+    card.addChild(subtitle);
+    card.addChild(label);
+    card.x = this.centerX;
+    card.y = this.centerY;
+    card.scale.set(0.6);
+    card.alpha = 0;
+
+    this.overlayContainer.addChild(card);
+    this.resultCard = card;
+
+    // Pop-in
+    const start = performance.now();
+    const animateIn = () => {
+      if (!this.resultCard) return;
+      const t = Math.min(1, (performance.now() - start) / 280);
+      const eased = 1 - Math.pow(1 - t, 3);
+      this.resultCard.scale.set(0.6 + 0.4 * eased);
+      this.resultCard.alpha = eased;
+      if (t < 1) requestAnimationFrame(animateIn);
+    };
+    requestAnimationFrame(animateIn);
+
+    this._createConfettiAroundCard();
+  }
+
+  private _createConfettiAroundCard(): void {
     if (this.confettiContainer) {
-      this.removeChild(this.confettiContainer);
+      this.overlayContainer.removeChild(this.confettiContainer);
+      this.confettiContainer.destroy({ children: true });
     }
 
     this.confettiContainer = new PIXI.Container();
-    this.addChild(this.confettiContainer);
+    this.overlayContainer.addChild(this.confettiContainer);
 
-    for (let i = 0; i < 50; i++) {
+    const colors = [0xffd700, 0xffffff, 0x5eead4, 0xfbbf24, 0xf472b6];
+    for (let i = 0; i < 28; i++) {
       const confetti = new PIXI.Graphics();
-      confetti.beginFill(Math.random() * 0xffffff);
-      confetti.drawRect(0, 0, 4, 4);
+      confetti.beginFill(colors[Math.floor(Math.random() * colors.length)]);
+      confetti.drawRect(0, 0, 5, 5);
       confetti.endFill();
 
-      confetti.x = this.centerX + (Math.random() - 0.5) * 150;
-      confetti.y = this.centerY - this.radius - 20;
-
+      confetti.x = this.centerX + (Math.random() - 0.5) * 220;
+      confetti.y = this.centerY - 40 + (Math.random() - 0.5) * 40;
       this.confettiContainer.addChild(confetti);
 
-      const fallSpeed = Math.random() * 3 + 2;
-      const rotationSpeed = (Math.random() - 0.5) * 0.2;
+      const fallSpeed = Math.random() * 2.5 + 1.5;
+      const rotationSpeed = (Math.random() - 0.5) * 0.15;
 
       const animate = () => {
         confetti.y += fallSpeed;
         confetti.rotation += rotationSpeed;
-        confetti.alpha -= 0.01;
-
-        if (confetti.alpha > 0 && confetti.y < this.centerY + 200) {
+        confetti.alpha -= 0.012;
+        if (confetti.alpha > 0 && confetti.y < this.centerY + 220) {
           requestAnimationFrame(animate);
         } else {
           confetti.destroy();
         }
       };
-
       requestAnimationFrame(animate);
     }
+  }
+
+  private async _runSelectionReveal(
+    selected: SelectablePowerupInfo,
+    winningIndex: number
+  ): Promise<void> {
+    this.revealInProgress = true;
+    this._flashWinningWedge(winningIndex);
+
+    await new Promise((r) => setTimeout(r, WEDGE_FLASH_MS));
+
+    this._showResultCard(selected);
+
+    if (this.onSelection) {
+      this.onSelection(selected, winningIndex);
+    }
+
+    await new Promise((r) => setTimeout(r, RESULT_HOLD_MS));
+
+    this.revealInProgress = false;
+    this.onSpinComplete?.();
   }
 
   private _reportSelectionFromPointer(): void {
@@ -273,17 +399,12 @@ export class PowerupSpinWheel extends PIXI.Container {
 
     const winningIndex = this.segmentIndexAtPointer(this.currentRotation);
     const selectedSegment = this.wheelSegments[winningIndex];
+    const selected: SelectablePowerupInfo = selectedSegment?.powerup ?? {
+      id: 'none',
+      displayName: 'No Power-up',
+    };
 
-    this._createConfetti();
-
-    if (selectedSegment?.powerup && this.onSelection) {
-      this.onSelection(selectedSegment.powerup, winningIndex);
-    } else if (this.onSelection && selectedSegment) {
-      this.onSelection(
-        { id: 'none', displayName: 'No Power-up' },
-        winningIndex
-      );
-    }
+    void this._runSelectionReveal(selected, winningIndex);
   }
 
   private handleClick(): void {
@@ -292,6 +413,7 @@ export class PowerupSpinWheel extends PIXI.Container {
 
   private createWheel(): void {
     this.wheel.removeChildren();
+    this.wedgeHighlight = null;
 
     const segmentAngle = this.segmentAngle;
 
@@ -331,6 +453,7 @@ export class PowerupSpinWheel extends PIXI.Container {
     this.wheel.pivot.set(this.centerX, this.centerY);
     this.wheel.x = this.centerX;
     this.wheel.y = this.centerY;
+    this.wheel.alpha = 1;
   }
 
   private addPowerupText(
@@ -377,10 +500,6 @@ export class PowerupSpinWheel extends PIXI.Container {
     this.wheel.addChild(textContainer);
   }
 
-  /**
-   * Fixed yellow arrow at the top of the wheel, tip pointing inward at the rim.
-   * Whatever segment sits under this tip when the wheel stops is the selection.
-   */
   private createPointer(): void {
     this.pointer.clear();
 
@@ -401,7 +520,6 @@ export class PowerupSpinWheel extends PIXI.Container {
     this.pointer.lineTo(halfWidth, baseY);
     this.pointer.closePath();
 
-    // Dark outline for contrast
     this.pointer.lineStyle(2, 0x114257, 0.9);
     this.pointer.moveTo(0, tipY);
     this.pointer.lineTo(-halfWidth, baseY);
@@ -410,21 +528,24 @@ export class PowerupSpinWheel extends PIXI.Container {
 
     this.pointer.x = this.centerX;
     this.pointer.y = this.centerY;
+    this.pointer.alpha = 1;
   }
 
+  /** Quiet accent sparkles — never dense enough to cover labels. */
   private createSparkles(): void {
     if (!this.spinning) return;
 
     const progress = Math.min(1, this.spinElapsedMs / this.spinDurationMs);
     const velocityRatio = Math.max(0, 1 - progress);
     const particleIntensity = Math.pow(velocityRatio, 2);
-    const shouldCreateParticle = Math.random() < particleIntensity * 3;
+    // ~5× quieter than before
+    const shouldCreateParticle = Math.random() < particleIntensity * 0.55;
 
     if (shouldCreateParticle) {
-      const burstSize = Math.ceil(particleIntensity * 10);
+      const burstSize = Math.min(2, Math.max(1, Math.ceil(particleIntensity * 2)));
       for (let i = 0; i < burstSize; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const sparkleRadius = this.radius + (Math.random() - 0.5) * 80;
+        const sparkleRadius = this.radius + (Math.random() - 0.5) * 40;
         const x = this.centerX + Math.cos(angle) * sparkleRadius;
         const y = this.centerY + Math.sin(angle) * sparkleRadius;
         this.sparkles.push(new Sparkle(x, y, this.sparkleContainer));
@@ -452,7 +573,6 @@ export class PowerupSpinWheel extends PIXI.Container {
         this.cursor = 'pointer';
         this.eventMode = 'static';
         this._reportSelectionFromPointer();
-        setTimeout(() => this.onSpinComplete?.(), 1000);
       }
     }
 
@@ -500,23 +620,20 @@ class Sparkle {
     this.sprite = new PIXI.Graphics();
     this.x = x;
     this.y = y;
-    this.vx = (Math.random() - 0.5) * 12;
-    this.vy = (Math.random() - 0.5) * 12;
+    this.vx = (Math.random() - 0.5) * 6;
+    this.vy = (Math.random() - 0.5) * 6;
     this.life = 1.0;
-    this.decay = Math.random() * 0.008 + 0.004;
-    this.size = Math.random() * 12 + 10;
+    this.decay = Math.random() * 0.014 + 0.01; // faster fade
+    this.size = Math.random() * 5 + 4; // smaller
     this.rotation = Math.random() * Math.PI * 2;
-    this.rotationSpeed = (Math.random() - 0.5) * 0.3;
+    this.rotationSpeed = (Math.random() - 0.5) * 0.2;
 
-    const colors = [0xffd700, 0xff69b4, 0x00ced1, 0xff6347, 0x98fb98, 0xdda0dd, 0xff1493, 0x00ff7f];
+    const colors = [0xffd700, 0xff69b4, 0x00ced1, 0xff6347];
     const color = colors[Math.floor(Math.random() * colors.length)];
 
-    this.sprite.beginFill(color, 0.9);
+    this.sprite.beginFill(color, 0.85);
     this.drawStar(this.sprite, 0, 0, 5, this.size, this.size * 0.4);
     this.sprite.endFill();
-
-    this.sprite.lineStyle(2, color, 0.3);
-    this.drawStar(this.sprite, 0, 0, 5, this.size * 1.3, this.size * 0.5);
 
     this.sprite.x = x;
     this.sprite.y = y;
@@ -553,7 +670,7 @@ class Sparkle {
     this.sprite.rotation = this.rotation;
     this.sprite.alpha = this.life;
     this.sprite.scale.set(this.life);
-    this.vy += 0.15;
+    this.vy += 0.12;
 
     return this.life > 0;
   }
