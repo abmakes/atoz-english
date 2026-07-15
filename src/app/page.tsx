@@ -47,7 +47,7 @@ export default function HomePage() {
               <div className="neo-card overflow-hidden bg-white -rotate-1 hover:rotate-0 transition-transform duration-300">
                 <Image
                   src="/images/marketing/quiz2.png"
-                  alt="Score Attack gameplay with timer, question, and answer choices"
+                  alt="Team Quiz gameplay with timer, question, and answer choices"
                   width={960}
                   height={540}
                   className="w-full h-auto object-cover"
@@ -100,19 +100,19 @@ export default function HomePage() {
             <article className="neo-card bg-white overflow-hidden flex flex-col">
               <Image
                 src="/images/marketing/quiz1.png"
-                alt="Score Attack multiple choice classroom game"
+                alt="Team Quiz multiple choice classroom game"
                 width={800}
                 height={450}
                 className="w-full h-52 object-cover border-b-2 border-[#1E5167]"
               />
               <div className="p-6 flex flex-col flex-grow">
-                <h3 className="text-2xl font-bold grandstander mb-2">Score Attack</h3>
+                <h3 className="text-2xl font-bold grandstander mb-2">Team Quiz</h3>
                 <p className="text-[--text-light] inclusive-sans mb-4">
                   Turn-based classroom energy with clock pressure. Themes, 10–20s timers, Basic or
                   Boosted scoring, and power-ups: 50/50, Double Points, Time Extension, Comeback.
                 </p>
                 <Link href="/games" className="mt-auto text-[--text-color] font-semibold grandstander underline-offset-4 hover:underline">
-                  Browse Score Attack quizzes
+                  Browse Team Quiz quizzes
                 </Link>
               </div>
             </article>
@@ -167,7 +167,7 @@ export default function HomePage() {
               {
                 step: '2',
                 title: 'Tune the match',
-                body: 'Score Attack or Splash Dash. Set timer, teams, and power-ups.',
+                body: 'Team Quiz or Splash Dash. Set timer, teams, and power-ups.',
               },
               {
                 step: '3',
@@ -247,7 +247,7 @@ export default function HomePage() {
                 Compete hard. Stay in the fight.
               </h2>
               <ul className="space-y-3 mb-8 text-[--text-light] inclusive-sans">
-                <li>Beat the clock in Boosted Score Attack.</li>
+                <li>Beat the clock in Boosted Team Quiz.</li>
                 <li>Race head-to-head in Splash Dash.</li>
                 <li>Power-ups that change the round — not a lottery.</li>
                 <li>Themes and animal energy without losing the quiz.</li>

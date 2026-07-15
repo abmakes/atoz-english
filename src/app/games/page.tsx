@@ -65,6 +65,7 @@ function GamesPageContent({ isSignedIn }: { isSignedIn: boolean }) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [sort, setSort] = useState<QuizSort>('newest');
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const [navigatingQuizId, setNavigatingQuizId] = useState<string | null>(null);
   const setQuizzes = useGameStore((state) => state.setQuizzes);
   const hasLoadedOnce = useRef(false);
 
@@ -369,13 +370,25 @@ function GamesPageContent({ isSignedIn }: { isSignedIn: boolean }) {
                   isRefreshing ? 'opacity-60' : ''
                 }`}
               >
-                {filteredQuizzes.map((quiz) => (
+                {filteredQuizzes.map((quiz) => {
+                  const isNavigating = navigatingQuizId === quiz.id;
+                  return (
                   <Link
-                    className="block group cursor-pointer"
+                    className={`block group cursor-pointer relative ${
+                      isNavigating ? 'opacity-70 pointer-events-none' : ''
+                    }`}
                     key={quiz.id}
                     href={`/games/${quiz.id}`}
                     passHref
+                    onClick={() => setNavigatingQuizId(quiz.id)}
                   >
+                    {isNavigating && (
+                      <div className="absolute inset-0 z-20 flex items-center justify-center rounded-[32px] bg-white/50 pointer-events-none">
+                        <span className="grandstander font-bold text-[#114257] text-lg bg-white/90 px-4 py-2 rounded-full border-2 border-[#1E5167] shadow-[3px_3px_0px_0px_#1E5167]">
+                          Opening…
+                        </span>
+                      </div>
+                    )}
                     {/* Image card — hover reveals stats, tags, and actions */}
                     <div className="relative overflow-hidden rounded-[32px] border-2 border-[#1E5167] bg-card shadow-[3px_6px_0px_0px_#1E5167] mb-3 transition duration-300 ease-in-out">
                       <div className="relative h-48 w-full min-w-72">
@@ -467,7 +480,8 @@ function GamesPageContent({ isSignedIn }: { isSignedIn: boolean }) {
                       )}
                     </div>
                   </Link>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </>

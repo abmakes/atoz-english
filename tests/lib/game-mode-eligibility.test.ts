@@ -56,14 +56,14 @@ describe('isSplashDashEligible', () => {
 })
 
 describe('getEligibleGameModes', () => {
-  it('always includes Score Attack and Splash Dash when eligible', () => {
+  it('always includes Team Quiz and Splash Dash when eligible', () => {
     expect(getEligibleGameModes({ questions: [shortMc] })).toEqual([
       'multiple-choice',
       'splash-dash',
     ])
   })
 
-  it('only includes Score Attack when ineligible', () => {
+  it('only includes Team Quiz when ineligible', () => {
     const long = 'x'.repeat(SPLASH_DASH_MAX_ANSWER_LENGTH + 1)
     expect(
       getEligibleGameModes({

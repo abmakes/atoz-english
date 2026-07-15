@@ -17,8 +17,7 @@ import {
     AudioConfiguration,
 } from '@/lib/pixi-engine/config/GameConfig';
 import { PixiEngineManagers } from '@/lib/pixi-engine/core/PixiEngine';
-import { MultipleChoiceGame } from '@/lib/pixi-games/multiple-choice/MultipleChoiceGame';
-import { SplashDashGame } from '@/lib/pixi-games/splash-dash/SplashDashGame';
+import type { BaseGame } from '@/lib/pixi-engine/game/BaseGame';
 import type { NavMenuItemProps } from './NavMenu';
 import { GAME_EVENTS, ENGINE_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
 import { PowerupConfig, STANDARD_SCORE_MODE_POWERUPS } from '@/lib/pixi-engine/config/PowerupConfig';
@@ -34,6 +33,8 @@ const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height
 
 type GameView = 'setup' | 'playing' | 'gameover';
 
+type GameConstructor = new (config: GameConfig, managers: PixiEngineManagers) => BaseGame;
+
 /**
  * Props for the GameContainer component.
  */
@@ -44,24 +45,14 @@ interface GameContainerProps {
   gameSlug: string;
 }
 
-/**
- * Factory function to create a specific game instance.
- * @param config - The game configuration object.
- * @param managers - The core PixiEngine managers.
- * @param gameSlug - The game type identifier.
- * @returns An instance of the game controller.
- */
-const gameFactory = (config: GameConfig, managers: PixiEngineManagers, gameSlug: string) => {
-    switch (gameSlug) {
-        case 'multiple-choice':
-            return new MultipleChoiceGame(config, managers);
-        case 'splash-dash':
-            return new SplashDashGame(config, managers);
-        default:
-            console.warn(`Unknown game slug: ${gameSlug}, falling back to multiple-choice`);
-            return new MultipleChoiceGame(config, managers);
-    }
-};
+async function loadGameConstructor(gameSlug: string): Promise<GameConstructor> {
+  if (gameSlug === 'splash-dash') {
+    const mod = await import('@/lib/pixi-games/splash-dash/SplashDashGame');
+    return mod.SplashDashGame as unknown as GameConstructor;
+  }
+  const mod = await import('@/lib/pixi-games/multiple-choice/MultipleChoiceGame');
+  return mod.MultipleChoiceGame as unknown as GameConstructor;
+}
 
 /**
  * Main container component responsible for managing the game lifecycle,
@@ -79,10 +70,18 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
   
   const pixiMountPointRef = useRef<HTMLDivElement>(null);
   const setSelectedQuiz = useGameStore((state) => state.setSelectedQuiz);
+  const gameCtorRef = useRef<GameConstructor | null>(null);
+  const [isStartingPlay, setIsStartingPlay] = useState(false);
 
   const createGameInstance = useCallback(
-    (config: GameConfig, managers: PixiEngineManagers) => gameFactory(config, managers, gameSlug),
-    [gameSlug]
+    (config: GameConfig, managers: PixiEngineManagers) => {
+      const Ctor = gameCtorRef.current;
+      if (!Ctor) {
+        throw new Error('Game module not loaded yet');
+      }
+      return new Ctor(config, managers);
+    },
+    []
   );
 
   useEffect(() => {
@@ -95,11 +94,20 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
    * Assembles the full GameConfig and transitions the view to 'playing'.
    * @param setupConfig - Configuration options selected in the setup panel.
    */
-  const handleStartGame = useCallback((setupData: Omit<GameSetupData, 'quizId' | 'gameSlug'>) => {
+  const handleStartGame = useCallback(async (setupData: Omit<GameSetupData, 'quizId' | 'gameSlug'>) => {
       if (!quizId) {
           console.error("Cannot start game: No Quiz ID available! Navigating back.");
           router.push('/games');
           return;
+      }
+
+      setIsStartingPlay(true);
+      try {
+        gameCtorRef.current = await loadGameConstructor(gameSlug);
+      } catch (err) {
+        console.error('Failed to load game module:', err);
+        setIsStartingPlay(false);
+        return;
       }
 
       // Fire-and-forget play count (once per browser session)
@@ -109,7 +117,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
 
       const gameMode: ScoreModeConfig = {
           type: 'score',
-          name: 'Score Attack',
+          name: 'Team Quiz',
       };
       // --- Define Powerup Config --- 
       const powerupConfig: PowerupConfig = {
@@ -375,6 +383,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
       }, 2000); // 2 second delay to let quiz images load first
 
       setCurrentView('playing');
+      setIsStartingPlay(false);
   }, [quizId, gameSlug, router]);
 
   /**
@@ -427,6 +436,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
                     onGoBack={handleBackFromSetup}
                     initialGameSlug={gameSlug}
                     quizId={quizId}
+                    isStartingPlay={isStartingPlay}
                 />;
       case 'playing':
         if (!gameConfig) {

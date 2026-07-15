@@ -913,8 +913,8 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
                 <p className="font-bold text-base mb-0.5">Long answers limit game modes</p>
                 <p className="text-sm inclusive-sans font-normal text-slate-700">
                   Keep each answer at {SPLASH_DASH_MAX_ANSWER_LENGTH} characters or fewer if you want
-                  this quiz playable in Splash Dash as well as Score Attack. Longer answers still
-                  work in Score Attack.
+                  this quiz playable in Splash Dash as well as Team Quiz. Longer answers still
+                  work in Team Quiz.
                 </p>
               </div>
             )}

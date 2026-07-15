@@ -1,40 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import GameContainer from '@/components/game_ui/GameContainer';
-import LoadingSpinner from '@/components/loading_spinner';
-
-// Will import actual game components later
-// import { PixiGameWrapper } from '@/components/PixiGameWrapper';
-// import multipleChoiceGame from '@/pixi-games/multiple-choice';
-
 
 export default function GamePage() {
   const params = useParams();
-  const [isValidParams, setIsValidParams] = useState(false);
-
   const quizId = params.quizId as string | undefined;
   const gameSlug = params.gameSlug as string | undefined;
 
-  useEffect(() => {
-    if (quizId && gameSlug) {
-      setIsValidParams(true);
-    } else {
-      setIsValidParams(false);
-      console.error("Invalid route params: ", params);
-    }  
-  }, [quizId, gameSlug, params]);
-
-  if (!isValidParams) {
+  if (!quizId || !gameSlug) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4"><LoadingSpinner /></h1>
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[--primary-bg] p-6">
+        <p className="grandstander text-xl font-bold text-[--text-color]">Invalid game link</p>
+        <Link href="/games" className="underline grandstander">
+          Back to games
+        </Link>
       </div>
     );
   }
 
-  return <GameContainer quizId={quizId!} gameSlug={gameSlug!} />;
-} 
+  return <GameContainer quizId={quizId} gameSlug={gameSlug} />;
+}

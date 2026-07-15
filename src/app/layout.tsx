@@ -8,7 +8,7 @@ import { ClerkActiveProvider } from "@/components/auth/ClerkActiveProvider";
 export const metadata: Metadata = {
   title: "PlaytoZ — English quizzes that play like fair fights",
   description:
-    "Create English quizzes in clicks. Students compete with skill and speed in Score Attack or Splash Dash — timers, power-ups, and teams without luck replacing learning.",
+    "Create English quizzes in clicks. Students compete with skill and speed in Team Quiz or Splash Dash — timers, power-ups, and teams without luck replacing learning.",
 };
 
 export default function RootLayout({
