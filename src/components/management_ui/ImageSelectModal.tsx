@@ -75,6 +75,12 @@ interface ImageSelectModalProps {
     },
     localFile?: File | null
   ) => void;
+  /** Prefill and run search when the modal opens. */
+  initialQuery?: string;
+  /** When false, skip Giphy entirely (curator). Default true for quiz UX. */
+  enableGiphy?: boolean;
+  /** Quiz-oriented success toast after Pixabay select. Default true. */
+  showQuizSaveHint?: boolean;
 }
 
 const PREVIEW_COUNT = 4;
@@ -86,10 +92,18 @@ function takeVisible<T>(items: T[], expanded: boolean): T[] {
   return expanded ? items : items.slice(0, PREVIEW_COUNT);
 }
 
-export default function ImageSelectModal({ isOpen, onClose, onImageSelect }: ImageSelectModalProps) {
+export default function ImageSelectModal({
+  isOpen,
+  onClose,
+  onImageSelect,
+  initialQuery,
+  enableGiphy = true,
+  showQuizSaveHint = true,
+}: ImageSelectModalProps) {
   const { addToast } = useCustomToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const initialSearchDoneRef = useRef(false);
 
   const [query, setQuery] = useState('');
   const [activeQuery, setActiveQuery] = useState('');
@@ -130,6 +144,7 @@ export default function ImageSelectModal({ isOpen, onClose, onImageSelect }: Ima
     setGiphyResults([]);
     setPixabayResults([]);
     setExpanded({ stored: false, giphy: false, pixabay: false });
+    initialSearchDoneRef.current = false;
   }, []);
 
   useEffect(() => {
@@ -140,6 +155,16 @@ export default function ImageSelectModal({ isOpen, onClose, onImageSelect }: Ima
     void loadTopUsedImages();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const q = initialQuery?.trim();
+    if (!q || initialSearchDoneRef.current) return;
+    initialSearchDoneRef.current = true;
+    setQuery(q);
+    void runUnifiedSearch(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialQuery]);
 
   const loadTopUsedImages = async () => {
     setIsLoadingTopUsed(true);
@@ -183,7 +208,7 @@ export default function ImageSelectModal({ isOpen, onClose, onImageSelect }: Ima
   };
 
   const searchGiphy = async (q: string, offset: number, append: boolean) => {
-    if (!giphyApiKey) {
+    if (!enableGiphy || !giphyApiKey) {
       setGiphyResults([]);
       setGiphyHasMore(false);
       return;
@@ -241,11 +266,17 @@ export default function ImageSelectModal({ isOpen, onClose, onImageSelect }: Ima
     setActiveQuery(q);
     setHasSearched(true);
     setExpanded({ stored: false, giphy: false, pixabay: false });
-    await Promise.all([
+    const tasks: Promise<void>[] = [
       searchStored(q, 1, false),
-      searchGiphy(q, 0, false),
       searchPixabay(q, 1, false),
-    ]);
+    ];
+    if (enableGiphy) {
+      tasks.push(searchGiphy(q, 0, false));
+    } else {
+      setGiphyResults([]);
+      setGiphyHasMore(false);
+    }
+    await Promise.all(tasks);
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -284,7 +315,11 @@ export default function ImageSelectModal({ isOpen, onClose, onImageSelect }: Ima
       width: image.webformatWidth,
       height: image.webformatHeight,
     });
-    addToast('Image selected! It will be saved when you publish the quiz.', { variant: 'success' });
+    if (showQuizSaveHint) {
+      addToast('Image selected! It will be saved when you publish the quiz.', {
+        variant: 'success',
+      });
+    }
   };
 
   const handleStoredImageSelect = (image: StoredImage) => {
@@ -295,7 +330,8 @@ export default function ImageSelectModal({ isOpen, onClose, onImageSelect }: Ima
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const isSearchingAny = isLoadingStored || isLoadingGiphy || isLoadingPixabay;
+  const isSearchingAny =
+    isLoadingStored || (enableGiphy && isLoadingGiphy) || isLoadingPixabay;
 
   const renderStoredGrid = (images: StoredImage[]) => (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -337,7 +373,11 @@ export default function ImageSelectModal({ isOpen, onClose, onImageSelect }: Ima
               <Search className="absolute left-4 h-5 w-5 text-slate-400 pointer-events-none" />
               <Input
                 type="text"
-                placeholder="Search collection, Giphy, and Pixabay..."
+                placeholder={
+                  enableGiphy
+                    ? 'Search collection, Giphy, and Pixabay...'
+                    : 'Search collection and Pixabay...'
+                }
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => {
@@ -433,7 +473,8 @@ export default function ImageSelectModal({ isOpen, onClose, onImageSelect }: Ima
                 renderStoredGrid(topUsedImages)
               ) : (
                 <p className="text-center text-slate-500 py-10 inclusive-sans">
-                  No images in our collection yet. Try searching Giphy or Pixabay.
+                  No images in our collection yet. Try searching{' '}
+                  {enableGiphy ? 'Giphy or ' : ''}Pixabay.
                 </p>
               )}
             </section>
@@ -455,6 +496,7 @@ export default function ImageSelectModal({ isOpen, onClose, onImageSelect }: Ima
                 {renderStoredGrid(takeVisible(storedImages, expanded.stored))}
               </ResultSection>
 
+              {enableGiphy ? (
               <ResultSection
                 title="Giphy"
                 subtitle={activeQuery}
@@ -495,6 +537,7 @@ export default function ImageSelectModal({ isOpen, onClose, onImageSelect }: Ima
                   })}
                 </div>
               </ResultSection>
+              ) : null}
 
               <ResultSection
                 title="Pixabay"
