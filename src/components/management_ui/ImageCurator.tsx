@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { Loader2, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,19 +17,9 @@ const LEVELS: { id: CefrLevel; label: string }[] = [
 ];
 
 const BASKET_LIMIT = 10;
-const COVERAGE_CHUNK = 150;
+const STORAGE_KEY = 'image-curator-progress-v1';
 
-type CoverageImage = {
-  id: string;
-  blobUrl: string;
-  searchTerm: string | null;
-  tags: string[];
-};
-
-type CoverageEntry = {
-  count: number;
-  images: CoverageImage[];
-};
+type ProgressMap = Record<string, number>;
 
 type ImageMetadata = {
   pixabayId: number;
@@ -49,29 +39,20 @@ type BasketItem = {
 
 type FilterMode = 'all' | 'missing' | 'has';
 
-async function fetchCoverageForWords(
-  words: string[]
-): Promise<Record<string, CoverageEntry>> {
-  const merged: Record<string, CoverageEntry> = {};
-
-  for (let i = 0; i < words.length; i += COVERAGE_CHUNK) {
-    const chunk = words.slice(i, i + COVERAGE_CHUNK);
-    const response = await fetch('/api/images/coverage', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ words: chunk }),
-    });
-    if (!response.ok) {
-      throw new Error(`Coverage request failed (${response.status})`);
-    }
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.error || 'Coverage request failed');
-    }
-    Object.assign(merged, result.data);
+function readProgress(): ProgressMap {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as ProgressMap;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
   }
+}
 
-  return merged;
+function writeProgress(progress: ProgressMap) {
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
 }
 
 async function tagStoredImage(
@@ -108,8 +89,8 @@ export default function ImageCurator() {
   const { addToast } = useCustomToast();
   const [level, setLevel] = useState<CefrLevel>('pre_a1');
   const [filter, setFilter] = useState<FilterMode>('missing');
-  const [coverage, setCoverage] = useState<Record<string, CoverageEntry>>({});
-  const [isLoadingCoverage, setIsLoadingCoverage] = useState(false);
+  const [progress, setProgress] = useState<ProgressMap>({});
+  const [hydrated, setHydrated] = useState(false);
   const [activeWord, setActiveWord] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [basket, setBasket] = useState<BasketItem[]>([]);
@@ -117,41 +98,34 @@ export default function ImageCurator() {
 
   const words = useMemo(() => wordsByCefr[level] ?? [], [level]);
 
-  const loadCoverage = useCallback(
-    async (wordList: string[]) => {
-      setIsLoadingCoverage(true);
-      try {
-        const data = await fetchCoverageForWords(wordList);
-        setCoverage(data);
-      } catch (error) {
-        console.error(error);
-        addToast('Could not load image coverage for this level.', {
-          variant: 'error',
-        });
-        setCoverage({});
-      } finally {
-        setIsLoadingCoverage(false);
-      }
-    },
-    [addToast]
-  );
-
   useEffect(() => {
-    void loadCoverage(words);
-  }, [words, loadCoverage]);
+    setProgress(readProgress());
+    setHydrated(true);
+  }, []);
+
+  const bumpProgress = (wordCounts: Record<string, number>) => {
+    setProgress((prev) => {
+      const next = { ...prev };
+      for (const [word, add] of Object.entries(wordCounts)) {
+        next[word] = (next[word] ?? 0) + add;
+      }
+      writeProgress(next);
+      return next;
+    });
+  };
 
   const filteredWords = useMemo(() => {
     return words.filter((word) => {
-      const count = coverage[word]?.count ?? 0;
+      const count = progress[word] ?? 0;
       if (filter === 'missing') return count === 0;
       if (filter === 'has') return count > 0;
       return true;
     });
-  }, [words, coverage, filter]);
+  }, [words, progress, filter]);
 
   const coveredCount = useMemo(
-    () => words.filter((w) => (coverage[w]?.count ?? 0) > 0).length,
-    [words, coverage]
+    () => words.filter((w) => (progress[w] ?? 0) > 0).length,
+    [words, progress]
   );
 
   const openPickerForWord = (word: string) => {
@@ -219,6 +193,7 @@ export default function ImageCurator() {
 
     let saved = 0;
     let failed = 0;
+    const savedByWord: Record<string, number> = {};
 
     addToast(`Saving ${basket.length} image(s)...`, {
       variant: 'info',
@@ -242,6 +217,7 @@ export default function ImageCurator() {
               item.metadata.tags
             );
             saved += 1;
+            savedByWord[item.word] = (savedByWord[item.word] ?? 0) + 1;
             continue;
           }
         }
@@ -272,9 +248,9 @@ export default function ImageCurator() {
 
         const result = await response.json();
         if (result.success && result.image?.id) {
-          // Ensure word tagging even when download hit an existing pixabayId
           await tagStoredImage(result.image.id, item.word, item.metadata.tags);
           saved += 1;
+          savedByWord[item.word] = (savedByWord[item.word] ?? 0) + 1;
         } else {
           failed += 1;
         }
@@ -287,15 +263,28 @@ export default function ImageCurator() {
     setIsSaving(false);
 
     if (saved > 0) {
+      bumpProgress(savedByWord);
       addToast(
         `Saved ${saved} image(s)${failed ? `, ${failed} failed` : ''}.`,
         { variant: failed ? 'info' : 'success' }
       );
       setBasket([]);
-      await loadCoverage(words);
     } else {
       addToast('No images were saved. Try again.', { variant: 'error' });
     }
+  };
+
+  const resetLocalProgress = () => {
+    if (
+      !window.confirm(
+        'Clear local progress counts for this browser? Images already in the library stay saved.'
+      )
+    ) {
+      return;
+    }
+    writeProgress({});
+    setProgress({});
+    addToast('Local progress cleared.', { variant: 'info' });
   };
 
   return (
@@ -308,9 +297,9 @@ export default function ImageCurator() {
           Pixabay image curator
         </h1>
         <p className="text-sm text-slate-600 inclusive-sans max-w-2xl">
-          Pick photos for CEFR vocabulary words (your list). Searches our
-          collection and Pixabay only — not Giphy. Save up to {BASKET_LIMIT} at a
-          time into the shared image library.
+          Word list with a count. Click a word, pick Pixabay photos, save the
+          basket. Counts live in this browser&apos;s localStorage — not a
+          coverage database query.
         </p>
       </header>
 
@@ -327,16 +316,24 @@ export default function ImageCurator() {
           </Button>
         ))}
         <span className="ml-auto text-sm text-slate-500 inclusive-sans">
-          {coveredCount}/{words.length} words have images
-          {isLoadingCoverage ? ' · loading…' : ''}
+          {hydrated ? `${coveredCount}/${words.length} marked done` : '…'}
         </span>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="text-xs text-slate-500"
+          onClick={resetLocalProgress}
+        >
+          Reset local counts
+        </Button>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-6">
         {(
           [
-            ['missing', 'Missing'],
-            ['has', 'Has images'],
+            ['missing', 'Not done'],
+            ['has', 'Done'],
             ['all', 'All'],
           ] as const
         ).map(([id, label]) => (
@@ -355,65 +352,38 @@ export default function ImageCurator() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
         <section className="min-h-[40vh]">
-          {isLoadingCoverage && Object.keys(coverage).length === 0 ? (
+          {!hydrated ? (
             <div className="py-16 text-center text-slate-500">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-              Loading coverage…
+              Loading list…
             </div>
           ) : filteredWords.length === 0 ? (
             <p className="py-12 text-center text-slate-500 inclusive-sans">
               No words match this filter.
             </p>
           ) : (
-            <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
               {filteredWords.map((word) => {
-                const entry = coverage[word];
-                const count = entry?.count ?? 0;
-                const thumbs = entry?.images?.slice(0, 3) ?? [];
+                const count = progress[word] ?? 0;
                 return (
                   <li key={word}>
                     <button
                       type="button"
                       onClick={() => openPickerForWord(word)}
-                      className="w-full text-left rounded-xl border border-slate-200 bg-white p-3 hover:border-[#49c8ff] hover:shadow-md transition-all"
+                      className="w-full text-left rounded-lg border border-slate-200 bg-white px-3 py-2 hover:border-[#49c8ff] hover:shadow-sm transition-all flex items-center justify-between gap-2"
                     >
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <span className="font-medium text-[#114257] text-sm leading-tight">
-                          {word}
-                        </span>
-                        <span
-                          className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded ${
-                            count > 0
-                              ? 'bg-emerald-50 text-emerald-700'
-                              : 'bg-slate-100 text-slate-500'
-                          }`}
-                        >
-                          {count}
-                        </span>
-                      </div>
-                      {thumbs.length > 0 ? (
-                        <div className="flex gap-1">
-                          {thumbs.map((img) => (
-                            <div
-                              key={img.id}
-                              className="relative h-10 w-10 rounded overflow-hidden bg-slate-100"
-                            >
-                              <Image
-                                src={img.blobUrl}
-                                alt=""
-                                fill
-                                className="object-cover"
-                                sizes="40px"
-                                unoptimized
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-[11px] text-slate-400 inclusive-sans">
-                          Click to add
-                        </p>
-                      )}
+                      <span className="font-medium text-[#114257] text-sm leading-tight truncate">
+                        {word}
+                      </span>
+                      <span
+                        className={`shrink-0 text-xs tabular-nums px-1.5 py-0.5 rounded ${
+                          count > 0
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        {count}
+                      </span>
                     </button>
                   </li>
                 );
