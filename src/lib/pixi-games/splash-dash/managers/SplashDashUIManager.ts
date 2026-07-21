@@ -4,6 +4,7 @@ import { GifSprite } from 'pixi.js/gif';
 import { PixiApplication } from '@/lib/pixi-engine/core/PixiApplication';
 import { EventBus } from '@/lib/pixi-engine/core/EventBus';
 import { AssetLoader } from '@/lib/pixi-engine/assets/AssetLoader';
+import { signalFirstQuestionReady } from '@/lib/load-timer';
 // import { PixiThemeConfig } from '@/themes';
 import { SplashDashLayoutManager } from './SplashDashLayoutManager';
 import { QuestionData } from '@/types';
@@ -389,15 +390,21 @@ export class SplashDashUIManager {
                         }
                         
                         console.log(`[SplashDashUIManager] Successfully loaded image: ${question.imageUrl}`);
+                        signalFirstQuestionReady({ noMedia: false });
                     } else {
                         console.warn(`[SplashDashUIManager] Unsupported display object type for: ${question.imageUrl}`);
+                        signalFirstQuestionReady({ noMedia: true });
                     }
                 } else {
                     console.warn(`[SplashDashUIManager] AssetLoader.getDisplayObject returned null for: ${question.imageUrl}`);
+                    signalFirstQuestionReady({ noMedia: true });
                 }
             } catch (error) {
                 console.error(`[SplashDashUIManager] Error loading question image: ${question.imageUrl}`, error);
+                signalFirstQuestionReady({ noMedia: true });
             }
+        } else {
+            signalFirstQuestionReady({ noMedia: true });
         }
         
         this._updateLayout();

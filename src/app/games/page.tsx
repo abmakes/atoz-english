@@ -24,6 +24,7 @@ import QuizCatalogSkeleton from '@/components/management_ui/QuizCatalogSkeleton'
 import { toast } from 'sonner';
 import { useIsClerkActive } from '@/components/auth/ClerkActiveProvider';
 import { useAuth } from '@clerk/nextjs';
+import { startLoadTimer } from '@/lib/load-timer';
 
 async function getQuizzesClient(sort: QuizSort): Promise<QuizListItem[]> {
   const apiUrl = `/api/quizzes?sort=${sort}`;
@@ -380,7 +381,10 @@ function GamesPageContent({ isSignedIn }: { isSignedIn: boolean }) {
                     key={quiz.id}
                     href={`/games/${quiz.id}`}
                     passHref
-                    onClick={() => setNavigatingQuizId(quiz.id)}
+                    onClick={() => {
+                      setNavigatingQuizId(quiz.id);
+                      startLoadTimer(quiz.id);
+                    }}
                   >
                     {isNavigating && (
                       <div className="absolute inset-0 z-20 flex items-center justify-center rounded-[32px] bg-white/50 pointer-events-none">
