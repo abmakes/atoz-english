@@ -41,6 +41,7 @@ interface QuizFinalizeFormProps {
     settings: QuizSettingsData;
   }) => Promise<void>;
   onGoBackToContent: () => void;
+  isPublishing?: boolean;
 }
 
 export default function QuizFinalizeForm({
@@ -48,7 +49,8 @@ export default function QuizFinalizeForm({
   questionsList,
   initialQuizSettings,
   onFinalize,
-  onGoBackToContent
+  onGoBackToContent,
+  isPublishing = false,
 }: QuizFinalizeFormProps) {
   const { addToast } = useCustomToast();
   const [currentTheme, setCurrentTheme] = useState<string | undefined>(initialQuizSettings.theme);
@@ -73,6 +75,7 @@ export default function QuizFinalizeForm({
   };
 
   const handlePublish = async () => {
+    if (isPublishing) return
     try {
       await onFinalize({
         quizSetup: quizSetupData,
@@ -134,9 +137,11 @@ export default function QuizFinalizeForm({
         <Button 
           variant="default" 
           onClick={handlePublish}
-            className="flex items-center text-lg pt-2 pb-1 px-6 font-semibold border border-[#1F6E91] gap-2 bg-[--text-color] text-white shadow-[4px_4px_0px_0px_#1F6E91] hover:bg-white hover:border-[#1F6E91] hover:shadow-[4px_6px_0px_0px_#1F6E91] hover:scale-105 hover:text-[--text-color] transition-all duration-300"
+          disabled={isPublishing}
+            className="flex items-center text-lg pt-2 pb-1 px-6 font-semibold border border-[#1F6E91] gap-2 bg-[--text-color] text-white shadow-[4px_4px_0px_0px_#1F6E91] hover:bg-white hover:border-[#1F6E91] hover:shadow-[4px_6px_0px_0px_#1F6E91] hover:scale-105 hover:text-[--text-color] transition-all duration-300 disabled:opacity-60 disabled:pointer-events-none disabled:hover:scale-100"
         >
-          Publish Quiz Now <ArrowRight className="w-5 h-5 ml-2 -mt-0.5" />
+          {isPublishing ? 'Publishing…' : 'Publish Quiz Now'}
+          {!isPublishing && <ArrowRight className="w-5 h-5 ml-2 -mt-0.5" />}
         </Button>
       </div>
 

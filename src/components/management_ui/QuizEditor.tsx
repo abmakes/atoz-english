@@ -158,7 +158,9 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
   const [contentView, setContentView] = useState<'create' | 'upload' | 'ai-generation'>('create')
 
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
+  const [isPublishing, setIsPublishing] = useState(false)
   const draftHydrated = useRef(false)
+  const publishCompletedRef = useRef(false)
   const workingDraftId = getWorkingDraftId(mode, quizId)
 
   const buildDraftSnapshot = useCallback((): QuizDraftSnapshot => {
@@ -200,6 +202,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
   ])
 
   const persistDraft = useCallback((reason: 'auto' | 'manual' | 'pre-submit' = 'auto') => {
+    if (publishCompletedRef.current) return
     const snapshot = buildDraftSnapshot()
     if (!draftHasContent(snapshot) && reason === 'auto') return
     upsertQuizDraft(snapshot)
@@ -258,7 +261,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
 
   // Debounced autosave — keeps partial work if publish fails or the tab closes
   useEffect(() => {
-    if (!draftHydrated.current) return
+    if (!draftHydrated.current || publishCompletedRef.current) return
     const timer = window.setTimeout(() => {
       persistDraft('auto')
     }, 800)
@@ -268,6 +271,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
   // Warn before leaving with unsaved/in-progress work
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (publishCompletedRef.current) return
       if (!draftHasContent(buildDraftSnapshot())) return
       e.preventDefault()
       e.returnValue = ''
@@ -692,8 +696,11 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
     questions: Question[];
     settings: QuizSettingsData;
   }) => {
+    if (isPublishing || publishCompletedRef.current) return
+
     const action = mode === 'create' ? 'Publishing' : 'Updating';
     addToast(`${action} your quiz...`, { variant: 'info', position: 'top-center' });
+    setIsPublishing(true)
 
     const { quizSetup, questions, settings } = finalizedData;
     setQuizSettings(settings);
@@ -780,7 +787,10 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
       const result = await response.json();
       console.log(`Quiz ${mode === 'create' ? 'created' : 'updated'} successfully:`, result);
 
+      // Stop autosave before clearing so a stay-on-page tick cannot recreate drafts
+      publishCompletedRef.current = true
       clearWorkingDraft(mode, quizId)
+      deleteQuizDraft(getWorkingDraftId(mode, quizId))
       if (resumeDraftId) {
         deleteQuizDraft(resumeDraftId)
       }
@@ -800,6 +810,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
         `Error ${mode === 'create' ? 'submitting' : 'updating'} quiz: ${error instanceof Error ? error.message : 'Unknown error'}. Your draft was kept on this device.`,
         { variant: 'error', position: 'top-center' }
       );
+      setIsPublishing(false)
     } 
   };
 
@@ -1115,6 +1126,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
               initialQuizSettings={quizSettings}
               onFinalize={handleFinalQuizSubmit}
               onGoBackToContent={() => setCreationStep('content')}
+              isPublishing={isPublishing}
             />
           </div>
         )}
