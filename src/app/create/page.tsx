@@ -2,15 +2,22 @@
 
 import QuizEditor from "@/components/management_ui/QuizEditor"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Suspense } from "react"
 import LoadingSpinner from "@/components/loading_spinner"
 
 function CreateEditor() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const resumeDraftId = searchParams.get('draft') || undefined
 
-  return <QuizEditor mode="create" resumeDraftId={resumeDraftId} />
+  return (
+    <QuizEditor
+      mode="create"
+      resumeDraftId={resumeDraftId}
+      onSuccess={(id) => router.push(`/games/${id}`)}
+    />
+  )
 }
 
 export default function CreatePage() {
