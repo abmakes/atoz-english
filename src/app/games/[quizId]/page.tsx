@@ -21,8 +21,9 @@ type QuizApiPayload = Pick<
   'id' | 'title' | 'description' | 'imageUrl' | 'quizType' | 'questions'
 >
 
+/** Landscape mode card (~3:2); left half is portrait art filling full height. */
 const modeCardClass =
-  'relative flex flex-col sm:flex-row overflow-hidden rounded-[24px] border-2 border-[#1E5167] bg-white shadow-[4px_4px_0px_0px_#1E5167] transition hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_0px_#1E5167]'
+  'relative flex aspect-[3/2] overflow-hidden rounded-[24px] border-2 border-[#1E5167] bg-white shadow-[4px_4px_0px_0px_#1E5167] transition hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_0px_#1E5167]'
 
 function ModeThumb({
   src,
@@ -35,7 +36,7 @@ function ModeThumb({
 }) {
   return (
     <div
-      className={`relative aspect-[4/3] w-full shrink-0 overflow-hidden border-[#1E5167] sm:aspect-auto sm:w-1/2 sm:border-r-2 ${
+      className={`relative h-full w-1/2 shrink-0 overflow-hidden border-r-2 border-[#1E5167] ${
         muted ? 'grayscale opacity-70' : ''
       }`}
     >
@@ -43,7 +44,7 @@ function ModeThumb({
         src={src}
         alt={alt}
         fill
-        sizes="(max-width: 640px) 100vw, 40vw"
+        sizes="(max-width: 640px) 50vw, 25vw"
         className="object-cover object-center"
       />
     </div>
@@ -65,12 +66,12 @@ function ModeDetails({
 }) {
   return (
     <div
-      className={`flex w-full flex-col p-5 sm:w-1/2 sm:p-6 ${
+      className={`flex h-full w-1/2 flex-col p-4 sm:p-5 ${
         muted ? 'text-slate-500' : ''
       }`}
     >
       <div
-        className={`mb-3 flex h-12 w-12 items-center justify-center rounded-full border-2 ${
+        className={`mb-2 flex h-10 w-10 items-center justify-center rounded-full border-2 ${
           muted
             ? 'border-slate-300 bg-white text-slate-400'
             : 'border-[#1E5167] bg-[--primary-light]'
@@ -79,21 +80,21 @@ function ModeDetails({
         {icon}
       </div>
       <h2
-        className={`text-2xl font-bold grandstander mb-2 ${
+        className={`text-xl sm:text-2xl font-bold grandstander mb-1.5 leading-tight ${
           muted ? 'text-slate-500' : ''
         }`}
       >
         {title}
       </h2>
       <p
-        className={`inclusive-sans text-sm flex-grow ${
+        className={`inclusive-sans text-xs sm:text-sm flex-grow leading-snug ${
           muted ? 'text-slate-500' : 'text-slate-600'
         }`}
       >
         {description}
       </p>
       <span
-        className={`mt-4 font-semibold grandstander ${
+        className={`mt-2 font-semibold grandstander text-sm sm:text-base ${
           muted ? 'text-slate-400' : 'text-[--text-color]'
         }`}
       >
@@ -196,46 +197,41 @@ export default function GameModePickerPage() {
           <ArrowLeft size={20} /> Back to catalog
         </button>
 
-        <header
-          className={`mb-8 flex flex-col gap-4 sm:flex-row sm:items-stretch overflow-hidden rounded-[24px] border-2 border-[#1E5167] bg-white shadow-[4px_4px_0px_0px_#1E5167] ${
+        <div
+          className={`mb-8 flex items-start gap-4 sm:gap-5 ${
             headerLoading ? 'animate-pulse' : ''
           }`}
         >
-          <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden border-[#1E5167] sm:aspect-auto sm:w-44 sm:border-r-2 md:w-52">
+          <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 overflow-hidden rounded-2xl border-2 border-[#1E5167] bg-white shadow-[3px_3px_0px_0px_#1E5167]">
             <Image
               src={coverSrc}
               alt={quiz ? `${title} cover` : 'Quiz cover'}
               fill
-              sizes="(max-width: 640px) 100vw, 208px"
+              sizes="112px"
               className="object-cover object-center"
               priority
             />
           </div>
-          <div className="flex min-w-0 flex-1 flex-col justify-center px-5 py-5 sm:px-6 sm:py-6">
-            <p className="inclusive-sans text-xs font-semibold uppercase tracking-wide text-[--text-light] mb-1">
-              Selected quiz
-            </p>
+          <div className="min-w-0 flex-1 pt-0.5">
             <h1
-              className={`text-2xl md:text-3xl font-black grandstander leading-tight ${
+              className={`text-3xl md:text-4xl font-black grandstander mb-2 ${
                 headerLoading ? 'text-slate-400' : ''
               }`}
             >
               {title}
             </h1>
             {description ? (
-              <p className="inclusive-sans text-[--text-light] mt-2 text-sm md:text-base leading-relaxed">
+              <p className="inclusive-sans text-[--text-light] mb-2 text-sm md:text-base leading-relaxed">
                 {description}
               </p>
-            ) : headerLoading ? (
-              <p className="inclusive-sans text-slate-300 mt-2 text-sm">Loading description…</p>
             ) : null}
-            <p className="inclusive-sans text-[--text-light] mt-3 text-sm">
+            <p className="inclusive-sans text-[--text-light]">
               Choose how you want to play this quiz.
             </p>
           </div>
-        </header>
+        </div>
 
-        <div className="grid gap-6">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2">
           <Link
             href={`/games/${quizPathId}/multiple-choice`}
             onClick={() => setNavigatingSlug('multiple-choice')}
@@ -254,7 +250,7 @@ export default function GameModePickerPage() {
               alt="Team Quiz gameplay with timer, teams, and answer choices"
             />
             <ModeDetails
-              icon={<Users size={24} />}
+              icon={<Users size={20} />}
               title="Team Quiz"
               description="Turn-based classroom play with timers, teams, and power-ups."
               cta="Play →"
@@ -269,7 +265,7 @@ export default function GameModePickerPage() {
                 muted
               />
               <ModeDetails
-                icon={<Zap size={24} className="text-slate-400" />}
+                icon={<Zap size={20} className="text-slate-400" />}
                 title="Splash Dash"
                 description="Checking eligibility…"
                 cta="…"
@@ -294,7 +290,7 @@ export default function GameModePickerPage() {
                 alt="Splash Dash race with capybara swimming to answer crates"
               />
               <ModeDetails
-                icon={<Zap size={24} />}
+                icon={<Zap size={20} />}
                 title="Splash Dash"
                 description="Two-player race — swim to the right crate first."
                 cta="Play →"
@@ -302,7 +298,7 @@ export default function GameModePickerPage() {
             </Link>
           ) : (
             <div
-              className="relative flex flex-col sm:flex-row overflow-hidden rounded-[24px] border-2 border-slate-300 bg-slate-50 opacity-80"
+              className="relative flex aspect-[3/2] overflow-hidden rounded-[24px] border-2 border-slate-300 bg-slate-50 opacity-80"
               aria-disabled="true"
             >
               <ModeThumb
@@ -311,7 +307,7 @@ export default function GameModePickerPage() {
                 muted
               />
               <ModeDetails
-                icon={<Zap size={24} className="text-slate-400" />}
+                icon={<Zap size={20} className="text-slate-400" />}
                 title="Splash Dash"
                 description={splashReason ?? 'Not available for this quiz.'}
                 cta="Unavailable"
