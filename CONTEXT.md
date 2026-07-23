@@ -22,7 +22,7 @@ Teacher-centric quiz platform: create quizzes (form, CSV, AI), then play them as
 | Data | Prisma → PostgreSQL; Zod validation |
 | Auth | Clerk (optional; falls back to local `"admin"`) |
 | Tests | **Vitest** (`tests/`) |
-| AI / media | Google Gemini; Giphy / Pixabay + Vercel Blob |
+| AI / media | Google Gemini + open young-learner lexicon guard; Giphy / Pixabay + Vercel Blob |
 
 ### Explicit non-goals (do not revive)
 
@@ -44,6 +44,7 @@ Canonical init sequence: [.cursor/rules/GAME_STARTUP_FLOW.mdc](.cursor/rules/GAM
 
 ```
 prisma/                 Schema (source of truth for DB)
+lexicon/                Open lexical sources, provenance, curation, and build pipeline
 public/                 Static assets — see public/ASSETS.md
 scripts/                CI helpers (verify-assets)
 src/app/                Pages + REST API routes
@@ -77,7 +78,7 @@ CONTEXT.md              This hub
 | **Multiple-choice flow** | [src/lib/pixi-games/multiple-choice/MultipleChoiceFlow.md](src/lib/pixi-games/multiple-choice/MultipleChoiceFlow.md) | MC-specific deep dive |
 | **API / Zod conventions** | [src/lib/README.md](src/lib/README.md) | API routes, schemas, responses |
 | **Assets contract** | [public/ASSETS.md](public/ASSETS.md) | public/ files, CI verify |
-| **AI quiz setup** | [AI_QUIZ_GENERATOR_SETUP.md](AI_QUIZ_GENERATOR_SETUP.md) | Gemini env/setup |
+| **AI quiz + lexicon setup** | [AI_QUIZ_GENERATOR_SETUP.md](AI_QUIZ_GENERATOR_SETUP.md) | Gemini, open lexicon, language guard |
 | **Doc updates after commits** | [project_docs/DOCUMENTATION_MAINTENANCE.md](project_docs/DOCUMENTATION_MAINTENANCE.md) | After structural code changes |
 | **Clerk** | [.cursor/rules/clerk_rules.mdc](.cursor/rules/clerk_rules.mdc) | Auth integration |
 | **DB schema** | [prisma/schema.prisma](prisma/schema.prisma) | Data model (not a separate MD) |

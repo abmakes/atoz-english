@@ -1,91 +1,80 @@
-# AI Quiz Generator Setup Guide
+# AI Quiz Generator
 
 ## Overview
-The AI Quiz Generator allows you to automatically create multiple choice questions based on your quiz title, description, selected tags, CEFR level, and optional book/unit content.
 
-## Setup Instructions
+The generator creates short multiple-choice questions for young learners. It
+uses:
 
-### 1. Environment Variables
-Add the following to your `.env` file:
+- teacher-selected level, topic, word-class, and grammar tags;
+- the open AtoZ Young-Learner Lexicon for retrieval;
+- Gemini 2.5 Flash Lite for drafting;
+- a post-generation language audit that checks questions and answers.
+
+Publisher book names, unit sequences, example sentences, and proprietary
+wordlists are not generation inputs.
+
+## Environment
 
 ```env
 GEMINI_QUIZ_API_KEY="your_gemini_api_key_here"
 ```
 
-To get a Gemini API key:
-1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Create a new API key
-3. Copy the key and add it to your `.env` file
+## Supported scope
 
-### 2. Features
+- Pre-A1
+- A1
+- A2
+- B1
 
-#### Available CEFR Levels:
-- **Pre-A1 (Starters)**: Very basic English for young learners
-- **A1 (Movers)**: Basic English for elementary learners  
-- **A2 (Flyers)**: Elementary English for young learners
+These bands are app-authored curriculum estimates, not an official
+certification. The current artifact is intentionally conservative and records
+confidence, method, and source provenance for each entry.
 
-#### Supported Books:
-- **Macmillan Academy Stars**: 5 levels with 9 units each
-- **Cambridge Primary Path**: 5 levels with 9 units each
+## Generation flow
 
-#### Tag Categories:
-- **Topic**: Animals, Food, Travel, History, Science, Movies, Music, Sports
-- **Grammar**: Present Simple, Past Simple, Future Simple, Nouns, Verbs, Adjectives, etc.
-- **Vocabulary Level**: Beginner, Elementary, Intermediate, Upper-Intermediate, Advanced
-- **CEFR Level**: A1, A2, B1, B2, C1, C2
-- **Skills**: Reading, Writing, Listening, Speaking
+1. The teacher chooses a level and one or more tags.
+2. The resolver selects cumulative, in-scope words from the lexicon.
+3. Grammar tags add short structural patterns.
+4. Gemini receives a bounded vocabulary allowlist.
+5. Questions and all four answers are audited.
+6. If the draft uses unknown or above-level language, it is rewritten once.
+7. A draft that still fails is rejected instead of being silently added.
 
-## How to Use
+## Building the lexicon
 
-1. **Create a Quiz**: Go to the quiz creation page
-2. **Fill Basic Info**: Enter quiz title and description
-3. **Select AI Generation**: Click the "Generate with AI" tab
-4. **Configure Settings**:
-   - Select CEFR level (required)
-   - Choose tags (at least one required)
-   - Optionally select a book and unit
-   - Set number of questions (1-20)
-5. **Generate**: Click "Generate Questions" button
-6. **Review**: Generated questions will be added to your quiz
-7. **Edit**: You can edit the generated questions as needed
+See [`lexicon/README.md`](lexicon/README.md).
 
-## How It Works
+```bash
+npm run build:lexicon
+npm test
+```
 
-The AI generator:
-1. Uses your quiz title and description for context
-2. Filters vocabulary based on selected CEFR level and tags
-3. Incorporates book/unit content if specified
-4. Generates appropriate multiple choice questions
-5. Returns questions in the correct format for your quiz system
+The generated app artifact is
+`src/generated/young-learner-lexicon.json`. Do not edit it manually.
 
-## Example Usage
+## Licensing and attribution
 
-**Quiz Title**: "Farm Animals for Beginners"
-**Description**: "Learn about farm animals and their sounds"
-**Level**: Pre-A1 (Starters)
-**Tags**: Animals, Farm Animals, Vocabulary
-**Book**: Macmillan Academy Stars - Unit: Farm Animals
-**Questions**: 5
+The lexical artifact is CC BY-SA 4.0 and is built from pinned snapshots of:
 
-This will generate 5 multiple choice questions about farm animals appropriate for Pre-A1 level students.
+- New Dolch List 1.1;
+- New General Service List 1.2;
+- Open English WordNet 2025.
+
+Full provenance and notices are in:
+
+- `lexicon/sources.lock.json`
+- `lexicon/ATTRIBUTION.md`
+- `lexicon/LICENSES/`
+
+CEFR-J is not included in the public artifact because its stated terms do not
+clearly grant redistribution of an adapted dataset.
 
 ## Troubleshooting
 
-### Common Issues:
-1. **"Failed to generate questions"**: Check your GEMINI_QUIZ_API_KEY is correct
-2. **"At least one tag is required"**: Select one or more tags before generating
-3. **"Invalid response from AI service"**: The AI response couldn't be parsed - try again
-
-### Tips:
-- Be specific in your quiz title and description for better results
-- Select relevant tags that match your content
-- Start with fewer questions (3-5) to test the system
-- Review and edit generated questions before publishing
-
-## Technical Details
-
-- Uses Google's Gemini 2.5 Flash Lite model (optimized for cost efficiency and low latency)
-- Processes vocabulary from wordlist.json based on CEFR levels
-- Incorporates book content from Macmillan and Cambridge JSON files
-- Generates questions in JSON format compatible with your quiz system
-- Includes proper error handling and loading states
+- **Not enough reviewed vocabulary:** broaden the topic or remove a restrictive
+  word-class tag.
+- **Outside the selected level:** the automatic rewrite failed; adjust the tags
+  or try again.
+- **Invalid question format:** Gemini did not return the required JSON shape.
+- **Lexicon build checksum error:** an upstream file changed; review and pin a
+  deliberate source update instead of accepting it silently.

@@ -39,8 +39,8 @@ export function TagDrawer({
   return (
     <Drawer>
       <DrawerTrigger asChild>{triggerElement}</DrawerTrigger>
-      <DrawerContent className="h-[50vh] text-[--text-color] grandstander">
-        <DrawerHeader className="text-center flex flex-col items-center px-12 pt-4 pb-2">
+      <DrawerContent className="h-[70vh] text-[--text-color] grandstander">
+        <DrawerHeader className="text-center flex flex-col items-center px-4 md:px-12 pt-4 pb-2">
           <DrawerTitle className='hidden'>{title || "Select Tags"}</DrawerTitle>
           <div className="flex flex-row justify-between items-center w-full mt-2">
             <div className="flex flex-wrap gap-2 items-center">
@@ -68,22 +68,20 @@ export function TagDrawer({
           <div className="flex flex-col gap-2 pl-8 py-2">
             <DrawerDescription className="text-base">{description}</DrawerDescription>
           </div>  
-          <div className="grid grid-cols-12 gap-4 px-8">
+          <div className="grid grid-cols-1 gap-4 px-4 pb-8 md:grid-cols-2 xl:grid-cols-4 md:px-8">
             {allTags.map((categoryItem) => {
-              // Determine column span based on category
-              let colSpan = 2; // Default for Level
-              if (categoryItem.category === "Grammar") {
-                colSpan = 6; // 3x wider (6 columns)
-              } else if (categoryItem.category === "Topic") {
-                colSpan = 4; // 2x wider (4 columns)
-              }
-              
               return (
                 <div 
                   key={categoryItem.category} 
-                  style={{ gridColumn: `span ${colSpan}` }}
+                  className="rounded-xl border border-[--primary-accent] bg-white/70 p-3"
                 >
-                  <h3 className="text-lg font-semibold mb-2">{categoryItem.category}</h3>
+                  <h3 className="text-lg font-semibold mb-1">{categoryItem.category}</h3>
+                  <p className="mb-3 text-xs text-gray-500">
+                    {categoryItem.category === 'Level' && 'Choose one target band'}
+                    {categoryItem.category === 'Topic' && 'Choose a visual theme'}
+                    {categoryItem.category === 'Word Class' && 'Choose the words to practise'}
+                    {categoryItem.category === 'Grammar' && 'Choose a short sentence structure'}
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {categoryItem.tags.map((tag) => {
                       const isSelected = selectedTags.includes(tag);
