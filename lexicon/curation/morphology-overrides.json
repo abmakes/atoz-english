@@ -1,0 +1,9 @@
+{
+  "bad": ["bad", "worse", "worst"],
+  "be": ["be", "am", "is", "are", "was", "were", "been", "being"],
+  "child": ["child", "children"],
+  "do": ["do", "does", "did", "done", "doing"],
+  "go": ["go", "goes", "went", "gone", "going"],
+  "good": ["good", "better", "best"],
+  "have": ["have", "has", "had", "having"]
+}
