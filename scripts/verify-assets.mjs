@@ -12,9 +12,9 @@ const REQUIRED_ASSETS = [
   'public/audio/default/crowd-cheering.mp3',
   'public/audio/default/background-music.mp3',
   // Theme backgrounds
-  'public/images/default/bg_image.png',
-  'public/images/dark/bg_image.png',
-  'public/images/forest/bg_image.png',
+  'public/images/default/bg_image.webp',
+  'public/images/dark/bg_image.webp',
+  'public/images/forest/bg_image.webp',
   'public/images/placeholder.webp',
   // Splash Dash
   'public/images/splash-dash/crate_5_4.png',

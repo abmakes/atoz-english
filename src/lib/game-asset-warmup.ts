@@ -26,9 +26,9 @@ export function getSplashDashSceneAssetUrls(): string[] {
 /** Score Attack theme backgrounds used by GameBackgroundManager. */
 export function getScoreAttackSceneAssetUrls(): string[] {
   return [
-    '/images/default/bg_image.png',
-    '/images/dark/bg_image.png',
-    '/images/forest/bg_image.png',
+    '/images/default/bg_image.webp',
+    '/images/dark/bg_image.webp',
+    '/images/forest/bg_image.webp',
   ]
 }
 
