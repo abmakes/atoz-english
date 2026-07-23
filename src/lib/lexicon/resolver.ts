@@ -204,9 +204,13 @@ export function entriesForForm(form: string): LexiconEntry[] {
 
 export function isAllowedAtLevel(
   entry: LexiconEntry,
-  level: CefrLevelId
+  level: CefrLevelId,
+  surfaceForm?: string
 ): boolean {
-  return rankForLevel(entry.introducedAt) <= LEVEL_RANK[level];
+  const formLevel = surfaceForm
+    ? entry.formLevels[normalizeSurface(surfaceForm)] ?? entry.introducedAt
+    : entry.introducedAt;
+  return rankForLevel(formLevel) <= LEVEL_RANK[level];
 }
 
 export function lexiconMetadata(): LexiconArtifact['metadata'] {

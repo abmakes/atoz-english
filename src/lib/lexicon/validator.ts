@@ -39,17 +39,21 @@ export function auditLanguage(
       continue;
     }
 
-    if (entries.some((entry) => isAllowedAtLevel(entry, targetLevel))) {
+    if (entries.some((entry) => isAllowedAtLevel(entry, targetLevel, word))) {
       continue;
     }
 
     const inScopeEntry = entries.find(
-      (entry) => entry.introducedAt !== 'OUT_OF_SCOPE'
+      (entry) =>
+        (entry.formLevels[word] ?? entry.introducedAt) !== 'OUT_OF_SCOPE'
     );
+    const detectedLevel = inScopeEntry
+      ? inScopeEntry.formLevels[word] ?? inScopeEntry.introducedAt
+      : 'OUT_OF_SCOPE';
     issues.push({
       word,
       reason: inScopeEntry ? 'above-level' : 'out-of-scope',
-      detectedLevel: inScopeEntry?.introducedAt ?? 'OUT_OF_SCOPE',
+      detectedLevel,
     });
   }
 

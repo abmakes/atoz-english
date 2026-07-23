@@ -12,6 +12,7 @@ export interface LexiconEntry {
   lemma: string;
   partsOfSpeech: LexiconPartOfSpeech[];
   forms: string[];
+  formLevels: Record<string, LexiconLevel>;
   topics: TopicTag[];
   introducedAt: LexiconLevel;
   levelConfidence: number;

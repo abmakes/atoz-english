@@ -36,6 +36,18 @@ describe('language audit', () => {
     })
   })
 
+  it('levels harder inflected forms separately from their base lemma', () => {
+    expect(auditLanguage(['go'], 'PRE_A1').valid).toBe(true)
+
+    const audit = auditLanguage(['gone'], 'PRE_A1')
+    expect(audit.valid).toBe(false)
+    expect(audit.issues).toContainEqual({
+      word: 'gone',
+      reason: 'above-level',
+      detectedLevel: 'A2',
+    })
+  })
+
   it('flags words absent from the open lexicon', () => {
     const audit = auditLanguage(['A flibbertigibbet appears'], 'B1')
 

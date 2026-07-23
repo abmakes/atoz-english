@@ -13,6 +13,9 @@ from Pre-A1 through B1.
 - Open English WordNet supplies parts of speech for candidate lemmas.
 - Topic assignments are curated, multi-label seeds. An empty topic list means
   "general vocabulary", not missing data.
+- Inflected forms can enter at a later band than their lemma (`go` at Pre-A1,
+  `went` at A1, `gone` at A2). Regular-form heuristics are backed by explicit
+  overrides for common irregular paradigms.
 - CEFR-J is not included because its published terms do not clearly grant
   redistribution of an adapted public dataset.
 - The previous publisher-derived word and coursebook files are not inputs.
@@ -41,7 +44,8 @@ The builder verifies every source checksum and writes
 
 1. Change source snapshots only through an explicit version update in
    `sources.lock.json`.
-2. Add topic decisions to `curation/topic-seeds.json`.
+2. Add topic decisions to `curation/topic-seeds.json` and morphology decisions
+   to the two override files in `curation/`.
 3. Rebuild the artifact.
 4. Run `npm test` and inspect coverage counts in the generated metadata.
 5. Record substantial data changes in this README and the app documentation.

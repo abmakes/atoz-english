@@ -27,6 +27,9 @@ TOPICS_PATH = LEXICON_DIR / "curation" / "topic-seeds.json"
 MORPHOLOGY_OVERRIDES_PATH = (
     LEXICON_DIR / "curation" / "morphology-overrides.json"
 )
+FORM_LEVEL_OVERRIDES_PATH = (
+    LEXICON_DIR / "curation" / "form-level-overrides.json"
+)
 
 LEVEL_ORDER = {"PRE_A1": 0, "A1": 1, "A2": 2, "B1": 3, "OUT_OF_SCOPE": 4}
 VALID_SURFACE = re.compile(r"^[A-Za-z][A-Za-z .'\u2019-]*$")
@@ -187,6 +190,38 @@ def estimate_level(
     return "OUT_OF_SCOPE", 0.45, "ngsl-conservative-b1-ceiling"
 
 
+def at_least_level(current: str, minimum: str) -> str:
+    return minimum if LEVEL_ORDER[minimum] > LEVEL_ORDER[current] else current
+
+
+def infer_form_levels(
+    lemma: str,
+    forms: set[str],
+    parts_of_speech: set[str],
+    base_level: str,
+    overrides: dict[str, dict[str, str]],
+) -> dict[str, str]:
+    form_levels = {form: base_level for form in forms}
+
+    if base_level != "OUT_OF_SCOPE":
+        if "verb" in parts_of_speech:
+            for form in forms:
+                if form != lemma and (form.endswith("ing") or form.endswith("ed")):
+                    form_levels[form] = at_least_level(base_level, "A1")
+
+        if "adjective" in parts_of_speech or "adverb" in parts_of_speech:
+            for form in forms:
+                if form != lemma and (form.endswith("er") or form.endswith("est")):
+                    form_levels[form] = at_least_level(base_level, "A1")
+
+    for form, level in overrides.get(lemma, {}).items():
+        normalized_form = normalize(form)
+        if normalized_form in forms and level in LEVEL_ORDER:
+            form_levels[normalized_form] = level
+
+    return dict(sorted(form_levels.items()))
+
+
 def build() -> dict[str, Any]:
     lock = json.loads(LOCK_PATH.read_text(encoding="utf-8"))
     verify_sources(lock)
@@ -218,6 +253,9 @@ def build() -> dict[str, Any]:
     morphology_overrides: dict[str, list[str]] = json.loads(
         MORPHOLOGY_OVERRIDES_PATH.read_text(encoding="utf-8")
     )
+    form_level_overrides: dict[str, dict[str, str]] = json.loads(
+        FORM_LEVEL_OVERRIDES_PATH.read_text(encoding="utf-8")
+    )
     topics_by_lemma: dict[str, set[str]] = defaultdict(set)
     for topic, lemmas in raw_topics.items():
         for lemma in lemmas:
@@ -239,6 +277,14 @@ def build() -> dict[str, Any]:
             all_forms = {
                 normalize(form) for form in morphology_overrides[lemma]
             }
+        parts_of_speech = pos_by_lemma.get(lemma, set())
+        form_levels = infer_form_levels(
+            lemma,
+            all_forms,
+            parts_of_speech,
+            level,
+            form_level_overrides,
+        )
         topics = sorted(topics_by_lemma.get(lemma, set()))
         for topic in topics:
             topic_counts[topic] += 1
@@ -262,8 +308,9 @@ def build() -> dict[str, Any]:
             {
                 "id": f"{lemma.replace(' ', '-')}",
                 "lemma": lemma,
-                "partsOfSpeech": sorted(pos_by_lemma.get(lemma, set())),
+                "partsOfSpeech": sorted(parts_of_speech),
                 "forms": sorted(all_forms),
+                "formLevels": form_levels,
                 "topics": topics,
                 "introducedAt": level,
                 "levelConfidence": confidence,
