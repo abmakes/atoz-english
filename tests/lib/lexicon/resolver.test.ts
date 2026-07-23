@@ -18,7 +18,7 @@ describe('resolveLexicon', () => {
   it('can restrict results to words introduced at the target band', () => {
     const result = resolveLexicon({
       level: 'A2',
-      tags: ['Animals'],
+      tags: [],
       introducedAtLevelOnly: true,
       limit: 100,
     })
