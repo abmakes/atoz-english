@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { useCustomToast } from '@/components/ui/CustomToast'
-import { ClipboardPaste, Loader2, Trash2, Upload } from 'lucide-react'
+import { ClipboardPaste, ImagePlus, Loader2, Trash2, Upload } from 'lucide-react'
 
 const ACCEPT = 'image/png,image/jpeg,image/webp'
 const MAX_BYTES = 8 * 1024 * 1024
@@ -13,7 +13,7 @@ export interface LessonPageCaptureProps {
   disabled?: boolean
   onAnalyze: (file: File) => Promise<void>
   isAnalyzing?: boolean
-  /** Compact sidebar-style layout (~1/3 width companion to notes) */
+  /** Compact companion panel beside quiz info */
   compact?: boolean
 }
 
@@ -102,16 +102,23 @@ export default function LessonPageCapture({
       onDragOver={(event) => event.preventDefault()}
       onDrop={handleDrop}
       className={`rounded-xl border-2 border-dashed border-violet-300 bg-violet-50/60 ${
-        compact ? 'flex h-full flex-col p-3' : 'p-4'
+        compact ? 'flex h-full min-h-[10rem] flex-col p-3' : 'p-4'
       }`}
     >
-      <p
-        className={`font-semibold text-[--text-color] ${
-          compact ? 'mb-2 text-sm' : 'mb-3 text-base'
-        }`}
-      >
-        Paste or upload a textbook page
-      </p>
+      <div className={`flex items-start gap-2 ${compact ? 'mb-2' : 'mb-3'}`}>
+        <ImagePlus
+          className={`mt-0.5 flex-none text-violet-700 ${
+            compact ? 'h-4 w-4' : 'h-5 w-5'
+          }`}
+        />
+        <p
+          className={`font-semibold leading-snug text-[--text-color] ${
+            compact ? 'text-sm' : 'text-base'
+          }`}
+        >
+          Paste or upload a textbook / worksheet page
+        </p>
+      </div>
 
       {previewUrl ? (
         <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-white">
@@ -122,7 +129,7 @@ export default function LessonPageCapture({
             height={360}
             unoptimized
             className={`w-full object-contain bg-slate-50 ${
-              compact ? 'h-28' : 'h-48'
+              compact ? 'h-24' : 'h-48'
             }`}
           />
           <div className="flex flex-wrap items-center justify-between gap-2 border-t px-2 py-2 text-xs">
@@ -157,17 +164,12 @@ export default function LessonPageCapture({
       ) : (
         <div
           className={`flex flex-1 flex-col items-center justify-center gap-2 text-center ${
-            compact ? 'py-4' : 'py-6'
+            compact ? 'py-3' : 'py-6'
           }`}
         >
           <ClipboardPaste
             className={`text-violet-500 ${compact ? 'h-6 w-6' : 'h-8 w-8'}`}
           />
-          {!compact && (
-            <p className="text-sm text-gray-600">
-              Paste a screenshot, drag and drop, or choose a file.
-            </p>
-          )}
           <Button
             type="button"
             variant="outline"

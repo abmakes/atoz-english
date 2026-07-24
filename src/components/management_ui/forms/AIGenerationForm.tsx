@@ -51,7 +51,7 @@ const NOTES_PLACEHOLDER =
   'Students are learning Present Simple for daily routines. Use Do/Does and short questions. Optional model sentence: She plays football every Saturday.'
 
 const pillClass = (selected: boolean) =>
-  `cursor-pointer text-sm font-medium transition-all text-nowrap duration-150 border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)] ease-in-out hover:shadow-md ${
+  `cursor-pointer px-2 pt-1 h-8 text-sm font-medium transition-all text-nowrap duration-150 border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)] ease-in-out hover:shadow-md ${
     selected
       ? 'bg-[--primary-accent] text-[--text-color]'
       : 'bg-white text-[--text-color]'
@@ -448,56 +448,37 @@ export default function AIGenerationForm({
           </Card>
         )}
 
-        {/* Prefill summary from setup */}
-        <div className="mb-5 space-y-3 rounded-lg bg-gray-50 p-4">
-          <div>
-            <p className="mb-1 text-sm font-bold">Quiz</p>
-            <p className="text-base">{quizTitle || 'Untitled quiz'}</p>
-          </div>
-          <div>
-            <p className="mb-1 text-sm font-bold">Description</p>
-            <p className="text-sm text-slate-700">
-              {quizDescription || 'No description yet'}
-            </p>
-          </div>
-          <div>
-            <p className="mb-2 text-sm font-bold">Tags</p>
-            <div className="flex flex-wrap gap-2">
-              {selectedTags.length > 0 ? (
-                selectedTags.map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant="secondary"
-                    className="h-8 border-[--primary-accent] px-2 pt-1 text-sm text-[--text-color] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]"
-                  >
-                    {tag}
-                  </Badge>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500">No tags selected yet.</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Notes + image capture */}
+        {/* Prefill summary + textbook upload */}
         <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="space-y-2 lg:col-span-2">
-            <Label htmlFor="teacherNotes" className="text-base font-bold">
-              Quiz notes
-            </Label>
-            <p className="text-sm text-slate-600">
-              Expand on your description to help generate accurate questions.
-            </p>
-            <Textarea
-              id="teacherNotes"
-              rows={6}
-              value={teacherNotes}
-              onChange={(event) => setTeacherNotes(event.target.value)}
-              placeholder={NOTES_PLACEHOLDER}
-              disabled={aiDisabled}
-              className="min-h-[9rem] border-2 border-slate-200 bg-white px-4 py-3 text-[--text-color] placeholder:text-slate-400"
-            />
+          <div className="space-y-3 rounded-lg bg-gray-50 p-4 lg:col-span-2">
+            <div>
+              <p className="mb-1 text-sm font-bold">Quiz</p>
+              <p className="text-base">{quizTitle || 'Untitled quiz'}</p>
+            </div>
+            <div>
+              <p className="mb-1 text-sm font-bold">Description</p>
+              <p className="text-sm text-slate-700">
+                {quizDescription || 'No description yet'}
+              </p>
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-bold">Tags</p>
+              <div className="flex flex-wrap gap-2">
+                {selectedTags.length > 0 ? (
+                  selectedTags.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="secondary"
+                      className="h-8 border-[--primary-accent] px-2 pt-1 text-sm text-[--text-color] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]"
+                    >
+                      {tag}
+                    </Badge>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500">No tags selected yet.</p>
+                )}
+              </div>
+            </div>
           </div>
           <div className="lg:col-span-1">
             <LessonPageCapture
@@ -509,8 +490,27 @@ export default function AIGenerationForm({
           </div>
         </div>
 
+        {/* Full-width quiz notes */}
+        <div className="mb-2 space-y-2">
+          <Label htmlFor="teacherNotes" className="text-base font-bold">
+            Quiz notes
+          </Label>
+          <p className="text-sm text-slate-600">
+            Expand on your description to help generate accurate questions.
+          </p>
+          <Textarea
+            id="teacherNotes"
+            rows={3}
+            value={teacherNotes}
+            onChange={(event) => setTeacherNotes(event.target.value)}
+            placeholder={NOTES_PLACEHOLDER}
+            disabled={aiDisabled}
+            className="min-h-[5.5rem] border-2 border-slate-200 bg-white px-4 py-3 text-[--text-color] placeholder:text-slate-400"
+          />
+        </div>
+
         {(lessonSummary || keyVocabulary.length > 0 || sentencePatterns.length > 0) && (
-          <div className="mb-5 space-y-2 rounded-lg border bg-slate-50 p-3">
+          <div className="mb-5 mt-4 space-y-2 rounded-lg border bg-slate-50 p-3">
             <Label className="font-bold">Lesson analysis</Label>
             <Textarea
               rows={2}
@@ -526,9 +526,43 @@ export default function AIGenerationForm({
           </div>
         )}
 
-        {/* How to test */}
+        {/* Quick question count — prominent for fast path */}
+        <div className="my-8 flex flex-wrap items-center justify-center gap-4 rounded-xl border-2 border-slate-200 bg-gray-50 px-6 py-5">
+          <p className="text-xl font-bold">Questions</p>
+          <div className="flex items-center gap-3 rounded-full border-2 border-[--border-dark] bg-white px-3 py-2 shadow-[3px_3px_0px_0px_var(--border-dark)]">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-11 w-11 rounded-full"
+              disabled={aiDisabled || numberOfQuestions <= 1}
+              onClick={() =>
+                setNumberOfQuestions((current) => Math.max(1, current - 1))
+              }
+            >
+              <Minus className="h-5 w-5" />
+            </Button>
+            <span className="min-w-10 text-center text-3xl font-bold tabular-nums">
+              {numberOfQuestions}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-11 w-11 rounded-full"
+              disabled={aiDisabled || numberOfQuestions >= 20}
+              onClick={() =>
+                setNumberOfQuestions((current) => Math.min(20, current + 1))
+              }
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Optional fine-tune controls */}
         <div className="space-y-4">
-          <h3 className="text-lg font-bold">Choose how to test it</h3>
+          <h3 className="text-lg font-bold">Fine-tune questions</h3>
 
           {levelMissing && (
             <div className="space-y-2 rounded-xl border border-[--primary-accent] bg-white p-4">
@@ -629,39 +663,6 @@ export default function AIGenerationForm({
                   )
                 })}
               </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="font-bold">Questions</p>
-            <div className="flex items-center gap-2 rounded-full border-2 border-slate-200 bg-white px-2 py-1">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full"
-                disabled={aiDisabled || numberOfQuestions <= 1}
-                onClick={() =>
-                  setNumberOfQuestions((current) => Math.max(1, current - 1))
-                }
-              >
-                <Minus className="h-4 w-4" />
-              </Button>
-              <span className="min-w-8 text-center text-lg font-semibold">
-                {numberOfQuestions}
-              </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full"
-                disabled={aiDisabled || numberOfQuestions >= 20}
-                onClick={() =>
-                  setNumberOfQuestions((current) => Math.min(20, current + 1))
-                }
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </div>

@@ -69,7 +69,7 @@ function hydrateGenerationBrief(
     )
       ? (draft.vocabularyFocus as VocabularyFocus)
       : 'Mixed',
-    numberOfQuestions: draft.numberOfQuestions ?? 8,
+    numberOfQuestions: draft.numberOfQuestions ?? 10,
     lessonSummary: draft.lessonSummary,
     keyVocabulary: draft.keyVocabulary,
     sentencePatterns: draft.sentencePatterns,

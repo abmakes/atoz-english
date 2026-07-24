@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React from 'react'
 import {
   Drawer,
   DrawerClose,
@@ -39,6 +39,13 @@ interface TagDrawerProps {
   description?: string
 }
 
+const pillClass = (isSelected: boolean) =>
+  `cursor-pointer px-2 pt-1 h-8 text-sm font-medium transition-all text-nowrap duration-150 border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)] ease-in-out hover:shadow-md ${
+    isSelected
+      ? 'bg-[--primary-accent] text-[--text-color]'
+      : 'bg-[--background-color] text-[--text-color]'
+  }`
+
 export function TagDrawer({
   allTags,
   selectedTags,
@@ -48,8 +55,6 @@ export function TagDrawer({
   title,
   description = 'Choose tags that best describe your quiz.',
 }: TagDrawerProps) {
-  const [mobileOpenGroup, setMobileOpenGroup] = useState<string | null>(null)
-
   const levelCategory = allTags.find((category) => category.category === 'Level')
   const topicCategory = allTags.find((category) => category.category === 'Topic')
   const grammarCategory = allTags.find((category) => category.category === 'Grammar')
@@ -62,7 +67,9 @@ export function TagDrawer({
 
   const handleToggle = (category: TagCategory, tag: string) => {
     if (category.selectionMode === 'single' || category.category === 'Level') {
-      const withoutLevels = selectedTags.filter((selected) => !normalizeCefrLevel(selected))
+      const withoutLevels = selectedTags.filter(
+        (selected) => !normalizeCefrLevel(selected)
+      )
       const next = selectedTags.includes(tag)
         ? withoutLevels
         : [...withoutLevels, tag]
@@ -92,11 +99,7 @@ export function TagDrawer({
             key={tag}
             variant={isSelected ? 'default' : 'outline'}
             onClick={() => handleToggle(category, tag)}
-            className={`cursor-pointer text-sm font-medium transition-all text-nowrap duration-150 border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)] ease-in-out hover:shadow-md ${
-              isSelected
-                ? 'bg-[--primary-accent] text-[--text-color]'
-                : 'bg-[--background-color] text-[--text-color]'
-            }`}
+            className={pillClass(isSelected)}
           >
             {tag}
           </Badge>
@@ -104,6 +107,17 @@ export function TagDrawer({
       })}
     </div>
   )
+
+  const grammarGroups =
+    grammarCategory?.groups ??
+    (grammarCategory
+      ? [{ id: 'all', label: 'All', tags: grammarCategory.tags }]
+      : [])
+  const grammarMid = Math.ceil(grammarGroups.length / 2)
+  const grammarColumns = [
+    grammarGroups.slice(0, grammarMid),
+    grammarGroups.slice(grammarMid),
+  ]
 
   return (
     <Drawer>
@@ -121,7 +135,7 @@ export function TagDrawer({
                   <Badge
                     key={tag}
                     variant="default"
-                    className="h-8 cursor-pointer p-2 text-sm font-medium"
+                    className={pillClass(true)}
                     onClick={() => onTagToggle(tag)}
                   >
                     {tag} <span className="ml-1">&times;</span>
@@ -142,58 +156,64 @@ export function TagDrawer({
 
         <ScrollArea className="flex-grow px-4 md:px-8">
           <div className="py-4">
-            <DrawerDescription className="mb-4 text-base">{description}</DrawerDescription>
+            <DrawerDescription className="mb-4 text-base">
+              {description}
+            </DrawerDescription>
 
-            {levelCategory && (
-              <section className="mb-4 rounded-xl border border-[--primary-accent] bg-white/80 p-4">
-                <div className="mb-2 flex items-baseline justify-between gap-3">
-                  <h3 className="text-lg font-semibold">Level</h3>
-                  <p className="text-xs text-gray-500">Choose one</p>
-                </div>
-                {renderChips(levelCategory, levelCategory.tags)}
-              </section>
-            )}
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
+              {levelCategory && (
+                <section className="rounded-xl border border-[--primary-accent] bg-white/80 p-4 lg:w-1/5 lg:shrink-0">
+                  <div className="mb-2 flex flex-col gap-1">
+                    <h3 className="text-lg font-semibold">Level</h3>
+                    <p className="text-xs text-gray-500">Choose one</p>
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap lg:flex-col">
+                    {levelCategory.tags.map((tag) => {
+                      const isSelected = selectedTags.includes(tag)
+                      return (
+                        <Badge
+                          key={tag}
+                          variant={isSelected ? 'default' : 'outline'}
+                          onClick={() => handleToggle(levelCategory, tag)}
+                          className={`${pillClass(isSelected)} w-fit`}
+                        >
+                          {tag}
+                        </Badge>
+                      )
+                    })}
+                  </div>
+                </section>
+              )}
 
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
               {topicCategory && (
-                <section className="rounded-xl border border-[--primary-accent] bg-white/80 p-4">
+                <section className="rounded-xl border border-[--primary-accent] bg-white/80 p-4 lg:w-2/5">
                   <h3 className="mb-1 text-lg font-semibold">Topic</h3>
-                  <p className="mb-3 text-xs text-gray-500">Choose a classroom theme</p>
+                  <p className="mb-3 text-xs text-gray-500">
+                    Choose a classroom theme
+                  </p>
                   {renderChips(topicCategory, topicCategory.tags)}
                 </section>
               )}
 
               {grammarCategory && (
-                <section className="rounded-xl border border-[--primary-accent] bg-white/80 p-4">
+                <section className="rounded-xl border border-[--primary-accent] bg-white/80 p-4 lg:w-2/5">
                   <h3 className="mb-1 text-lg font-semibold">Grammar</h3>
                   <p className="mb-3 text-xs text-gray-500">
-                    Choose structures from English coursebooks
+                    Coursebook structures
                   </p>
-                  <div className="space-y-4">
-                    {(grammarCategory.groups ?? [
-                      { id: 'all', label: 'All', tags: grammarCategory.tags },
-                    ]).map((group) => {
-                      const isOpen = mobileOpenGroup === group.id
-                      return (
-                        <div key={group.id}>
-                          <button
-                            type="button"
-                            className="mb-2 flex w-full items-center justify-between text-left text-sm font-semibold text-gray-700 md:cursor-default"
-                            onClick={() =>
-                              setMobileOpenGroup((current) =>
-                                current === group.id ? null : group.id
-                              )
-                            }
-                          >
-                            <span>{group.label}</span>
-                            <span className="md:hidden">{isOpen ? '−' : '+'}</span>
-                          </button>
-                          <div className={`${isOpen ? 'block' : 'hidden'} md:block`}>
+                  <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+                    {grammarColumns.map((column, columnIndex) => (
+                      <div key={`grammar-col-${columnIndex}`} className="space-y-3">
+                        {column.map((group) => (
+                          <div key={group.id}>
+                            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                              {group.label}
+                            </p>
                             {renderChips(grammarCategory, [...group.tags])}
                           </div>
-                        </div>
-                      )
-                    })}
+                        ))}
+                      </div>
+                    ))}
                   </div>
                 </section>
               )}
