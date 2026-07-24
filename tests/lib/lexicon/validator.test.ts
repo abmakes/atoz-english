@@ -41,11 +41,12 @@ describe('language audit', () => {
 
     const audit = auditLanguage(['gone'], 'PRE_A1')
     expect(audit.valid).toBe(false)
-    expect(audit.issues).toContainEqual({
+    expect(audit.issues[0]).toMatchObject({
       word: 'gone',
       reason: 'above-level',
       detectedLevel: 'A2',
     })
+    expect(audit.issues[0]?.suggestion).toBeTruthy()
   })
 
   it('flags words absent from the open lexicon', () => {

@@ -4,7 +4,9 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import QuizForm, { QuizFormHandle } from "@/components/management_ui/forms/QuizForm"
 import UploadForm from "@/components/management_ui/forms/UploadForm"
 import QuizSetupForm from "@/components/management_ui/forms/QuizSetupForm"
-import AIGenerationForm from "@/components/management_ui/forms/AIGenerationForm"
+import AIGenerationForm, {
+  type AIGenerationDraftBrief,
+} from "@/components/management_ui/forms/AIGenerationForm"
 import DownloadButton from "@/components/management_ui/DownloadButton"
 import Image from "next/image"
 import { Card } from "@/components/ui/card"
@@ -21,12 +23,56 @@ import {
   getQuizDraft,
   getWorkingDraftId,
   upsertQuizDraft,
+  type DraftGenerationBrief,
   type QuizDraftSnapshot,
 } from '@/lib/quiz-draft-storage'
 import {
   hasAnswersTooLongForSplashDash,
   SPLASH_DASH_MAX_ANSWER_LENGTH,
 } from '@/lib/game-mode-eligibility'
+import {
+  CEFR_LEVELS,
+  QUESTION_STYLE_OPTIONS,
+  SENTENCE_FORM_OPTIONS,
+  VOCABULARY_FOCUS_OPTIONS,
+  normalizeCefrLevel,
+  type CefrLevelId,
+  type QuestionStyle,
+  type SentenceForm,
+  type VocabularyFocus,
+} from '@/lib/taxonomy/quiz-taxonomy'
+
+function hydrateGenerationBrief(
+  draft: DraftGenerationBrief,
+  fallbackTags: string[]
+): AIGenerationDraftBrief {
+  const level =
+    (draft.level && normalizeCefrLevel(draft.level)) ||
+    (CEFR_LEVELS.find((candidate) => candidate.id === draft.level)?.id as CefrLevelId | undefined) ||
+    'A1'
+
+  return {
+    teacherNotes: draft.teacherNotes ?? '',
+    modelSentence: draft.modelSentence ?? '',
+    selectedTags: draft.selectedTags ?? fallbackTags,
+    level,
+    sentenceForms: (draft.sentenceForms ?? []).filter((value): value is SentenceForm =>
+      (SENTENCE_FORM_OPTIONS as readonly string[]).includes(value)
+    ),
+    questionStyles: (draft.questionStyles ?? []).filter((value): value is QuestionStyle =>
+      (QUESTION_STYLE_OPTIONS as readonly string[]).includes(value)
+    ),
+    vocabularyFocus: (VOCABULARY_FOCUS_OPTIONS as readonly string[]).includes(
+      draft.vocabularyFocus ?? ''
+    )
+      ? (draft.vocabularyFocus as VocabularyFocus)
+      : 'Mixed',
+    numberOfQuestions: draft.numberOfQuestions ?? 8,
+    lessonSummary: draft.lessonSummary,
+    keyVocabulary: draft.keyVocabulary,
+    sentencePatterns: draft.sentencePatterns,
+  }
+}
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -156,6 +202,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
 
   // Current view in the content step (create, upload, or AI generation)
   const [contentView, setContentView] = useState<'create' | 'upload' | 'ai-generation'>('create')
+  const [generationBrief, setGenerationBrief] = useState<AIGenerationDraftBrief | null>(null)
 
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
   const draftHydrated = useRef(false)
@@ -186,6 +233,21 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
         type: q.type,
       })),
       settings: quizSettings,
+      generationBrief: generationBrief
+        ? {
+            teacherNotes: generationBrief.teacherNotes,
+            modelSentence: generationBrief.modelSentence,
+            selectedTags: generationBrief.selectedTags,
+            level: generationBrief.level,
+            sentenceForms: generationBrief.sentenceForms,
+            questionStyles: generationBrief.questionStyles,
+            vocabularyFocus: generationBrief.vocabularyFocus,
+            numberOfQuestions: generationBrief.numberOfQuestions,
+            lessonSummary: generationBrief.lessonSummary,
+            keyVocabulary: generationBrief.keyVocabulary,
+            sentencePatterns: generationBrief.sentencePatterns,
+          }
+        : undefined,
     }
   }, [
     resumeDraftId,
@@ -197,6 +259,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
     quizSetupData,
     questionsList,
     quizSettings,
+    generationBrief,
   ])
 
   const persistDraft = useCallback((reason: 'auto' | 'manual' | 'pre-submit' = 'auto') => {
@@ -247,6 +310,11 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
       }))
     )
     setQuizSettings(draft.settings || { theme: 'default', powerUps: [] })
+    if (draft.generationBrief) {
+      setGenerationBrief(
+        hydrateGenerationBrief(draft.generationBrief, draft.quizSetup.tags || [])
+      )
+    }
     setCreationStep(draft.creationStep || 'setup')
     setContentView(draft.contentView || 'create')
     setDraftSavedAt(draft.updatedAt)
@@ -292,23 +360,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
    */
   const handleSetupComplete = (data: QuizSetupData) => {
     setQuizSetupData(data)
-    
-    // If questionsList is empty and a quiz type is set, add an initial question
-    if (questionsList.length === 0 && data.quizType) {
-      const initialQuestion: Question = {
-        question: '',
-        answers: ["", "", "", ""],
-        correctAnswer: "",
-        imageUrl: '/images/placeholder.webp',
-        imageFile: null,
-        type: data.quizType,
-      };
-      setQuestionsList([initialQuestion]);
-    } else if (questionsList.length > 0 && data.quizType) {
-      // Optionally, update types of existing questions if overall type changes
-      // setQuestionsList(prevQuestions => prevQuestions.map(q => ({ ...q, type: data.quizType })));
-    }
-    
+    // Do not seed an empty question — wait until Manual / Upload / AI adds content.
     setCreationStep('content')
   }
 
@@ -332,12 +384,27 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
   };
 
   /**
-   * Adds new questions to the existing list
-   * Used when uploading questions or generating with AI
+   * Adds new questions to the existing list.
+   * Replaces a single empty stub question when present.
    */
   const handleAddQuestions = (newQuestions: Question[]) => {
-    setQuestionsList(prevQuestions => [...prevQuestions, ...newQuestions]);
-  };
+    setQuestionsList((prevQuestions) => {
+      const onlyEmptyStub =
+        prevQuestions.length === 1 &&
+        !prevQuestions[0].question.trim() &&
+        prevQuestions[0].answers.every((answer) => !answer.trim())
+
+      if (onlyEmptyStub || prevQuestions.length === 0) {
+        return newQuestions
+      }
+      return [...prevQuestions, ...newQuestions]
+    })
+    setContentView('create')
+  }
+
+  const handleAiTagsSync = (tags: string[]) => {
+    setQuizSetupData((prev) => ({ ...prev, tags }))
+  }
   
   /**
    * Validates all questions and moves to the publish step
@@ -422,6 +489,10 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
         : [...prevData.tags, tag];
       return { ...prevData, tags: newTags };
     });
+  };
+
+  const handleSelectedTagsChange = (tags: string[]) => {
+    setQuizSetupData((prevData) => ({ ...prevData, tags }))
   };
 
   /**
@@ -895,6 +966,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
               onSetupComplete={handleSetupComplete}
               selectedTags={quizSetupData.tags}
               onTagToggle={handleTagToggle}
+              onSelectedTagsChange={handleSelectedTagsChange}
             />
           </div>
         )}
@@ -976,7 +1048,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
                 <Button variant='outline' 
                   className="flex w-full lg:w-auto items-center h-full text-lg font-semibold border border-[#1F6E91] gap-2 bg-[--text-color] text-white shadow-[4px_4px_0px_0px_var(--border-dark)] hover:bg-white hover:border-[#1F6E91] hover:shadow-[4px_6px_0px_0px_var(--border-dark)] hover:scale-105 transition-all duration-300"
                   onClick={handleGoToPublishStep}>
-                    {mode === 'create' ? 'Publish Quiz' : 'Update Quiz'} <ArrowRight className="-mt-0.5" size={20} /> 
+                    {mode === 'create' ? 'Review & Continue' : 'Update Quiz'} <ArrowRight className="-mt-0.5" size={20} /> 
                 </Button>
               </div>
 
@@ -1091,10 +1163,13 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
                 {contentView === 'ai-generation' && (
                   <AIGenerationForm
                     onQuestionsGenerated={handleAddQuestions}
+                    onTagsSync={handleAiTagsSync}
                     quizType={quizSetupData.quizType}
                     quizTitle={quizSetupData.title}
                     quizDescription={quizSetupData.description}
                     existingTags={quizSetupData.tags}
+                    initialBrief={generationBrief}
+                    onBriefChange={setGenerationBrief}
                   />
                 )}
               </div>

@@ -45,55 +45,106 @@ export const TOPIC_TAGS = [
   'Community & Buildings',
   'Stories & Fantasy',
   'Health & Daily Life',
+  'Daily Routines',
 ] as const;
 
 export type TopicTag = (typeof TOPIC_TAGS)[number];
 
-export const WORD_CLASS_TAGS = [
+export const GRAMMAR_GROUPS = [
+  {
+    id: 'tenses-time',
+    label: 'Tenses & time',
+    tags: [
+      'Present Simple',
+      'Present Continuous',
+      'Past Simple',
+      'Past Continuous',
+      'Present Perfect',
+      'Future with going to',
+      'Time Expressions',
+    ],
+  },
+  {
+    id: 'questions-forms',
+    label: 'Questions & sentence forms',
+    tags: [
+      'Questions & Negatives',
+      'There is / There are',
+      'Word Order',
+      'First Conditional',
+    ],
+  },
+  {
+    id: 'nouns-quantity',
+    label: 'Nouns & quantity',
+    tags: ['Countable & Uncountable', 'Quantifiers'],
+  },
+  {
+    id: 'describing',
+    label: 'Describing & comparing',
+    tags: ['Comparatives & Superlatives', 'Adjectives & Adverbs'],
+  },
+  {
+    id: 'modals-functions',
+    label: 'Modals & functions',
+    tags: ['Can / Could', 'Must / Have to / Should', 'Phrasal Verbs'],
+  },
+  {
+    id: 'linking',
+    label: 'Word order & linking',
+    tags: ['Conjunctions & Linking Words', 'Prepositions', 'Pronouns & Possessives'],
+  },
+] as const;
+
+export const GRAMMAR_TAGS = GRAMMAR_GROUPS.flatMap((group) => [...group.tags]);
+
+export type GrammarTag = (typeof GRAMMAR_TAGS)[number];
+
+export const VOCABULARY_FOCUS_OPTIONS = [
+  'Mixed',
   'Nouns',
   'Verbs',
   'Adjectives',
   'Adverbs',
-  'Function Words',
 ] as const;
 
-export const GRAMMAR_TAGS = [
-  'Nouns & Articles',
-  'Pronouns & Possessives',
-  'Adjectives & Adverbs',
-  'Prepositions',
-  'Present Simple',
-  'Present Continuous',
-  'Past Simple',
-  'Past Continuous',
-  'Present Perfect',
-  'Questions & Negatives',
-  'There is / There are',
-  'Can / Could',
-  'Must / Have to / Should',
-  'Comparatives & Superlatives',
-  'Countable & Uncountable',
-  'Quantifiers',
-  'Conjunctions & Linking Words',
-  'Future with going to',
-  'First Conditional',
-  'Gerunds & Infinitives',
-  'Phrasal Verbs',
-  'Word Order',
-  'Time Expressions',
+export type VocabularyFocus = (typeof VOCABULARY_FOCUS_OPTIONS)[number];
+
+export const SENTENCE_FORM_OPTIONS = [
+  'Affirmative',
+  'Negative',
+  'Yes/No question',
+  'Wh-question',
 ] as const;
+
+export type SentenceForm = (typeof SENTENCE_FORM_OPTIONS)[number];
+
+export const QUESTION_STYLE_OPTIONS = [
+  'Choose the correct form',
+  'Fill the gap',
+  'Choose the right question',
+  'Find the mistake',
+  'Picture description',
+  'Vocabulary meaning',
+] as const;
+
+export type QuestionStyle = (typeof QUESTION_STYLE_OPTIONS)[number];
 
 export interface QuizTagCategory {
   category: string;
   description: string;
   tags: readonly string[];
+  groups?: readonly { id: string; label: string; tags: readonly string[] }[];
+  selectionMode?: 'single' | 'multiple';
 }
 
-export const QUIZ_TAG_CATEGORIES: readonly QuizTagCategory[] = [
+/** Tags used for browse/create metadata. Word class is intentionally excluded. */
+export const DISCOVERY_TAG_CATEGORIES: readonly QuizTagCategory[] = [
   {
     category: 'Level',
     description: 'Choose one language level.',
     tags: CEFR_LEVELS.map((level) => level.label),
+    selectionMode: 'single',
   },
   {
     category: 'Topic',
@@ -101,16 +152,15 @@ export const QUIZ_TAG_CATEGORIES: readonly QuizTagCategory[] = [
     tags: TOPIC_TAGS,
   },
   {
-    category: 'Word Class',
-    description: 'Which kinds of words should students practise?',
-    tags: WORD_CLASS_TAGS,
-  },
-  {
     category: 'Grammar',
     description: 'Which short language structure should students practise?',
     tags: GRAMMAR_TAGS,
+    groups: GRAMMAR_GROUPS,
   },
 ] as const;
+
+/** @deprecated Prefer DISCOVERY_TAG_CATEGORIES for browse/setup. */
+export const QUIZ_TAG_CATEGORIES = DISCOVERY_TAG_CATEGORIES;
 
 const LEVEL_LABEL_TO_ID = new Map(
   CEFR_LEVELS.map((level) => [level.label.toLowerCase(), level.id])
@@ -122,12 +172,28 @@ const LEGACY_TOPIC_ALIASES: Record<string, TopicTag[]> = {
   'stories & fairy tales': ['Stories & Fantasy'],
 };
 
+const LEGACY_GRAMMAR_ALIASES: Record<string, GrammarTag[]> = {
+  nouns: [],
+  verbs: [],
+  adjectives: [],
+  adverbs: [],
+  'function words': [],
+  'nouns & articles': ['Countable & Uncountable'],
+  modals: ['Can / Could', 'Must / Have to / Should'],
+  conditionals: ['First Conditional'],
+  'questions & negatives': ['Questions & Negatives'],
+};
+
 export function normalizeCefrLevel(level: string): CefrLevelId | null {
   const normalized = level.trim().replace('-', '_').toUpperCase();
   if (CEFR_LEVELS.some((candidate) => candidate.id === normalized)) {
     return normalized as CefrLevelId;
   }
   return LEVEL_LABEL_TO_ID.get(level.trim().toLowerCase()) ?? null;
+}
+
+export function levelLabelFromId(level: CefrLevelId): string {
+  return CEFR_LEVELS.find((candidate) => candidate.id === level)?.label ?? level;
 }
 
 export function levelFromTags(tags: string[]): CefrLevelId | null {
@@ -158,9 +224,65 @@ export function resolveTopicTags(tags: string[]): TopicTag[] {
   return [...resolved];
 }
 
+export function resolveGrammarTags(tags: string[]): GrammarTag[] {
+  const resolved = new Set<GrammarTag>();
+
+  for (const tag of tags) {
+    const exact = GRAMMAR_TAGS.find(
+      (grammar) => grammar.toLowerCase() === tag.trim().toLowerCase()
+    );
+    if (exact) {
+      resolved.add(exact);
+      continue;
+    }
+
+    for (const alias of LEGACY_GRAMMAR_ALIASES[tag.trim().toLowerCase()] ?? []) {
+      resolved.add(alias);
+    }
+  }
+
+  return [...resolved];
+}
+
 export function isKnownQuizTag(tag: string): boolean {
   const normalized = tag.trim().toLowerCase();
-  return QUIZ_TAG_CATEGORIES.some((category) =>
+  if (normalizeCefrLevel(tag)) return true;
+  return DISCOVERY_TAG_CATEGORIES.some((category) =>
     category.tags.some((candidate) => candidate.toLowerCase() === normalized)
   );
+}
+
+export function syncLevelIntoTags(
+  tags: string[],
+  level: CefrLevelId
+): string[] {
+  const withoutLevels = tags.filter((tag) => !normalizeCefrLevel(tag));
+  return [levelLabelFromId(level), ...withoutLevels];
+}
+
+export function summarizeGenerationBrief(input: {
+  level: CefrLevelId;
+  topics: string[];
+  grammarFocus: string[];
+  sentenceForms: string[];
+  questionStyles: string[];
+  numberOfQuestions: number;
+}): string {
+  const level = levelLabelFromId(input.level);
+  const topics =
+    input.topics.length > 0 ? input.topics.join(', ') : 'a general theme';
+  const grammar =
+    input.grammarFocus.length > 0
+      ? input.grammarFocus.join(', ')
+      : 'short classroom language';
+  const forms =
+    input.sentenceForms.length > 0
+      ? input.sentenceForms.join(' and ').toLowerCase()
+      : 'mixed sentence forms';
+  const styles =
+    input.questionStyles.length > 0
+      ? input.questionStyles.join(' and ').toLowerCase()
+      : 'mixed question styles';
+
+  return `Create ${input.numberOfQuestions} ${level} questions about ${topics}. Practise ${grammar}, using ${forms}. Prefer ${styles}.`;
 }

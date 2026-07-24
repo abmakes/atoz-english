@@ -1,0 +1,44 @@
+import { describe, expect, it } from 'vitest'
+import {
+  isKnownQuizTag,
+  resolveGrammarTags,
+  resolveTopicTags,
+  summarizeGenerationBrief,
+  syncLevelIntoTags,
+} from '@/lib/taxonomy/quiz-taxonomy'
+
+describe('quiz taxonomy aliases', () => {
+  it('maps legacy topic labels onto discovery tags', () => {
+    expect(resolveTopicTags(['Clothes & Body Parts'])).toEqual(
+      expect.arrayContaining(['Clothes', 'Body Parts'])
+    )
+  })
+
+  it('maps legacy grammar and word-class labels without polluting discovery', () => {
+    expect(resolveGrammarTags(['Nouns & Articles'])).toEqual(['Countable & Uncountable'])
+    expect(resolveGrammarTags(['Nouns'])).toEqual([])
+    expect(isKnownQuizTag('Nouns')).toBe(false)
+    expect(isKnownQuizTag('Present Simple')).toBe(true)
+  })
+
+  it('keeps a single synchronized level label in tags', () => {
+    expect(syncLevelIntoTags(['A2', 'Animals', 'Pre-A1'], 'A1')).toEqual([
+      'A1',
+      'Animals',
+    ])
+  })
+
+  it('summarizes a generation brief in plain language', () => {
+    const summary = summarizeGenerationBrief({
+      level: 'A1',
+      topics: ['Daily Routines'],
+      grammarFocus: ['Present Simple'],
+      sentenceForms: ['Affirmative', 'Negative'],
+      questionStyles: ['Fill the gap'],
+      numberOfQuestions: 8,
+    })
+
+    expect(summary).toContain('Create 8 A1 questions about Daily Routines')
+    expect(summary).toContain('Present Simple')
+  })
+})

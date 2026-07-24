@@ -2,21 +2,30 @@
 
 ## Overview
 
-The generator creates short multiple-choice questions for young learners. It
-uses:
+The generator helps teachers draft multiple-choice questions from a **teacher
+brief**, not from a hard vocabulary allowlist.
 
-- teacher-selected level, topic, word-class, and grammar tags;
-- the open AtoZ Young-Learner Lexicon for retrieval;
-- Gemini 2.5 Flash Lite for drafting;
-- a post-generation language audit that checks questions and answers.
+Inputs, in priority order:
 
-Publisher book names, unit sequences, example sentences, and proprietary
-wordlists are not generation inputs.
+1. teacher notes and optional model sentence;
+2. optional textbook / worksheet screenshot analysis;
+3. classroom discovery tags (Level, Topic, Grammar);
+4. AI-only controls (sentence form, question style, vocabulary focus);
+5. open lexicon examples used as a **soft** level assistant.
+
+Publisher book names, unit sequences, and proprietary wordlists are not
+generation inputs. Screenshot images are processed in memory and discarded.
 
 ## Environment
 
 ```env
 GEMINI_QUIZ_API_KEY="your_gemini_api_key_here"
+```
+
+Optional for image suggestions in the review step:
+
+```env
+NEXT_PUBLIC_PIXABAY_API_KEY="your_pixabay_key"
 ```
 
 ## Supported scope
@@ -27,18 +36,26 @@ GEMINI_QUIZ_API_KEY="your_gemini_api_key_here"
 - B1
 
 These bands are app-authored curriculum estimates, not an official
-certification. The current artifact is intentionally conservative and records
-confidence, method, and source provenance for each entry.
+certification. Lexicon levels remain provisional.
 
-## Generation flow
+## Teacher-first generation flow
 
-1. The teacher chooses a level and one or more tags.
-2. The resolver selects cumulative, in-scope words from the lexicon.
-3. Grammar tags add short structural patterns.
-4. Gemini receives a bounded vocabulary allowlist.
-5. Questions and all four answers are audited.
-6. If the draft uses unknown or above-level language, it is rewritten once.
-7. A draft that still fails is rejected instead of being silently added.
+1. Teacher writes notes and/or pastes a lesson page image.
+2. Optional image analysis returns an editable brief (summary, level, topics,
+   grammar, vocabulary, question styles). Analysis never auto-generates.
+3. Teacher confirms Level / Topic / Grammar discovery tags plus AI controls.
+4. A plain-language brief summary is shown before the Gemini call.
+5. Gemini drafts questions from the full `GenerationBrief`.
+6. The lexicon adds **non-blocking** level warnings and replacement suggestions.
+7. Teacher reviews each question: edit, approve, reject, simplify, keep words,
+   and choose among three image suggestions (stored library first, then Pixabay).
+8. Only approved questions enter the quiz editor, replacing an empty stub if
+   present, and discovery tags sync back to quiz metadata.
+
+## API routes
+
+- `POST /api/ai/analyze-lesson-image` — multipart image upload, ephemeral analysis
+- `POST /api/ai/generate-questions` — accepts a `GenerationBrief` (+ quiz type)
 
 ## Building the lexicon
 
@@ -71,10 +88,9 @@ clearly grant redistribution of an adapted dataset.
 
 ## Troubleshooting
 
-- **Not enough reviewed vocabulary:** broaden the topic or remove a restrictive
-  word-class tag.
-- **Outside the selected level:** the automatic rewrite failed; adjust the tags
-  or try again.
+- **Multiple-choice only:** AI generation is disabled for other quiz types with
+  an immediate explanation in the form.
 - **Invalid question format:** Gemini did not return the required JSON shape.
+- **Image analysis failed:** check MIME type (PNG/JPEG/WebP) and the 8 MB limit.
 - **Lexicon build checksum error:** an upstream file changed; review and pin a
   deliberate source update instead of accepting it silently.

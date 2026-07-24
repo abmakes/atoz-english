@@ -20,6 +20,7 @@ interface QuizSetupFormProps {
   onSetupComplete: (data: QuizSetupData) => void;
   selectedTags: string[];
   onTagToggle: (tag: string) => void;
+  onSelectedTagsChange?: (tags: string[]) => void;
 }
 
 const PLACEHOLDER_IMAGE_CLIENT = '/images/placeholder.webp'; // Renamed to avoid conflict if imported elsewhere
@@ -28,7 +29,8 @@ export default function QuizSetupForm({
   initialData, 
   onSetupComplete, 
   selectedTags, 
-  onTagToggle 
+  onTagToggle,
+  onSelectedTagsChange,
 }: QuizSetupFormProps) {
   const [title, setTitle] = useState(initialData.title);
   const [description, setDescription] = useState(initialData.description);
@@ -58,6 +60,13 @@ export default function QuizSetupForm({
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!description.trim()) {
+      addToast('Add a short quiz description so learners know what to expect.', {
+        variant: 'warning',
+        position: 'top-center',
+      });
+      return;
+    }
     addToast('Quiz setup complete. Now add questions to your quiz.', { variant: 'success', position: 'top-center' });
     onSetupComplete({
       title,
@@ -99,6 +108,7 @@ export default function QuizSetupForm({
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Enter a brief description for your quiz"
+                  required
                 />
               </div>
             </div>
@@ -153,6 +163,7 @@ export default function QuizSetupForm({
             allTags={ALL_TAG_CATEGORIES}
             selectedTags={selectedTags}
             onTagToggle={onTagToggle}
+            onSelectedTagsChange={onSelectedTagsChange}
             triggerElement={
               <div className='flex items-center w-full lg:w-72 h-10 rounded-full border border-violet-400 hover:bg-violet-50 cursor-pointer transition-colors'>
                 <span className="flex items-center text-base w-32 h-full px-4 pt-2 pb-1 font-semibold

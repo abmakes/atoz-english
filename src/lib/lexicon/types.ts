@@ -63,9 +63,12 @@ export interface LanguageAuditIssue {
   word: string;
   reason: 'unknown' | 'above-level' | 'out-of-scope';
   detectedLevel?: LexiconLevel;
+  /** Optional lower-level replacement for teacher simplification */
+  suggestion?: string;
 }
 
 export interface LanguageAudit {
+  /** Soft signal only — false means warnings exist, not a hard reject */
   valid: boolean;
   targetLevel: CefrLevelId;
   issues: LanguageAuditIssue[];

@@ -6,6 +6,7 @@ import {
 import type {
   LanguageAudit,
   LanguageAuditIssue,
+  LexiconEntry,
 } from '@/lib/lexicon/types';
 import type { CefrLevelId } from '@/lib/taxonomy/quiz-taxonomy';
 
@@ -21,6 +22,26 @@ function tokenize(text: string): string[] {
   return (text.match(TOKEN_PATTERN) ?? []).map((token) =>
     token.replace('’', "'").toLowerCase()
   );
+}
+
+function suggestSimplerForm(
+  word: string,
+  entries: LexiconEntry[],
+  targetLevel: CefrLevelId
+): string | undefined {
+  for (const entry of entries) {
+    const candidates = entry.forms
+      .map((form) => form.toLowerCase())
+      .filter((form) => form !== word && isAllowedAtLevel(entry, targetLevel, form))
+      .sort((a, b) => a.length - b.length);
+    if (candidates.length > 0) {
+      // Prefer the lemma when it is allowed at the target level.
+      const lemma = entry.lemma.toLowerCase();
+      if (candidates.includes(lemma)) return lemma;
+      return candidates[0];
+    }
+  }
+  return undefined;
 }
 
 export function auditLanguage(
@@ -54,6 +75,7 @@ export function auditLanguage(
       word,
       reason: inScopeEntry ? 'above-level' : 'out-of-scope',
       detectedLevel,
+      suggestion: suggestSimplerForm(word, entries, targetLevel),
     });
   }
 
@@ -74,4 +96,24 @@ export function auditQuestions(
     questions.flatMap((question) => [question.question, ...question.answers]),
     targetLevel
   );
+}
+
+export function auditQuestion(
+  question: AuditableQuestion,
+  targetLevel: CefrLevelId
+): LanguageAudit {
+  return auditLanguage([question.question, ...question.answers], targetLevel);
+}
+
+export function filterIgnoredIssues(
+  audit: LanguageAudit,
+  keptWords: string[]
+): LanguageAudit {
+  const keep = new Set(keptWords.map((word) => word.toLowerCase()));
+  const issues = audit.issues.filter((issue) => !keep.has(issue.word.toLowerCase()));
+  return {
+    ...audit,
+    issues,
+    valid: issues.length === 0,
+  };
 }

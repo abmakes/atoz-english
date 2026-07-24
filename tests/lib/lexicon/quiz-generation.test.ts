@@ -1,29 +1,39 @@
 import { describe, expect, it } from 'vitest'
 import {
-  createQuizGenerationPrompt,
+  createTeacherFirstPrompt,
   parseGeneratedQuestions,
-} from '@/lib/lexicon/quiz-generation'
+} from '@/lib/ai/quiz-generation'
 import { resolveLexicon } from '@/lib/lexicon/resolver'
 
 describe('quiz generation contract', () => {
-  it('builds a prompt with a bounded lexical selection', () => {
+  it('builds a teacher-first prompt with helpful examples', () => {
     const selection = resolveLexicon({
       level: 'A1',
       tags: ['Animals', 'Nouns', 'Present Simple'],
       limit: 30,
     })
-    const prompt = createQuizGenerationPrompt({
+    const prompt = createTeacherFirstPrompt({
+      brief: {
+        level: 'A1',
+        topics: ['Animals'],
+        grammarFocus: ['Present Simple'],
+        teacherNotes: 'A short picture quiz',
+        modelSentence: '',
+        sentenceForms: ['Affirmative'],
+        questionStyles: ['Vocabulary meaning'],
+        vocabularyFocus: 'Nouns',
+        numberOfQuestions: 3,
+        quizTitle: 'Animals',
+        quizDescription: 'A short picture quiz',
+      },
       selection,
-      tags: ['Animals', 'Nouns', 'Present Simple'],
-      quizTitle: 'Animals',
-      quizDescription: 'A short picture quiz',
-      numberOfQuestions: 3,
     })
 
     expect(prompt).toContain('CEFR band: A1')
-    expect(prompt).toContain('Use only words from this allowlist')
+    expect(prompt).toContain('HELPFUL LEVEL EXAMPLES (not an exclusive allowlist)')
     expect(prompt).toContain('subject + base verb')
     expect(prompt).not.toContain('BOOK CONTEXT')
+    expect(prompt).not.toContain('Use only words from this allowlist')
   })
 
   it('parses a valid fenced response', () => {
@@ -34,6 +44,7 @@ describe('quiz generation contract', () => {
 
     expect(result).toHaveLength(1)
     expect(result[0].correctAnswer).toBe('big')
+    expect(result[0].imageKeyword).toBeTruthy()
   })
 
   it('rejects a correct answer that is not one of the options', () => {

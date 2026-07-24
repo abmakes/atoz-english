@@ -1,15 +1,20 @@
-import { QUIZ_TAG_CATEGORIES } from '@/lib/taxonomy/quiz-taxonomy';
+import { DISCOVERY_TAG_CATEGORIES } from '@/lib/taxonomy/quiz-taxonomy';
 
 /**
  * Compatibility export for the existing tag picker.
  *
- * The taxonomy is defined in `quiz-taxonomy.ts`; this module remains so older
- * imports do not need to change at once. Existing free-form quiz tags continue
- * to display, while new selections use the smaller Pre-A1–B1 taxonomy.
+ * Discovery tags are Level + Topic + Grammar. Word Class is AI-only and lives
+ * in the generation brief, not browse/create metadata.
  */
-export const ALL_TAG_CATEGORIES = QUIZ_TAG_CATEGORIES.map((category) => ({
+export const ALL_TAG_CATEGORIES = DISCOVERY_TAG_CATEGORIES.map((category) => ({
   category: category.category,
   tags: [...category.tags],
+  groups: category.groups?.map((group) => ({
+    id: group.id,
+    label: group.label,
+    tags: [...group.tags],
+  })),
+  selectionMode: category.selectionMode,
 }));
 
 export const FLATTENED_TAGS: string[] = ALL_TAG_CATEGORIES.flatMap(

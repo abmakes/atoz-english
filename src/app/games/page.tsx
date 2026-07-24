@@ -96,6 +96,10 @@ function GamesPageContent({ isSignedIn }: { isSignedIn: boolean }) {
     );
   };
 
+  const handleSelectedTagsChange = (tags: string[]) => {
+    setSelectedTags(tags);
+  };
+
   const updateQuizLocal = (quizId: string, patch: Partial<QuizListItem>) => {
     setAllQuizzes((prev) =>
       prev.map((q) => (q.id === quizId ? { ...q, ...patch, statistics: { ...q.statistics, ...patch.statistics } } : q))
@@ -326,6 +330,7 @@ function GamesPageContent({ isSignedIn }: { isSignedIn: boolean }) {
             allTags={ALL_TAG_CATEGORIES}
             selectedTags={selectedTags}
             onTagToggle={handleTagToggle}
+            onSelectedTagsChange={handleSelectedTagsChange}
             triggerElement={
               <Button
                 variant="ghost"
