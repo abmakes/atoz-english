@@ -445,12 +445,7 @@ export default function AIQuestionReviewPanel({
 
             <div className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <Label>
-                  Image suggestions
-                  <span className="ml-2 text-xs font-normal text-gray-500">
-                    keyword: {item.imageKeyword || 'classroom'}
-                  </span>
-                </Label>
+                <Label htmlFor={`image-keyword-${index}`}>Image keyword</Label>
                 <Button
                   type="button"
                   size="sm"
@@ -459,6 +454,30 @@ export default function AIQuestionReviewPanel({
                 >
                   <Search className="mr-1 h-4 w-4" />
                   Search more
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Input
+                  id={`image-keyword-${index}`}
+                  value={item.imageKeyword || ''}
+                  onChange={(event) =>
+                    updateItem(index, { imageKeyword: event.target.value })
+                  }
+                  placeholder="cat pet"
+                  className="max-w-xs"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    void loadSuggestions(
+                      index,
+                      item.imageKeyword || item.correctAnswer || 'classroom'
+                    )
+                  }
+                >
+                  Refresh suggestions
                 </Button>
               </div>
               <div className="grid grid-cols-3 gap-2">

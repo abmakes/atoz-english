@@ -252,6 +252,54 @@ export function isKnownQuizTag(tag: string): boolean {
   );
 }
 
+/**
+ * Expand legacy labels onto current discovery tags while keeping unknown labels.
+ * Used when editing older quizzes and when matching browse filters.
+ */
+export function normalizeDiscoveryTags(tags: string[]): string[] {
+  const next = new Set<string>();
+
+  for (const tag of tags) {
+    const level = normalizeCefrLevel(tag);
+    if (level) {
+      next.add(levelLabelFromId(level));
+      continue;
+    }
+
+    const topics = resolveTopicTags([tag]);
+    const grammar = resolveGrammarTags([tag]);
+    if (topics.length > 0 || grammar.length > 0) {
+      for (const topic of topics) next.add(topic);
+      for (const item of grammar) next.add(item);
+      continue;
+    }
+
+    // Preserve unrecognized tags so teachers can still see/edit them.
+    if (tag.trim()) next.add(tag.trim());
+  }
+
+  return [...next];
+}
+
+/** True when a quiz tag set satisfies one selected discovery filter tag. */
+export function discoveryTagMatches(
+  quizTags: string[],
+  selectedTag: string
+): boolean {
+  const selected = selectedTag.trim().toLowerCase();
+  const quizNormalized = normalizeDiscoveryTags(quizTags).map((tag) =>
+    tag.toLowerCase()
+  );
+  const selectedNormalized = normalizeDiscoveryTags([selectedTag]).map((tag) =>
+    tag.toLowerCase()
+  );
+
+  if (quizTags.some((tag) => tag.toLowerCase() === selected)) return true;
+  return selectedNormalized.some((candidate) =>
+    quizNormalized.includes(candidate)
+  );
+}
+
 export function syncLevelIntoTags(
   tags: string[],
   level: CefrLevelId

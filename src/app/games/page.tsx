@@ -19,6 +19,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useGameStore } from '@/stores/useGameStore';
 import { TagDrawer } from '@/components/management_ui/TagDrawer';
 import { ALL_TAG_CATEGORIES } from '@/lib/tags';
+import { discoveryTagMatches } from '@/lib/taxonomy/quiz-taxonomy';
 import LoadingSpinner from '@/components/loading_spinner';
 import QuizCatalogSkeleton from '@/components/management_ui/QuizCatalogSkeleton';
 import { toast } from 'sonner';
@@ -234,7 +235,7 @@ function GamesPageContent({ isSignedIn }: { isSignedIn: boolean }) {
     if (selectedTags.length > 0) {
       quizzesToFilter = quizzesToFilter.filter((quiz) =>
         selectedTags.every((selectedTag) =>
-          quiz.tags?.some((quizTag) => quizTag.toLowerCase() === selectedTag.toLowerCase())
+          discoveryTagMatches(quiz.tags ?? [], selectedTag)
         )
       );
     }

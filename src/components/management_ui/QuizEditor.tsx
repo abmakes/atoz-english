@@ -36,11 +36,13 @@ import {
   SENTENCE_FORM_OPTIONS,
   VOCABULARY_FOCUS_OPTIONS,
   normalizeCefrLevel,
+  normalizeDiscoveryTags,
   type CefrLevelId,
   type QuestionStyle,
   type SentenceForm,
   type VocabularyFocus,
 } from '@/lib/taxonomy/quiz-taxonomy'
+import { mergeApprovedQuestions } from '@/lib/ai/review-commit'
 
 function hydrateGenerationBrief(
   draft: DraftGenerationBrief,
@@ -176,8 +178,8 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
   const quizFormRef = useRef<QuizFormHandle>(null);
 
   // Quiz setup data (title, description, cover image, type, tags)
-  const [quizSetupData, setQuizSetupData] = useState<QuizSetupData>(
-    initialData?.quizSetup || {
+  const [quizSetupData, setQuizSetupData] = useState<QuizSetupData>(() => {
+    const setup = initialData?.quizSetup || {
       title: '',
       description: '',
       coverImageUrl: '/images/placeholder.webp',
@@ -185,7 +187,11 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
       quizType: QuestionType.MULTIPLE_CHOICE,
       tags: [],
     }
-  )
+    return {
+      ...setup,
+      tags: normalizeDiscoveryTags(setup.tags || []),
+    }
+  })
 
   // List of questions for the quiz
   const [questionsList, setQuestionsList] = useState<Question[]>(
@@ -300,7 +306,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
       coverImageUrl: draft.quizSetup.coverImageUrl || '/images/placeholder.webp',
       coverImageFile: null,
       quizType: draft.quizSetup.quizType,
-      tags: draft.quizSetup.tags || [],
+      tags: normalizeDiscoveryTags(draft.quizSetup.tags || []),
     })
     setQuestionsList(
       draft.questions.map((q) => ({
@@ -388,22 +394,17 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
    * Replaces a single empty stub question when present.
    */
   const handleAddQuestions = (newQuestions: Question[]) => {
-    setQuestionsList((prevQuestions) => {
-      const onlyEmptyStub =
-        prevQuestions.length === 1 &&
-        !prevQuestions[0].question.trim() &&
-        prevQuestions[0].answers.every((answer) => !answer.trim())
-
-      if (onlyEmptyStub || prevQuestions.length === 0) {
-        return newQuestions
-      }
-      return [...prevQuestions, ...newQuestions]
-    })
+    setQuestionsList((prevQuestions) =>
+      mergeApprovedQuestions(prevQuestions, newQuestions)
+    )
     setContentView('create')
   }
 
   const handleAiTagsSync = (tags: string[]) => {
-    setQuizSetupData((prev) => ({ ...prev, tags }))
+    setQuizSetupData((prev) => ({
+      ...prev,
+      tags: normalizeDiscoveryTags(tags),
+    }))
   }
   
   /**

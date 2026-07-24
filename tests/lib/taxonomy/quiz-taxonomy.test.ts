@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  discoveryTagMatches,
   isKnownQuizTag,
+  normalizeDiscoveryTags,
   resolveGrammarTags,
   resolveTopicTags,
   summarizeGenerationBrief,
@@ -19,6 +21,18 @@ describe('quiz taxonomy aliases', () => {
     expect(resolveGrammarTags(['Nouns'])).toEqual([])
     expect(isKnownQuizTag('Nouns')).toBe(false)
     expect(isKnownQuizTag('Present Simple')).toBe(true)
+  })
+
+  it('normalizes legacy labels for editing and browse filtering', () => {
+    expect(normalizeDiscoveryTags(['Clothes & Body Parts', 'A2'])).toEqual(
+      expect.arrayContaining(['Clothes', 'Body Parts', 'A2'])
+    )
+    expect(
+      discoveryTagMatches(['Clothes & Body Parts'], 'Clothes')
+    ).toBe(true)
+    expect(
+      discoveryTagMatches(['Stories & Fairy Tales'], 'Stories & Fantasy')
+    ).toBe(true)
   })
 
   it('keeps a single synchronized level label in tags', () => {

@@ -47,7 +47,7 @@ certification. Lexicon levels remain provisional.
 4. A plain-language brief summary is shown before the Gemini call.
 5. Gemini drafts questions from the full `GenerationBrief`.
 6. The lexicon adds **non-blocking** level warnings and replacement suggestions.
-7. Teacher reviews each question: edit, approve, reject, simplify, keep words,
+7. Teacher reviews each question: edit, approve, reject, regenerate, simplify, keep words,
    and choose among three image suggestions (stored library first, then Pixabay).
 8. Only approved questions enter the quiz editor, replacing an empty stub if
    present, and discovery tags sync back to quiz metadata.

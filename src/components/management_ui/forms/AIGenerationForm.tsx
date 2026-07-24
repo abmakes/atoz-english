@@ -380,12 +380,59 @@ export default function AIGenerationForm({
     }
   }
 
+  const regenerateOneQuestion = async (
+    _index: number,
+    previous: ReviewableQuestion
+  ): Promise<ReviewableQuestion | null> => {
+    try {
+      const response = await fetch('/api/ai/generate-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...brief,
+          numberOfQuestions: 1,
+          teacherNotes: [
+            brief.teacherNotes,
+            'Regenerate one replacement question.',
+            `Avoid repeating this exact question: ${previous.question}`,
+          ]
+            .filter(Boolean)
+            .join('\n'),
+          questionType: quizType,
+          language: 'English',
+        }),
+      })
+      const result = (await response.json()) as GenerationResponse
+      if (!response.ok || !result.success || !result.questions?.[0]) {
+        throw new Error(result.error || 'Failed to regenerate question')
+      }
+      const next = result.questions[0]
+      addToast('Replacement question ready for review.', {
+        variant: 'success',
+        position: 'top-center',
+      })
+      return {
+        ...next,
+        imageFile: null,
+        status: 'pending',
+        keptWords: [],
+      }
+    } catch (error) {
+      addToast(
+        error instanceof Error ? error.message : 'Failed to regenerate question',
+        { variant: 'error', position: 'top-center' }
+      )
+      return null
+    }
+  }
+
   if (reviewQuestions) {
     return (
       <div className="flex flex-col gap-6 p-4 md:p-6">
         <AIQuestionReviewPanel
           questions={reviewQuestions}
           onCancel={() => setReviewQuestions(null)}
+          onRegenerateOne={regenerateOneQuestion}
           onCommit={(approved) => {
             onTagsSync?.(discoveryTagsFromBrief(brief))
             onQuestionsGenerated(approved)
@@ -432,19 +479,50 @@ export default function AIGenerationForm({
           onAnalyze={analyzeLessonImage}
         />
 
-        {lessonSummary && (
-          <div className="space-y-2 rounded-lg border bg-slate-50 p-3">
-            <Label>Editable lesson analysis</Label>
-            <Textarea
-              rows={3}
-              value={lessonSummary}
-              onChange={(event) => setLessonSummary(event.target.value)}
-            />
-            {keyVocabulary.length > 0 && (
-              <p className="text-xs text-gray-600">
-                Key vocabulary: {keyVocabulary.join(', ')}
-              </p>
-            )}
+        {(lessonSummary || keyVocabulary.length > 0 || sentencePatterns.length > 0) && (
+          <div className="space-y-3 rounded-lg border bg-slate-50 p-3">
+            <div className="space-y-2">
+              <Label>Editable lesson analysis</Label>
+              <Textarea
+                rows={3}
+                value={lessonSummary}
+                onChange={(event) => setLessonSummary(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="keyVocabulary">Key vocabulary</Label>
+              <Textarea
+                id="keyVocabulary"
+                rows={2}
+                value={keyVocabulary.join(', ')}
+                onChange={(event) =>
+                  setKeyVocabulary(
+                    event.target.value
+                      .split(',')
+                      .map((word) => word.trim())
+                      .filter(Boolean)
+                  )
+                }
+                placeholder="play, go, school"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sentencePatterns">Sentence patterns</Label>
+              <Textarea
+                id="sentencePatterns"
+                rows={2}
+                value={sentencePatterns.join('\n')}
+                onChange={(event) =>
+                  setSentencePatterns(
+                    event.target.value
+                      .split('\n')
+                      .map((line) => line.trim())
+                      .filter(Boolean)
+                  )
+                }
+                placeholder={'subject + verb\ndo/does + subject'}
+              />
+            </div>
           </div>
         )}
 
