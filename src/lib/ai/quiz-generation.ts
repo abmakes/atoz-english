@@ -106,6 +106,10 @@ TEACHER BRIEF (highest priority):
 - Teacher / textbook vocabulary to prefer: ${teacherVocabulary}
 - Useful sentence patterns: ${sentencePatterns}
 
+PRIORITY RULE:
+- Teacher notes and quiz description outrank discovery tags when they conflict.
+- Use tags for level/topic framing, but follow the teacher's written intent first.
+
 LEVEL GUIDANCE:
 - ${levelGuidance(brief.level)}
 - Keep each question under 16 words.

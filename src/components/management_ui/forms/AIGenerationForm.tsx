@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -15,11 +15,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { TagDrawer } from '@/components/management_ui/TagDrawer'
 import LessonPageCapture from '@/components/management_ui/LessonPageCapture'
 import AIQuestionReviewPanel, {
   type ReviewableQuestion,
 } from '@/components/management_ui/AIQuestionReviewPanel'
 import type { Question } from '@/components/management_ui/QuizEditor'
+import { ALL_TAG_CATEGORIES } from '@/lib/tags'
 import {
   buildBriefSummary,
   defaultQuestionStylesForGrammar,
@@ -149,6 +151,7 @@ export default function AIGenerationForm({
     null
   )
   const { addToast } = useCustomToast()
+  const lastSyncedSetupTags = useRef(JSON.stringify(existingTags))
 
   const grammarFocus = useMemo(
     () => resolveGrammarTags(selectedTags),
@@ -157,12 +160,29 @@ export default function AIGenerationForm({
   const topics = useMemo(() => resolveTopicTags(selectedTags), [selectedTags])
   const levelMissing = !selectedLevel
 
+  // Keep AI tags in sync when the teacher edits them back on Quiz Setup
   useEffect(() => {
-    if (initialBrief) return
+    const key = JSON.stringify(existingTags)
+    if (key === lastSyncedSetupTags.current) return
+    lastSyncedSetupTags.current = key
     setSelectedTags(existingTags)
-    const level = levelFromTags(existingTags)
-    if (level) setSelectedLevel(level)
-  }, [existingTags, initialBrief])
+    setSelectedLevel(levelFromTags(existingTags))
+  }, [existingTags])
+
+  const applyTags = (tags: string[]) => {
+    lastSyncedSetupTags.current = JSON.stringify(tags)
+    setSelectedTags(tags)
+    setSelectedLevel(levelFromTags(tags))
+    onTagsSync?.(tags)
+  }
+
+  const handleTagToggle = (tag: string) => {
+    applyTags(
+      selectedTags.includes(tag)
+        ? selectedTags.filter((selected) => selected !== tag)
+        : [...selectedTags, tag]
+    )
+  }
 
   useEffect(() => {
     if (defaultsSeeded) return
@@ -225,24 +245,24 @@ export default function AIGenerationForm({
   const aiDisabled = quizType !== QuestionType.MULTIPLE_CHOICE
 
   const handleLevelSelect = (level: CefrLevelId) => {
-    setSelectedLevel(level)
-    setSelectedTags((current) => syncLevelIntoTags(current, level))
+    applyTags(syncLevelIntoTags(selectedTags, level))
   }
 
   const applyAnalysis = (analysis: LessonImageAnalysis) => {
     setLessonSummary(analysis.lessonSummary)
-    setSelectedLevel(analysis.suggestedLevel)
-    setSelectedTags((current) => {
-      const next = syncLevelIntoTags(
-        [
-          ...current.filter((tag) => !normalizeCefrLevel(tag)),
-          ...analysis.topics,
-          ...analysis.grammarFocus,
-        ],
-        analysis.suggestedLevel
-      )
-      return [...new Set(next)]
-    })
+    const nextTags = [
+      ...new Set(
+        syncLevelIntoTags(
+          [
+            ...selectedTags.filter((tag) => !normalizeCefrLevel(tag)),
+            ...analysis.topics,
+            ...analysis.grammarFocus,
+          ],
+          analysis.suggestedLevel
+        )
+      ),
+    ]
+    applyTags(nextTags)
     setKeyVocabulary(analysis.keyVocabulary)
     setSentencePatterns(analysis.sentencePatterns)
     setQuestionStyles(
@@ -463,20 +483,49 @@ export default function AIGenerationForm({
             </div>
             <div>
               <p className="mb-2 text-sm font-bold">Tags</p>
-              <div className="flex flex-wrap gap-2">
-                {selectedTags.length > 0 ? (
-                  selectedTags.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant="secondary"
-                      className="h-8 border-[--primary-accent] px-2 pt-1 text-sm text-[--text-color] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]"
-                    >
-                      {tag}
-                    </Badge>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500">No tags selected yet.</p>
-                )}
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <TagDrawer
+                  allTags={ALL_TAG_CATEGORIES}
+                  selectedTags={selectedTags}
+                  onTagToggle={handleTagToggle}
+                  onSelectedTagsChange={applyTags}
+                  triggerElement={
+                    <div className="flex h-10 w-full cursor-pointer items-center rounded-full border border-violet-400 transition-colors hover:bg-violet-50 sm:w-72">
+                      <span className="flex h-full w-32 items-center rounded-full bg-violet-100 px-4 pb-1 pt-2 text-base font-semibold text-violet-700 hover:bg-violet-200">
+                        Quiz Tags
+                      </span>
+                      <Button
+                        id="aiQuizTags"
+                        type="button"
+                        variant="outline"
+                        className="h-full flex-1 border-none pb-1 pt-2 text-base text-[--text-color]"
+                      >
+                        Select Tags
+                      </Button>
+                    </div>
+                  }
+                  title="Edit quiz tags"
+                  description="These tags publish with the quiz and guide AI generation."
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  {selectedTags.length > 0 ? (
+                    selectedTags.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="secondary"
+                        className="h-8 cursor-pointer border-[--primary-accent] px-2 pt-1 text-sm text-[--text-color] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]"
+                        onClick={() => handleTagToggle(tag)}
+                      >
+                        {tag}
+                        <span className="ml-2 text-xs font-bold hover:text-red-500">
+                          &times;
+                        </span>
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500">No tags selected yet.</p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
