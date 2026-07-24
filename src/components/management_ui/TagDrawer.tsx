@@ -160,14 +160,14 @@ export function TagDrawer({
               {description}
             </DrawerDescription>
 
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-6 lg:items-stretch">
               {levelCategory && (
-                <section className="rounded-xl border border-[--primary-accent] bg-white/80 p-4 lg:w-1/5 lg:shrink-0">
+                <section className="rounded-xl border border-[--primary-accent] bg-white/80 p-4 lg:col-span-1">
                   <div className="mb-2 flex flex-col gap-1">
                     <h3 className="text-lg font-semibold">Level</h3>
                     <p className="text-xs text-gray-500">Choose one</p>
                   </div>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap lg:flex-col">
+                  <div className="flex flex-row flex-wrap gap-2">
                     {levelCategory.tags.map((tag) => {
                       const isSelected = selectedTags.includes(tag)
                       return (
@@ -186,7 +186,7 @@ export function TagDrawer({
               )}
 
               {topicCategory && (
-                <section className="rounded-xl border border-[--primary-accent] bg-white/80 p-4 lg:w-2/5">
+                <section className="rounded-xl border border-[--primary-accent] bg-white/80 p-4 lg:col-span-2">
                   <h3 className="mb-1 text-lg font-semibold">Topic</h3>
                   <p className="mb-3 text-xs text-gray-500">
                     Choose a classroom theme
@@ -196,7 +196,7 @@ export function TagDrawer({
               )}
 
               {grammarCategory && (
-                <section className="rounded-xl border border-[--primary-accent] bg-white/80 p-4 lg:w-2/5">
+                <section className="rounded-xl border border-[--primary-accent] bg-white/80 p-4 lg:col-span-3">
                   <h3 className="mb-1 text-lg font-semibold">Grammar</h3>
                   <p className="mb-3 text-xs text-gray-500">
                     Coursebook structures
