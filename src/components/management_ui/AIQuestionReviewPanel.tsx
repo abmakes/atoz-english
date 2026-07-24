@@ -5,8 +5,6 @@ import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { useCustomToast } from '@/components/ui/CustomToast'
 import ImageSelectModal from '@/components/management_ui/ImageSelectModal'
 import type { Question } from '@/components/management_ui/QuizEditor'
@@ -41,16 +39,27 @@ interface AIQuestionReviewPanelProps {
   questions: ReviewableQuestion[]
   onCommit: (approved: Question[]) => void
   onCancel: () => void
-  onRegenerateOne?: (index: number, question: ReviewableQuestion) => Promise<ReviewableQuestion | null>
+  onRegenerateOne?: (
+    index: number,
+    question: ReviewableQuestion
+  ) => Promise<ReviewableQuestion | null>
 }
 
-function visibleWarnings(
-  question: ReviewableQuestion
-): LanguageAuditIssue[] {
-  const kept = new Set((question.keptWords ?? []).map((word) => word.toLowerCase()))
+function visibleWarnings(question: ReviewableQuestion): LanguageAuditIssue[] {
+  const kept = new Set(
+    (question.keptWords ?? []).map((word) => word.toLowerCase())
+  )
   return (question.languageWarnings ?? []).filter(
     (issue) => !kept.has(issue.word.toLowerCase())
   )
+}
+
+function keywordPills(keyword: string | undefined): string[] {
+  if (!keyword?.trim()) return []
+  return keyword
+    .split(/[\s,]+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
 }
 
 async function fetchImageSuggestions(keyword: string): Promise<ImageSuggestion[]> {
@@ -63,7 +72,16 @@ async function fetchImageSuggestions(keyword: string): Promise<ImageSuggestion[]
     )
     if (stored.ok) {
       const payload = (await stored.json()) as {
-        data?: { images?: Array<{ id: string; blobUrl: string; searchTerm?: string; tags?: string[]; width?: number; height?: number }> }
+        data?: {
+          images?: Array<{
+            id: string
+            blobUrl: string
+            searchTerm?: string
+            tags?: string[]
+            width?: number
+            height?: number
+          }>
+        }
       }
       for (const image of payload.data?.images ?? []) {
         suggestions.push({
@@ -118,7 +136,10 @@ async function fetchImageSuggestions(keyword: string): Promise<ImageSuggestion[]
         metadata: {
           pixabayId: hit.id,
           pixabayUser: hit.user,
-          tags: hit.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+          tags: hit.tags
+            .split(',')
+            .map((tag) => tag.trim())
+            .filter(Boolean),
           searchTerm: query,
           width: hit.webformatWidth,
           height: hit.webformatHeight,
@@ -177,7 +198,10 @@ export default function AIQuestionReviewPanel({
     items.forEach((item, index) => {
       if (item.status === 'rejected') return
       if (suggestionsByIndex[index]) return
-      void loadSuggestions(index, item.imageKeyword || item.correctAnswer || 'classroom')
+      void loadSuggestions(
+        index,
+        item.imageKeyword || item.correctAnswer || 'classroom'
+      )
     })
   }, [items, loadSuggestions, suggestionsByIndex])
 
@@ -201,7 +225,10 @@ export default function AIQuestionReviewPanel({
     const nextAnswers = item.answers.map((answer) =>
       applySuggestedSimplifications(answer, warnings)
     )
-    const nextCorrect = applySuggestedSimplifications(item.correctAnswer, warnings)
+    const nextCorrect = applySuggestedSimplifications(
+      item.correctAnswer,
+      warnings
+    )
     updateItem(index, {
       question: nextQuestion,
       answers: nextAnswers,
@@ -249,30 +276,30 @@ export default function AIQuestionReviewPanel({
   }
 
   return (
-    <div className="space-y-4">
-      <Card className="border-emerald-200 bg-emerald-50 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="text-lg font-semibold text-emerald-950">
-              Review generated questions
-            </h3>
-            <p className="text-sm text-emerald-900">
-              Approve, edit, or reject each item. Level warnings are advice only.
-              Approved questions enter the quiz.
-            </p>
-          </div>
-          <Badge className="bg-emerald-700 text-white">
-            {approvedCount} approved / {items.length}
-          </Badge>
+    <div className="grandstander space-y-4 text-[--text-color]">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+        <div>
+          <h3 className="text-lg font-semibold">Review generated questions</h3>
+          <p className="text-sm text-slate-600">
+            Approve the ones you want. Warnings are advice only.
+          </p>
         </div>
-      </Card>
+        <Badge className="bg-emerald-700 text-white">
+          {approvedCount} approved / {items.length}
+        </Badge>
+      </div>
 
       {items.map((item, index) => {
         if (item.status === 'rejected') {
           return (
-            <Card key={`rejected-${index}`} className="bg-gray-50 p-4 opacity-70">
+            <Card
+              key={`rejected-${index}`}
+              className="bg-gray-50 p-4 opacity-70"
+            >
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm text-gray-600">Question {index + 1} rejected</p>
+                <p className="text-sm text-gray-600">
+                  Question {index + 1} rejected
+                </p>
                 <Button
                   type="button"
                   variant="outline"
@@ -288,40 +315,59 @@ export default function AIQuestionReviewPanel({
 
         const warnings = visibleWarnings(item)
         const suggestions = suggestionsByIndex[index] ?? []
+        const pills = keywordPills(item.imageKeyword)
 
         return (
           <Card
             key={`review-${index}`}
-            className={`space-y-4 p-4 ${
-              item.status === 'approved' ? 'border-emerald-400 bg-emerald-50/40' : ''
+            className={`space-y-4 border p-5 shadow-none ${
+              item.status === 'approved'
+                ? 'border-emerald-400 bg-emerald-50/30'
+                : 'border-slate-200 bg-white'
             }`}
           >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h4 className="font-semibold">Question {index + 1}</h4>
-              <div className="flex flex-wrap gap-2">
-                <Button
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 space-y-1">
+                <p className="text-base font-bold">
+                  Question {index + 1}:
+                </p>
+                <input
+                  value={item.question}
+                  onChange={(event) =>
+                    updateItem(index, { question: event.target.value })
+                  }
+                  className="w-full border-0 bg-transparent p-0 text-base text-[--text-color] outline-none ring-0 focus:ring-0"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-slate-600">
+                  Approve:
+                </span>
+                <button
                   type="button"
-                  size="sm"
-                  variant={item.status === 'approved' ? 'default' : 'outline'}
+                  title="Approve"
                   onClick={() => updateItem(index, { status: 'approved' })}
+                  className={`flex h-10 w-10 items-center justify-center rounded-lg border-2 transition-colors ${
+                    item.status === 'approved'
+                      ? 'border-emerald-600 bg-emerald-500 text-white'
+                      : 'border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                  }`}
                 >
-                  <Check className="mr-1 h-4 w-4" />
-                  Approve
-                </Button>
-                <Button
+                  <Check className="h-5 w-5" />
+                </button>
+                <button
                   type="button"
-                  size="sm"
-                  variant="outline"
+                  title="Reject"
                   onClick={() => updateItem(index, { status: 'rejected' })}
+                  className="flex h-10 w-10 items-center justify-center rounded-lg border-2 border-red-500 bg-red-50 text-red-600 hover:bg-red-100"
                 >
-                  <Trash2 className="mr-1 h-4 w-4" />
-                  Reject
-                </Button>
+                  <Trash2 className="h-5 w-5" />
+                </button>
                 {onRegenerateOne && (
-                  <Button
+                  <button
                     type="button"
-                    size="sm"
-                    variant="outline"
+                    title="Regenerate"
                     disabled={regeneratingIndex === index}
                     onClick={async () => {
                       setRegeneratingIndex(index)
@@ -342,63 +388,61 @@ export default function AIQuestionReviewPanel({
                         setRegeneratingIndex(null)
                       }
                     }}
+                    className="flex h-10 w-10 items-center justify-center rounded-lg border-2 border-sky-500 bg-sky-50 text-sky-700 hover:bg-sky-100 disabled:opacity-60"
                   >
                     {regeneratingIndex === index ? (
-                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                      <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
-                      <RefreshCw className="mr-1 h-4 w-4" />
+                      <RefreshCw className="h-5 w-5" />
                     )}
-                    Regenerate
-                  </Button>
+                  </button>
                 )}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Question</Label>
-              <Input
-                value={item.question}
-                onChange={(event) =>
-                  updateItem(index, { question: event.target.value })
-                }
-              />
-            </div>
-
-            <div className="grid gap-2 md:grid-cols-2">
-              {item.answers.map((answer, answerIndex) => (
-                <div key={`answer-${index}-${answerIndex}`} className="space-y-1">
-                  <Label className="flex items-center gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              {item.answers.map((answer, answerIndex) => {
+                const isCorrect = item.correctAnswer === answer
+                return (
+                  <button
+                    key={`answer-${index}-${answerIndex}`}
+                    type="button"
+                    onClick={() =>
+                      updateItem(index, { correctAnswer: answer })
+                    }
+                    className={`flex min-w-[10rem] flex-1 items-center gap-2 rounded-xl px-3 py-2 text-left transition-colors ${
+                      isCorrect
+                        ? 'border-2 border-emerald-500 bg-emerald-50'
+                        : 'border border-transparent hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="font-semibold text-slate-500">
+                      {answerIndex + 1} -
+                    </span>
                     <input
-                      type="radio"
-                      name={`correct-${index}`}
-                      checked={item.correctAnswer === answer}
-                      onChange={() =>
-                        updateItem(index, { correctAnswer: answer })
-                      }
+                      value={answer}
+                      onClick={(event) => event.stopPropagation()}
+                      onChange={(event) => {
+                        const answers = [...item.answers]
+                        const previous = answers[answerIndex]
+                        answers[answerIndex] = event.target.value
+                        updateItem(index, {
+                          answers,
+                          correctAnswer:
+                            item.correctAnswer === previous
+                              ? event.target.value
+                              : item.correctAnswer,
+                        })
+                      }}
+                      className="min-w-0 flex-1 border-0 bg-transparent p-0 text-base outline-none ring-0 focus:ring-0"
                     />
-                    Answer {answerIndex + 1}
-                  </Label>
-                  <Input
-                    value={answer}
-                    onChange={(event) => {
-                      const answers = [...item.answers]
-                      const previous = answers[answerIndex]
-                      answers[answerIndex] = event.target.value
-                      updateItem(index, {
-                        answers,
-                        correctAnswer:
-                          item.correctAnswer === previous
-                            ? event.target.value
-                            : item.correctAnswer,
-                      })
-                    }}
-                  />
-                </div>
-              ))}
+                  </button>
+                )
+              })}
             </div>
 
             {warnings.length > 0 && (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+              <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm">
                 <div className="mb-2 flex items-center gap-2 font-semibold text-amber-900">
                   <TriangleAlert className="h-4 w-4" />
                   Level warnings
@@ -414,8 +458,12 @@ export default function AIQuestionReviewPanel({
                       </Badge>
                       <span className="text-amber-900">
                         {warning.reason}
-                        {warning.detectedLevel ? ` (${warning.detectedLevel})` : ''}
-                        {warning.suggestion ? ` → try “${warning.suggestion}”` : ''}
+                        {warning.detectedLevel
+                          ? ` (${warning.detectedLevel})`
+                          : ''}
+                        {warning.suggestion
+                          ? ` → try “${warning.suggestion}”`
+                          : ''}
                       </span>
                       <Button
                         type="button"
@@ -443,33 +491,29 @@ export default function AIQuestionReviewPanel({
               </div>
             )}
 
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <Label htmlFor={`image-keyword-${index}`}>Image keyword</Label>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setImageModalIndex(index)}
-                >
-                  <Search className="mr-1 h-4 w-4" />
-                  Search more
-                </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold">Keywords:</span>
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                {pills.length > 0 ? (
+                  pills.map((pill) => (
+                    <Badge
+                      key={`${index}-${pill}`}
+                      variant="secondary"
+                      className="h-8 border-[--primary-accent] px-2 pt-1 text-sm text-[--text-color] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]"
+                    >
+                      {pill}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-sm text-slate-400">No keyword yet</span>
+                )}
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Input
-                  id={`image-keyword-${index}`}
-                  value={item.imageKeyword || ''}
-                  onChange={(event) =>
-                    updateItem(index, { imageKeyword: event.target.value })
-                  }
-                  placeholder="cat pet"
-                  className="max-w-xs"
-                />
+              <div className="ml-auto flex flex-wrap items-center gap-2">
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
+                  className="h-8"
                   onClick={() =>
                     void loadSuggestions(
                       index,
@@ -477,54 +521,63 @@ export default function AIQuestionReviewPanel({
                     )
                   }
                 >
+                  <RefreshCw className="mr-1 h-3.5 w-3.5" />
                   Refresh suggestions
                 </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8"
+                  onClick={() => setImageModalIndex(index)}
+                >
+                  <Search className="mr-1 h-3.5 w-3.5" />
+                  Search more
+                </Button>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                {loadingImages[index] && suggestions.length === 0 ? (
-                  <div className="col-span-3 flex items-center gap-2 text-sm text-gray-500">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading image ideas…
-                  </div>
-                ) : suggestions.length === 0 ? (
-                  <p className="col-span-3 text-sm text-gray-500">
-                    No suggestions yet. Use Search more to pick an image.
-                  </p>
-                ) : (
-                  suggestions.map((suggestion) => {
-                    const selected = item.imageUrl === suggestion.url
-                    return (
-                      <button
-                        key={suggestion.id}
-                        type="button"
-                        className={`overflow-hidden rounded-lg border-2 ${
-                          selected
-                            ? 'border-emerald-500'
-                            : 'border-transparent hover:border-violet-300'
-                        }`}
-                        onClick={() =>
-                          updateItem(index, {
-                            imageUrl: suggestion.url,
-                            imageFile: null,
-                            imageMetadata: suggestion.metadata,
-                          })
-                        }
-                      >
-                        <Image
-                          src={suggestion.url}
-                          alt={suggestion.label}
-                          width={200}
-                          height={120}
-                          unoptimized
-                          className="h-24 w-full object-cover"
-                        />
-                      </button>
-                    )
-                  })
-                )}
-              </div>
-              {item.imageUrl && item.imageUrl !== '/images/placeholder.webp' && (
-                <p className="text-xs text-gray-500">Selected image ready for this question.</p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              {loadingImages[index] && suggestions.length === 0 ? (
+                <div className="col-span-3 flex items-center gap-2 text-sm text-gray-500">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading image ideas…
+                </div>
+              ) : suggestions.length === 0 ? (
+                <p className="col-span-3 text-sm text-gray-500">
+                  No suggestions yet. Use Search more to pick an image.
+                </p>
+              ) : (
+                suggestions.map((suggestion) => {
+                  const selected = item.imageUrl === suggestion.url
+                  return (
+                    <button
+                      key={suggestion.id}
+                      type="button"
+                      className={`overflow-hidden rounded-lg border-2 ${
+                        selected
+                          ? 'border-emerald-500'
+                          : 'border-transparent hover:border-violet-300'
+                      }`}
+                      onClick={() =>
+                        updateItem(index, {
+                          imageUrl: suggestion.url,
+                          imageFile: null,
+                          imageMetadata: suggestion.metadata,
+                        })
+                      }
+                    >
+                      <Image
+                        src={suggestion.url}
+                        alt={suggestion.label}
+                        width={200}
+                        height={120}
+                        unoptimized
+                        className="h-24 w-full object-cover"
+                      />
+                    </button>
+                  )
+                })
               )}
             </div>
           </Card>
@@ -540,7 +593,8 @@ export default function AIQuestionReviewPanel({
           onClick={handleCommit}
           className="bg-[--primary-accent] text-white hover:bg-[--primary-accent-hover]"
         >
-          Add {approvedCount} approved question{approvedCount === 1 ? '' : 's'} to quiz
+          Add {approvedCount} approved question
+          {approvedCount === 1 ? '' : 's'} to quiz
         </Button>
       </div>
 
