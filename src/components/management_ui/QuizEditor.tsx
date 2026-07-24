@@ -370,6 +370,16 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
     setCreationStep('content')
   }
 
+  const handleSetupAiGenerate = (data: QuizSetupData) => {
+    setQuizSetupData(data)
+    setContentView('ai-generation')
+    setCreationStep('content')
+    addToast('Title, description, and tags are ready — refine notes and generate.', {
+      variant: 'success',
+      position: 'top-center',
+    })
+  }
+
   /**
    * Callback for QuizForm to update cover image in quizSetupData
    * This allows the cover image to be changed from the content step
@@ -965,6 +975,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
             <QuizSetupForm 
               initialData={quizSetupData} 
               onSetupComplete={handleSetupComplete}
+              onAiGenerate={handleSetupAiGenerate}
               selectedTags={quizSetupData.tags}
               onTagToggle={handleTagToggle}
               onSelectedTagsChange={handleSelectedTagsChange}

@@ -11,13 +11,15 @@ import type { QuizSetupData } from '@/components/management_ui/QuizEditor'; // I
 import { TagDrawer } from "@/components/management_ui/TagDrawer"; // Adjusted path
 import { ALL_TAG_CATEGORIES } from "@/lib/tags";
 import { useCustomToast } from '@/components/ui/CustomToast'
-import { ArrowRight, Image as Picture } from 'lucide-react';
+import { ArrowRight, Image as Picture, Sparkles } from 'lucide-react';
 import QuizTypeGrid, { QuestionType } from "@/components/management_ui/forms/QuizTypeGrid"; // Added import for QuizTypeGrid and its QuestionType
 import ImageSelectModal from '@/components/management_ui/ImageSelectModal';
 
 interface QuizSetupFormProps {
   initialData: QuizSetupData;
   onSetupComplete: (data: QuizSetupData) => void;
+  /** Premium path: complete setup and open AI generation with prefilled values */
+  onAiGenerate?: (data: QuizSetupData) => void;
   selectedTags: string[];
   onTagToggle: (tag: string) => void;
   onSelectedTagsChange?: (tags: string[]) => void;
@@ -27,7 +29,8 @@ const PLACEHOLDER_IMAGE_CLIENT = '/images/placeholder.webp'; // Renamed to avoid
 
 export default function QuizSetupForm({ 
   initialData, 
-  onSetupComplete, 
+  onSetupComplete,
+  onAiGenerate,
   selectedTags, 
   onTagToggle,
   onSelectedTagsChange,
@@ -58,17 +61,22 @@ export default function QuizSetupForm({
     addToast('Cover image selected!', { variant: 'success' });
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const buildSetupData = (): QuizSetupData | null => {
+    if (!title.trim()) {
+      addToast('Enter a quiz title.', {
+        variant: 'warning',
+        position: 'top-center',
+      });
+      return null;
+    }
     if (!description.trim()) {
       addToast('Add a short quiz description so learners know what to expect.', {
         variant: 'warning',
         position: 'top-center',
       });
-      return;
+      return null;
     }
-    addToast('Quiz setup complete. Now add questions to your quiz.', { variant: 'success', position: 'top-center' });
-    onSetupComplete({
+    return {
       title,
       description,
       coverImageUrl:
@@ -76,7 +84,28 @@ export default function QuizSetupForm({
       coverImageFile,
       quizType,
       tags: selectedTags,
-    });
+    };
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const data = buildSetupData();
+    if (!data) return;
+    addToast('Quiz setup complete. Now add questions to your quiz.', { variant: 'success', position: 'top-center' });
+    onSetupComplete(data);
+  };
+
+  const handleAiGenerate = () => {
+    const data = buildSetupData();
+    if (!data) return;
+    if (quizType !== QuestionType.MULTIPLE_CHOICE) {
+      addToast('AI generation currently supports multiple-choice quizzes only.', {
+        variant: 'error',
+        position: 'top-center',
+      });
+      return;
+    }
+    onAiGenerate?.(data);
   };
 
   return (
@@ -204,11 +233,22 @@ export default function QuizSetupForm({
 
  
 
-      <div className="flex justify-end">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        {onAiGenerate && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleAiGenerate}
+            className="flex items-center gap-2 px-6 h-12 text-lg font-semibold border-2 border-[--primary-accent] bg-[--primary-accent]/20 text-[--text-color] shadow-[4px_4px_0px_0px_var(--primary-accent-hover)] hover:bg-white hover:scale-105 transition-all duration-300"
+          >
+            <Sparkles className="h-5 w-5" />
+            AI Generate
+          </Button>
+        )}
         <Button
           type="submit"
           variant='outline' 
-          className="flex items-center px-8 h-full text-lg font-semibold border border-[#1F6E91] gap-2 bg-[--text-color] text-white shadow-[4px_4px_0px_0px_#1F6E91] hover:bg-white hover:text-[--text-color] hover:border-[#1F6E91] hover:shadow-[4px_6px_0px_0px_#1F6E91] hover:scale-105 transition-all duration-300"
+          className="flex items-center px-8 h-12 text-lg font-semibold border border-[#1F6E91] gap-2 bg-[--text-color] text-white shadow-[4px_4px_0px_0px_#1F6E91] hover:bg-white hover:text-[--text-color] hover:border-[#1F6E91] hover:shadow-[4px_6px_0px_0px_#1F6E91] hover:scale-105 transition-all duration-300"
         >
             Create Questions <ArrowRight className="-mt-0.5" size={20} /> 
         </Button>

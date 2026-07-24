@@ -40,11 +40,12 @@ certification. Lexicon levels remain provisional.
 
 ## Teacher-first generation flow
 
-1. Teacher writes notes and/or pastes a lesson page image.
-2. Optional image analysis returns an editable brief (summary, level, topics,
-   grammar, vocabulary, question styles). Analysis never auto-generates.
-3. Teacher confirms Level / Topic / Grammar discovery tags plus AI controls.
-4. A plain-language brief summary is shown before the Gemini call.
+1. Teacher completes quiz setup (title, description, tags, type) and chooses
+   **Create Questions** or the premium **AI Generate** path.
+2. AI Generate opens a compact brief with setup values already filled.
+3. Optional image analysis returns an editable lesson summary.
+4. Teacher confirms Level / styles / question count, then reviews a plain-language
+   brief in a confirm dialog before the Gemini call.
 5. Gemini drafts questions from the full `GenerationBrief`.
 6. The lexicon adds **non-blocking** level warnings and replacement suggestions.
 7. Teacher reviews each question: edit, approve, reject, regenerate, simplify, keep words,
