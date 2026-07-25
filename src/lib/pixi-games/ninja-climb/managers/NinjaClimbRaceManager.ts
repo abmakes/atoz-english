@@ -2,11 +2,15 @@ import type { NinjaPowerupId } from '../ninjaPowerups'
 
 export type ShortcutKind = 'forest' | 'cave'
 
+export const POINTS_PER_STEP = 40
+
 export interface ShortcutNodeDef {
   id: string
   kind: ShortcutKind
-  /** Fraction of summit height where the node sits (0–1). */
+  /** Fraction of summit (used to derive step index once summit is known). */
   fraction: number
+  /** Absolute step index (filled after race init). */
+  stepIndex: number
   ladderChance: number
   ladderDelta: number
   snakeDelta: number
@@ -16,13 +20,10 @@ export interface TeamRaceState {
   teamId: string
   score: number
   charges: Record<NinjaPowerupId, number>
-  /** Remaining scoring answers that still get +50% from rope. */
   ropeBoostRemaining: number
-  /** Remaining scoring answers still cut by smoke. */
   smokeDebuffRemaining: number
-  /** Barrier height placed by this team (blocks the opponent). Null if none. */
-  barrierHeight: number | null
-  /** Shortcut node ids this team has already resolved (accept or skip). */
+  /** Barrier step index placed by this team. Null if none. */
+  barrierStep: number | null
   consumedShortcuts: string[]
 }
 
@@ -49,7 +50,7 @@ export interface ApplyPowerupResult {
   reason?: string
   actorScoreDelta?: number
   targetScoreDelta?: number
-  barrierPlacedAt?: number | null
+  barrierPlacedAtStep?: number | null
 }
 
 const TELEPORT_JUMP = 120
@@ -59,7 +60,7 @@ const ROPE_BOOST_ANSWERS = 3
 const SMOKE_MULTIPLIER = 0.7
 const SMOKE_ANSWERS = 2
 
-export const DEFAULT_SHORTCUT_NODES: ShortcutNodeDef[] = [
+export const DEFAULT_SHORTCUT_NODES: Omit<ShortcutNodeDef, 'stepIndex'>[] = [
   {
     id: 'node-forest-1',
     kind: 'forest',
@@ -98,6 +99,16 @@ export function computeSummitPoints(questionsPerTeam: number): number {
   return Math.max(400, Math.floor(questionsPerTeam) * 80)
 }
 
+export function scoreToStepIndex(score: number, summitPoints: number): number {
+  const totalSteps = Math.max(1, Math.ceil(summitPoints / POINTS_PER_STEP))
+  const raw = Math.floor(Math.max(0, score) / POINTS_PER_STEP)
+  return Math.max(0, Math.min(totalSteps - 1, raw))
+}
+
+export function totalStepsForSummit(summitPoints: number): number {
+  return Math.max(1, Math.ceil(summitPoints / POINTS_PER_STEP))
+}
+
 export function computeCorrectGain(options: {
   boosted: boolean
   remainingTimeMs: number
@@ -110,7 +121,7 @@ export function computeCorrectGain(options: {
 }
 
 /**
- * Pure race rules: score ↔ height, gain pipeline, barriers, boosts, shortcuts.
+ * Pure race rules: score ↔ step, gain pipeline, barriers, boosts, shortcuts.
  */
 export class NinjaClimbRaceManager {
   private summitPoints: number
@@ -125,14 +136,23 @@ export class NinjaClimbRaceManager {
     startingCharges: NinjaPowerupId[]
     questionsPerTeam: number
     shortcutsEnabled?: boolean
-    nodes?: ShortcutNodeDef[]
+    nodes?: Omit<ShortcutNodeDef, 'stepIndex'>[]
     rng?: () => number
   }) {
     this.summitPoints = computeSummitPoints(options.questionsPerTeam)
     this.shortcutsEnabled = options.shortcutsEnabled !== false
-    this.nodes = options.nodes ?? DEFAULT_SHORTCUT_NODES
     this.rng = options.rng ?? Math.random
     this.teamOrder = [...options.teamIds]
+
+    const totalSteps = totalStepsForSummit(this.summitPoints)
+    const rawNodes = options.nodes ?? DEFAULT_SHORTCUT_NODES
+    this.nodes = rawNodes.map((n) => ({
+      ...n,
+      stepIndex: Math.max(
+        0,
+        Math.min(totalSteps - 1, Math.round(n.fraction * (totalSteps - 1)))
+      ),
+    }))
 
     for (const teamId of options.teamIds) {
       const charges: Record<NinjaPowerupId, number> = {
@@ -149,7 +169,7 @@ export class NinjaClimbRaceManager {
         charges,
         ropeBoostRemaining: 0,
         smokeDebuffRemaining: 0,
-        barrierHeight: null,
+        barrierStep: null,
         consumedShortcuts: [],
       })
     }
@@ -157,6 +177,10 @@ export class NinjaClimbRaceManager {
 
   public getSummitPoints(): number {
     return this.summitPoints
+  }
+
+  public getTotalSteps(): number {
+    return totalStepsForSummit(this.summitPoints)
   }
 
   public getNodes(): ShortcutNodeDef[] {
@@ -169,20 +193,38 @@ export class NinjaClimbRaceManager {
 
   public getTeamState(teamId: string): TeamRaceState | null {
     const t = this.teams.get(teamId)
-    return t ? { ...t, charges: { ...t.charges }, consumedShortcuts: [...t.consumedShortcuts] } : null
+    return t
+      ? { ...t, charges: { ...t.charges }, consumedShortcuts: [...t.consumedShortcuts] }
+      : null
   }
 
   public getScore(teamId: string): number {
     return this.teams.get(teamId)?.score ?? 0
   }
 
-  public getHeightFraction(teamId: string): number {
-    return Math.max(0, Math.min(1, this.getScore(teamId) / this.summitPoints))
+  public getStepIndex(teamId: string): number {
+    return scoreToStepIndex(this.getScore(teamId), this.summitPoints)
   }
 
-  public scoreToWorldY(score: number, trackBottomY: number, trackTopY: number): number {
-    const fraction = Math.max(0, Math.min(1, score / this.summitPoints))
-    return trackBottomY + (trackTopY - trackBottomY) * fraction
+  /** Convert an absolute score to a clamped waypoint step index. */
+  public scoreToStepIndex(score: number): number {
+    return scoreToStepIndex(score, this.summitPoints)
+  }
+
+  /**
+   * Active barrier step on the shared trail (first team that has one).
+   * Barriers are stored per team but render as a single trail gate.
+   */
+  public getBarrierStep(): number | null {
+    for (const id of this.teamOrder) {
+      const step = this.teams.get(id)?.barrierStep ?? null
+      if (step != null) return step
+    }
+    return null
+  }
+
+  public getHeightFraction(teamId: string): number {
+    return Math.max(0, Math.min(1, this.getScore(teamId) / this.summitPoints))
   }
 
   public hasReachedSummit(teamId: string): boolean {
@@ -206,8 +248,39 @@ export class NinjaClimbRaceManager {
   }
 
   /**
-   * Apply a power-up. Mutates race state. Caller syncs ScoringManager.
+   * Clamp a proposed score gain against the opponent's barrier (by step).
+   * Returns the applied delta and whether the barrier shattered.
    */
+  private _clampAgainstBarrier(
+    teamId: string,
+    currentScore: number,
+    proposedDelta: number
+  ): { applied: number; barrierClamped: boolean; barrierShattered: boolean } {
+    if (proposedDelta <= 0) {
+      return { applied: proposedDelta, barrierClamped: false, barrierShattered: false }
+    }
+
+    const opponentId = this.getOpponentId(teamId)
+    const opponent = opponentId ? this.teams.get(opponentId) : null
+    if (!opponent || opponent.barrierStep == null) {
+      return { applied: proposedDelta, barrierClamped: false, barrierShattered: false }
+    }
+
+    const barrierScore = opponent.barrierStep * POINTS_PER_STEP
+    if (currentScore >= barrierScore) {
+      return { applied: proposedDelta, barrierClamped: false, barrierShattered: false }
+    }
+
+    const projected = currentScore + proposedDelta
+    if (projected <= barrierScore) {
+      return { applied: proposedDelta, barrierClamped: false, barrierShattered: false }
+    }
+
+    const applied = Math.max(0, barrierScore - currentScore)
+    opponent.barrierStep = null
+    return { applied, barrierClamped: true, barrierShattered: true }
+  }
+
   public applyPowerup(actorId: string, powerup: NinjaPowerupId): ApplyPowerupResult {
     const actor = this.teams.get(actorId)
     if (!actor) return { ok: false, reason: 'unknown-team' }
@@ -220,12 +293,13 @@ export class NinjaClimbRaceManager {
 
     if (powerup === 'teleport') {
       const before = actor.score
-      actor.score = Math.min(this.summitPoints, actor.score + TELEPORT_JUMP)
-      actor.barrierHeight = actor.score
+      const clamp = this._clampAgainstBarrier(actorId, actor.score, TELEPORT_JUMP)
+      actor.score = Math.min(this.summitPoints, actor.score + clamp.applied)
+      actor.barrierStep = this.getStepIndex(actorId)
       return {
         ok: true,
         actorScoreDelta: actor.score - before,
-        barrierPlacedAt: actor.barrierHeight,
+        barrierPlacedAtStep: actor.barrierStep,
       }
     }
 
@@ -250,10 +324,6 @@ export class NinjaClimbRaceManager {
     return { ok: false, reason: 'unknown-powerup' }
   }
 
-  /**
-   * Gain pipeline: base → rope boost → smoke → barrier clamp → apply.
-   * Consumes one boost/debuff charge when base > 0.
-   */
   public applyGain(teamId: string, base: number): GainResult {
     const team = this.teams.get(teamId)
     if (!team) {
@@ -292,53 +362,20 @@ export class NinjaClimbRaceManager {
       team.smokeDebuffRemaining -= 1
     }
 
-    const opponentId = this.getOpponentId(teamId)
-    const opponent = opponentId ? this.teams.get(opponentId) : null
-    let applied = afterSmoke
-    let barrierClamped = false
-    let barrierShattered = false
-
-    if (opponent && opponent.barrierHeight != null) {
-      const barrier = opponent.barrierHeight
-      if (team.score < barrier) {
-        const maxReachable = barrier
-        const projected = team.score + afterSmoke
-        if (projected > maxReachable) {
-          applied = Math.max(0, maxReachable - team.score)
-          barrierClamped = true
-          opponent.barrierHeight = null
-          barrierShattered = true
-        }
-      }
-    }
-
-    team.score = Math.min(this.summitPoints, Math.max(0, team.score + applied))
+    const clamp = this._clampAgainstBarrier(teamId, team.score, afterSmoke)
+    team.score = Math.min(this.summitPoints, Math.max(0, team.score + clamp.applied))
 
     return {
       base,
       afterBoost,
       afterSmoke,
-      applied,
-      barrierClamped,
-      barrierShattered,
+      applied: clamp.applied,
+      barrierClamped: clamp.barrierClamped,
+      barrierShattered: clamp.barrierShattered,
       newScore: team.score,
     }
   }
 
-  /**
-   * Apply a raw delta (ladder/snake/rope pull sync). Clamps to [0, summit].
-   */
-  public applyRawDelta(teamId: string, delta: number): number {
-    const team = this.teams.get(teamId)
-    if (!team) return 0
-    const before = team.score
-    team.score = Math.min(this.summitPoints, Math.max(0, team.score + delta))
-    return team.score - before
-  }
-
-  /**
-   * Sync absolute score from ScoringManager (e.g. after external set). Prefer applyGain.
-   */
   public setScore(teamId: string, score: number): void {
     const team = this.teams.get(teamId)
     if (!team) return
@@ -354,20 +391,19 @@ export class NinjaClimbRaceManager {
     const team = this.teams.get(teamId)
     if (!team) return null
 
-    const crossed = this.nodes
-      .map((node) => ({
-        node,
-        height: Math.floor(node.fraction * this.summitPoints),
-      }))
-      .filter(
-        ({ node, height }) =>
-          !team.consumedShortcuts.includes(node.id) &&
-          previousScore < height &&
-          newScore >= height
-      )
-      .sort((a, b) => a.height - b.height)
+    const prevStep = scoreToStepIndex(previousScore, this.summitPoints)
+    const nextStep = scoreToStepIndex(newScore, this.summitPoints)
 
-    return crossed[0]?.node ?? null
+    const crossed = this.nodes
+      .filter(
+        (node) =>
+          !team.consumedShortcuts.includes(node.id) &&
+          prevStep < node.stepIndex &&
+          nextStep >= node.stepIndex
+      )
+      .sort((a, b) => a.stepIndex - b.stepIndex)
+
+    return crossed[0] ?? null
   }
 
   public markShortcutConsumed(teamId: string, nodeId: string): void {
@@ -393,14 +429,23 @@ export class NinjaClimbRaceManager {
     this.markShortcutConsumed(teamId, node.id)
     const roll = this.rng()
     const isLadder = roll < node.ladderChance
-    const delta = isLadder ? node.ladderDelta : node.snakeDelta
-    team.score = Math.min(this.summitPoints, Math.max(0, team.score + delta))
+    const rawDelta = isLadder ? node.ladderDelta : node.snakeDelta
+
+    let applied = rawDelta
+    let outcome: 'ladder' | 'snake' = isLadder ? 'ladder' : 'snake'
+
+    if (rawDelta > 0) {
+      const clamp = this._clampAgainstBarrier(teamId, team.score, rawDelta)
+      applied = clamp.applied
+    }
+
+    team.score = Math.min(this.summitPoints, Math.max(0, team.score + applied))
 
     return {
       nodeId: node.id,
       kind: node.kind,
-      outcome: isLadder ? 'ladder' : 'snake',
-      delta,
+      outcome,
+      delta: applied,
       newScore: team.score,
     }
   }
@@ -420,5 +465,9 @@ export class NinjaClimbRaceManager {
       }
     }
     return bestId
+  }
+
+  public getTeamOrder(): string[] {
+    return [...this.teamOrder]
   }
 }

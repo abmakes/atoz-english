@@ -48,7 +48,7 @@ interface NinjaClimbGameState extends BaseGameState {
 }
 
 /**
- * Turn-based two-team mountain race. Score is climb distance.
+ * Turn-based two-team mountain race. Score maps to shared switchback waypoints.
  */
 export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
   private dataManager!: NinjaClimbDataManager
@@ -72,9 +72,6 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
       ...DEFAULT_NINJA_POWERUPS,
       ...(raw ?? {}),
     }
-    this.boostedFeatures = (config as GameConfig & { gameFeatures?: string }).gameFeatures === 'boosted'
-      || false
-    // GameContainer stores gameFeatures only in setup; detect boosted via progressive rules if needed
   }
 
   protected createInitialState(): NinjaClimbGameState {
@@ -114,7 +111,10 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
 
     this.dataManager.initializeSequencer(this.config.teams.length)
     const totalQuestions = this.dataManager.getTotalQuestionsToAsk()
-    const questionsPerTeam = Math.max(1, Math.floor(totalQuestions / Math.max(1, this.config.teams.length)))
+    const questionsPerTeam = Math.max(
+      1,
+      Math.floor(totalQuestions / Math.max(1, this.config.teams.length))
+    )
 
     const startingCharges = getEnabledNinjaPowerupIds(this.ninjaPowerupsConfig)
     this.raceManager = new NinjaClimbRaceManager({
@@ -124,7 +124,6 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
       shortcutsEnabled: this.ninjaPowerupsConfig.shortcuts,
     })
 
-    // Detect boosted from rule config (progressive scoring)
     const rules = this.config.rules?.rules ?? []
     this.boostedFeatures = rules.some(
       (r) =>
@@ -146,6 +145,7 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
       this.layoutManager
     )
     await this.mountainManager.initialize(
+      this.raceManager.getTotalSteps(),
       this.ninjaPowerupsConfig.shortcuts ? this.raceManager.getNodes() : []
     )
     this.view.addChildAt(this.mountainManager.getView(), 0)
@@ -167,16 +167,21 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
       this.themeConfig.pixiConfig,
       this.layoutManager
     )
-    await this.uiManager.initialize()
+    await this.uiManager.initialize(
+      this.config.teams.map((t) => ({ id: String(t.id), name: t.name }))
+    )
     this.uiManager.setAnswerHandler((optionId) => {
       void this._handleAnswerSelected(optionId)
     })
-    this.uiManager.setPowerupHandler((id) => {
-      void this._handlePowerupPlay(id)
+    this.uiManager.setPowerupHandler((teamId, id) => {
+      void this._handlePowerupPlay(teamId, id)
     })
     this.view.addChild(this.uiManager.getView())
 
-    this._syncPowerupButtons(true)
+    this.playerManager.setActiveTeam(String(this.getState().activeTeam))
+    this._syncPowerTrays(true)
+    this._syncCamera(true)
+    this._pulseNextLedges()
 
     const firstTeam = this.config.teams[0]
     await this.showTransition({
@@ -204,14 +209,8 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
     this.transitionScreen?.update(delta)
     this.mountainManager?.update(delta)
     this.playerManager?.update(delta)
-
-    // Keep camera on the leader
-    if (this.raceManager && this.mountainManager) {
-      const leaderId = this.raceManager.getLeadingTeamId()
-      if (leaderId) {
-        this.mountainManager.setCameraToFraction(this.raceManager.getHeightFraction(leaderId))
-      }
-    }
+    this.uiManager?.update(delta)
+    this._syncCamera(false)
   }
 
   public render(): void {
@@ -249,14 +248,19 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
   }
 
   private _onPlayerAction = (payload: ControlsPlayerActionPayload): void => {
+    // Guard keyup / release — only act on pressed (true)
+    if (!payload.value) return
     if (this.getState().phase !== 'playing') return
     if (this.answeringLocked || this.processingTurn) return
 
     const action = payload.action
-    if (action === 'POWERUP_TELEPORT') void this._handlePowerupPlay('teleport')
-    else if (action === 'POWERUP_ROPE') void this._handlePowerupPlay('rope')
-    else if (action === 'POWERUP_SMOKE') void this._handlePowerupPlay('smoke')
-    else if (action.startsWith('ANSWER_')) {
+    if (action === 'POWERUP_TELEPORT') {
+      void this._handlePowerupPlay(String(this.getState().activeTeam), 'teleport')
+    } else if (action === 'POWERUP_ROPE') {
+      void this._handlePowerupPlay(String(this.getState().activeTeam), 'rope')
+    } else if (action === 'POWERUP_SMOKE') {
+      void this._handlePowerupPlay(String(this.getState().activeTeam), 'smoke')
+    } else if (action.startsWith('ANSWER_')) {
       const index = parseInt(action.replace('ANSWER_', ''), 10) - 1
       const option = this.currentAnswerOptions[index]
       if (option) void this._handleAnswerSelected(option.id)
@@ -280,15 +284,25 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
       currentQuestionIndex: this.dataManager.getCurrentProgressIndex(),
     })
 
+    this.playerManager.setActiveTeam(String(this.getState().activeTeam))
     this.questionDurationMs = (this.config.intensityTimeLimit || 15) * 1000
+
+    const totalQuestions = this.dataManager.getTotalQuestionsToAsk()
+    const current = Math.min(
+      this.dataManager.getCurrentProgressIndex() + 1,
+      totalQuestions
+    )
+
     await this.uiManager.showQuestion(
       question.question,
       question.imageUrl,
       this.currentAnswerOptions,
-      this.questionDurationMs
+      this.questionDurationMs,
+      { current, total: totalQuestions }
     )
 
-    this._syncPowerupButtons(true)
+    this._syncPowerTrays(true)
+    this._pulseNextLedges()
     this._startQuestionTimer()
   }
 
@@ -313,18 +327,32 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
     this.uiManager.updateTimerDisplay(this.questionDurationMs, this.questionDurationMs)
   }
 
-  private _syncPowerupButtons(interactive: boolean): void {
-    const teamId = String(this.getState().activeTeam)
-    const state = this.raceManager.getTeamState(teamId)
-    if (!state) return
-    this.uiManager.setPowerupCharges(state.charges, interactive && this.ninjaPowerupsConfig.enabled)
+  private _syncPowerTrays(interactive: boolean): void {
+    const activeId = String(this.getState().activeTeam)
+    this.uiManager.setTeamTrays(
+      this.config.teams.map((t) => {
+        const id = String(t.id)
+        const state = this.raceManager.getTeamState(id)
+        return {
+          teamId: id,
+          teamName: t.name,
+          charges: state?.charges ?? { teleport: 0, rope: 0, smoke: 0 },
+          interactive:
+            interactive &&
+            this.ninjaPowerupsConfig.enabled &&
+            id === activeId,
+        }
+      })
+    )
   }
 
-  private async _handlePowerupPlay(powerup: NinjaPowerupId): Promise<void> {
+  private async _handlePowerupPlay(
+    teamId: string,
+    powerup: NinjaPowerupId
+  ): Promise<void> {
     if (this.answeringLocked || this.processingTurn) return
     if (!this.ninjaPowerupsConfig.enabled) return
-
-    const teamId = String(this.getState().activeTeam)
+    if (teamId !== String(this.getState().activeTeam)) return
     if (!this.raceManager.canPlayPowerup(teamId, powerup)) return
 
     const previousScores = new Map(
@@ -341,11 +369,8 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
       if (delta !== 0) {
         this.scoringManager.addScore(teamId, delta)
       }
-      this.playerManager.setHeightFraction(teamId, this.raceManager.getHeightFraction(teamId), true)
-      const lane = this.playerManager.getLaneForTeam(teamId)
-      if (lane) {
-        await this.mountainManager.setBarrier(lane, this.raceManager.getHeightFraction(teamId))
-      }
+      await this._syncTeamSteps(true)
+      await this.mountainManager.setBarrierAtStep(this.raceManager.getBarrierStep())
       this.uiManager.showPowerupFeedback(`Shadow Teleport! +${delta}`)
       await this._maybeHandleShortcut(teamId, previousScores.get(teamId) ?? 0)
     } else if (powerup === 'rope') {
@@ -354,19 +379,15 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
       if (targetId && targetDelta !== 0) {
         if (targetDelta < 0) this.scoringManager.subtractScore(targetId, Math.abs(targetDelta))
         else this.scoringManager.addScore(targetId, targetDelta)
-        this.playerManager.setHeightFraction(
-          targetId,
-          this.raceManager.getHeightFraction(targetId),
-          true
-        )
       }
+      await this._syncTeamSteps(true)
       this.uiManager.showPowerupFeedback('Kunai Rope! Opponent −50, you boost ×3')
     } else if (powerup === 'smoke') {
       this.uiManager.showPowerupFeedback('Smoke Bomb! Opponent −30% for 2 answers')
     }
 
-    this._syncPowerupButtons(true)
-    this._syncAllHeights()
+    this._syncPowerTrays(true)
+    this._pulseNextLedges()
 
     if (this.raceManager.hasReachedSummit(teamId)) {
       this._finishWithWinner(teamId)
@@ -378,7 +399,7 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
     this.answeringLocked = true
     this.processingTurn = true
     this.uiManager.setAnswerButtonsEnabled(false)
-    this._syncPowerupButtons(false)
+    this._syncPowerTrays(false)
 
     const question = this.getState().currentQuestion
     const selected = this.currentAnswerOptions.find((o) => o.id === optionId)
@@ -402,7 +423,7 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
     this.answeringLocked = true
     this.processingTurn = true
     this.uiManager.setAnswerButtonsEnabled(false)
-    this._syncPowerupButtons(false)
+    this._syncPowerTrays(false)
     this.timerManager.removeTimer(QUESTION_TIMER_ID)
 
     const question = this.getState().currentQuestion
@@ -410,6 +431,9 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
       await this._advanceTurn()
       return
     }
+
+    // Wrong/timeout: zero gain — do not burn rope/smoke (applyGain early-outs)
+    this.raceManager.applyGain(String(this.getState().activeTeam), 0)
 
     this.uiManager.showAnswerFeedback(false, 0)
     this.emitEvent(GAME_EVENTS.ANSWER_SELECTED, {
@@ -454,18 +478,18 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
         this.scoringManager.addScore(teamId, applied)
       }
 
-      this.playerManager.setHeightFraction(teamId, this.raceManager.getHeightFraction(teamId), true)
+      await this._syncTeamSteps(true)
 
       if (gain.barrierShattered) {
-        const opponentId = this.raceManager.getOpponentId(teamId)
-        const lane = opponentId ? this.playerManager.getLaneForTeam(opponentId) : null
-        if (lane) this.mountainManager.shatterBarrier(lane)
+        this.mountainManager.shatterBarrier()
       }
+      await this.mountainManager.setBarrierAtStep(this.raceManager.getBarrierStep())
 
       this.uiManager.showAnswerFeedback(true, applied)
       await new Promise((r) => setTimeout(r, 900))
       await this._maybeHandleShortcut(teamId, previousScore)
     } else {
+      this.raceManager.applyGain(teamId, 0)
       this.uiManager.showAnswerFeedback(false, 0)
       await new Promise((r) => setTimeout(r, 1000))
     }
@@ -496,7 +520,6 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
       return
     }
 
-    const before = this.raceManager.getScore(teamId)
     const roll = this.raceManager.rollShortcut(teamId, node)
     const raceScore = this.raceManager.getScore(teamId)
     const scoringBefore = this.scoringManager.getScore(teamId)
@@ -504,7 +527,8 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
     if (syncDelta > 0) this.scoringManager.addScore(teamId, syncDelta)
     else if (syncDelta < 0) this.scoringManager.subtractScore(teamId, Math.abs(syncDelta))
 
-    this.playerManager.setHeightFraction(teamId, this.raceManager.getHeightFraction(teamId), true)
+    await this._syncTeamSteps(true)
+    await this.mountainManager.setBarrierAtStep(this.raceManager.getBarrierStep())
     this.mountainManager.dimGate(node.id)
 
     const msg =
@@ -513,18 +537,38 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
         : `Snake! ${roll.delta}`
     this.uiManager.showPowerupFeedback(msg)
     await new Promise((r) => setTimeout(r, 1100))
-    void before
   }
 
-  private _syncAllHeights(): void {
+  private async _syncTeamSteps(animate: boolean): Promise<void> {
+    const hops: Promise<void>[] = []
     for (const team of this.config.teams) {
       const id = String(team.id)
-      this.playerManager.setHeightFraction(
-        id,
-        this.raceManager.getHeightFraction(id),
-        true
-      )
+      const step = this.raceManager.getStepIndex(id)
+      hops.push(this.playerManager.setStepIndex(id, step, animate))
     }
+    await Promise.all(hops)
+    this.playerManager.recomputeOccupancy()
+    this._pulseNextLedges()
+  }
+
+  private _pulseNextLedges(): void {
+    const maxStep = this.raceManager.getTotalSteps() - 1
+    let next: number | null = null
+    for (const team of this.config.teams) {
+      const step = this.raceManager.getStepIndex(String(team.id))
+      const candidate = Math.min(step + 1, maxStep)
+      if (next == null || candidate < next) next = candidate
+    }
+    this.mountainManager.pulseNextStep(next)
+  }
+
+  private _syncCamera(immediate: boolean): void {
+    if (!this.playerManager || !this.mountainManager) return
+    const positions = this.playerManager.getWorldPositions()
+    this.mountainManager.setCameraTargets(
+      positions.map((p) => ({ x: p.x, y: p.y })),
+      immediate
+    )
   }
 
   private async _advanceTurn(): Promise<void> {
@@ -546,6 +590,8 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
       activeTeam: nextTeamId,
     })
 
+    this.playerManager.setActiveTeam(nextTeamId)
+
     const nextQuestionIndex = this.dataManager.getCurrentProgressIndex()
     const totalQuestions = this.dataManager.getTotalQuestionsToAsk()
 
@@ -566,8 +612,9 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
 
   private _finishWithWinner(teamId: string): void {
     this.playerManager.celebrate(teamId)
-    this.playerManager.setHeightFraction(teamId, 1, true)
-    this.mountainManager.setCameraToFraction(1)
+    const summitStep = this.raceManager.getTotalSteps() - 1
+    void this.playerManager.setStepIndex(teamId, summitStep, true)
+    this._syncCamera(false)
     this._triggerGameOver()
   }
 

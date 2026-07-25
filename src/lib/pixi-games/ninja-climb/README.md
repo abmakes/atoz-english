@@ -4,19 +4,20 @@
 
 ## Overview
 
-Turn-based two-team mountain race. Quiz points convert to climb distance. Each team starts with one charge of Shadow Teleport, Kunai Rope, and Smoke Bomb. Optional forest/cave shortcut nodes act like snakes and ladders.
+Turn-based two-team mountain race. Quiz points convert to climb distance on a shared switchback trail. Each team starts with one charge of Shadow Teleport, Kunai Rope, and Smoke Bomb. Optional forest/cave shortcut nodes act like snakes and ladders.
 
 ## Architecture
 
 1. **NinjaClimbGame.ts** — `BaseGame` subclass; turn rotation, scoring sync, power-ups, shortcuts, game over
-2. **managers/**
+2. **mountainPath.ts** / **plateauSlots.ts** — pure waypoint + occupancy math
+3. **managers/**
    - `NinjaClimbDataManager` — `BaseQuizDataManager` wrapper
-   - `NinjaClimbRaceManager` — pure race rules (gain pipeline, barriers, shortcuts)
-   - `NinjaClimbMountainManager` — sky, parallax bands, gates, barriers, camera
-   - `NinjaClimbPlayerManager` — ninja sprite strips + action poses
-   - `NinjaClimbUIManager` — question card, answers, timer, power buttons, shortcut prompt
-   - `NinjaClimbLayoutManager` — responsive layout profile
-3. **ninjaPowerups.ts** — setup/runtime power-up config
+   - `NinjaClimbRaceManager` — pure race rules (`POINTS_PER_STEP`, barriers by step, shortcuts)
+   - `NinjaClimbMountainManager` — tiled cliffs/plateaus, trail, gates, barrier, fit-zoom camera
+   - `NinjaClimbPlayerManager` — arc hops, facing, occupancy, idle pose variants
+   - `NinjaClimbUIManager` — bottom bar, sky answer clouds, dual power trays, shortcut prompt
+   - `NinjaClimbLayoutManager` — sky band / bottom bar / cloud / tray profile
+4. **ninjaPowerups.ts** — setup/runtime power-up config
 
 ## Wiring checklist
 
@@ -26,4 +27,4 @@ Turn-based two-team mountain race. Quiz points convert to climb distance. Each t
 - [x] Mode picker card
 - [x] Setup panel (2 teams, power toggles, shortcuts)
 - [x] Asset warmup + `verify-assets.mjs` + `ASSETS.md`
-- [x] Vitest coverage for race manager + eligibility
+- [x] Vitest coverage for path, slots, race manager + eligibility

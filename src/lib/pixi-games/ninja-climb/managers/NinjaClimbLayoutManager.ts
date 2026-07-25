@@ -1,34 +1,44 @@
 export interface NinjaClimbLayoutProfile {
+  skyBandHeight: number
+  bottomBarHeight: number
   questionFontSize: number
   questionCounterFontSize: number
   answerFontSize: number
-  answerBannerHeight: number
-  answerBannerGap: number
-  questionCardHeight: number
-  bottomUIHeight: number
+  cloudWidth: number
+  cloudHeight: number
   powerupButtonSize: number
+  trayPadding: number
   sidePadding: number
   topPadding: number
   ninjaDisplaySize: number
   timerRadius: number
+  questionImageMaxHeight: number
+  stepHeight: number
+  stepsPerSection: number
+  pathMargin: number
 }
 
 export class NinjaClimbLayoutManager {
   private currentLayoutProfile!: NinjaClimbLayoutProfile
 
   private readonly defaultProfile: NinjaClimbLayoutProfile = {
+    skyBandHeight: 260,
+    bottomBarHeight: 150,
     questionFontSize: 22,
     questionCounterFontSize: 14,
     answerFontSize: 16,
-    answerBannerHeight: 48,
-    answerBannerGap: 10,
-    questionCardHeight: 110,
-    bottomUIHeight: 170,
-    powerupButtonSize: 56,
+    cloudWidth: 220,
+    cloudHeight: 110,
+    powerupButtonSize: 44,
+    trayPadding: 10,
     sidePadding: 16,
-    topPadding: 12,
-    ninjaDisplaySize: 72,
-    timerRadius: 36,
+    topPadding: 10,
+    ninjaDisplaySize: 64,
+    timerRadius: 34,
+    questionImageMaxHeight: 110,
+    stepHeight: 90,
+    stepsPerSection: 4,
+    pathMargin: 140,
   }
 
   constructor(initialScreenWidth: number, initialScreenHeight: number) {
@@ -46,6 +56,14 @@ export class NinjaClimbLayoutManager {
     return this.currentLayoutProfile
   }
 
+  /** Play window between sky band and bottom bar. */
+  public getPlayWindow(screenHeight: number): { top: number; bottom: number; height: number } {
+    const p = this.getLayoutParams()
+    const top = p.skyBandHeight
+    const bottom = screenHeight - p.bottomBarHeight
+    return { top, bottom, height: Math.max(1, bottom - top) }
+  }
+
   private _getLayoutParameters(screenWidth: number, screenHeight: number): NinjaClimbLayoutProfile {
     const profile = { ...this.defaultProfile }
     this._applyResponsiveScaling(profile, screenWidth, screenHeight)
@@ -59,20 +77,26 @@ export class NinjaClimbLayoutManager {
   ): void {
     const baseWidth = 1200
     const baseHeight = 700
-    const widthScale = Math.min(1.2, Math.max(0.8, screenWidth / baseWidth))
-    const heightScale = Math.min(1.2, Math.max(0.8, screenHeight / baseHeight))
+    const widthScale = Math.min(1.2, Math.max(0.75, screenWidth / baseWidth))
+    const heightScale = Math.min(1.2, Math.max(0.75, screenHeight / baseHeight))
 
+    profile.skyBandHeight = Math.round(Math.min(screenHeight * 0.38, profile.skyBandHeight * heightScale))
+    profile.bottomBarHeight = Math.round(
+      Math.max(130, Math.min(180, profile.bottomBarHeight * heightScale))
+    )
     profile.questionFontSize = Math.round(profile.questionFontSize * widthScale)
     profile.questionCounterFontSize = Math.round(profile.questionCounterFontSize * widthScale)
     profile.answerFontSize = Math.round(profile.answerFontSize * widthScale)
-    profile.answerBannerHeight = Math.round(profile.answerBannerHeight * heightScale)
-    profile.answerBannerGap = Math.round(profile.answerBannerGap * heightScale)
-    profile.questionCardHeight = Math.round(profile.questionCardHeight * heightScale)
-    profile.bottomUIHeight = Math.round(profile.bottomUIHeight * heightScale)
+    profile.cloudWidth = Math.round(profile.cloudWidth * widthScale)
+    profile.cloudHeight = Math.round(profile.cloudHeight * heightScale)
     profile.powerupButtonSize = Math.round(profile.powerupButtonSize * widthScale)
+    profile.trayPadding = Math.round(profile.trayPadding * widthScale)
     profile.sidePadding = Math.round(profile.sidePadding * widthScale)
     profile.topPadding = Math.round(profile.topPadding * heightScale)
     profile.ninjaDisplaySize = Math.round(profile.ninjaDisplaySize * widthScale)
     profile.timerRadius = Math.round(profile.timerRadius * widthScale)
+    profile.questionImageMaxHeight = Math.round(profile.questionImageMaxHeight * heightScale)
+    profile.stepHeight = Math.round(profile.stepHeight * heightScale)
+    profile.pathMargin = Math.round(profile.pathMargin * widthScale)
   }
 }

@@ -11,7 +11,7 @@ import { NINJA_POWERUP_DEFINITIONS } from '../ninjaPowerups'
 import type { ShortcutKind } from './NinjaClimbRaceManager'
 
 const ASSET_BASE = '/images/ninja-climb'
-const QUESTION_TIMER_ID = 'ninja-climb-question-timer'
+export const QUESTION_TIMER_ID = 'ninja-climb-question-timer'
 
 export interface NinjaAnswerOption {
   id: string
@@ -26,35 +26,48 @@ export interface ShortcutPromptInfo {
   snakeDelta: number
 }
 
+export interface TeamTrayInfo {
+  teamId: string
+  teamName: string
+  charges: Record<NinjaPowerupId, number>
+  interactive: boolean
+}
+
 /**
- * Question card, answer banners, timer, power-up buttons, shortcut prompt, feedback.
+ * Splash Dash-style bottom bar + sky answer clouds + per-team power trays.
  */
 export class NinjaClimbUIManager {
   private view: PIXI.Container
-  private questionPanel: PIXI.Container
-  private answerPanel: PIXI.Container
-  private powerupPanel: PIXI.Container
+  private bottomBar: PIXI.Container
+  private bottomBg: PIXI.Graphics
+  private questionContainer: PIXI.Container
+  private questionText: PIXI.Text
+  private questionCounter: PIXI.Text
+  private questionImage: PIXI.Container | null = null
+  private cloudPanel: PIXI.Container
   private feedbackPanel: PIXI.Container
   private shortcutPanel: PIXI.Container
-  private questionText: PIXI.Text
-  private questionImage: PIXI.Sprite | null = null
-  private answerButtons: Array<{
+  private leftTray: PIXI.Container
+  private rightTray: PIXI.Container
+  private cloudButtons: Array<{
     container: PIXI.Container
-    bg: PIXI.Graphics
     label: PIXI.Text
     option: NinjaAnswerOption
+    baseY: number
   }> = []
-  private powerupButtons: Map<
-    NinjaPowerupId,
-    { container: PIXI.Container; icon: PIXI.Sprite | null; label: PIXI.Text; enabled: boolean }
+  private trayButtons: Map<
+    string,
+    Map<NinjaPowerupId, { container: PIXI.Container; enabled: boolean }>
   > = new Map()
   private timer: PixiTimer
   private answersEnabled = false
-  private powerupsEnabled = false
   private destroyed = false
   private shortcutResolve: ((choice: 'enter' | 'skip') => void) | null = null
+  private shortcutTimeoutId: ReturnType<typeof setTimeout> | null = null
+  private bobPhase = 0
   private onAnswerSelected: ((optionId: string) => void) | null = null
-  private onPowerupSelected: ((id: NinjaPowerupId) => void) | null = null
+  private onPowerupSelected: ((teamId: string, id: NinjaPowerupId) => void) | null = null
+  private teamOrder: string[] = []
 
   constructor(
     private pixiApp: PixiApplication,
@@ -64,12 +77,15 @@ export class NinjaClimbUIManager {
     private layoutManager: NinjaClimbLayoutManager
   ) {
     this.view = new PIXI.Container()
-    this.questionPanel = new PIXI.Container()
-    this.answerPanel = new PIXI.Container()
-    this.powerupPanel = new PIXI.Container()
+    this.bottomBar = new PIXI.Container()
+    this.bottomBg = new PIXI.Graphics()
+    this.questionContainer = new PIXI.Container()
+    this.cloudPanel = new PIXI.Container()
     this.feedbackPanel = new PIXI.Container()
     this.shortcutPanel = new PIXI.Container()
     this.shortcutPanel.visible = false
+    this.leftTray = new PIXI.Container()
+    this.rightTray = new PIXI.Container()
 
     this.questionText = new PIXI.Text({
       text: '',
@@ -79,26 +95,43 @@ export class NinjaClimbUIManager {
         fill: this._hex(pixiConfig.questionTextColor || pixiConfig.textColor),
         fontWeight: 'bold',
         wordWrap: true,
-        wordWrapWidth: 600,
-        align: 'center',
+        wordWrapWidth: 400,
+        align: 'left',
       },
     })
-    this.questionText.anchor.set(0.5, 0)
+    this.questionText.anchor.set(0, 0.5)
+
+    this.questionCounter = new PIXI.Text({
+      text: '',
+      style: {
+        fontFamily: pixiConfig.fontFamilyTheme || 'Grandstander',
+        fontSize: 14,
+        fill: this._hex(pixiConfig.textLight || pixiConfig.textColor),
+        fontWeight: 'bold',
+      },
+    })
+    this.questionCounter.anchor.set(0, 0)
 
     this.timer = new PixiTimer({
-      radius: 36,
+      radius: 34,
       textColor: this._hex(pixiConfig.timerColor || pixiConfig.textColor),
-      textSize: 28,
+      textSize: 26,
       fontFamily: pixiConfig.fontFamilyTheme || 'Grandstander',
       progressBarColor: this._hex(pixiConfig.primaryAccent || '#49C8FF'),
       progressBarWidth: 8,
-      backgroundAlpha: 0.15,
+      backgroundAlpha: 0.2,
       backgroundColor: 0xffffff,
     })
 
-    this.view.addChild(this.questionPanel)
-    this.view.addChild(this.answerPanel)
-    this.view.addChild(this.powerupPanel)
+    this.bottomBar.addChild(this.bottomBg)
+    this.questionContainer.addChild(this.questionText)
+    this.questionContainer.addChild(this.questionCounter)
+    this.bottomBar.addChild(this.questionContainer)
+    this.bottomBar.addChild(this.leftTray)
+    this.bottomBar.addChild(this.rightTray)
+
+    this.view.addChild(this.cloudPanel)
+    this.view.addChild(this.bottomBar)
     this.view.addChild(this.feedbackPanel)
     this.view.addChild(this.shortcutPanel)
     this.view.addChild(this.timer)
@@ -115,12 +148,13 @@ export class NinjaClimbUIManager {
     this.onAnswerSelected = handler
   }
 
-  public setPowerupHandler(handler: (id: NinjaPowerupId) => void): void {
+  public setPowerupHandler(handler: (teamId: string, id: NinjaPowerupId) => void): void {
     this.onPowerupSelected = handler
   }
 
-  public async initialize(): Promise<void> {
-    await this._buildPowerupButtons()
+  public async initialize(teams: Array<{ id: string; name: string }>): Promise<void> {
+    this.teamOrder = teams.map((t) => t.id)
+    await this._buildTrays(teams)
     this._layoutAll()
   }
 
@@ -128,93 +162,80 @@ export class NinjaClimbUIManager {
     questionText: string,
     imageUrl: string | undefined,
     options: NinjaAnswerOption[],
-    questionDurationMs: number
+    questionDurationMs: number,
+    counter: { current: number; total: number }
   ): Promise<void> {
-    this.clearQuestionState()
-    this.questionPanel.removeChildren()
-
-    const { width } = this.pixiApp.getScreenSize()
-    const layout = this.layoutManager.getLayoutParams()
-
-    const panelBg = new PIXI.Graphics()
-    const panelW = width - layout.sidePadding * 2
-    const panelH = layout.questionCardHeight
-    panelBg
-      .roundRect(0, 0, panelW, panelH, 16)
-      .fill({ color: this._hex(this.pixiConfig.panelBg || '#e0f2fe'), alpha: 0.92 })
-      .stroke({ width: 3, color: this._hex(this.pixiConfig.primaryAccent || '#49C8FF') })
-    this.questionPanel.addChild(panelBg)
-    this.questionPanel.x = layout.sidePadding
-    this.questionPanel.y = layout.topPadding
-
+    this.clearAnswers()
     this.questionText.text = questionText
-    this.questionText.style.fontSize = layout.questionFontSize
-    this.questionText.style.wordWrapWidth = panelW - 140
-    this.questionText.x = panelW / 2
-    this.questionText.y = 16
-    this.questionPanel.addChild(this.questionText)
+    this.questionCounter.text = `Question ${counter.current} of ${counter.total}`
+
+    if (this.questionImage) {
+      this.questionContainer.removeChild(this.questionImage)
+      this.questionImage.destroy({ children: true })
+      this.questionImage = null
+    }
 
     if (imageUrl) {
       try {
         const display = this.assetLoader.getDisplayObject(imageUrl)
         if (display) {
-          const maxH = panelH - 20
-          const maxW = 90
-          const scale = Math.min(maxW / display.width, maxH / display.height, 1)
+          const layout = this.layoutManager.getLayoutParams()
+          const maxH = layout.questionImageMaxHeight
+          const maxW = 120
+          const scale = Math.min(maxW / Math.max(1, display.width), maxH / Math.max(1, display.height), 1)
           display.scale.set(scale)
-          display.x = 12
-          display.y = 10
-          this.questionImage = display as PIXI.Sprite
-          this.questionPanel.addChild(display)
-          this.questionText.x = panelW / 2 + 40
+          display.x = 0
+          display.y = -display.height / 2
+          this.questionImage = display
+          this.questionContainer.addChild(display)
         }
       } catch {
-        /* ignore image failures */
+        /* ignore */
       }
     }
 
-    this._buildAnswerBanners(options)
-    this.updateTimerDisplay(questionDurationMs)
+    await this._buildAnswerClouds(options)
+    this.updateTimerDisplay(questionDurationMs, questionDurationMs)
     this.setAnswerButtonsEnabled(true)
+    this._layoutBottomBar()
   }
 
   public updateTimerDisplay(remainingMs: number, durationMs?: number): void {
-    const duration = durationMs ?? remainingMs
-    this.timer.updateDisplay(remainingMs, Math.max(1, duration))
+    this.timer.updateDisplay(remainingMs, Math.max(1, durationMs ?? remainingMs))
   }
 
   public setAnswerButtonsEnabled(enabled: boolean): void {
     this.answersEnabled = enabled
-    for (const btn of this.answerButtons) {
+    for (const btn of this.cloudButtons) {
       btn.container.eventMode = enabled ? 'static' : 'none'
       btn.container.alpha = enabled ? 1 : 0.7
     }
   }
 
-  public setPowerupCharges(
-    charges: Record<NinjaPowerupId, number>,
-    interactive: boolean
-  ): void {
-    this.powerupsEnabled = interactive
-    for (const def of NINJA_POWERUP_DEFINITIONS) {
-      const btn = this.powerupButtons.get(def.id)
-      if (!btn) continue
-      const hasCharge = (charges[def.id] ?? 0) > 0
-      btn.enabled = interactive && hasCharge
-      btn.container.alpha = hasCharge ? (interactive ? 1 : 0.85) : 0.35
-      btn.container.eventMode = btn.enabled ? 'static' : 'none'
-      btn.label.text = hasCharge ? def.hotkey : '—'
+  public setTeamTrays(trays: TeamTrayInfo[]): void {
+    for (const tray of trays) {
+      const map = this.trayButtons.get(tray.teamId)
+      if (!map) continue
+      for (const def of NINJA_POWERUP_DEFINITIONS) {
+        const btn = map.get(def.id)
+        if (!btn) continue
+        const hasCharge = (tray.charges[def.id] ?? 0) > 0
+        btn.enabled = tray.interactive && hasCharge
+        btn.container.alpha = hasCharge ? (tray.interactive ? 1 : 0.55) : 0.3
+        btn.container.eventMode = btn.enabled ? 'static' : 'none'
+      }
     }
   }
 
   public showAnswerFeedback(correct: boolean, points: number): void {
     this.feedbackPanel.removeChildren()
     const { width, height } = this.pixiApp.getScreenSize()
+    const layout = this.layoutManager.getLayoutParams()
     const text = new PIXI.Text({
       text: correct ? (points > 0 ? `+${points} CLIMB!` : 'CORRECT!') : 'MISSED!',
       style: {
         fontFamily: this.pixiConfig.fontFamilyTheme || 'Grandstander',
-        fontSize: 36,
+        fontSize: 34,
         fontWeight: 'bold',
         fill: correct ? 0x16a34a : 0xdc2626,
         align: 'center',
@@ -223,22 +244,23 @@ export class NinjaClimbUIManager {
     })
     text.anchor.set(0.5)
     text.x = width / 2
-    text.y = height * 0.42
+    text.y = layout.skyBandHeight * 0.55
     this.feedbackPanel.addChild(text)
-
     setTimeout(() => {
       if (!this.destroyed) this.feedbackPanel.removeChildren()
     }, 1400)
+    void height
   }
 
   public showPowerupFeedback(message: string): void {
     this.feedbackPanel.removeChildren()
-    const { width, height } = this.pixiApp.getScreenSize()
+    const { width } = this.pixiApp.getScreenSize()
+    const layout = this.layoutManager.getLayoutParams()
     const text = new PIXI.Text({
       text: message,
       style: {
         fontFamily: this.pixiConfig.fontFamilyTheme || 'Grandstander',
-        fontSize: 28,
+        fontSize: 26,
         fontWeight: 'bold',
         fill: this._hex(this.pixiConfig.primaryAccent || '#49C8FF'),
         align: 'center',
@@ -247,7 +269,7 @@ export class NinjaClimbUIManager {
     })
     text.anchor.set(0.5)
     text.x = width / 2
-    text.y = height * 0.38
+    text.y = layout.skyBandHeight * 0.5
     this.feedbackPanel.addChild(text)
     setTimeout(() => {
       if (!this.destroyed) this.feedbackPanel.removeChildren()
@@ -256,6 +278,7 @@ export class NinjaClimbUIManager {
 
   public promptShortcut(info: ShortcutPromptInfo): Promise<'enter' | 'skip'> {
     return new Promise((resolve) => {
+      this._clearShortcutTimeout()
       this.shortcutResolve = resolve
       this.shortcutPanel.removeChildren()
       this.shortcutPanel.visible = true
@@ -265,9 +288,9 @@ export class NinjaClimbUIManager {
       overlay.rect(0, 0, width, height).fill({ color: 0x000000, alpha: 0.45 })
       this.shortcutPanel.addChild(overlay)
 
-      const card = new PIXI.Graphics()
       const cardW = Math.min(420, width * 0.8)
       const cardH = 220
+      const card = new PIXI.Graphics()
       card
         .roundRect(0, 0, cardW, cardH, 18)
         .fill({ color: 0xfffbeb, alpha: 0.97 })
@@ -276,14 +299,12 @@ export class NinjaClimbUIManager {
       card.y = (height - cardH) / 2
       this.shortcutPanel.addChild(card)
 
-      const title =
-        info.kind === 'forest' ? 'Dark Forest Shortcut!' : 'Cave Shortcut!'
+      const title = info.kind === 'forest' ? 'Dark Forest Shortcut!' : 'Cave Shortcut!'
       const ladderPct = Math.round(info.ladderChance * 100)
-      const snakePct = 100 - ladderPct
       const body = new PIXI.Text({
         text:
           `${title}\n` +
-          `${ladderPct}% ladder +${info.ladderDelta}  ·  ${snakePct}% snake ${info.snakeDelta}\n` +
+          `${ladderPct}% ladder +${info.ladderDelta}  ·  ${100 - ladderPct}% snake ${info.snakeDelta}\n` +
           `Enter the risk, or skip safely?`,
         style: {
           fontFamily: this.pixiConfig.fontFamilyTheme || 'Grandstander',
@@ -307,32 +328,54 @@ export class NinjaClimbUIManager {
       this.shortcutPanel.addChild(enterBtn)
       this.shortcutPanel.addChild(skipBtn)
 
-      // Auto-skip after 8s
-      setTimeout(() => {
+      this.shortcutTimeoutId = setTimeout(() => {
         if (this.shortcutResolve) this._resolveShortcut('skip')
       }, 8000)
     })
   }
 
   public clearQuestionState(): void {
-    this.answerPanel.removeChildren()
-    this.answerButtons = []
+    this.clearAnswers()
+    this.questionText.text = ''
+    this.questionCounter.text = ''
     if (this.questionImage) {
-      this.questionImage.destroy()
+      this.questionContainer.removeChild(this.questionImage)
+      this.questionImage.destroy({ children: true })
       this.questionImage = null
     }
   }
 
+  public clearAnswers(): void {
+    this.cloudPanel.removeChildren()
+    this.cloudButtons = []
+  }
+
   public hideShortcutPrompt(): void {
+    this._clearShortcutTimeout()
     this.shortcutPanel.visible = false
     this.shortcutPanel.removeChildren()
     this.shortcutResolve = null
+  }
+
+  public update(deltaMs: number): void {
+    this.bobPhase += deltaMs * 0.003
+    for (let i = 0; i < this.cloudButtons.length; i++) {
+      const btn = this.cloudButtons[i]
+      btn.container.y = btn.baseY + Math.sin(this.bobPhase + i) * 4
+    }
   }
 
   private _resolveShortcut(choice: 'enter' | 'skip'): void {
     const resolve = this.shortcutResolve
     this.hideShortcutPrompt()
     resolve?.(choice)
+  }
+
+  private _clearShortcutTimeout(): void {
+    if (this.shortcutTimeoutId != null) {
+      clearTimeout(this.shortcutTimeoutId)
+      this.shortcutTimeoutId = null
+    }
   }
 
   private _makePromptButton(
@@ -363,43 +406,61 @@ export class NinjaClimbUIManager {
     return c
   }
 
-  private _buildAnswerBanners(options: NinjaAnswerOption[]): void {
-    this.answerPanel.removeChildren()
-    this.answerButtons = []
-    const { width, height } = this.pixiApp.getScreenSize()
+  private async _buildAnswerClouds(options: NinjaAnswerOption[]): Promise<void> {
+    this.cloudPanel.removeChildren()
+    this.cloudButtons = []
+    const { width } = this.pixiApp.getScreenSize()
     const layout = this.layoutManager.getLayoutParams()
-    const bannerH = layout.answerBannerHeight
-    const gap = layout.answerBannerGap
-    const totalH = options.length * bannerH + (options.length - 1) * gap
-    const startY = height - layout.bottomUIHeight + 8
-    // If too tall for bottom area, stack upward from bottom padding
-    let y = Math.max(height - layout.sidePadding - totalH, startY)
-    const bannerW = width - layout.sidePadding * 2 - layout.powerupButtonSize - 12
+    const n = options.length
+    const gap = 16
+    const totalW = n * layout.cloudWidth + (n - 1) * gap
+    let startX = Math.max(layout.sidePadding, (width - totalW) / 2)
+
+    let cloudTex: PIXI.Texture | null = null
+    try {
+      cloudTex = await PIXI.Assets.load(`${ASSET_BASE}/answer_cloud.png`)
+    } catch {
+      cloudTex = null
+    }
 
     options.forEach((option, index) => {
       const container = new PIXI.Container()
-      const bg = new PIXI.Graphics()
-      bg.roundRect(0, 0, bannerW, bannerH, 12)
-        .fill({ color: this._hex(this.pixiConfig.buttonFillColor || '#ffffff'), alpha: 0.95 })
-        .stroke({ width: 3, color: this._hex(this.pixiConfig.buttonBorderColor || '#d1d5db') })
+      if (cloudTex) {
+        const sprite = new PIXI.Sprite(cloudTex)
+        sprite.anchor.set(0.5)
+        sprite.width = layout.cloudWidth
+        sprite.height = layout.cloudHeight
+        container.addChild(sprite)
+      } else {
+        const g = new PIXI.Graphics()
+        g.roundRect(-layout.cloudWidth / 2, -layout.cloudHeight / 2, layout.cloudWidth, layout.cloudHeight, 24)
+          .fill({ color: 0xffffff, alpha: 0.92 })
+          .stroke({ width: 3, color: 0x334155 })
+        container.addChild(g)
+      }
 
       const label = new PIXI.Text({
-        text: `${index + 1}. ${option.text}`,
+        text: option.text,
         style: {
           fontFamily: this.pixiConfig.fontFamilyTheme || 'Grandstander',
           fontSize: layout.answerFontSize,
-          fill: this._hex(this.pixiConfig.buttonTextColor || this.pixiConfig.textColor),
+          fill: 0x1f2937,
           fontWeight: 'bold',
           wordWrap: true,
-          wordWrapWidth: bannerW - 24,
+          wordWrapWidth: layout.cloudWidth * 0.72,
+          align: 'center',
         },
       })
-      label.x = 12
-      label.y = (bannerH - label.height) / 2
-
-      container.addChild(bg)
+      label.anchor.set(0.5)
+      // Shrink if still too tall
+      if (label.height > layout.cloudHeight * 0.55) {
+        label.style.fontSize = Math.max(12, layout.answerFontSize - 4)
+      }
       container.addChild(label)
-      container.x = layout.sidePadding
+
+      const x = startX + layout.cloudWidth / 2
+      const y = layout.topPadding + layout.cloudHeight / 2 + 8 + (index % 2) * 12
+      container.x = x
       container.y = y
       container.eventMode = 'static'
       container.cursor = 'pointer'
@@ -407,102 +468,129 @@ export class NinjaClimbUIManager {
         if (!this.answersEnabled) return
         this.onAnswerSelected?.(option.id)
       })
-      container.on('pointerover', () => {
-        bg.clear()
-          .roundRect(0, 0, bannerW, bannerH, 12)
-          .fill({ color: this._hex(this.pixiConfig.primaryAccent || '#49C8FF'), alpha: 0.25 })
-          .stroke({ width: 3, color: this._hex(this.pixiConfig.primaryAccent || '#49C8FF') })
-      })
-      container.on('pointerout', () => {
-        bg.clear()
-          .roundRect(0, 0, bannerW, bannerH, 12)
-          .fill({ color: this._hex(this.pixiConfig.buttonFillColor || '#ffffff'), alpha: 0.95 })
-          .stroke({ width: 3, color: this._hex(this.pixiConfig.buttonBorderColor || '#d1d5db') })
-      })
 
-      this.answerPanel.addChild(container)
-      this.answerButtons.push({ container, bg, label, option })
-      y += bannerH + gap
+      this.cloudPanel.addChild(container)
+      this.cloudButtons.push({ container, label, option, baseY: y })
+      startX += layout.cloudWidth + gap
     })
   }
 
-  private async _buildPowerupButtons(): Promise<void> {
-    this.powerupPanel.removeChildren()
-    this.powerupButtons.clear()
+  private async _buildTrays(teams: Array<{ id: string; name: string }>): Promise<void> {
+    this.leftTray.removeChildren()
+    this.rightTray.removeChildren()
+    this.trayButtons.clear()
     const layout = this.layoutManager.getLayoutParams()
     const size = layout.powerupButtonSize
 
-    for (let i = 0; i < NINJA_POWERUP_DEFINITIONS.length; i++) {
-      const def = NINJA_POWERUP_DEFINITIONS[i]
-      const container = new PIXI.Container()
-      const bg = new PIXI.Graphics()
-      bg.roundRect(0, 0, size, size, 12)
-        .fill({ color: 0x1f2937, alpha: 0.85 })
-        .stroke({ width: 2, color: 0xfbbf24 })
+    for (let t = 0; t < Math.min(2, teams.length); t++) {
+      const team = teams[t]
+      const tray = t === 0 ? this.leftTray : this.rightTray
+      const map = new Map<NinjaPowerupId, { container: PIXI.Container; enabled: boolean }>()
 
-      let icon: PIXI.Sprite | null = null
-      try {
-        const tex = await PIXI.Assets.load(`${ASSET_BASE}/icon_${def.id}.png`)
-        icon = new PIXI.Sprite(tex)
-        icon.anchor.set(0.5)
-        icon.width = size * 0.62
-        icon.height = size * 0.62
-        icon.x = size / 2
-        icon.y = size / 2 - 4
-        container.addChild(bg)
-        container.addChild(icon)
-      } catch {
-        container.addChild(bg)
-      }
-
-      const label = new PIXI.Text({
-        text: def.hotkey,
+      const nameLabel = new PIXI.Text({
+        text: team.name,
         style: {
           fontFamily: this.pixiConfig.fontFamilyTheme || 'Grandstander',
           fontSize: 12,
-          fill: 0xffffff,
+          fill: this._hex(this.pixiConfig.textColor),
           fontWeight: 'bold',
         },
       })
-      label.anchor.set(0.5)
-      label.x = size / 2
-      label.y = size - 10
-      container.addChild(label)
+      nameLabel.y = -18
+      if (t === 1) nameLabel.anchor.set(1, 0)
+      tray.addChild(nameLabel)
 
-      container.eventMode = 'static'
-      container.cursor = 'pointer'
-      container.on('pointertap', () => {
-        const btn = this.powerupButtons.get(def.id)
-        if (!btn?.enabled) return
-        this.onPowerupSelected?.(def.id)
-      })
+      for (let i = 0; i < NINJA_POWERUP_DEFINITIONS.length; i++) {
+        const def = NINJA_POWERUP_DEFINITIONS[i]
+        const container = new PIXI.Container()
+        const bg = new PIXI.Graphics()
+        bg.roundRect(0, 0, size, size, 10)
+          .fill({ color: 0x1f2937, alpha: 0.9 })
+          .stroke({ width: 2, color: 0xfbbf24 })
+        container.addChild(bg)
 
-      this.powerupPanel.addChild(container)
-      this.powerupButtons.set(def.id, { container, icon, label, enabled: false })
+        try {
+          const tex = await PIXI.Assets.load(`${ASSET_BASE}/icon_${def.id}.png`)
+          const icon = new PIXI.Sprite(tex)
+          icon.anchor.set(0.5)
+          icon.width = size * 0.62
+          icon.height = size * 0.62
+          icon.x = size / 2
+          icon.y = size / 2 - 4
+          container.addChild(icon)
+        } catch {
+          /* ignore */
+        }
+
+        const keyLabel = new PIXI.Text({
+          text: def.hotkey,
+          style: {
+            fontFamily: this.pixiConfig.fontFamilyTheme || 'Grandstander',
+            fontSize: 11,
+            fill: 0xffffff,
+            fontWeight: 'bold',
+          },
+        })
+        keyLabel.anchor.set(0.5)
+        keyLabel.x = size / 2
+        keyLabel.y = size - 9
+        container.addChild(keyLabel)
+
+        container.x = t === 0 ? i * (size + 6) : -(i + 1) * (size + 6)
+        container.y = 0
+        container.eventMode = 'static'
+        container.cursor = 'pointer'
+        container.on('pointertap', () => {
+          const btn = map.get(def.id)
+          if (!btn?.enabled) return
+          this.onPowerupSelected?.(team.id, def.id)
+        })
+
+        tray.addChild(container)
+        map.set(def.id, { container, enabled: false })
+      }
+      this.trayButtons.set(team.id, map)
     }
-    this._layoutPowerups()
   }
 
   private _layoutAll(): void {
+    this._layoutBottomBar()
     const { width } = this.pixiApp.getScreenSize()
     const layout = this.layoutManager.getLayoutParams()
     this.timer.x = width - layout.sidePadding - layout.timerRadius - 8
-    this.timer.y = layout.topPadding + layout.timerRadius + 8
-    this._layoutPowerups()
+    this.timer.y = layout.topPadding + layout.timerRadius + 4
   }
 
-  private _layoutPowerups(): void {
+  private _layoutBottomBar(): void {
     const { width, height } = this.pixiApp.getScreenSize()
     const layout = this.layoutManager.getLayoutParams()
-    const size = layout.powerupButtonSize
-    const ids = NINJA_POWERUP_DEFINITIONS.map((d) => d.id)
-    const startY = height - layout.bottomUIHeight + 8
-    ids.forEach((id, i) => {
-      const btn = this.powerupButtons.get(id)
-      if (!btn) return
-      btn.container.x = width - layout.sidePadding - size
-      btn.container.y = startY + i * (size + 8)
-    })
+
+    this.bottomBar.y = height - layout.bottomBarHeight
+    this.bottomBg.clear()
+    this.bottomBg.rect(0, 0, width, layout.bottomBarHeight).fill({ color: 0xffffff, alpha: 0.96 })
+
+    const trayWidth =
+      NINJA_POWERUP_DEFINITIONS.length * (layout.powerupButtonSize + 6) + layout.trayPadding
+    this.leftTray.x = layout.sidePadding + layout.trayPadding
+    this.leftTray.y = layout.bottomBarHeight / 2 - layout.powerupButtonSize / 2 + 6
+    this.rightTray.x = width - layout.sidePadding - layout.trayPadding
+    this.rightTray.y = layout.bottomBarHeight / 2 - layout.powerupButtonSize / 2 + 6
+
+    const leftEdge = trayWidth + layout.sidePadding + 8
+    const rightEdge = width - trayWidth - layout.sidePadding - 8
+    const available = Math.max(200, rightEdge - leftEdge)
+
+    this.questionContainer.x = leftEdge
+    this.questionContainer.y = layout.bottomBarHeight / 2
+
+    const imageW = this.questionImage ? this.questionImage.width + 12 : 0
+    this.questionText.x = imageW
+    this.questionText.y = -8
+    this.questionText.style.fontSize = layout.questionFontSize
+    this.questionText.style.wordWrapWidth = Math.max(160, available - imageW - 16)
+    this.questionCounter.x = imageW
+    this.questionCounter.y = 22
+    this.questionCounter.style.fontSize = layout.questionCounterFontSize
   }
 
   private _onResize = (): void => {
@@ -510,6 +598,11 @@ export class NinjaClimbUIManager {
     const { width, height } = this.pixiApp.getScreenSize()
     this.layoutManager.updateLayout(width, height)
     this._layoutAll()
+    // Reposition clouds if present
+    if (this.cloudButtons.length > 0) {
+      const options = this.cloudButtons.map((b) => b.option)
+      void this._buildAnswerClouds(options)
+    }
   }
 
   private _onTimerTick = (payload: TimerEventPayload): void => {
@@ -520,17 +613,17 @@ export class NinjaClimbUIManager {
   private _hex(color: string | number): number {
     if (typeof color === 'number') return color
     const cleaned = color.replace('#', '')
-    return parseInt(cleaned.length === 3
-      ? cleaned.split('').map((c) => c + c).join('')
-      : cleaned, 16)
+    return parseInt(
+      cleaned.length === 3 ? cleaned.split('').map((c) => c + c).join('') : cleaned,
+      16
+    )
   }
 
   public destroy(): void {
     this.destroyed = true
+    this._clearShortcutTimeout()
     this.eventBus.off(ENGINE_EVENTS.RESIZED, this._onResize)
     this.eventBus.off(TIMER_EVENTS.TIMER_TICK, this._onTimerTick)
     this.view.destroy({ children: true })
   }
 }
-
-export { QUESTION_TIMER_ID }

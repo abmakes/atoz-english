@@ -3,6 +3,8 @@ import {
   NinjaClimbRaceManager,
   computeCorrectGain,
   computeSummitPoints,
+  POINTS_PER_STEP,
+  scoreToStepIndex,
 } from '@/lib/pixi-games/ninja-climb/managers/NinjaClimbRaceManager'
 
 function makeRace(overrides?: {
@@ -54,6 +56,31 @@ describe('computeSummitPoints / computeCorrectGain', () => {
   })
 })
 
+describe('scoreToStepIndex', () => {
+  const summit = 400
+
+  it('maps score boundaries to steps', () => {
+    expect(scoreToStepIndex(0, summit)).toBe(0)
+    expect(scoreToStepIndex(39, summit)).toBe(0)
+    expect(scoreToStepIndex(40, summit)).toBe(1)
+    expect(scoreToStepIndex(79, summit)).toBe(1)
+    expect(scoreToStepIndex(80, summit)).toBe(2)
+  })
+
+  it('clamps to last step', () => {
+    const last = Math.ceil(summit / POINTS_PER_STEP) - 1
+    expect(scoreToStepIndex(summit, summit)).toBe(last)
+    expect(scoreToStepIndex(summit + 500, summit)).toBe(last)
+    expect(scoreToStepIndex(-10, summit)).toBe(0)
+  })
+
+  it('matches race manager instance helper', () => {
+    const race = makeRace({ questionsPerTeam: 5 })
+    expect(race.scoreToStepIndex(120)).toBe(scoreToStepIndex(120, 400))
+    expect(race.getTotalSteps()).toBe(10)
+  })
+})
+
 describe('NinjaClimbRaceManager gain pipeline', () => {
   it('applies a plain gain', () => {
     const race = makeRace()
@@ -66,9 +93,7 @@ describe('NinjaClimbRaceManager gain pipeline', () => {
   it('applies rope boost then smoke debuff in order', () => {
     const race = makeRace()
     race.applyPowerup('blue', 'rope')
-    // Opponent gets smoke from blue? Smoke targets opponent — apply from red onto blue
     race.applyPowerup('red', 'smoke')
-    // blue has rope boost; blue also has smoke from red
     const result = race.applyGain('blue', 100)
     // 100 * 1.5 = 150, then * 0.7 = 105
     expect(result.afterBoost).toBe(150)
@@ -76,22 +101,65 @@ describe('NinjaClimbRaceManager gain pipeline', () => {
     expect(result.applied).toBe(105)
   })
 
-  it('clamps gain at opponent barrier and shatters it', () => {
+  it('zero gain does not burn rope or smoke charges', () => {
     const race = makeRace()
-    // Red teleports ahead and places barrier at 120
+    race.applyPowerup('blue', 'rope')
+    race.applyPowerup('red', 'smoke')
+    expect(race.getTeamState('blue')?.ropeBoostRemaining).toBe(3)
+    expect(race.getTeamState('blue')?.smokeDebuffRemaining).toBe(2)
+
+    const result = race.applyGain('blue', 0)
+    expect(result.applied).toBe(0)
+    expect(race.getTeamState('blue')?.ropeBoostRemaining).toBe(3)
+    expect(race.getTeamState('blue')?.smokeDebuffRemaining).toBe(2)
+  })
+
+  it('clamps gain at opponent barrier step and shatters it', () => {
+    const race = makeRace()
+    // Red teleports +120 → step 3, barrier at step 3 (= 120 pts)
     race.applyPowerup('red', 'teleport')
     expect(race.getScore('red')).toBe(120)
-    expect(race.getTeamState('red')?.barrierHeight).toBe(120)
+    expect(race.getTeamState('red')?.barrierStep).toBe(3)
+    expect(race.getBarrierStep()).toBe(3)
 
-    // Blue is at 90, tries to gain 100 → clamped to 30, barrier shatters
-    race.applyGain('blue', 90) // set blue to 90 via two gains... easier setScore
     race.setScore('blue', 90)
     const result = race.applyGain('blue', 100)
     expect(result.barrierClamped).toBe(true)
     expect(result.barrierShattered).toBe(true)
     expect(result.applied).toBe(30)
     expect(result.newScore).toBe(120)
-    expect(race.getTeamState('red')?.barrierHeight).toBeNull()
+    expect(race.getTeamState('red')?.barrierStep).toBeNull()
+    expect(race.getBarrierStep()).toBeNull()
+  })
+
+  it('does not clamp a team already at or above the barrier', () => {
+    const race = makeRace()
+    race.applyPowerup('red', 'teleport') // barrier at step 3 / 120
+    race.setScore('blue', 120)
+    const result = race.applyGain('blue', 60)
+    expect(result.barrierClamped).toBe(false)
+    expect(result.barrierShattered).toBe(false)
+    expect(result.applied).toBe(60)
+    expect(result.newScore).toBe(180)
+    expect(race.getTeamState('red')?.barrierStep).toBe(3)
+  })
+
+  it('teleport and ladder gains respect barriers', () => {
+    const race = makeRace({
+      questionsPerTeam: 5,
+      rng: () => 0.1, // ladder
+    })
+    race.applyPowerup('red', 'teleport') // barrier at 120
+    race.setScore('blue', 100)
+
+    // Blue teleport would try +120 → clamped to barrier
+    const tp = race.applyPowerup('blue', 'teleport')
+    expect(tp.ok).toBe(true)
+    expect(tp.actorScoreDelta).toBe(20)
+    expect(race.getScore('blue')).toBe(120)
+    // Blue's teleport shattered red's barrier and placed blue's own
+    expect(race.getTeamState('red')?.barrierStep).toBeNull()
+    expect(race.getTeamState('blue')?.barrierStep).toBe(3)
   })
 
   it('rope pulls opponent back 50', () => {
@@ -119,7 +187,7 @@ describe('NinjaClimbRaceManager shortcuts', () => {
       questionsPerTeam: 5, // summit 400
       rng: () => 0.1, // always ladder
     })
-    // First forest node at 0.25 * 400 = 100
+    // First forest node at ~0.25 * 9 ≈ step 2 → score crossing from below
     race.setScore('blue', 120)
     const node = race.findCrossedShortcut('blue', 50, 120)
     expect(node?.id).toBe('node-forest-1')
@@ -127,6 +195,24 @@ describe('NinjaClimbRaceManager shortcuts', () => {
     expect(roll.outcome).toBe('ladder')
     expect(roll.delta).toBe(90)
     expect(race.getScore('blue')).toBe(210)
+  })
+
+  it('ladder gain is clamped by barrier', () => {
+    const race = makeRace({
+      questionsPerTeam: 5,
+      rng: () => 0.1,
+    })
+    race.applyPowerup('red', 'teleport') // barrier 120
+    race.setScore('blue', 100)
+    // Cross forest node and take ladder +90 → would go to 190, clamped to 120
+    const node = race.findCrossedShortcut('blue', 50, 100)
+    // May or may not cross depending on step indices — force roll on forest node
+    const forest = race.getNodes().find((n) => n.id === 'node-forest-1')!
+    const roll = race.rollShortcut('blue', forest)
+    expect(roll.outcome).toBe('ladder')
+    expect(roll.newScore).toBe(120)
+    expect(roll.delta).toBe(20)
+    expect(race.getTeamState('red')?.barrierStep).toBeNull()
   })
 
   it('skip marks node consumed without changing score', () => {

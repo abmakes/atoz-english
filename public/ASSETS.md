@@ -23,7 +23,12 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 | `images/splash-dash/capy_spritesheet.png` | Splash Dash players |
 | `images/ninja-climb/ninja_blue_idle.png` | Ninja Climb blue team |
 | `images/ninja-climb/ninja_red_idle.png` | Ninja Climb red team |
+| `images/ninja-climb/ninja_blue_idle_b.png` | Ninja Climb blue idle pose B |
+| `images/ninja-climb/ninja_red_idle_b.png` | Ninja Climb red idle pose B |
 | `images/ninja-climb/sky.webp` | Ninja Climb sky |
+| `images/ninja-climb/cliff_a.webp` | Ninja Climb cliff tile A |
+| `images/ninja-climb/summit.webp` | Ninja Climb summit tile |
+| `images/ninja-climb/answer_cloud.png` | Ninja Climb answer cloud card |
 | `images/marketing/ninjaclimb_thumb.png` | Mode picker thumbnail |
 | `fonts/GrandstanderVF.ttf` | Game UI font |
 | `fonts/InclusiveSansVF.ttf` | Game UI font |
@@ -36,8 +41,9 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 
 ## Ninja Climb notes
 
-- Character strips: `ninja_{blue|red}_idle.png` (2 frames), `ninja_{blue|red}_climb.png` (4 frames).
-- Action poses and scenery live under `public/images/ninja-climb/`.
+- Character strips: `ninja_{blue|red}_idle.png` / `idle_b.png` (2 frames each), `ninja_{blue|red}_climb.png` (4 frames).
+- Mountain tiles: `cliff_{a|b|c}.webp`, `plateau_{1|2|3}.webp`, `summit.webp` (vector cartoon; no band_* art).
+- UI: `answer_cloud.png` for sky answers; `deco_{tree|bush|hut}.png` for sparse ledge props.
 - Mode picker thumb: `public/images/marketing/ninjaclimb_thumb.png`.
 
 ## Verify locally

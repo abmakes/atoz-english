@@ -3,41 +3,38 @@ import { EventBus } from '@/lib/pixi-engine/core/EventBus'
 import { ENGINE_EVENTS } from '@/lib/pixi-engine/core/EventTypes'
 import type { PixiApplication } from '@/lib/pixi-engine/core/PixiApplication'
 import type { NinjaClimbLayoutManager } from './NinjaClimbLayoutManager'
-import type { ShortcutKind, ShortcutNodeDef } from './NinjaClimbRaceManager'
+import type { ShortcutNodeDef } from './NinjaClimbRaceManager'
+import { buildPath, type Waypoint } from '../mountainPath'
 
 const ASSET_BASE = '/images/ninja-climb'
-
-interface BandSprite {
-  key: string
-  sprite: PIXI.Sprite
-  /** World Y of the top of this band (0 = summit, larger = lower). */
-  worldTop: number
-  worldHeight: number
-}
+const CLIFF_KEYS = ['cliff_a', 'cliff_b', 'cliff_c'] as const
+const PLATEAU_KEYS = ['plateau_1', 'plateau_2', 'plateau_3'] as const
 
 /**
- * Sky + parallax mountain bands + gates + barriers + summit flag.
- * Camera scrolls vertically to follow the race leader.
+ * Tiled switchback mountain trail with eased fit-zoom camera.
  */
 export class NinjaClimbMountainManager {
   private view: PIXI.Container
   private world: PIXI.Container
   private skySprite: PIXI.Sprite | null = null
+  private trailGraphics: PIXI.Graphics
   private cloudSprites: PIXI.Sprite[] = []
-  private bands: BandSprite[] = []
   private gateSprites: Map<string, PIXI.Sprite> = new Map()
-  private barrierSprites: Map<string, PIXI.Sprite> = new Map()
+  private barrierSprite: PIXI.Sprite | null = null
   private flagSprite: PIXI.Sprite | null = null
-  private trackLeftX = 0
-  private trackRightX = 0
-  private trackBottomWorldY = 0
-  private trackTopWorldY = 0
-  private worldHeight = 2400
-  private cameraY = 0
+  private path: Waypoint[] = []
   private screenW = 0
   private screenH = 0
+  private cameraX = 0
+  private cameraY = 0
+  private cameraZoom = 1
+  private targetCameraX = 0
+  private targetCameraY = 0
+  private targetZoom = 1
   private cloudPhase = 0
   private destroyed = false
+  private pulseStep: number | null = null
+  private pulseTime = 0
 
   constructor(
     private pixiApp: PixiApplication,
@@ -46,6 +43,7 @@ export class NinjaClimbMountainManager {
   ) {
     this.view = new PIXI.Container()
     this.world = new PIXI.Container()
+    this.trailGraphics = new PIXI.Graphics()
     this.view.addChild(this.world)
     this.eventBus.on(ENGINE_EVENTS.RESIZED, this._onResize)
   }
@@ -58,30 +56,20 @@ export class NinjaClimbMountainManager {
     return this.world
   }
 
-  /** Left and right lane X positions in world/screen space (lanes don't scroll horizontally). */
-  public getLaneXs(): { left: number; right: number } {
-    return { left: this.trackLeftX, right: this.trackRightX }
+  public getPath(): Waypoint[] {
+    return this.path
   }
 
-  public getTrackBounds(): { bottomY: number; topY: number; worldHeight: number } {
-    return {
-      bottomY: this.trackBottomWorldY,
-      topY: this.trackTopWorldY,
-      worldHeight: this.worldHeight,
-    }
+  public getWaypoint(stepIndex: number): Waypoint | null {
+    if (stepIndex < 0 || stepIndex >= this.path.length) return null
+    return this.path[stepIndex]
   }
 
-  /** Convert race score fraction (0–1) to world Y (larger Y = lower on mountain). */
-  public fractionToWorldY(fraction: number): number {
-    const f = Math.max(0, Math.min(1, fraction))
-    return this.trackBottomWorldY + (this.trackTopWorldY - this.trackBottomWorldY) * f
-  }
-
-  public async initialize(nodes: ShortcutNodeDef[]): Promise<void> {
+  public async initialize(totalSteps: number, nodes: ShortcutNodeDef[]): Promise<void> {
     const { width, height } = this.pixiApp.getScreenSize()
     this.screenW = width
     this.screenH = height
-    this._computeTrackGeometry()
+    const layout = this.layoutManager.getLayoutParams()
 
     try {
       const skyTex = await PIXI.Assets.load(`${ASSET_BASE}/sky.webp`)
@@ -89,47 +77,22 @@ export class NinjaClimbMountainManager {
       this.skySprite.width = width
       this.skySprite.height = height
       this.view.addChildAt(this.skySprite, 0)
-    } catch (e) {
-      console.warn('NinjaClimbMountainManager: sky load failed', e)
+    } catch {
       const g = new PIXI.Graphics()
       g.rect(0, 0, width, height).fill({ color: 0x87ceeb })
       this.view.addChildAt(g, 0)
     }
 
-    const bandFiles = [
-      { key: 'summit', src: `${ASSET_BASE}/band_summit.webp` },
-      { key: 'snow', src: `${ASSET_BASE}/band_snow.webp` },
-      { key: 'rocky', src: `${ASSET_BASE}/band_rocky.webp` },
-      { key: 'foothills', src: `${ASSET_BASE}/band_foothills.webp` },
-    ]
-
-    const bandH = this.worldHeight / bandFiles.length
-    for (let i = 0; i < bandFiles.length; i++) {
-      const def = bandFiles[i]
-      try {
-        const tex = await PIXI.Assets.load(def.src)
-        const sprite = new PIXI.Sprite(tex)
-        sprite.width = this.screenW
-        sprite.height = bandH + 4
-        const worldTop = i * bandH
-        sprite.y = worldTop
-        sprite.x = 0
-        this.world.addChild(sprite)
-        this.bands.push({ key: def.key, sprite, worldTop, worldHeight: bandH })
-      } catch (e) {
-        console.warn(`NinjaClimbMountainManager: band ${def.key} failed`, e)
-      }
-    }
-
+    // Ambient sky clouds (screen-space, not in world)
     for (let i = 1; i <= 3; i++) {
       try {
         const tex = await PIXI.Assets.load(`${ASSET_BASE}/cloud_${i}.png`)
         const cloud = new PIXI.Sprite(tex)
         cloud.anchor.set(0.5)
-        cloud.scale.set(0.45 + i * 0.08)
-        cloud.alpha = 0.85
+        cloud.scale.set(0.35 + i * 0.06)
+        cloud.alpha = 0.7
         cloud.x = (width * i) / 4
-        cloud.y = 40 + i * 30
+        cloud.y = 30 + i * 28
         this.view.addChild(cloud)
         this.cloudSprites.push(cloud)
       } catch {
@@ -137,13 +100,121 @@ export class NinjaClimbMountainManager {
       }
     }
 
+    const worldBottomY = totalSteps * layout.stepHeight + 200
+    this.path = buildPath({
+      totalSteps,
+      screenWidth: width,
+      stepHeight: layout.stepHeight,
+      stepsPerSection: layout.stepsPerSection,
+      margin: layout.pathMargin,
+      worldBottomY,
+    })
+
+    await this._buildSections()
+    await this._placePlateaus()
+    await this._placeDecorations()
     await this._placeGates(nodes)
     await this._placeFlag()
-    this.setCameraToFraction(0)
+
+    this.world.addChild(this.trailGraphics)
+    this._drawTrail()
+
+    // Start camera at base
+    if (this.path[0]) {
+      this.cameraX = this.path[0].x
+      this.cameraY = this.path[0].y
+      this.targetCameraX = this.cameraX
+      this.targetCameraY = this.cameraY
+    }
+    this._applyCameraTransform()
+  }
+
+  private async _buildSections(): Promise<void> {
+    if (this.path.length === 0) return
+    const layout = this.layoutManager.getLayoutParams()
+    const sectionCount = Math.ceil(this.path.length / layout.stepsPerSection)
+
+    for (let s = 0; s < sectionCount; s++) {
+      const isSummit = s === sectionCount - 1
+      const key = isSummit
+        ? 'summit'
+        : CLIFF_KEYS[s % CLIFF_KEYS.length]
+      try {
+        const tex = await PIXI.Assets.load(`${ASSET_BASE}/${key}.webp`)
+        const sprite = new PIXI.Sprite(tex)
+        sprite.anchor.set(0.5, 0)
+
+        const firstIdx = s * layout.stepsPerSection
+        const lastIdx = Math.min(this.path.length - 1, firstIdx + layout.stepsPerSection - 1)
+        const midY = (this.path[firstIdx].y + this.path[lastIdx].y) / 2
+        const sectionHeight =
+          Math.abs(this.path[firstIdx].y - this.path[lastIdx].y) + layout.stepHeight * 1.4
+
+        sprite.width = this.screenW * 1.05
+        sprite.height = Math.max(sectionHeight, layout.stepHeight * 2)
+        sprite.x = this.screenW / 2
+        sprite.y = midY - sprite.height * 0.35
+
+        // Mirror odd sections
+        if (s % 2 === 1 && !isSummit) {
+          sprite.scale.x *= -1
+        }
+
+        this.world.addChildAt(sprite, 0)
+      } catch (e) {
+        console.warn('NinjaClimbMountainManager: cliff load failed', key, e)
+      }
+    }
+  }
+
+  private async _placePlateaus(): Promise<void> {
+    for (let i = 0; i < this.path.length; i++) {
+      const wp = this.path[i]
+      const key = PLATEAU_KEYS[i % PLATEAU_KEYS.length]
+      try {
+        const tex = await PIXI.Assets.load(`${ASSET_BASE}/${key}.webp`)
+        const sprite = new PIXI.Sprite(tex)
+        sprite.anchor.set(0.5, 0.15)
+        const charW = this.layoutManager.getLayoutParams().ninjaDisplaySize
+        const targetW = i === this.path.length - 1 ? charW * 3.4 : charW * 2.9
+        const scale = targetW / Math.max(1, tex.width)
+        sprite.scale.set(scale)
+        sprite.x = wp.x
+        sprite.y = wp.y
+        this.world.addChild(sprite)
+      } catch (e) {
+        console.warn('NinjaClimbMountainManager: plateau load failed', e)
+      }
+    }
+  }
+
+  private async _placeDecorations(): Promise<void> {
+    const decoFiles = ['deco_tree.png', 'deco_bush.png', 'deco_hut.png']
+    for (let i = 0; i < this.path.length; i += 3) {
+      if (i === 0 || i === this.path.length - 1) continue
+      const wp = this.path[i]
+      const file = decoFiles[i % decoFiles.length]
+      try {
+        const tex = await PIXI.Assets.load(`${ASSET_BASE}/${file}`)
+        const sprite = new PIXI.Sprite(tex)
+        sprite.anchor.set(0.5, 1)
+        sprite.scale.set(0.35 + (i % 3) * 0.05)
+        // Place beside the trail based on section direction
+        const side = wp.dir === 1 ? -1 : 1
+        sprite.x = wp.x + side * 90
+        sprite.y = wp.y + 8
+        sprite.alpha = 0.95
+        this.world.addChild(sprite)
+      } catch {
+        /* optional */
+      }
+    }
   }
 
   private async _placeGates(nodes: ShortcutNodeDef[]): Promise<void> {
     for (const node of nodes) {
+      const wp = this.getWaypoint(node.stepIndex)
+      if (!wp) continue
       const src =
         node.kind === 'forest'
           ? `${ASSET_BASE}/gate_forest.png`
@@ -151,10 +222,10 @@ export class NinjaClimbMountainManager {
       try {
         const tex = await PIXI.Assets.load(src)
         const sprite = new PIXI.Sprite(tex)
-        sprite.anchor.set(0.5)
-        sprite.scale.set(0.55)
-        sprite.x = this.screenW / 2
-        sprite.y = this.fractionToWorldY(node.fraction)
+        sprite.anchor.set(0.5, 1)
+        sprite.scale.set(0.4)
+        sprite.x = wp.x
+        sprite.y = wp.y - 10
         this.world.addChild(sprite)
         this.gateSprites.set(node.id, sprite)
       } catch (e) {
@@ -164,53 +235,53 @@ export class NinjaClimbMountainManager {
   }
 
   private async _placeFlag(): Promise<void> {
+    const summit = this.path[this.path.length - 1]
+    if (!summit) return
     try {
       const tex = await PIXI.Assets.load(`${ASSET_BASE}/flag_summit.png`)
       this.flagSprite = new PIXI.Sprite(tex)
       this.flagSprite.anchor.set(0.5, 1)
-      this.flagSprite.scale.set(0.5)
-      this.flagSprite.x = this.screenW / 2
-      this.flagSprite.y = this.trackTopWorldY
+      this.flagSprite.scale.set(0.45)
+      this.flagSprite.x = summit.x
+      this.flagSprite.y = summit.y - 20
       this.world.addChild(this.flagSprite)
     } catch (e) {
       console.warn('NinjaClimbMountainManager: flag load failed', e)
     }
   }
 
-  public async setBarrier(teamLane: 'left' | 'right', heightFraction: number | null): Promise<void> {
-    const key = teamLane
-    const existing = this.barrierSprites.get(key)
-    if (existing) {
-      this.world.removeChild(existing)
-      existing.destroy()
-      this.barrierSprites.delete(key)
+  public async setBarrierAtStep(stepIndex: number | null): Promise<void> {
+    if (this.barrierSprite) {
+      this.world.removeChild(this.barrierSprite)
+      this.barrierSprite.destroy()
+      this.barrierSprite = null
     }
-    if (heightFraction == null) return
-
+    if (stepIndex == null) return
+    const wp = this.getWaypoint(stepIndex)
+    if (!wp) return
     try {
       const tex = await PIXI.Assets.load(`${ASSET_BASE}/barrier.png`)
-      const sprite = new PIXI.Sprite(tex)
-      sprite.anchor.set(0.5)
-      sprite.scale.set(0.4)
-      sprite.x = teamLane === 'left' ? this.trackLeftX : this.trackRightX
-      sprite.y = this.fractionToWorldY(heightFraction)
-      this.world.addChild(sprite)
-      this.barrierSprites.set(key, sprite)
+      this.barrierSprite = new PIXI.Sprite(tex)
+      this.barrierSprite.anchor.set(0.5, 0.5)
+      this.barrierSprite.scale.set(0.55)
+      this.barrierSprite.x = wp.x
+      this.barrierSprite.y = wp.y - 40
+      this.world.addChild(this.barrierSprite)
     } catch (e) {
       console.warn('NinjaClimbMountainManager: barrier load failed', e)
     }
   }
 
-  public shatterBarrier(teamLane: 'left' | 'right'): void {
-    const existing = this.barrierSprites.get(teamLane)
-    if (!existing) return
-    existing.alpha = 0.3
-    existing.scale.set(existing.scale.x * 1.2)
+  public shatterBarrier(): void {
+    if (!this.barrierSprite) return
+    const sprite = this.barrierSprite
+    this.barrierSprite = null
+    sprite.alpha = 0.3
+    sprite.scale.set(sprite.scale.x * 1.25)
     setTimeout(() => {
       if (this.destroyed) return
-      if (existing.parent) existing.parent.removeChild(existing)
-      existing.destroy()
-      this.barrierSprites.delete(teamLane)
+      if (sprite.parent) sprite.parent.removeChild(sprite)
+      sprite.destroy()
     }, 400)
   }
 
@@ -219,41 +290,98 @@ export class NinjaClimbMountainManager {
     if (sprite) sprite.alpha = 0.35
   }
 
-  public setCameraToFraction(leaderFraction: number): void {
-    const worldY = this.fractionToWorldY(leaderFraction)
-    const layout = this.layoutManager.getLayoutParams()
-    // Keep climber roughly in vertical middle of the playable area
-    const playableTop = layout.questionCardHeight + layout.topPadding
-    const playableBottom = this.screenH - layout.bottomUIHeight
-    const mid = (playableTop + playableBottom) / 2
-    this.cameraY = worldY - mid
-    const maxCam = Math.max(0, this.worldHeight - this.screenH)
-    this.cameraY = Math.max(0, Math.min(maxCam, this.cameraY))
-    this.world.y = -this.cameraY
+  public pulseNextStep(stepIndex: number | null): void {
+    this.pulseStep = stepIndex
   }
 
-  public worldYToScreenY(worldY: number): number {
-    return worldY + this.world.y
+  /**
+   * Update camera target from climber world positions.
+   * When `immediate` is true, snap instead of easing.
+   */
+  public setCameraTargets(
+    positions: Array<{ x: number; y: number }>,
+    immediate = false
+  ): void {
+    if (positions.length === 0) return
+    const play = this.layoutManager.getPlayWindow(this.screenH)
+
+    let minY = Infinity
+    let maxY = -Infinity
+    let sumX = 0
+    let sumY = 0
+    for (const p of positions) {
+      minY = Math.min(minY, p.y)
+      maxY = Math.max(maxY, p.y)
+      sumX += p.x
+      sumY += p.y
+    }
+    this.targetCameraX = sumX / positions.length
+    this.targetCameraY = sumY / positions.length
+
+    const spanY = Math.max(80, maxY - minY)
+    const margin = 160
+    this.targetZoom = Math.max(0.45, Math.min(1, play.height / (spanY + margin)))
+
+    if (immediate) {
+      this.cameraX = this.targetCameraX
+      this.cameraY = this.targetCameraY
+      this.cameraZoom = this.targetZoom
+      this._applyCameraTransform()
+    }
   }
 
   public update(deltaMs: number): void {
     this.cloudPhase += deltaMs * 0.02
     for (let i = 0; i < this.cloudSprites.length; i++) {
       const cloud = this.cloudSprites[i]
-      cloud.x += (0.15 + i * 0.05) * (deltaMs / 16)
+      cloud.x += (0.12 + i * 0.04) * (deltaMs / 16)
       if (cloud.x > this.screenW + 80) cloud.x = -80
-      cloud.y += Math.sin(this.cloudPhase + i) * 0.05
+      cloud.y += Math.sin(this.cloudPhase + i) * 0.04
     }
+
+    // Ease camera
+    const t = Math.min(1, (deltaMs / 16) * 0.08)
+    this.cameraX += (this.targetCameraX - this.cameraX) * t
+    this.cameraY += (this.targetCameraY - this.cameraY) * t
+    this.cameraZoom += (this.targetZoom - this.cameraZoom) * t
+    this._applyCameraTransform()
+
+    this.pulseTime += deltaMs
+    this._drawTrail()
   }
 
-  private _computeTrackGeometry(): void {
-    const layout = this.layoutManager.getLayoutParams()
-    this.worldHeight = Math.max(2000, this.screenH * 3.2)
-    this.trackLeftX = this.screenW * 0.32
-    this.trackRightX = this.screenW * 0.68
-    // Bottom of track near foothills; top near summit
-    this.trackBottomWorldY = this.worldHeight - layout.bottomUIHeight - 40
-    this.trackTopWorldY = 80
+  private _applyCameraTransform(): void {
+    const play = this.layoutManager.getPlayWindow(this.screenH)
+    const midX = this.screenW / 2
+    const midY = (play.top + play.bottom) / 2
+    this.world.scale.set(this.cameraZoom)
+    this.world.x = midX - this.cameraX * this.cameraZoom
+    this.world.y = midY - this.cameraY * this.cameraZoom
+  }
+
+  private _drawTrail(): void {
+    this.trailGraphics.clear()
+    if (this.path.length < 2) return
+
+    // Dotted polyline
+    for (let i = 1; i < this.path.length; i++) {
+      const a = this.path[i - 1]
+      const b = this.path[i]
+      this.trailGraphics.moveTo(a.x, a.y - 6)
+      this.trailGraphics.lineTo(b.x, b.y - 6)
+    }
+    this.trailGraphics.stroke({ width: 3, color: 0xffffff, alpha: 0.35 })
+
+    // Pulse next ledge
+    if (this.pulseStep != null) {
+      const wp = this.getWaypoint(this.pulseStep)
+      if (wp) {
+        const pulse = 0.5 + 0.5 * Math.sin(this.pulseTime / 200)
+        this.trailGraphics
+          .circle(wp.x, wp.y - 8, 14 + pulse * 6)
+          .stroke({ width: 3, color: 0xfbbf24, alpha: 0.4 + pulse * 0.4 })
+      }
+    }
   }
 
   private _onResize = (): void => {
@@ -262,16 +390,11 @@ export class NinjaClimbMountainManager {
     this.screenW = width
     this.screenH = height
     this.layoutManager.updateLayout(width, height)
-    this._computeTrackGeometry()
     if (this.skySprite) {
       this.skySprite.width = width
       this.skySprite.height = height
     }
-    for (const band of this.bands) {
-      band.sprite.width = width
-    }
-    this.trackLeftX = width * 0.32
-    this.trackRightX = width * 0.68
+    this._applyCameraTransform()
   }
 
   public destroy(): void {
@@ -280,5 +403,3 @@ export class NinjaClimbMountainManager {
     this.view.destroy({ children: true })
   }
 }
-
-export type { ShortcutKind }
