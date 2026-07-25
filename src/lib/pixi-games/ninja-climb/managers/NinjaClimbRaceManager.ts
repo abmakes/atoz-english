@@ -432,7 +432,7 @@ export class NinjaClimbRaceManager {
     const rawDelta = isLadder ? node.ladderDelta : node.snakeDelta
 
     let applied = rawDelta
-    let outcome: 'ladder' | 'snake' = isLadder ? 'ladder' : 'snake'
+    const outcome: 'ladder' | 'snake' = isLadder ? 'ladder' : 'snake'
 
     if (rawDelta > 0) {
       const clamp = this._clampAgainstBarrier(teamId, team.score, rawDelta)
