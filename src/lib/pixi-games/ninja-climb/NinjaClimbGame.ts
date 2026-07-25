@@ -432,9 +432,6 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
       return
     }
 
-    // Wrong/timeout: zero gain — do not burn rope/smoke (applyGain early-outs)
-    this.raceManager.applyGain(String(this.getState().activeTeam), 0)
-
     this.uiManager.showAnswerFeedback(false, 0)
     this.emitEvent(GAME_EVENTS.ANSWER_SELECTED, {
       questionId: question.id,
@@ -489,7 +486,6 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
       await new Promise((r) => setTimeout(r, 900))
       await this._maybeHandleShortcut(teamId, previousScore)
     } else {
-      this.raceManager.applyGain(teamId, 0)
       this.uiManager.showAnswerFeedback(false, 0)
       await new Promise((r) => setTimeout(r, 1000))
     }
