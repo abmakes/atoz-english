@@ -60,38 +60,23 @@ const ROPE_BOOST_ANSWERS = 3
 const SMOKE_MULTIPLIER = 0.7
 const SMOKE_ANSWERS = 2
 
+/** Two well-spaced nodes — enough risk, not a shortcut ladder to the summit. */
 export const DEFAULT_SHORTCUT_NODES: Omit<ShortcutNodeDef, 'stepIndex'>[] = [
   {
     id: 'node-forest-1',
     kind: 'forest',
-    fraction: 0.25,
+    fraction: 0.4,
     ladderChance: 0.6,
-    ladderDelta: 90,
-    snakeDelta: -60,
+    ladderDelta: 60,
+    snakeDelta: -40,
   },
   {
     id: 'node-cave-1',
     kind: 'cave',
-    fraction: 0.45,
-    ladderChance: 0.4,
-    ladderDelta: 160,
-    snakeDelta: -100,
-  },
-  {
-    id: 'node-forest-2',
-    kind: 'forest',
-    fraction: 0.7,
-    ladderChance: 0.6,
-    ladderDelta: 90,
-    snakeDelta: -60,
-  },
-  {
-    id: 'node-cave-2',
-    kind: 'cave',
-    fraction: 0.85,
-    ladderChance: 0.4,
-    ladderDelta: 160,
-    snakeDelta: -100,
+    fraction: 0.75,
+    ladderChance: 0.45,
+    ladderDelta: 80,
+    snakeDelta: -50,
   },
 ]
 
@@ -109,14 +94,21 @@ export function totalStepsForSummit(summitPoints: number): number {
   return Math.max(1, Math.ceil(summitPoints / POINTS_PER_STEP))
 }
 
+/**
+ * Correct-answer climb points with a time bonus.
+ * - Basic: 50–75 (slow → fast)
+ * - Boosted: 50–100 (slow → fast)
+ */
 export function computeCorrectGain(options: {
   boosted: boolean
   remainingTimeMs: number
   questionDurationMs: number
 }): number {
-  if (!options.boosted) return 60
   const duration = Math.max(1, options.questionDurationMs)
   const fraction = Math.max(0, Math.min(1, options.remainingTimeMs / duration))
+  if (!options.boosted) {
+    return 50 + Math.round(25 * fraction)
+  }
   return 50 + Math.round(50 * fraction)
 }
 

@@ -5,6 +5,7 @@ import {
   computeSummitPoints,
   POINTS_PER_STEP,
   scoreToStepIndex,
+  DEFAULT_SHORTCUT_NODES,
 } from '@/lib/pixi-games/ninja-climb/managers/NinjaClimbRaceManager'
 
 function makeRace(overrides?: {
@@ -28,14 +29,28 @@ describe('computeSummitPoints / computeCorrectGain', () => {
     expect(computeSummitPoints(6)).toBe(480)
   })
 
-  it('returns flat 60 for basic mode', () => {
+  it('applies a time bonus in basic mode (50–75)', () => {
     expect(
       computeCorrectGain({
         boosted: false,
-        remainingTimeMs: 10000,
+        remainingTimeMs: 15000,
         questionDurationMs: 15000,
       })
-    ).toBe(60)
+    ).toBe(75)
+    expect(
+      computeCorrectGain({
+        boosted: false,
+        remainingTimeMs: 0,
+        questionDurationMs: 15000,
+      })
+    ).toBe(50)
+    expect(
+      computeCorrectGain({
+        boosted: false,
+        remainingTimeMs: 7500,
+        questionDurationMs: 15000,
+      })
+    ).toBe(63)
   })
 
   it('scales 50–100 for boosted mode', () => {
@@ -182,19 +197,31 @@ describe('NinjaClimbRaceManager gain pipeline', () => {
 })
 
 describe('NinjaClimbRaceManager shortcuts', () => {
+  it('ships only two well-spaced nodes', () => {
+    expect(DEFAULT_SHORTCUT_NODES).toHaveLength(2)
+    expect(DEFAULT_SHORTCUT_NODES.map((n) => n.id)).toEqual([
+      'node-forest-1',
+      'node-cave-1',
+    ])
+    const race = makeRace({ questionsPerTeam: 5 })
+    expect(race.getNodes()).toHaveLength(2)
+    const [a, b] = race.getNodes()
+    expect(b.stepIndex - a.stepIndex).toBeGreaterThanOrEqual(2)
+  })
+
   it('detects crossed nodes and rolls ladder when rng is low', () => {
     const race = makeRace({
       questionsPerTeam: 5, // summit 400
       rng: () => 0.1, // always ladder
     })
-    // First forest node at ~0.25 * 9 ≈ step 2 → score crossing from below
-    race.setScore('blue', 120)
-    const node = race.findCrossedShortcut('blue', 50, 120)
+    // Forest at ~0.4 * 9 ≈ step 4 → score ~160
+    race.setScore('blue', 180)
+    const node = race.findCrossedShortcut('blue', 100, 180)
     expect(node?.id).toBe('node-forest-1')
     const roll = race.rollShortcut('blue', node!)
     expect(roll.outcome).toBe('ladder')
-    expect(roll.delta).toBe(90)
-    expect(race.getScore('blue')).toBe(210)
+    expect(roll.delta).toBe(60)
+    expect(race.getScore('blue')).toBe(240)
   })
 
   it('ladder gain is clamped by barrier', () => {
@@ -204,9 +231,6 @@ describe('NinjaClimbRaceManager shortcuts', () => {
     })
     race.applyPowerup('red', 'teleport') // barrier 120
     race.setScore('blue', 100)
-    // Cross forest node and take ladder +90 → would go to 190, clamped to 120
-    const node = race.findCrossedShortcut('blue', 50, 100)
-    // May or may not cross depending on step indices — force roll on forest node
     const forest = race.getNodes().find((n) => n.id === 'node-forest-1')!
     const roll = race.rollShortcut('blue', forest)
     expect(roll.outcome).toBe('ladder')
@@ -217,12 +241,12 @@ describe('NinjaClimbRaceManager shortcuts', () => {
 
   it('skip marks node consumed without changing score', () => {
     const race = makeRace()
-    race.setScore('blue', 120)
-    const node = race.findCrossedShortcut('blue', 50, 120)
+    race.setScore('blue', 180)
+    const node = race.findCrossedShortcut('blue', 100, 180)
     expect(node).not.toBeNull()
     race.skipShortcut('blue', node!.id)
-    expect(race.findCrossedShortcut('blue', 50, 120)).toBeNull()
-    expect(race.getScore('blue')).toBe(120)
+    expect(race.findCrossedShortcut('blue', 100, 180)).toBeNull()
+    expect(race.getScore('blue')).toBe(180)
   })
 
   it('detects summit', () => {

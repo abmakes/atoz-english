@@ -2,7 +2,7 @@
 
 ## Overview
 
-Two teams alternate answering multiple-choice questions. Correct answers award climb points. Positions quantize to shared switchback waypoints with `POINTS_PER_STEP = 40`. First to the summit wins; otherwise highest climber after all questions.
+Two teams alternate answering multiple-choice questions. Correct answers award climb points. Positions quantize to shared switchback waypoints with `POINTS_PER_STEP = 40`. Highest score wins after a fair finish (see Win).
 
 ## Scoring
 
@@ -12,9 +12,9 @@ Two teams alternate answering multiple-choice questions. Correct answers award c
 
 `totalSteps = ceil(SUMMIT_POINTS / POINTS_PER_STEP)`
 
-### Correct answer
+### Correct answer (always includes a time bonus)
 
-- **Basic:** flat `60` (~1–2 hops)
+- **Basic:** `50 + round(25 * remainingTimeFraction)` → range 50–75
 - **Boosted:** `50 + round(50 * remainingTimeFraction)` → range 50–100
 - **Wrong / timeout:** `0` (no reverse climb; does not burn rope/smoke charges)
 
@@ -41,14 +41,14 @@ Playable on your turn before answering (`Z` / `X` / `C` or per-team tray buttons
 
 ## Shortcuts
 
-Nodes at 25% / 45% / 70% / 85% of summit (anchored to step indices), alternating Dark Forest and Cave.
+Only **two** well-spaced nodes (≈40% and ≈75% of the trail) so you cannot chain gates to the summit.
 
-| Kind | Ladder | Snake |
-|------|--------|-------|
-| Forest | 60% → +90 | 40% → −60 |
-| Cave | 40% → +160 | 60% → −100 |
+| Kind | Forward | Back |
+|------|---------|------|
+| Forest | 60% → +60 | 40% → −40 |
+| Cave | 45% → +80 | 55% → −50 |
 
-Opt-in prompt with odds shown (8s auto-skip; timer cleared on resolve/destroy). Each node once per team.
+Prompt shows a small pie chart (green = forward, red = back), “Take a chance?”, and green ✓ / red ✕ circles (8s auto-skip). Each node once per team.
 
 ## Trail & occupancy
 
@@ -72,5 +72,6 @@ Same as Team Quiz: after each answer/timeout, rotate `activeTeamIndex`, show tur
 
 ## Win
 
-- Team reaches summit → celebrate at peak → `GAME_ENDED`
-- Or question pool exhausted → highest score celebrates
+- If the **first** team of a round reaches the summit, later teams still get **one more answer** (catch-up turn).
+- After that catch-up (or if the **last** team of the round summits), **highest score** wins.
+- Or question pool exhausted → highest score celebrates.

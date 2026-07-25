@@ -22,8 +22,6 @@ export interface NinjaAnswerOption {
 export interface ShortcutPromptInfo {
   kind: ShortcutKind
   ladderChance: number
-  ladderDelta: number
-  snakeDelta: number
 }
 
 export interface TeamTrayInfo {
@@ -288,8 +286,8 @@ export class NinjaClimbUIManager {
       overlay.rect(0, 0, width, height).fill({ color: 0x000000, alpha: 0.45 })
       this.shortcutPanel.addChild(overlay)
 
-      const cardW = Math.min(420, width * 0.8)
-      const cardH = 220
+      const cardW = Math.min(320, width * 0.78)
+      const cardH = 280
       const card = new PIXI.Graphics()
       card
         .roundRect(0, 0, cardW, cardH, 18)
@@ -299,39 +297,124 @@ export class NinjaClimbUIManager {
       card.y = (height - cardH) / 2
       this.shortcutPanel.addChild(card)
 
-      const title = info.kind === 'forest' ? 'Dark Forest Shortcut!' : 'Cave Shortcut!'
-      const ladderPct = Math.round(info.ladderChance * 100)
-      const body = new PIXI.Text({
-        text:
-          `${title}\n` +
-          `${ladderPct}% ladder +${info.ladderDelta}  ·  ${100 - ladderPct}% snake ${info.snakeDelta}\n` +
-          `Enter the risk, or skip safely?`,
+      const cx = width / 2
+      const pieY = card.y + 88
+      const pieR = 48
+      const ladderPct = Math.max(0, Math.min(1, info.ladderChance))
+      const pie = this._makeChancePie(pieR, ladderPct)
+      pie.x = cx
+      pie.y = pieY
+      this.shortcutPanel.addChild(pie)
+
+      const fwdLabel = new PIXI.Text({
+        text: `${Math.round(ladderPct * 100)}% ↑`,
         style: {
           fontFamily: this.pixiConfig.fontFamilyTheme || 'Grandstander',
-          fontSize: 18,
-          fill: 0x1f2937,
-          align: 'center',
+          fontSize: 13,
+          fill: 0x15803d,
           fontWeight: 'bold',
         },
       })
-      body.anchor.set(0.5, 0)
-      body.x = width / 2
-      body.y = card.y + 24
-      this.shortcutPanel.addChild(body)
+      fwdLabel.anchor.set(0.5)
+      fwdLabel.x = cx - 70
+      fwdLabel.y = pieY + pieR + 18
+      this.shortcutPanel.addChild(fwdLabel)
 
-      const enterBtn = this._makePromptButton('Enter', 0x16a34a, () => this._resolveShortcut('enter'))
-      const skipBtn = this._makePromptButton('Skip', 0x6b7280, () => this._resolveShortcut('skip'))
-      enterBtn.x = width / 2 - 100
-      skipBtn.x = width / 2 + 20
-      enterBtn.y = card.y + cardH - 60
-      skipBtn.y = card.y + cardH - 60
-      this.shortcutPanel.addChild(enterBtn)
-      this.shortcutPanel.addChild(skipBtn)
+      const backLabel = new PIXI.Text({
+        text: `${Math.round((1 - ladderPct) * 100)}% ↓`,
+        style: {
+          fontFamily: this.pixiConfig.fontFamilyTheme || 'Grandstander',
+          fontSize: 13,
+          fill: 0xb91c1c,
+          fontWeight: 'bold',
+        },
+      })
+      backLabel.anchor.set(0.5)
+      backLabel.x = cx + 70
+      backLabel.y = pieY + pieR + 18
+      this.shortcutPanel.addChild(backLabel)
+
+      const prompt = new PIXI.Text({
+        text: 'Take a chance?',
+        style: {
+          fontFamily: this.pixiConfig.fontFamilyTheme || 'Grandstander',
+          fontSize: 22,
+          fill: 0x1f2937,
+          fontWeight: 'bold',
+          align: 'center',
+        },
+      })
+      prompt.anchor.set(0.5)
+      prompt.x = cx
+      prompt.y = card.y + cardH - 88
+      this.shortcutPanel.addChild(prompt)
+
+      const yesBtn = this._makeCircleChoiceButton(0x16a34a, '✓', () =>
+        this._resolveShortcut('enter')
+      )
+      const noBtn = this._makeCircleChoiceButton(0xdc2626, '✕', () =>
+        this._resolveShortcut('skip')
+      )
+      yesBtn.x = cx - 52
+      noBtn.x = cx + 52
+      yesBtn.y = card.y + cardH - 42
+      noBtn.y = card.y + cardH - 42
+      this.shortcutPanel.addChild(yesBtn)
+      this.shortcutPanel.addChild(noBtn)
 
       this.shortcutTimeoutId = setTimeout(() => {
         if (this.shortcutResolve) this._resolveShortcut('skip')
       }, 8000)
     })
+  }
+
+  /** Green slice = move forward, red slice = go back. Starts at 12 o'clock. */
+  private _makeChancePie(radius: number, ladderChance: number): PIXI.Container {
+    const c = new PIXI.Container()
+    const g = new PIXI.Graphics()
+    const start = -Math.PI / 2
+    const ladderAngle = Math.max(0.001, ladderChance * Math.PI * 2)
+    const snakeAngle = Math.max(0.001, (1 - ladderChance) * Math.PI * 2)
+
+    g.moveTo(0, 0)
+    g.arc(0, 0, radius, start, start + ladderAngle)
+    g.lineTo(0, 0)
+    g.fill({ color: 0x22c55e })
+
+    g.moveTo(0, 0)
+    g.arc(0, 0, radius, start + ladderAngle, start + ladderAngle + snakeAngle)
+    g.lineTo(0, 0)
+    g.fill({ color: 0xef4444 })
+
+    g.circle(0, 0, radius).stroke({ width: 3, color: 0x1f2937 })
+    c.addChild(g)
+    return c
+  }
+
+  private _makeCircleChoiceButton(
+    color: number,
+    glyph: string,
+    onClick: () => void
+  ): PIXI.Container {
+    const c = new PIXI.Container()
+    const bg = new PIXI.Graphics()
+    bg.circle(0, 0, 26).fill({ color }).stroke({ width: 3, color: 0x111827 })
+    const text = new PIXI.Text({
+      text: glyph,
+      style: {
+        fontFamily: this.pixiConfig.fontFamilyTheme || 'Grandstander',
+        fontSize: 26,
+        fill: 0xffffff,
+        fontWeight: 'bold',
+      },
+    })
+    text.anchor.set(0.5)
+    c.addChild(bg)
+    c.addChild(text)
+    c.eventMode = 'static'
+    c.cursor = 'pointer'
+    c.on('pointertap', onClick)
+    return c
   }
 
   public clearQuestionState(): void {
@@ -376,34 +459,6 @@ export class NinjaClimbUIManager {
       clearTimeout(this.shortcutTimeoutId)
       this.shortcutTimeoutId = null
     }
-  }
-
-  private _makePromptButton(
-    label: string,
-    color: number,
-    onClick: () => void
-  ): PIXI.Container {
-    const c = new PIXI.Container()
-    const bg = new PIXI.Graphics()
-    bg.roundRect(0, 0, 90, 40, 10).fill({ color }).stroke({ width: 2, color: 0x111827 })
-    const text = new PIXI.Text({
-      text: label,
-      style: {
-        fontFamily: this.pixiConfig.fontFamilyTheme || 'Grandstander',
-        fontSize: 16,
-        fill: 0xffffff,
-        fontWeight: 'bold',
-      },
-    })
-    text.anchor.set(0.5)
-    text.x = 45
-    text.y = 20
-    c.addChild(bg)
-    c.addChild(text)
-    c.eventMode = 'static'
-    c.cursor = 'pointer'
-    c.on('pointertap', onClick)
-    return c
   }
 
   private async _buildAnswerClouds(options: NinjaAnswerOption[]): Promise<void> {

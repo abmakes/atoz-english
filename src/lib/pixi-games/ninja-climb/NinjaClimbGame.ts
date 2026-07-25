@@ -64,6 +64,8 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
   private answeringLocked = false
   private processingTurn = false
   private boostedFeatures = false
+  /** Teams still owed a reply turn after someone first reaches the summit. */
+  private catchUpTurnsRemaining = 0
 
   constructor(config: GameConfig, managers: PixiEngineManagers) {
     super(config, managers)
@@ -390,7 +392,7 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
     this._pulseNextLedges()
 
     if (this.raceManager.hasReachedSummit(teamId)) {
-      this._finishWithWinner(teamId)
+      await this._onSummitReached(teamId)
     }
   }
 
@@ -442,7 +444,7 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
     } satisfies AnswerSelectedPayload)
 
     await new Promise((r) => setTimeout(r, 1000))
-    await this._advanceTurn()
+    await this._continueAfterTurn()
   }
 
   private async _resolveAnswer(
@@ -491,10 +493,22 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
     }
 
     if (this.raceManager.hasReachedSummit(teamId)) {
-      this._finishWithWinner(teamId)
+      await this._onSummitReached(teamId)
       return
     }
 
+    await this._continueAfterTurn()
+  }
+
+  /** After a non-summit turn: finish catch-up if owed, else rotate. */
+  private async _continueAfterTurn(): Promise<void> {
+    if (this.catchUpTurnsRemaining > 0) {
+      this.catchUpTurnsRemaining -= 1
+      if (this.catchUpTurnsRemaining === 0) {
+        this._finishRaceByScore()
+        return
+      }
+    }
     await this._advanceTurn()
   }
 
@@ -506,8 +520,6 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
     const choice = await this.uiManager.promptShortcut({
       kind: node.kind,
       ladderChance: node.ladderChance,
-      ladderDelta: node.ladderDelta,
-      snakeDelta: node.snakeDelta,
     })
 
     if (choice === 'skip') {
@@ -529,8 +541,8 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
 
     const msg =
       roll.outcome === 'ladder'
-        ? `Ladder! +${roll.delta}`
-        : `Snake! ${roll.delta}`
+        ? `Forward! +${roll.delta}`
+        : `Back! ${roll.delta}`
     this.uiManager.showPowerupFeedback(msg)
     await new Promise((r) => setTimeout(r, 1100))
   }
@@ -571,7 +583,7 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
     if (this.getState().hasTriggeredGameOver) return
 
     if (this.dataManager.isSequenceFinished()) {
-      this._triggerGameOver()
+      this._finishRaceByScore()
       return
     }
 
@@ -593,7 +605,10 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
 
     await this.showTransition({
       type: 'turn',
-      message: `${nextTeamName} Climbs!`,
+      message:
+        this.catchUpTurnsRemaining > 0
+          ? `${nextTeamName} — last climb!`
+          : `${nextTeamName} Climbs!`,
       duration: 2200,
       autoHide: true,
       questionCounter: {
@@ -606,10 +621,40 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
     await this._showQuestion()
   }
 
-  private _finishWithWinner(teamId: string): void {
-    this.playerManager.celebrate(teamId)
-    const summitStep = this.raceManager.getTotalSteps() - 1
-    void this.playerManager.setStepIndex(teamId, summitStep, true)
+  /**
+   * If the first team of a round hits the summit, later teams still get one
+   * answer. After that catch-up (or if the last team summits), highest score wins.
+   */
+  private async _onSummitReached(teamId: string): Promise<void> {
+    if (this.getState().hasTriggeredGameOver) return
+
+    // Already in catch-up: this reply finishes the race.
+    if (this.catchUpTurnsRemaining > 0) {
+      this.catchUpTurnsRemaining = 0
+      this._finishRaceByScore()
+      return
+    }
+
+    const activeIndex = this.getState().activeTeamIndex
+    const teamsAfter = this.config.teams.length - 1 - activeIndex
+    if (teamsAfter > 0) {
+      this.catchUpTurnsRemaining = teamsAfter
+      this.uiManager.showPowerupFeedback('Summit! Opponent gets one more climb')
+      await new Promise((r) => setTimeout(r, 1200))
+      await this._advanceTurn()
+      return
+    }
+
+    this._finishRaceByScore(teamId)
+  }
+
+  private _finishRaceByScore(preferredId?: string): void {
+    const leader = this.raceManager.getLeadingTeamId() ?? preferredId ?? null
+    if (leader) {
+      this.playerManager.celebrate(leader)
+      const summitStep = this.raceManager.getTotalSteps() - 1
+      void this.playerManager.setStepIndex(leader, summitStep, true)
+    }
     this._syncCamera(false)
     this._triggerGameOver()
   }
@@ -618,13 +663,8 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
     if (this.getState().hasTriggeredGameOver) return
     this.setState({ hasTriggeredGameOver: true, phase: 'gameOver' })
 
-    const summitTeam = this.raceManager.anyTeamAtSummit()
-    if (summitTeam) {
-      this.playerManager.celebrate(summitTeam)
-    } else {
-      const leader = this.raceManager.getLeadingTeamId()
-      if (leader) this.playerManager.celebrate(leader)
-    }
+    const leader = this.raceManager.getLeadingTeamId()
+    if (leader) this.playerManager.celebrate(leader)
 
     this.emitEvent(GAME_STATE_EVENTS.GAME_ENDED)
     this.end()
