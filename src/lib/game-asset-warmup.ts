@@ -23,6 +23,39 @@ export function getSplashDashSceneAssetUrls(): string[] {
   ]
 }
 
+/** Ninja Climb scene art — keep in sync with NinjaClimb managers. */
+export function getNinjaClimbSceneAssetUrls(): string[] {
+  return [
+    '/images/ninja-climb/sky.webp',
+    '/images/ninja-climb/band_foothills.webp',
+    '/images/ninja-climb/band_rocky.webp',
+    '/images/ninja-climb/band_snow.webp',
+    '/images/ninja-climb/band_summit.webp',
+    '/images/ninja-climb/cloud_1.png',
+    '/images/ninja-climb/cloud_2.png',
+    '/images/ninja-climb/cloud_3.png',
+    '/images/ninja-climb/gate_forest.png',
+    '/images/ninja-climb/gate_cave.png',
+    '/images/ninja-climb/barrier.png',
+    '/images/ninja-climb/flag_summit.png',
+    '/images/ninja-climb/icon_teleport.png',
+    '/images/ninja-climb/icon_rope.png',
+    '/images/ninja-climb/icon_smoke.png',
+    '/images/ninja-climb/ninja_blue_idle.png',
+    '/images/ninja-climb/ninja_blue_climb.png',
+    '/images/ninja-climb/ninja_blue_teleport.png',
+    '/images/ninja-climb/ninja_blue_rope.png',
+    '/images/ninja-climb/ninja_blue_smoke.png',
+    '/images/ninja-climb/ninja_blue_cheer.png',
+    '/images/ninja-climb/ninja_red_idle.png',
+    '/images/ninja-climb/ninja_red_climb.png',
+    '/images/ninja-climb/ninja_red_teleport.png',
+    '/images/ninja-climb/ninja_red_rope.png',
+    '/images/ninja-climb/ninja_red_smoke.png',
+    '/images/ninja-climb/ninja_red_cheer.png',
+  ]
+}
+
 /** Score Attack theme backgrounds used by GameBackgroundManager. */
 export function getScoreAttackSceneAssetUrls(): string[] {
   return [
@@ -122,6 +155,13 @@ export async function warmSplashDashSceneAssets(
   return loadUrlsWithProgress(getSplashDashSceneAssetUrls(), onProgress)
 }
 
+export async function warmNinjaClimbSceneAssets(
+  onProgress?: (progress: WarmupProgress) => void
+): Promise<{ ok: number; failed: string[] }> {
+  await ensurePixiAssetsInitialized()
+  return loadUrlsWithProgress(getNinjaClimbSceneAssetUrls(), onProgress)
+}
+
 export async function warmScoreAttackSceneAssets(
   onProgress?: (progress: WarmupProgress) => void
 ): Promise<{ ok: number; failed: string[] }> {
@@ -142,19 +182,21 @@ export async function warmGameAssets(options: {
   const sceneUrls =
     options.gameSlug === 'splash-dash'
       ? getSplashDashSceneAssetUrls()
-      : getScoreAttackSceneAssetUrls()
+      : options.gameSlug === 'ninja-climb'
+        ? getNinjaClimbSceneAssetUrls()
+        : getScoreAttackSceneAssetUrls()
 
   const allUrls = [...options.questionImageUrls, ...sceneUrls]
   const result = await loadUrlsWithProgress(allUrls, options.onProgress)
 
-  // Critical failures: question media that failed (scene art soft-fails except splash-dash empty water)
+  // Critical failures: question media that failed (scene art soft-fails except race games)
   const questionFailed = result.failed.filter((url) => options.questionImageUrls.includes(url))
-  const splashCriticalFailed =
-    options.gameSlug === 'splash-dash'
+  const sceneCriticalFailed =
+    options.gameSlug === 'splash-dash' || options.gameSlug === 'ninja-climb'
       ? result.failed.filter((url) => sceneUrls.includes(url))
       : []
 
-  const blocking = [...questionFailed, ...splashCriticalFailed]
+  const blocking = [...questionFailed, ...sceneCriticalFailed]
   return {
     ready: blocking.length === 0,
     failed: result.failed,

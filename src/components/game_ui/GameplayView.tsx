@@ -371,7 +371,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
                 score={player.score}
                 isActive={player.teamId === activeTeamId}
                 isMobile={isMobileView}
-                isCompact={config.gameSlug === 'splash-dash'} // Make smaller for splash-dash
+                isCompact={config.gameSlug === 'splash-dash' || config.gameSlug === 'ninja-climb'}
                 className={`${themeClassName}`}
             />
                 );

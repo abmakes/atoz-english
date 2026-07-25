@@ -20,7 +20,12 @@ import {
   type SplashPowerupIntervalSeconds,
   type SplashPowerupsConfig,
 } from '@/lib/pixi-games/splash-dash/splashPowerups';
-import type { SplashPowerupsData } from '@/types/gameTypes';
+import {
+  DEFAULT_NINJA_POWERUPS,
+  NINJA_POWERUP_DEFINITIONS,
+  type NinjaPowerupsConfig,
+} from '@/lib/pixi-games/ninja-climb/ninjaPowerups';
+import type { SplashPowerupsData, NinjaPowerupsData } from '@/types/gameTypes';
 
 // Define props explicitly, using imported types
 /**
@@ -131,6 +136,8 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
   // Remove Zustand usage
   const selectedQuiz = useGameStore((state) => state.selectedQuiz);
   const isSplashDash = initialGameSlug === 'splash-dash';
+  const isNinjaClimb = initialGameSlug === 'ninja-climb';
+  const isTwoTeamRace = isSplashDash || isNinjaClimb;
 
   const [assetsReady, setAssetsReady] = useState(false);
   const [assetsProgress, setAssetsProgress] = useState(0);
@@ -154,13 +161,16 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
   const [splashPowerups, setSplashPowerups] = useState<SplashPowerupsConfig>({
     ...DEFAULT_SPLASH_POWERUPS,
   });
+  const [ninjaPowerups, setNinjaPowerups] = useState<NinjaPowerupsConfig>({
+    ...DEFAULT_NINJA_POWERUPS,
+  });
 
   // State to hold the theme class name
   const [themeClassName, setThemeClassName] = useState<string>('');
 
-  // Splash Dash: exactly two players
+  // Splash Dash / Ninja Climb: exactly two players
   useEffect(() => {
-    if (!isSplashDash) return;
+    if (!isTwoTeamRace) return;
     setTeams((prev) => {
       const next = prev.slice(0, 2);
       while (next.length < 2) {
@@ -168,7 +178,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
       }
       return next;
     });
-  }, [isSplashDash]);
+  }, [isTwoTeamRace]);
 
 
   // Effect to update the theme class name when selectedTheme changes
@@ -330,7 +340,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
 
   // --- Handlers (Placeholders) ---
   const handleAddTeam = () => {
-    if (isSplashDash) return;
+    if (isTwoTeamRace) return;
     if (newTeamName.trim()) {
       setTeams([
         ...teams,
@@ -345,7 +355,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
   };
 
   const handleRemoveTeam = (id: string) => {
-    if (isSplashDash) return;
+    if (isTwoTeamRace) return;
     setTeams(teams.filter(team => team.id !== id));
   };
 
@@ -449,8 +459,17 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
           immunity: splashPowerups.immunity,
         }
       : undefined;
+    const ninjaPayload: NinjaPowerupsData | undefined = isNinjaClimb
+      ? {
+          enabled: ninjaPowerups.enabled,
+          teleport: ninjaPowerups.teleport,
+          rope: ninjaPowerups.rope,
+          smoke: ninjaPowerups.smoke,
+          shortcuts: ninjaPowerups.shortcuts,
+        }
+      : undefined;
     const config: LocalConfig = {
-      teams: isSplashDash ? teams.slice(0, 2) : teams,
+      teams: isTwoTeamRace ? teams.slice(0, 2) : teams,
       settings,
       theme: selectedTheme,
       gameFeatures: selectedGameFeatures,
@@ -459,6 +478,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
       limitedGuesses: SHOW_LIMITED_GUESSES ? limitedGuesses : null,
       powerups,
       splashPowerups: splashPayload,
+      ninjaPowerups: ninjaPayload,
     };
     console.log('Calling onStartGame with setup config:', config);
     void onStartGame(config);
@@ -499,6 +519,11 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
         {isSplashDash && (
           <p className="text-center text-sm text-[var(--text-color)] mb-4 opacity-80">
             Splash Dash · 2-player race
+          </p>
+        )}
+        {isNinjaClimb && (
+          <p className="text-center text-sm text-[var(--text-color)] mb-4 opacity-80">
+            Ninja Climb · 2-team mountain race
           </p>
         )}
 
@@ -545,13 +570,13 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
                   className={`py-2 px-6 ml-3 mr-1 rounded-[12px] text-lg border-2 border-[var(--input-border)] inputfield text-[var(--heading-color)]`}
                   aria-label={`Team ${index + 1} name`}
                 />
-                 {!isSplashDash && (
+                 {!isTwoTeamRace && (
                    <button onClick={() => handleRemoveTeam(team.id)} className={`buttonRemoveTeam`} aria-label={`Remove team ${team.name}`}>&times;</button>
                  )}
               </li>
             ))}
           </ul>
-          {!isSplashDash && (
+          {!isTwoTeamRace && (
           <div className={`flex items-center`}>
             <input
               type="text"
@@ -609,7 +634,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
               </select>
             </div>
 
-            {/* Game Features Selection — Team Quiz only */}
+            {/* Game Features Selection — Team Quiz + Ninja Climb */}
             {!isSplashDash && (
             <div className={`flex flex-row gap-4 items-center mb-4 justify-center`}>
               <label htmlFor="features-select" className={`text-[var(--text-color)]`}>Game Mode:</label>
@@ -644,7 +669,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
               </span>
             </div>
             <h3 className={`font-semibold mb-2 text-md text-[var(--text-color)]`}>
-              {isSplashDash ? 'Time per question' : 'Increase intensity with a time limit'}
+              {isTwoTeamRace ? 'Time per question' : 'Increase intensity with a time limit'}
             </h3>
             <div className={`buttonGroup`}>
               {[10, 15, 20].map(time => (
@@ -730,6 +755,74 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
                   </button>
                 );
               })}
+            </div>
+          </div>
+          </>
+          ) : isNinjaClimb ? (
+          <>
+          <div className={'optionBox'}>
+            <h3 className={`font-semibold mb-2 text-md text-[var(--text-color)]`}>Ninja power-ups</h3>
+            <div className={`buttonGroup mb-3`}>
+              <button
+                type="button"
+                onClick={() => setNinjaPowerups((p) => ({ ...p, enabled: true }))}
+                className={`buttonChoice ${ninjaPowerups.enabled ? 'buttonChoiceActive' : ''}`}
+              >
+                On
+              </button>
+              <button
+                type="button"
+                onClick={() => setNinjaPowerups((p) => ({ ...p, enabled: false }))}
+                className={`buttonChoice ${!ninjaPowerups.enabled ? 'buttonChoiceActive' : ''}`}
+              >
+                Off
+              </button>
+            </div>
+            <p className="text-sm text-[var(--text-color)] mb-2 opacity-80">
+              Each team starts with one charge of each enabled power.
+            </p>
+            <div className={`buttonGroup`}>
+              {NINJA_POWERUP_DEFINITIONS.map((def) => {
+                const active = ninjaPowerups[def.id];
+                return (
+                  <button
+                    key={def.id}
+                    type="button"
+                    onClick={() =>
+                      setNinjaPowerups((p) => ({
+                        ...p,
+                        [def.id]: !p[def.id],
+                      }))
+                    }
+                    className={`buttonChoice ${active ? 'buttonChoiceActive' : ''}`}
+                    title={def.description}
+                  >
+                    {def.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className={'optionBox'}>
+            <h3 className={`font-semibold mb-2 text-md text-[var(--text-color)]`}>Mountain shortcuts</h3>
+            <p className="text-sm text-[var(--text-color)] mb-2 opacity-80">
+              Forest and cave risk nodes (ladder or snake).
+            </p>
+            <div className={`buttonGroup`}>
+              <button
+                type="button"
+                onClick={() => setNinjaPowerups((p) => ({ ...p, shortcuts: true }))}
+                className={`buttonChoice ${ninjaPowerups.shortcuts ? 'buttonChoiceActive' : ''}`}
+              >
+                On
+              </button>
+              <button
+                type="button"
+                onClick={() => setNinjaPowerups((p) => ({ ...p, shortcuts: false }))}
+                className={`buttonChoice ${!ninjaPowerups.shortcuts ? 'buttonChoiceActive' : ''}`}
+              >
+                Off
+              </button>
             </div>
           </div>
           </>

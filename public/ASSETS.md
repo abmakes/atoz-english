@@ -21,6 +21,10 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 | `images/placeholder.webp` | Quiz/question fallbacks |
 | `images/splash-dash/crate_5_4.png` | Splash Dash crates |
 | `images/splash-dash/capy_spritesheet.png` | Splash Dash players |
+| `images/ninja-climb/ninja_blue_idle.png` | Ninja Climb blue team |
+| `images/ninja-climb/ninja_red_idle.png` | Ninja Climb red team |
+| `images/ninja-climb/sky.webp` | Ninja Climb sky |
+| `images/marketing/ninjaclimb_thumb.png` | Mode picker thumbnail |
 | `fonts/GrandstanderVF.ttf` | Game UI font |
 | `fonts/InclusiveSansVF.ttf` | Game UI font |
 | `quiz_template.csv` | CSV quiz upload template |
@@ -29,6 +33,12 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 
 - Crate texture path is **`/images/splash-dash/crate_5_4.png`** (not `crate_square.png`).
 - Optional extras (e.g. `crate_square.png`) may exist for prototyping but are not referenced by production code.
+
+## Ninja Climb notes
+
+- Character strips: `ninja_{blue|red}_idle.png` (2 frames), `ninja_{blue|red}_climb.png` (4 frames).
+- Action poses and scenery live under `public/images/ninja-climb/`.
+- Mode picker thumb: `public/images/marketing/ninjaclimb_thumb.png`.
 
 ## Verify locally
 
