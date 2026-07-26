@@ -62,6 +62,8 @@ export function getNinjaClimbSceneAssetUrls(): string[] {
     '/images/ninja-climb/ninja_red_rope.png',
     '/images/ninja-climb/ninja_red_smoke.png',
     '/images/ninja-climb/ninja_red_cheer.png',
+    '/images/shared/kunai_tip.png',
+    '/images/shared/rope_segment.png',
   ]
 }
 

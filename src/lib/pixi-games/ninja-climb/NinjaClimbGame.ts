@@ -36,6 +36,8 @@ import {
   NinjaPowerupId,
   getEnabledNinjaPowerupIds,
 } from './ninjaPowerups'
+import { RopeProjectile } from '@/lib/pixi-engine/fx/RopeProjectile'
+import * as PIXI from 'pixi.js'
 
 interface NinjaClimbGameState extends BaseGameState {
   currentQuestionIndex: number
@@ -66,6 +68,8 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
   private boostedFeatures = false
   /** Teams still owed a reply turn after someone first reaches the summit. */
   private catchUpTurnsRemaining = 0
+  private ropeProjectile: RopeProjectile | null = null
+  private ropeVfxBusy = false
 
   constructor(config: GameConfig, managers: PixiEngineManagers) {
     super(config, managers)
@@ -162,6 +166,8 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
     )
     this.playerManager.attachToWorld(this.mountainManager.getWorld())
 
+    await this._initRopeProjectile()
+
     this.uiManager = new NinjaClimbUIManager(
       this.pixiApp,
       this.eventBus,
@@ -211,6 +217,7 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
     this.transitionScreen?.update(delta)
     this.mountainManager?.update(delta)
     this.playerManager?.update(delta)
+    this.ropeProjectile?.update(delta)
     this.uiManager?.update(delta)
     this._syncCamera(false)
   }
@@ -227,10 +234,39 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
 
   protected destroyImplementation(): void {
     this._unbindGameEvents()
+    this.ropeProjectile?.destroy()
+    this.ropeProjectile = null
     this.uiManager?.destroy()
     this.playerManager?.destroy()
     this.mountainManager?.destroy()
     this.view.removeChildren()
+  }
+
+  private async _initRopeProjectile(): Promise<void> {
+    let tipTexture: PIXI.Texture | null = null
+    let bodyTexture: PIXI.Texture | null = null
+    try {
+      tipTexture = await PIXI.Assets.load('/images/shared/kunai_tip.png')
+    } catch (e) {
+      console.warn('NinjaClimbGame: kunai tip missing', e)
+    }
+    try {
+      bodyTexture = await PIXI.Assets.load('/images/shared/rope_segment.png')
+    } catch (e) {
+      console.warn('NinjaClimbGame: rope segment missing', e)
+    }
+
+    this.ropeProjectile = new RopeProjectile({
+      parent: this.mountainManager.getWorld(),
+      tipTexture,
+      bodyTexture,
+      bodyThickness: 7,
+      tipDisplaySize: 32,
+      extendDurationMs: 300,
+      holdDurationMs: 100,
+      retractDurationMs: 450,
+      zIndex: 800,
+    })
   }
 
   private _bindGameEvents(): void {
@@ -352,10 +388,15 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
     teamId: string,
     powerup: NinjaPowerupId
   ): Promise<void> {
-    if (this.answeringLocked || this.processingTurn) return
+    if (this.answeringLocked || this.processingTurn || this.ropeVfxBusy) return
     if (!this.ninjaPowerupsConfig.enabled) return
     if (teamId !== String(this.getState().activeTeam)) return
     if (!this.raceManager.canPlayPowerup(teamId, powerup)) return
+
+    if (powerup === 'rope') {
+      await this._playRopePowerup(teamId)
+      return
+    }
 
     const previousScores = new Map(
       this.config.teams.map((t) => [String(t.id), this.raceManager.getScore(String(t.id))])
@@ -375,15 +416,6 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
       await this.mountainManager.setBarrierAtStep(this.raceManager.getBarrierStep())
       this.uiManager.showPowerupFeedback(`Shadow Teleport! +${delta}`)
       await this._maybeHandleShortcut(teamId, previousScores.get(teamId) ?? 0)
-    } else if (powerup === 'rope') {
-      const targetId = this.raceManager.getOpponentId(teamId)
-      const targetDelta = result.targetScoreDelta ?? 0
-      if (targetId && targetDelta !== 0) {
-        if (targetDelta < 0) this.scoringManager.subtractScore(targetId, Math.abs(targetDelta))
-        else this.scoringManager.addScore(targetId, targetDelta)
-      }
-      await this._syncTeamSteps(true)
-      this.uiManager.showPowerupFeedback('Kunai Rope! Opponent −50, you boost ×3')
     } else if (powerup === 'smoke') {
       this.uiManager.showPowerupFeedback('Smoke Bomb! Opponent −30% for 2 answers')
     }
@@ -393,6 +425,63 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
 
     if (this.raceManager.hasReachedSummit(teamId)) {
       await this._onSummitReached(teamId)
+    }
+  }
+
+  /**
+   * Kunai rope: tip extends to opponent, grabs, then retracts while they hop back.
+   * Score apply happens on grab (reach B).
+   */
+  private async _playRopePowerup(teamId: string): Promise<void> {
+    const targetId = this.raceManager.getOpponentId(teamId)
+    if (!targetId || !this.ropeProjectile) {
+      const result = this.raceManager.applyPowerup(teamId, 'rope')
+      if (!result.ok) return
+      const targetDelta = result.targetScoreDelta ?? 0
+      if (targetId && targetDelta < 0) {
+        this.scoringManager.subtractScore(targetId, Math.abs(targetDelta))
+      } else if (targetId && targetDelta > 0) {
+        this.scoringManager.addScore(targetId, targetDelta)
+      }
+      await this._syncTeamSteps(true)
+      this.uiManager.showPowerupFeedback('Kunai Rope! Opponent −50, you boost ×3')
+      this._syncPowerTrays(true)
+      return
+    }
+
+    this.ropeVfxBusy = true
+    this.playerManager.playAction(teamId, 'rope', 1400)
+
+    let hopPromise: Promise<void> = Promise.resolve()
+    let applied = false
+
+    try {
+      await this.ropeProjectile.play({
+        getPointA: () =>
+          this.playerManager.getAttachPoint(teamId) ?? { x: 0, y: 0 },
+        getPointB: () =>
+          this.playerManager.getAttachPoint(targetId) ?? { x: 0, y: 0 },
+        pullTargetDuringRetract: true,
+        onReachB: () => {
+          if (applied) return
+          applied = true
+          const result = this.raceManager.applyPowerup(teamId, 'rope')
+          if (!result.ok) return
+          const targetDelta = result.targetScoreDelta ?? 0
+          if (targetDelta < 0) {
+            this.scoringManager.subtractScore(targetId, Math.abs(targetDelta))
+          } else if (targetDelta > 0) {
+            this.scoringManager.addScore(targetId, targetDelta)
+          }
+          hopPromise = this._syncTeamSteps(true)
+          this._syncPowerTrays(true)
+          this._pulseNextLedges()
+        },
+      })
+      await hopPromise
+      this.uiManager.showPowerupFeedback('Kunai Rope! Opponent −50, you boost ×3')
+    } finally {
+      this.ropeVfxBusy = false
     }
   }
 

@@ -29,6 +29,8 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 | `images/ninja-climb/cliff_a.webp` | Ninja Climb cliff tile A |
 | `images/ninja-climb/summit.webp` | Ninja Climb summit tile |
 | `images/ninja-climb/answer_cloud.png` | Ninja Climb answer cloud card |
+| `images/shared/kunai_tip.png` | Shared rope projectile tip |
+| `images/shared/rope_segment.png` | Shared rope body tile |
 | `images/marketing/ninjaclimb_thumb.png` | Mode picker thumbnail |
 | `fonts/GrandstanderVF.ttf` | Game UI font |
 | `fonts/InclusiveSansVF.ttf` | Game UI font |
@@ -44,6 +46,7 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 - Character strips: `ninja_{blue|red}_idle.png` / `idle_b.png` (2 frames each), `ninja_{blue|red}_climb.png` (4 frames).
 - Mountain tiles: `cliff_{a|b|c}.webp`, `plateau_{1|2|3}.webp`, `summit.webp` (vector cartoon; no band_* art).
 - UI: `answer_cloud.png` for sky answers; `deco_{tree|bush|hut}.png` for sparse ledge props.
+- Shared rope VFX: `images/shared/kunai_tip.png`, `images/shared/rope_segment.png` (used by `RopeProjectile`).
 - Mode picker thumb: `public/images/marketing/ninjaclimb_thumb.png`.
 
 ## Verify locally

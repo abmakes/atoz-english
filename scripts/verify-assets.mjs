@@ -39,6 +39,8 @@ const REQUIRED_ASSETS = [
   'public/images/ninja-climb/icon_teleport.png',
   'public/images/ninja-climb/icon_rope.png',
   'public/images/ninja-climb/icon_smoke.png',
+  'public/images/shared/kunai_tip.png',
+  'public/images/shared/rope_segment.png',
   'public/images/marketing/ninjaclimb_thumb.png',
   // Fonts
   'public/fonts/GrandstanderVF.ttf',

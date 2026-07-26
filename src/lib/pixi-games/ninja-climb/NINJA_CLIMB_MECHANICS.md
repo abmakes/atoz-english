@@ -34,7 +34,7 @@ Teleport and ladder gains use the same barrier clamp.
 | Id | Name | Effect |
 |----|------|--------|
 | `teleport` | Shadow Teleport | +120 instantly; drop barrier at new **step** |
-| `rope` | Kunai Rope | Opponent −50; actor +50% on next 3 scoring answers |
+| `rope` | Kunai Rope | Opponent −50; actor +50% on next 3 scoring answers. VFX: shared `RopeProjectile` extends tip A→B, grabs, retracts while opponent hops back. |
 | `smoke` | Smoke Bomb | Opponent −30% on next 2 scoring answers |
 
 Playable on your turn before answering (`Z` / `X` / `C` or per-team tray buttons). Inactive team's tray is dimmed but visible.

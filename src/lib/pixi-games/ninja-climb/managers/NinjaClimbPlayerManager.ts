@@ -144,6 +144,25 @@ export class NinjaClimbPlayerManager {
     }
   }
 
+  public getWorldPosition(teamId: string): { x: number; y: number } | null {
+    const actor = this.actors.find((a) => a.teamId === teamId)
+    if (!actor) return null
+    return { x: actor.container.x, y: actor.container.y }
+  }
+
+  /**
+   * Chest / hand attach point for rope VFX (slightly above feet anchor).
+   */
+  public getAttachPoint(teamId: string): { x: number; y: number } | null {
+    const actor = this.actors.find((a) => a.teamId === teamId)
+    if (!actor) return null
+    const size = this.layoutManager.getLayoutParams().ninjaDisplaySize
+    return {
+      x: actor.container.x,
+      y: actor.container.y - size * 0.45,
+    }
+  }
+
   public getWorldPositions(): Array<{ teamId: string; x: number; y: number }> {
     return this.actors.map((a) => ({
       teamId: a.teamId,
