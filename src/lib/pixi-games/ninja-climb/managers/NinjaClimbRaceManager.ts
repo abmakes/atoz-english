@@ -25,6 +25,8 @@ export interface TeamRaceState {
   /** Barrier step index placed by this team. Null if none. */
   barrierStep: number | null
   consumedShortcuts: string[]
+  /** Correct answers this race — every 2nd grants a random power-up. */
+  correctAnswers: number
 }
 
 export interface GainResult {
@@ -60,28 +62,31 @@ const ROPE_BOOST_ANSWERS = 3
 const SMOKE_MULTIPLIER = 0.7
 const SMOKE_ANSWERS = 2
 
-/** Two well-spaced nodes — enough risk, not a shortcut ladder to the summit. */
+/** Two well-spaced nodes — high risk (snake more likely than ladder). */
 export const DEFAULT_SHORTCUT_NODES: Omit<ShortcutNodeDef, 'stepIndex'>[] = [
   {
     id: 'node-forest-1',
     kind: 'forest',
     fraction: 0.4,
-    ladderChance: 0.6,
+    ladderChance: 0.35,
     ladderDelta: 60,
-    snakeDelta: -40,
+    snakeDelta: -50,
   },
   {
     id: 'node-cave-1',
     kind: 'cave',
     fraction: 0.75,
-    ladderChance: 0.45,
+    ladderChance: 0.3,
     ladderDelta: 80,
-    snakeDelta: -50,
+    snakeDelta: -70,
   },
 ]
 
+/** Minimum summit height so back-and-forth power fights can play out. */
+export const MIN_SUMMIT_POINTS = 560
+
 export function computeSummitPoints(questionsPerTeam: number): number {
-  return Math.max(400, Math.floor(questionsPerTeam) * 80)
+  return Math.max(MIN_SUMMIT_POINTS, Math.floor(questionsPerTeam) * 80)
 }
 
 export function scoreToStepIndex(score: number, summitPoints: number): number {
@@ -163,6 +168,7 @@ export class NinjaClimbRaceManager {
         smokeDebuffRemaining: 0,
         barrierStep: null,
         consumedShortcuts: [],
+        correctAnswers: 0,
       })
     }
   }
@@ -237,6 +243,31 @@ export class NinjaClimbRaceManager {
   public canPlayPowerup(teamId: string, powerup: NinjaPowerupId): boolean {
     const team = this.teams.get(teamId)
     return !!team && (team.charges[powerup] ?? 0) > 0
+  }
+
+  public getCharges(teamId: string): Record<NinjaPowerupId, number> {
+    const team = this.teams.get(teamId)
+    return team
+      ? { ...team.charges }
+      : { teleport: 0, rope: 0, smoke: 0 }
+  }
+
+  /**
+   * Record a correct answer. Every 2nd correct grants one random charge
+   * from `pool` (enabled power-ups). Returns the granted id, or null.
+   */
+  public registerCorrectAnswer(
+    teamId: string,
+    pool: readonly NinjaPowerupId[]
+  ): NinjaPowerupId | null {
+    const team = this.teams.get(teamId)
+    if (!team) return null
+    team.correctAnswers += 1
+    if (team.correctAnswers % 2 !== 0) return null
+    if (!pool.length) return null
+    const pick = pool[Math.floor(this.rng() * pool.length)]!
+    team.charges[pick] = (team.charges[pick] ?? 0) + 1
+    return pick
   }
 
   /**

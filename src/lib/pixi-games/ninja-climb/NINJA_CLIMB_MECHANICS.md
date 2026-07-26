@@ -8,9 +8,11 @@ Two teams alternate answering multiple-choice questions. Correct answers award c
 
 ### Summit
 
-`SUMMIT_POINTS = max(400, questionsPerTeam * 80)`
+`SUMMIT_POINTS = max(560, uniqueQuestions * 80)`
 
 `totalSteps = ceil(SUMMIT_POINTS / POINTS_PER_STEP)`
+
+The 560 floor keeps climbs long enough for rope/teleport fights to matter.
 
 ### Correct answer (always includes a time bonus)
 
@@ -29,7 +31,9 @@ For any positive point gain:
 
 Teleport and ladder gains use the same barrier clamp.
 
-## Power-ups (one charge each at start)
+## Power-ups
+
+**Start with zero charges.** Every **2 correct answers** for a team grants **one random** enabled power-up (teleport / rope / smoke).
 
 | Id | Name | Effect |
 |----|------|--------|
@@ -41,14 +45,22 @@ Playable on your turn before answering (`Z` / `X` / `C` or per-team tray buttons
 
 ## Shortcuts
 
-Only **two** well-spaced nodes (≈40% and ≈75% of the trail) so you cannot chain gates to the summit.
+Only **two** well-spaced nodes (≈40% and ≈75%). **High risk** — snake is more likely than ladder.
 
 | Kind | Forward | Back |
 |------|---------|------|
-| Forest | 60% → +60 | 40% → −40 |
-| Cave | 45% → +80 | 55% → −50 |
+| Forest | 35% → +60 | 65% → −50 |
+| Cave | 30% → +80 | 70% → −70 |
 
-Prompt shows a small pie chart (green = forward, red = back), “Take a chance?”, and green ✓ / red ✕ circles (8s auto-skip). Each node once per team.
+Prompt shows a pie chart (green = forward, red = back), “Take a chance?”, and green ✓ / red ✕ circles (8s auto-skip). Each node once per team.
+
+## Questions
+
+When the quiz pool is short relative to summit height, questions **recycle in coverage cycles**:
+
+1. Each unique question is answered by **each team** once per cycle (turn order A→B→A→B maps to Q,Q, nextQ, nextQ, …).
+2. Within a cycle, the same team never sees the same question twice.
+3. Extra cycles are scheduled so there are enough turns for a typical climb to 560+.
 
 ## Trail & occupancy
 
@@ -68,10 +80,10 @@ Fit-zoom on both climbers: midpoint in the play window (between sky band and bot
 
 ## Turn model
 
-Same as Team Quiz: after each answer/timeout, rotate `activeTeamIndex`, show turn banner, next question.
+After each answer/timeout, rotate `activeTeamIndex`, show turn banner, next question.
 
 ## Win
 
 - If the **first** team of a round reaches the summit, later teams still get **one more answer** (catch-up turn).
 - After that catch-up (or if the **last** team of the round summits), **highest score** wins.
-- Or question pool exhausted → highest score celebrates.
+- Or question schedule exhausted → highest score celebrates

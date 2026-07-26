@@ -4,7 +4,7 @@
 
 ## Overview
 
-Turn-based two-team mountain race. Quiz points convert to climb distance on a shared switchback trail. Each team starts with one charge of Shadow Teleport, Kunai Rope, and Smoke Bomb. Optional forest/cave shortcut nodes act like snakes and ladders.
+Turn-based two-team mountain race. Quiz points convert to climb distance on a shared switchback trail. Power-ups start empty and are earned every 2 correct answers. Optional forest/cave shortcut nodes are high-risk snakes-and-ladders.
 
 ## Architecture
 

@@ -29,11 +29,13 @@ import {
 import {
   NinjaClimbRaceManager,
   computeCorrectGain,
+  computeSummitPoints,
 } from './managers/NinjaClimbRaceManager'
 import {
   DEFAULT_NINJA_POWERUPS,
   NinjaPowerupsConfig,
   NinjaPowerupId,
+  NINJA_POWERUP_DEFINITIONS,
   getEnabledNinjaPowerupIds,
 } from './ninjaPowerups'
 import { RopeProjectile } from '@/lib/pixi-engine/fx/RopeProjectile'
@@ -115,17 +117,16 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
     await Promise.all([engineAssetsPromise, this.dataManager.loadData()])
     await ensureFontIsLoaded('Grandstander')
 
+    // Summit from unique pool size (not expanded schedule length). Start with no charges.
+    const uniqueQuestions = Math.max(1, this.dataManager.getTotalLoadedQuestions())
+    const questionsPerTeam = uniqueQuestions
+    const previewSummit = computeSummitPoints(questionsPerTeam)
+    this.dataManager.setSummitPointsForSchedule(previewSummit)
     this.dataManager.initializeSequencer(this.config.teams.length)
-    const totalQuestions = this.dataManager.getTotalQuestionsToAsk()
-    const questionsPerTeam = Math.max(
-      1,
-      Math.floor(totalQuestions / Math.max(1, this.config.teams.length))
-    )
 
-    const startingCharges = getEnabledNinjaPowerupIds(this.ninjaPowerupsConfig)
     this.raceManager = new NinjaClimbRaceManager({
       teamIds: this.config.teams.map((t) => String(t.id)),
-      startingCharges,
+      startingCharges: [],
       questionsPerTeam,
       shortcutsEnabled: this.ninjaPowerupsConfig.shortcuts,
     })
@@ -192,6 +193,7 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
     this._pulseNextLedges()
 
     const firstTeam = this.config.teams[0]
+    const totalQuestions = this.dataManager.getTotalQuestionsToAsk()
     await this.showTransition({
       type: 'turn',
       message: `${firstTeam?.name ?? 'Team 1'} Climbs!`,
@@ -575,6 +577,19 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
 
       this.uiManager.showAnswerFeedback(true, applied)
       await new Promise((r) => setTimeout(r, 900))
+
+      const granted = this.raceManager.registerCorrectAnswer(
+        teamId,
+        getEnabledNinjaPowerupIds(this.ninjaPowerupsConfig)
+      )
+      if (granted) {
+        const label =
+          NINJA_POWERUP_DEFINITIONS.find((d) => d.id === granted)?.label ?? granted
+        this.uiManager.showPowerupFeedback(`Power gained: ${label}!`)
+        this._syncPowerTrays(true)
+        await new Promise((r) => setTimeout(r, 900))
+      }
+
       await this._maybeHandleShortcut(teamId, previousScore)
     } else {
       this.uiManager.showAnswerFeedback(false, 0)
