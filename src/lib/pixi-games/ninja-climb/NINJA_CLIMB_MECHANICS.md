@@ -8,11 +8,11 @@ Two teams alternate answering multiple-choice questions. Correct answers award c
 
 ### Summit
 
-`SUMMIT_POINTS = max(560, uniqueQuestions * 80)`
+`SUMMIT_POINTS = max(480, uniqueQuestions * 80)`
 
 `totalSteps = ceil(SUMMIT_POINTS / POINTS_PER_STEP)`
 
-The 560 floor keeps climbs long enough for rope/teleport fights to matter.
+The 480 floor keeps climbs long enough for rope/teleport fights to matter.
 
 ### Correct answer (always includes a time bonus)
 
@@ -33,7 +33,7 @@ Teleport and ladder gains use the same barrier clamp.
 
 ## Power-ups
 
-**Start with zero charges.** Every **2 correct answers** for a team grants **one random** enabled power-up (teleport / rope / smoke).
+**Each team starts with one random** enabled power-up. Every **2 correct answers** grants **another** random enabled power-up.
 
 | Id | Name | Effect |
 |----|------|--------|
@@ -60,7 +60,7 @@ When the quiz pool is short relative to summit height, questions **recycle in co
 
 1. Each unique question is answered by **each team** once per cycle (turn order A→B→A→B maps to Q,Q, nextQ, nextQ, …).
 2. Within a cycle, the same team never sees the same question twice.
-3. Extra cycles are scheduled so there are enough turns for a typical climb to 560+.
+3. Extra cycles are scheduled so there are enough turns for a typical climb to 480+.
 
 ## Trail & occupancy
 

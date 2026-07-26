@@ -25,10 +25,10 @@ function makeRace(overrides?: {
 }
 
 describe('computeSummitPoints / computeCorrectGain', () => {
-  it('uses max(560, questions * 80)', () => {
-    expect(MIN_SUMMIT_POINTS).toBe(560)
-    expect(computeSummitPoints(1)).toBe(560)
-    expect(computeSummitPoints(6)).toBe(560)
+  it('uses max(480, questions * 80)', () => {
+    expect(MIN_SUMMIT_POINTS).toBe(480)
+    expect(computeSummitPoints(1)).toBe(480)
+    expect(computeSummitPoints(5)).toBe(480)
     expect(computeSummitPoints(8)).toBe(640)
   })
 
@@ -68,7 +68,7 @@ describe('computeSummitPoints / computeCorrectGain', () => {
 })
 
 describe('scoreToStepIndex', () => {
-  const summit = 560
+  const summit = 480
 
   it('maps score boundaries to steps', () => {
     expect(scoreToStepIndex(0, summit)).toBe(0)
@@ -84,27 +84,32 @@ describe('scoreToStepIndex', () => {
 
   it('matches race manager instance helper', () => {
     const race = makeRace({ questionsPerTeam: 5 })
-    expect(race.getSummitPoints()).toBe(560)
-    expect(race.scoreToStepIndex(120)).toBe(scoreToStepIndex(120, 560))
+    expect(race.getSummitPoints()).toBe(480)
+    expect(race.scoreToStepIndex(120)).toBe(scoreToStepIndex(120, 480))
   })
 })
 
 describe('power-up earning', () => {
-  it('starts with zero charges by default', () => {
+  it('starts with zero charges when none granted', () => {
     const race = makeRace()
     expect(race.canPlayPowerup('blue', 'teleport')).toBe(false)
     expect(race.canPlayPowerup('blue', 'rope')).toBe(false)
     expect(race.getCharges('blue')).toEqual({ teleport: 0, rope: 0, smoke: 0 })
   })
 
+  it('grantRandomCharge gives exactly one charge', () => {
+    const race = makeRace({ rng: () => 0 })
+    expect(race.grantRandomCharge('blue', ['teleport', 'rope', 'smoke'])).toBe(
+      'teleport'
+    )
+    expect(race.getCharges('blue').teleport).toBe(1)
+    expect(race.getCharges('blue').rope).toBe(0)
+  })
+
   it('grants a random power every 2 correct answers', () => {
-    let i = 0
     const pool = ['teleport', 'rope', 'smoke'] as const
     const race = makeRace({
-      rng: () => {
-        // Always pick index 0 from pool (teleport) when Math.floor(rng * 3)
-        return 0
-      },
+      rng: () => 0,
     })
     expect(race.registerCorrectAnswer('blue', pool)).toBeNull()
     expect(race.getTeamState('blue')?.correctAnswers).toBe(1)
@@ -113,7 +118,6 @@ describe('power-up earning', () => {
     expect(race.registerCorrectAnswer('blue', pool)).toBeNull()
     expect(race.registerCorrectAnswer('blue', pool)).toBe('teleport')
     expect(race.getCharges('blue').teleport).toBe(2)
-    void i
   })
 })
 
@@ -207,10 +211,10 @@ describe('NinjaClimbRaceManager shortcuts', () => {
     expect(race.findCrossedShortcut('blue', 100, 220)).toBeNull()
   })
 
-  it('detects summit at 560', () => {
+  it('detects summit at 480', () => {
     const race = makeRace({ questionsPerTeam: 5 })
-    expect(race.getSummitPoints()).toBe(560)
-    race.setScore('blue', 560)
+    expect(race.getSummitPoints()).toBe(480)
+    race.setScore('blue', 480)
     expect(race.hasReachedSummit('blue')).toBe(true)
   })
 })

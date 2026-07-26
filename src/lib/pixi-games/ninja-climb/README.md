@@ -4,7 +4,7 @@
 
 ## Overview
 
-Turn-based two-team mountain race. Quiz points convert to climb distance on a shared switchback trail. Power-ups start empty and are earned every 2 correct answers. Optional forest/cave shortcut nodes are high-risk snakes-and-ladders.
+Turn-based two-team mountain race. Quiz points convert to climb distance on a shared switchback trail. Each team starts with one random power-up and earns another every 2 correct answers. Optional forest/cave shortcut nodes are high-risk snakes-and-ladders.
 
 ## Architecture
 

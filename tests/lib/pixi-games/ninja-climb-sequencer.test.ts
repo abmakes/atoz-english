@@ -17,7 +17,7 @@ function q(id: string): QuestionData {
 
 describe('estimateTurnsForSummit', () => {
   it('sizes turns for summit climb', () => {
-    expect(estimateTurnsForSummit(560, 2, 50)).toBe(24) // 12 answers * 2 teams
+    expect(estimateTurnsForSummit(480, 2, 50)).toBe(20) // 10 answers * 2 teams
   })
 })
 

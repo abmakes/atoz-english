@@ -13,7 +13,7 @@ import {
  */
 export class NinjaClimbDataManager extends BaseQuizDataManager {
   private ninjaSequencer?: NinjaClimbQuestionSequencer
-  private summitPointsForSchedule = 560
+  private summitPointsForSchedule = 480
 
   constructor(
     quizId: string,

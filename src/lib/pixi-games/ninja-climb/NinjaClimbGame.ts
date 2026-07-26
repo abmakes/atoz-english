@@ -131,6 +131,12 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
       shortcutsEnabled: this.ninjaPowerupsConfig.shortcuts,
     })
 
+    // Each team starts with one random enabled power-up.
+    const powerPool = getEnabledNinjaPowerupIds(this.ninjaPowerupsConfig)
+    for (const team of this.config.teams) {
+      this.raceManager.grantRandomCharge(String(team.id), powerPool)
+    }
+
     const rules = this.config.rules?.rules ?? []
     this.boostedFeatures = rules.some(
       (r) =>

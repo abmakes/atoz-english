@@ -83,7 +83,7 @@ export const DEFAULT_SHORTCUT_NODES: Omit<ShortcutNodeDef, 'stepIndex'>[] = [
 ]
 
 /** Minimum summit height so back-and-forth power fights can play out. */
-export const MIN_SUMMIT_POINTS = 560
+export const MIN_SUMMIT_POINTS = 480
 
 export function computeSummitPoints(questionsPerTeam: number): number {
   return Math.max(MIN_SUMMIT_POINTS, Math.floor(questionsPerTeam) * 80)
@@ -253,6 +253,20 @@ export class NinjaClimbRaceManager {
   }
 
   /**
+   * Grant one random charge from `pool`. Returns the granted id, or null.
+   */
+  public grantRandomCharge(
+    teamId: string,
+    pool: readonly NinjaPowerupId[]
+  ): NinjaPowerupId | null {
+    const team = this.teams.get(teamId)
+    if (!team || pool.length === 0) return null
+    const pick = pool[Math.floor(this.rng() * pool.length)]!
+    team.charges[pick] = (team.charges[pick] ?? 0) + 1
+    return pick
+  }
+
+  /**
    * Record a correct answer. Every 2nd correct grants one random charge
    * from `pool` (enabled power-ups). Returns the granted id, or null.
    */
@@ -264,10 +278,7 @@ export class NinjaClimbRaceManager {
     if (!team) return null
     team.correctAnswers += 1
     if (team.correctAnswers % 2 !== 0) return null
-    if (!pool.length) return null
-    const pick = pool[Math.floor(this.rng() * pool.length)]!
-    team.charges[pick] = (team.charges[pick] ?? 0) + 1
-    return pick
+    return this.grantRandomCharge(teamId, pool)
   }
 
   /**
