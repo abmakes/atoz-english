@@ -957,10 +957,20 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
             const titleClassesWithResponsive = `${titleClasses} ${isActive ? 'block' : 'hidden sm:block'}`;
 
             return (
-              <div key={step.id} className={stepContainerClasses}>
+              <button
+                key={step.id}
+                type="button"
+                disabled={status === 'pending'}
+                onClick={() => {
+                  if (status === 'pending') return;
+                  setCreationStep(step.id as typeof creationStep);
+                }}
+                className={`${stepContainerClasses} border-0 bg-transparent text-left appearance-none ${status !== 'pending' ? 'cursor-pointer hover:opacity-95' : 'cursor-default'}`}
+                aria-current={isActive ? 'step' : undefined}
+              >
                 <span className={iconClasses}>{iconContent}</span>
                 <span className={titleClassesWithResponsive}>{step.title}</span>
-              </div>
+              </button>
             );
           })}
 
@@ -1116,30 +1126,97 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
             {/* MAIN CONTENT AREA - Methods for creating quiz content */}
             <div className="basis-3/4 flex flex-col gap-4 grandstander items-center text-[--text-color] h-full align-middle ">
               
-              {/* Content Method Selector */}
-              <div className="md:absolute md:-mt-6 flex w-full md:w-[540px] justify-between items-center grandstander gap-2 bg-[--primary-light] border border-[--border-dark] rounded-lg shadow-[4px_4px_0px_0px_var(--border-dark)]">
-                <Button variant='default' className={`w-32 pr-4 pl-1 text-[--text-color] ${contentView === 'create' ? 'bg-white' : 'hover:font-bold'}`} onClick={() => setContentView('create')}>
-                  <div className={`flex items-center p-1.5 mr-2 justify-center rounded-full ${contentView === 'create' ? 'bg-[--background] border-2 border-[--primary-accent]' : 'hover:bg-white'}`}>
-                    <Pencil size={16} />
-                  </div> Edit 
-                </Button>
-                <Button variant='default' className={`w-32 pr-4 pl-1 text-[--text-color] ${contentView === 'upload' ? 'bg-white' : 'hover:font-bold'}`} onClick={() => setContentView('upload')}>
-                  <div className={`flex items-center p-1.5 mr-2 justify-center rounded-full ${contentView === 'upload' ? 'bg-[--background] border-2 border-[--primary-accent]' : 'hover:bg-white'}`}>  
-                    <Upload size={16} />
-                  </div> Upload
-                </Button>
-                <Button variant='default' className={`w-40 pr-4 pl-1 text-[--text-color] ${contentView === 'ai-generation' ? 'bg-white' : 'hover:font-bold'}`} onClick={() => setContentView('ai-generation')}>
-                  <div className={`flex items-center p-1.5 mr-2 justify-center rounded-full ${contentView === 'ai-generation' ? 'bg-[--background] border-2 border-[--primary-accent]' : 'hover:bg-white'}`}>
-                    <Sparkles size={16} />
-                  </div> AI Generator
-                </Button>
+              {/* Content actions — Edit is the canvas; Upload / AI are tools */}
+              <div className="md:absolute md:-mt-6 flex w-full md:w-auto justify-center items-center grandstander gap-2">
+                <div className="flex items-center gap-1 rounded-full border border-[--border-dark] bg-[var(--surface-cloud)] p-1 shadow-[3px_3px_0px_0px_var(--border-dark)]">
+                  <Button
+                    variant="default"
+                    className={`rounded-full px-4 text-[--text-color] ${contentView === 'create' ? 'bg-white shadow-sm' : 'bg-transparent hover:bg-white/70'}`}
+                    onClick={() => setContentView('create')}
+                  >
+                    <Pencil size={16} className="mr-2" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="default"
+                    className={`rounded-full px-4 text-[--text-color] ${contentView === 'upload' ? 'bg-white shadow-sm' : 'bg-transparent hover:bg-white/70'}`}
+                    onClick={() => setContentView('upload')}
+                    title="Upload CSV"
+                  >
+                    <Upload size={16} className="mr-2" />
+                    Upload
+                  </Button>
+                  <Button
+                    variant="default"
+                    className={`rounded-full px-4 ${
+                      contentView === 'ai-generation'
+                        ? 'bg-[var(--accent-premium-muted)] text-[--text-color] shadow-[0_0_0_2px_var(--accent-premium)]'
+                        : 'bg-transparent text-[--text-color] hover:bg-[var(--accent-premium-muted)]'
+                    }`}
+                    onClick={() => setContentView('ai-generation')}
+                    title="AI Generator"
+                  >
+                    <Sparkles size={16} className="mr-2 text-[var(--accent-premium)]" />
+                    AI
+                  </Button>
+                </div>
               </div>
 
               {/* Content Creation Area */}
               <div className='w-full h-full max-w-screen-2xl border border-[--border-dark] bg-white shadow-[4px_4px_0px_0px_var(--border-dark)] rounded-lg'>
 
+                {/* Empty-state chooser — prefer actions over empty Edit canvas */}
+                {contentView === 'create' && questionsList.length === 0 && (
+                  <div className="flex flex-col items-center gap-6 bg-[var(--surface-cloud)] px-6 py-14 text-center">
+                    <div>
+                      <h2 className="text-2xl font-bold text-[--text-color]">How do you want to add questions?</h2>
+                      <p className="mt-2 text-sm text-slate-600">Pick one path — you can switch anytime from the toolbar.</p>
+                    </div>
+                    <div className="grid w-full max-w-3xl grid-cols-1 gap-4 md:grid-cols-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setContentView('create')
+                          // Seed first blank question via QuizForm by switching after parent adds one
+                          handleAddQuestions([{
+                            question: '',
+                            answers: ['', '', '', ''],
+                            correctAnswer: '',
+                            imageUrl: '/images/placeholder.webp',
+                            imageFile: null,
+                            type: quizSetupData.quizType,
+                          }])
+                        }}
+                        className="flex flex-col items-center gap-3 rounded-xl border-2 border-[--border-dark] bg-white p-6 text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] transition hover:scale-[1.02] hover:bg-white"
+                      >
+                        <Pencil className="h-8 w-8" />
+                        <span className="text-lg font-semibold">Write manually</span>
+                        <span className="text-sm font-normal text-slate-600">Build questions one by one</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setContentView('upload')}
+                        className="flex flex-col items-center gap-3 rounded-xl border-2 border-[--border-dark] bg-white p-6 text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] transition hover:scale-[1.02]"
+                      >
+                        <Upload className="h-8 w-8" />
+                        <span className="text-lg font-semibold">Upload CSV</span>
+                        <span className="text-sm font-normal text-slate-600">Import from a spreadsheet</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setContentView('ai-generation')}
+                        className="flex flex-col items-center gap-3 rounded-xl border-2 border-[var(--accent-premium)] bg-[var(--accent-premium-muted)] p-6 text-[--text-color] shadow-[4px_4px_0px_0px_var(--accent-premium-hover)] transition hover:scale-[1.02]"
+                      >
+                        <Sparkles className="h-8 w-8 text-[var(--accent-premium)]" />
+                        <span className="text-lg font-semibold">AI Generate</span>
+                        <span className="text-sm font-normal text-slate-600">Draft from lesson notes</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Manual Question Creation */}
-                {contentView === 'create' && (
+                {contentView === 'create' && questionsList.length > 0 && (
                   <QuizForm 
                     ref={quizFormRef}
                     quizId={quizId}

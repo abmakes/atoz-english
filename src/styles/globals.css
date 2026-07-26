@@ -138,6 +138,13 @@
     --secondary-accent-hover: #359886;
     --danger-color: #f68fff; /* Same as --chart-2, overrides --destructive */
     --danger-color-hover: #f268ff;
+    /* Atmosphere + premium micro-moments (site chrome — not in-game themes) */
+    --surface-cloud: #F5FBFF; /* soft sky wash for setup panels */
+    --surface-stone: #FAF8F5; /* warm paper for question canvases */
+    --accent-premium: #8B5CF6; /* violet — AI / signed-in sparkle only */
+    --accent-premium-hover: #7C3AED;
+    --accent-premium-muted: #EDE9FE;
+    --accent-premium-glow: rgba(139, 92, 246, 0.22);
     --input-bg: #ffffff; /* Potential override for --input */
     --input-border: #d1d5db; /* Potential override for --input or --border */
     --input-shadow: #a4a7ab;
@@ -145,7 +152,7 @@
     --input-text: var(--text-color);
     --button-text-light: #ffffff;
     --button-text-dark: var(--text-color);
-    --box-bg: #f9fafb;
+    --box-bg: var(--surface-stone);
     --box-border: #e5e7eb;
     --active-button-bg: var(--primary-accent);
     --active-button-text: var(--button-text-light);

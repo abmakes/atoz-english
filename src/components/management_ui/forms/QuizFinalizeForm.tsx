@@ -14,6 +14,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { QuizSetupData, Question, QuizSettingsData } from '@/components/management_ui/QuizEditor';
 import { useCustomToast } from '@/components/ui/CustomToast';
 import { Badge } from '@/components/ui/badge';
+import { getPixiThemeConfig } from '@/lib/themes';
 
 // Define a type for PowerUp for local use, can be expanded
 interface PowerUp {
@@ -95,27 +96,29 @@ export default function QuizFinalizeForm({
   };
   
   const currentPreviewQuestion = questionsList[currentPreviewQuestionIndex];
+  const themePixi = getPixiThemeConfig(currentTheme);
+  const themeSwatchColors = [
+    themePixi.primaryBg,
+    themePixi.secondaryBg,
+    themePixi.primaryAccent,
+    themePixi.panelBg,
+  ];
 
-  // Placeholder for theme color preview - this would need actual color values based on theme
-  const ThemeColorPreview = () => {
-    // Example: Hardcoded colors for demonstration
-    let colors: string[] = [];
-    if (currentTheme === 'forest') {
-      colors = ['bg-green-700', 'bg-green-500', 'bg-yellow-600', 'bg-lime-300'];
-    } else if (currentTheme === 'dark') {
-      colors = ['bg-gray-800', 'bg-gray-600', 'bg-purple-500', 'bg-teal-400'];
-    } else { // default
-      colors = ['bg-sky-500', 'bg-sky-300', 'bg-white', 'bg-slate-200'];
-    }
-    return (
-      <div className="flex w-full gap-2 p-1 items-center border border-[--border-light] rounded-md bg-slate-50 shadow-sm">
-        {colors.map((color, index) => (
-          <div key={index} className={`w-8 h-8 rounded-full ${color} border border-slate-300 shadow-inner`}></div>
-        ))}
-        <span className="text-sm text-gray-600 ml-2 capitalize">{currentTheme || 'Default'} Theme Colors</span>
-      </div>
-    );
-  };
+  const ThemeColorPreview = () => (
+    <div className="flex w-full items-center gap-2 rounded-md border border-slate-200 bg-[var(--surface-cloud)] p-1 shadow-sm">
+      {themeSwatchColors.map((color, index) => (
+        <div
+          key={`${color}-${index}`}
+          className="h-8 w-8 rounded-full border border-slate-300 shadow-inner"
+          style={{ backgroundColor: color }}
+          title={color}
+        />
+      ))}
+      <span className="ml-2 text-sm capitalize text-slate-600">
+        {currentTheme || 'default'} theme colors
+      </span>
+    </div>
+  );
 
 
   return (
@@ -209,28 +212,47 @@ export default function QuizFinalizeForm({
                             </DialogDescription>
                         </DialogHeader>
                         {currentPreviewQuestion && (
-                            <div className="my-4 p-4 rounded-lg" style={{ backgroundColor: currentTheme === 'dark' ? '#334155' : (currentTheme === 'forest' ? '#f0fff4' : '#e0f2fe')}}>
+                            <div
+                              className="my-4 rounded-lg p-4"
+                              style={{ backgroundColor: themePixi.panelBg }}
+                            >
                                 {currentPreviewQuestion.imageUrl && currentPreviewQuestion.imageUrl !== '/images/placeholder.webp' && (
-                                    <div className="relative w-full h-48 mb-4 rounded-md overflow-hidden border border-slate-300">
+                                    <div className="relative mb-4 h-48 w-full overflow-hidden rounded-md border border-slate-300">
                                         <Image src={currentPreviewQuestion.imageUrl} alt={currentPreviewQuestion.question} fill style={{objectFit: 'contain'}}/>
                                     </div>
                                 )}
-                                <p className={`font-semibold text-2xl text-center mb-4 ${currentTheme === 'dark' ? 'text-white' : 'text-[--text-color]'}`}>{currentPreviewQuestion.question}</p>
+                                <p
+                                  className="mb-4 text-center text-2xl font-semibold"
+                                  style={{ color: themePixi.questionTextColor }}
+                                >
+                                  {currentPreviewQuestion.question}
+                                </p>
                                 <div className="grid grid-cols-2 gap-3">
                                     {currentPreviewQuestion.answers.map((answer, index) => (
-                                        <p key={index} className={`p-3 rounded-md border-2 text-center text-lg ${
-                                            currentTheme === 'dark' ? 'bg-slate-700 text-slate-100 border-slate-600' : 
-                                            currentTheme === 'forest' ? 'bg-green-100 text-green-800 border-green-300' :
-                                            'bg-sky-100 text-sky-800 border-sky-300'
-                                        }`}>{answer}</p>
+                                        <p
+                                          key={index}
+                                          className="rounded-md border-2 p-3 text-center text-lg"
+                                          style={{
+                                            backgroundColor: themePixi.buttonFillColor,
+                                            color: themePixi.buttonTextColor,
+                                            borderColor: themePixi.buttonBorderColor || themePixi.inputBorder,
+                                          }}
+                                        >
+                                          {answer}
+                                        </p>
                                     ))}
-                                    {/* Fill remaining answer slots for consistent grid */}
                                     {Array(Math.max(0, 4 - currentPreviewQuestion.answers.length)).fill(null).map((_, index) => (
-                                        <p key={`placeholder-preview-${index}`} className={`p-3 rounded-md border-2 text-center text-lg ${
-                                            currentTheme === 'dark' ? 'bg-slate-800 text-slate-500 border-slate-700' :
-                                            currentTheme === 'forest' ? 'bg-green-50 text-green-400 border-green-200' :
-                                            'bg-sky-50 text-sky-400 border-sky-200'
-                                        }`}>Answer Placeholder</p>
+                                        <p
+                                          key={`placeholder-preview-${index}`}
+                                          className="rounded-md border-2 p-3 text-center text-lg opacity-50"
+                                          style={{
+                                            backgroundColor: themePixi.inputBg,
+                                            color: themePixi.textLight,
+                                            borderColor: themePixi.inputBorder,
+                                          }}
+                                        >
+                                          Answer Placeholder
+                                        </p>
                                     ))}
                                 </div>
                             </div>
@@ -355,10 +377,10 @@ export default function QuizFinalizeForm({
               key={pu.id}
               variant="outline"
               onClick={() => togglePowerUp(pu.id)}
-              className={`p-4 h-auto flex flex-col border items-center justify-center gap-2 text-center transition-all duration-200 ease-in-out transform hover:scale-105 rounded-lg
+              className={`flex h-auto flex-col items-center justify-center gap-2 rounded-lg border p-4 text-center transition-all duration-200 ease-in-out transform hover:scale-105
                           ${selectedPowerUps.includes(pu.id) 
-                              ? 'bg-violet-200 text-[--text-color] shadow-[2px_2px_0px_0px_var(--border-dark)]' 
-                              : 'bg-white text-[--text-color] border-[--border-dark] shadow-[2px_2px_0px_0px_var(--border-dark)]'
+                              ? 'border-[var(--primary-accent)] bg-[var(--surface-cloud)] text-[--text-color] shadow-[2px_2px_0px_0px_var(--border-dark)]' 
+                              : 'border-[--border-dark] bg-white text-[--text-color] shadow-[2px_2px_0px_0px_var(--border-dark)]'
                           }`}
             >
               <span className="text-3xl">{pu.icon}</span>
