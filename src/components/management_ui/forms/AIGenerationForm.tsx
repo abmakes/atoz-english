@@ -541,7 +541,7 @@ export default function AIGenerationForm({
 
         {/* Full-width quiz notes */}
         <div className="mb-2 space-y-2">
-          <Label htmlFor="teacherNotes" className="text-base font-bold">
+          <Label htmlFor="teacherNotes" className="text-sm font-semibold">
             Quiz notes
           </Label>
           <p className="text-sm text-slate-600">
@@ -576,35 +576,35 @@ export default function AIGenerationForm({
         )}
 
         {/* Quick question count — prominent for fast path */}
-        <div className="my-8 flex flex-wrap items-center justify-center gap-4 rounded-xl border-2 border-slate-200 bg-gray-50 px-6 py-5">
-          <p className="text-xl font-bold">Questions</p>
-          <div className="flex items-center gap-3 rounded-full border-2 border-[--border-dark] bg-white px-3 py-2 shadow-[3px_3px_0px_0px_var(--border-dark)]">
+        <div className="my-6 flex flex-wrap items-center justify-center gap-3 rounded-xl border-2 border-slate-200 bg-gray-50 px-4 py-3">
+          <p className="text-sm font-semibold">Questions</p>
+          <div className="flex items-center gap-2 rounded-full border-2 border-[--border-dark] bg-white px-2 py-1.5 shadow-[3px_3px_0px_0px_var(--border-dark)]">
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-11 w-11 rounded-full"
+              className="h-9 w-9 rounded-full"
               disabled={aiDisabled || numberOfQuestions <= 1}
               onClick={() =>
                 setNumberOfQuestions((current) => Math.max(1, current - 1))
               }
             >
-              <Minus className="h-5 w-5" />
+              <Minus className="h-4 w-4" />
             </Button>
-            <span className="min-w-10 text-center text-3xl font-bold tabular-nums">
+            <span className="min-w-8 text-center text-xl font-bold tabular-nums">
               {numberOfQuestions}
             </span>
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-11 w-11 rounded-full"
+              className="h-9 w-9 rounded-full"
               disabled={aiDisabled || numberOfQuestions >= 20}
               onClick={() =>
                 setNumberOfQuestions((current) => Math.min(20, current + 1))
               }
             >
-              <Plus className="h-5 w-5" />
+              <Plus className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -721,16 +721,16 @@ export default function AIGenerationForm({
             type="button"
             onClick={openConfirm}
             disabled={isGenerating || aiDisabled}
-            className="flex h-12 items-center gap-2 border border-[#1F6E91] bg-[--text-color] px-8 text-lg font-semibold text-white shadow-[4px_4px_0px_0px_#1F6E91] hover:scale-105 hover:bg-white hover:text-[--text-color]"
+            className="flex h-10 items-center gap-2 border border-[#1F6E91] bg-[--text-color] px-5 text-sm font-semibold text-white shadow-[3px_3px_0px_0px_#1F6E91] hover:bg-white hover:text-[--text-color]"
           >
             {isGenerating ? (
               <>
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Generating…
               </>
             ) : (
               <>
-                <Sparkles className="h-5 w-5" />
+                <Sparkles className="h-4 w-4" />
                 Generate {numberOfQuestions} question
                 {numberOfQuestions === 1 ? '' : 's'}
               </>

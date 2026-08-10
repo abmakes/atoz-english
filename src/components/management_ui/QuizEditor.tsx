@@ -1171,14 +1171,14 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
                 {/* CSV Upload for Questions */}
                 {contentView === 'upload' && (
                   <div className="flex w-full justify-">
-                    <Card className="flex flex-col text-2xl w-full h-full border-none font-bold p-6">
+                    <Card className="flex h-full w-full flex-col border-none p-6 text-base font-normal">
                       <UploadForm 
                         quizOverallType={quizSetupData.quizType}
                         onAddQuestions={handleAddQuestions}
                         className="bg-transparent shadow-none border-0"
                       />
-                      <div className="text-base font-normal p-4 flex-grow ">
-                        <h1 className="text-xl font-semibold mb-2">Even faster quiz creation</h1>
+                      <div className="flex-grow p-4 text-sm font-normal">
+                        <h1 className="mb-2 text-lg font-semibold">Even faster quiz creation</h1>
                         <p>Use our quiz template to make a quiz in Excel then simply upload the quiz.</p>
                         <p className='mb-2'>You can add images by going to the quiz list and editing the quiz.</p>
                         <DownloadButton />
