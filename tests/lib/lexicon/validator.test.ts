@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { resolveLexicon } from '@/lib/lexicon/resolver'
-import { auditLanguage, auditQuestions } from '@/lib/lexicon/validator'
+import {
+  auditLanguage,
+  auditQuestion,
+  auditQuestions,
+} from '@/lib/lexicon/validator'
 
 describe('language audit', () => {
   it('accepts cumulative words within the target level', () => {
@@ -9,6 +13,7 @@ describe('language audit', () => {
         {
           question: 'The dog is good',
           answers: ['good', 'bad', 'big', 'small'],
+          correctAnswer: 'good',
         },
       ],
       'A1'
@@ -53,6 +58,50 @@ describe('language audit', () => {
     const audit = auditLanguage(['A flibbertigibbet appears'], 'B1')
 
     expect(audit.valid).toBe(false)
-    expect(audit.issues.some((issue) => issue.word === 'flibbertigibbet')).toBe(true)
+    expect(audit.issues.some((issue) => issue.word === 'flibbertigibbet')).toBe(
+      true
+    )
+  })
+
+  it('ignores unknown words that appear only in distractors', () => {
+    const audit = auditQuestion(
+      {
+        question: 'I eat an apple',
+        answers: ['eat', 'flibbertigibbet', 'run', 'puting'],
+        correctAnswer: 'eat',
+      },
+      'A1'
+    )
+
+    expect(audit.valid).toBe(true)
+    expect(audit.issues).toEqual([])
+  })
+
+  it('still flags unknown words in the stem or correct answer', () => {
+    const stemAudit = auditQuestion(
+      {
+        question: 'A flibbertigibbet appears',
+        answers: ['yes', 'no', 'maybe', 'ok'],
+        correctAnswer: 'yes',
+      },
+      'B1'
+    )
+    expect(stemAudit.valid).toBe(false)
+    expect(
+      stemAudit.issues.some((issue) => issue.word === 'flibbertigibbet')
+    ).toBe(true)
+
+    const correctAudit = auditQuestion(
+      {
+        question: 'Choose the word',
+        answers: ['cat', 'flibbertigibbet', 'dog', 'bird'],
+        correctAnswer: 'flibbertigibbet',
+      },
+      'B1'
+    )
+    expect(correctAudit.valid).toBe(false)
+    expect(
+      correctAudit.issues.some((issue) => issue.word === 'flibbertigibbet')
+    ).toBe(true)
   })
 })

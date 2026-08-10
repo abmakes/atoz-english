@@ -1003,70 +1003,79 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
               </div>
             )}
 
-            <div className="flex flex-col lg:flex-row flex-grow gap-4">
+            <div className="flex flex-col lg:flex-row flex-grow gap-6 lg:gap-4">
             {/* SIDEBAR - Quiz Information and Navigation */}
-            <div className={`basis-1/4 flex flex-col h-full min-h-[420px] gap-2 grandstander text-[--text-color] bg-white p-4 items-center align-middle border rounded-lg border-[--border-dark] shadow-[4px_4px_0px_0px_var(--border-dark)]`}>
-              <div className='flex flex-row lg:flex-col gap-2 w-full'>
-                {/* Quiz Title */}
-                <div className='flex flex-col w-full justify-center lg:items-center gap-0 '>
-                  <h2 className='text-2xl w-full text-center font-bold px-4'>{quizSetupData.title || "Quiz Title"}</h2>
-                  
-                  {/* Cover Image */}
-                  {quizSetupData.coverImageUrl && (
-                    <Image 
-                      src={quizSetupData.coverImageFile ? URL.createObjectURL(quizSetupData.coverImageFile) : quizSetupData.coverImageUrl} 
-                      alt={quizSetupData.title || "Quiz cover image"} 
-                      width={300} 
-                      height={200} 
-                      className='rounded-lg hidden lg:block lg:w-full h-auto my-2 object-cover aspect-[16/9]'
-                    />
-                  )}
-                {/* Description */}
-                <span className='text-center'>{quizSetupData.quizType.replace(/_/g, ' ')} QUIZ </span>
-                <p className='text-center text-sm py-0'>{quizSetupData.description || "No description yet."}</p>
-                </div>
-                <div className='flex flex-col w-full justify-center lg:items-center px-6 items-end gap-2 '>
-
-                
-                {/* Tags */}
-                  <div className='flex gap-2 justify-center'>
-                    {quizSetupData.tags.length > 0 && (
-                      <div className='text-center'>
-                        <div className="flex flex-wrap justify-center gap-2">
-                          {quizSetupData.tags.map((tag, index) => (
-                            <Badge key={index} variant="outline" className="text-sm bg-white text-[--text-color] border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]">{tag}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {quizSetupData.tags.length === 0 && (
-                      <div className='text-center'><Badge variant="outline" className="text-xs font-medium bg-white text-[--text-color] border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]">No tags yet</Badge></div>
-                    )}
-                  </div>
-                  
-                  {/* Question Count */}
-                  <h3 className='text-center text-lg font-bold py-2'>Questions: {questionsList.length}</h3>
-                </div>
+            <div className="basis-1/4 mb-4 flex h-full min-h-0 flex-col gap-4 grandstander border border-[--border-dark] bg-white p-5 text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] rounded-lg lg:mb-0">
+              <div className="flex w-full items-start justify-between gap-3">
+                <h2 className="min-w-0 flex-1 text-left text-xl font-bold leading-tight">
+                  {quizSetupData.title || 'Quiz Title'}
+                </h2>
+                <p className="shrink-0 pt-0.5 text-sm font-bold text-slate-700">
+                  Questions: {questionsList.length}
+                </p>
               </div>
 
-              
-              {/* Navigation Buttons */}
-              <div className='flex flex-row lg:flex-col gap-4 w-full justify-center'> 
-                <Button variant='outline' 
-                  className="flex w-full lg:w-auto items-center h-full text-lg font-semibold border border-[--border-dark] gap-2 bg-[--background] text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] hover:bg-teal-50 hover:border-[--border-dark] hover:shadow-[4px_6px_0px_0px_var(--border-dark)] hover:scale-105 transition-all duration-300"
-                  onClick={() => setCreationStep('setup')}>
-                     <ArrowLeft className="-mt-0.5" size={20} /> Edit Quiz Info
+              {quizSetupData.coverImageUrl && (
+                <Image
+                  src={
+                    quizSetupData.coverImageFile
+                      ? URL.createObjectURL(quizSetupData.coverImageFile)
+                      : quizSetupData.coverImageUrl
+                  }
+                  alt={quizSetupData.title || 'Quiz cover image'}
+                  width={300}
+                  height={200}
+                  className="hidden h-auto w-full rounded-lg object-cover aspect-[16/9] lg:block"
+                />
+              )}
+
+              <p className="text-left text-sm text-slate-700">
+                {quizSetupData.description || 'No description yet.'}
+              </p>
+
+              <div className="flex w-full flex-wrap justify-start gap-2">
+                {quizSetupData.tags.length > 0 ? (
+                  quizSetupData.tags.map((tag, index) => (
+                    <Badge
+                      key={index}
+                      variant="outline"
+                      className="text-sm bg-white text-[--text-color] border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]"
+                    >
+                      {tag}
+                    </Badge>
+                  ))
+                ) : (
+                  <Badge
+                    variant="outline"
+                    className="text-xs font-medium bg-white text-[--text-color] border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]"
+                  >
+                    No tags yet
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-start gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 w-auto items-center gap-1.5 border border-[--border-dark] bg-[--background] px-3 text-sm font-semibold text-[--text-color] shadow-[3px_3px_0px_0px_var(--border-dark)] hover:bg-teal-50 hover:border-[--border-dark]"
+                  onClick={() => setCreationStep('setup')}
+                >
+                  <ArrowLeft className="-mt-0.5" size={16} /> Edit Quiz Info
                 </Button>
-                <Button variant='outline' 
-                  className="flex w-full lg:w-auto items-center h-full text-lg font-semibold border border-[#1F6E91] gap-2 bg-[--text-color] text-white shadow-[4px_4px_0px_0px_var(--border-dark)] hover:bg-white hover:border-[#1F6E91] hover:shadow-[4px_6px_0px_0px_var(--border-dark)] hover:scale-105 transition-all duration-300"
-                  onClick={handleGoToPublishStep}>
-                    {mode === 'create' ? 'Review & Continue' : 'Update Quiz'} <ArrowRight className="-mt-0.5" size={20} /> 
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 w-auto items-center gap-1.5 border border-[#1F6E91] bg-[--text-color] px-3 text-sm font-semibold text-white shadow-[3px_3px_0px_0px_var(--border-dark)] hover:bg-white hover:text-[--text-color] hover:border-[#1F6E91]"
+                  onClick={handleGoToPublishStep}
+                >
+                  {mode === 'create' ? 'Review & Continue' : 'Update Quiz'}{' '}
+                  <ArrowRight className="-mt-0.5" size={16} />
                 </Button>
               </div>
 
-              {/* Draft controls — use leftover sidebar height without cluttering the main editor */}
-              <div className="mt-auto w-full pt-4 border-t border-slate-200 space-y-2">
-                <p className="text-xs text-center text-slate-500 inclusive-sans px-1">
+              <div className="mt-auto w-full space-y-2 border-t border-slate-200 pt-4">
+                <p className="inclusive-sans px-1 text-left text-xs text-slate-500">
                   {draftSavedAt
                     ? `Last saved ${new Date(draftSavedAt).toLocaleString([], {
                         month: 'short',
@@ -1076,67 +1085,74 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
                       })}`
                     : 'Edits autosave on this device'}
                 </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full grandstander border-2 border-[#1E5167] text-[#114257]"
-                  onClick={() => persistDraft('manual')}
-                >
-                  Save draft
-                </Button>
-                {draftSavedAt ? (
+                <div className="flex flex-wrap items-center gap-2">
                   <Button
                     type="button"
-                    variant="ghost"
-                    className="w-full grandstander text-red-600"
-                    onClick={() => {
-                      clearWorkingDraft(mode, quizId)
-                      if (resumeDraftId) deleteQuizDraft(resumeDraftId)
-                      setDraftSavedAt(null)
-                      setQuizSetupData({
-                        title: '',
-                        description: '',
-                        coverImageUrl: '/images/placeholder.webp',
-                        coverImageFile: null,
-                        quizType: QuestionType.MULTIPLE_CHOICE,
-                        tags: [],
-                      })
-                      setQuestionsList([])
-                      setQuizSettings({ theme: 'default', powerUps: [] })
-                      setCreationStep('setup')
-                      addToast('Draft discarded.', { variant: 'info', position: 'top-center' })
-                    }}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-auto grandstander border-2 border-[#1E5167] px-3 text-[#114257]"
+                    onClick={() => persistDraft('manual')}
                   >
-                    Discard draft
+                    Save draft
                   </Button>
-                ) : null}
+                  {draftSavedAt ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-auto grandstander px-2 text-red-600"
+                      onClick={() => {
+                        clearWorkingDraft(mode, quizId)
+                        if (resumeDraftId) deleteQuizDraft(resumeDraftId)
+                        setDraftSavedAt(null)
+                        setQuizSetupData({
+                          title: '',
+                          description: '',
+                          coverImageUrl: '/images/placeholder.webp',
+                          coverImageFile: null,
+                          quizType: QuestionType.MULTIPLE_CHOICE,
+                          tags: [],
+                        })
+                        setQuestionsList([])
+                        setQuizSettings({ theme: 'default', powerUps: [] })
+                        setCreationStep('setup')
+                        addToast('Draft discarded.', {
+                          variant: 'info',
+                          position: 'top-center',
+                        })
+                      }}
+                    >
+                      Discard draft
+                    </Button>
+                  ) : null}
+                </div>
               </div>
             </div>
 
             {/* MAIN CONTENT AREA - Methods for creating quiz content */}
-            <div className="basis-3/4 flex flex-col gap-4 grandstander items-center text-[--text-color] h-full align-middle ">
+            <div className="relative basis-3/4 mt-2 flex h-full flex-col items-center gap-4 align-middle grandstander text-[--text-color] md:mt-8 lg:mt-0">
               
-              {/* Content Method Selector */}
-              <div className="md:absolute md:-mt-6 flex w-full md:w-[540px] justify-between items-center grandstander gap-2 bg-[--primary-light] border border-[--border-dark] rounded-lg shadow-[4px_4px_0px_0px_var(--border-dark)]">
-                <Button variant='default' className={`w-32 pr-4 pl-1 text-[--text-color] ${contentView === 'create' ? 'bg-white' : 'hover:font-bold'}`} onClick={() => setContentView('create')}>
+              {/* Content Method Selector — in-flow on narrow screens; floats above panel on md+ */}
+              <div className="relative z-10 flex w-full flex-wrap justify-center gap-1 rounded-lg border border-[--border-dark] bg-[--primary-light] shadow-[4px_4px_0px_0px_var(--border-dark)] md:absolute md:-mt-6 md:w-[540px] md:flex-nowrap md:justify-between md:gap-2">
+                <Button variant='default' className={`w-auto min-w-0 flex-1 md:w-32 md:flex-none pr-3 pl-1 text-[--text-color] ${contentView === 'create' ? 'bg-white' : 'hover:font-bold'}`} onClick={() => setContentView('create')}>
                   <div className={`flex items-center p-1.5 mr-2 justify-center rounded-full ${contentView === 'create' ? 'bg-[--background] border-2 border-[--primary-accent]' : 'hover:bg-white'}`}>
                     <Pencil size={16} />
                   </div> Edit 
                 </Button>
-                <Button variant='default' className={`w-32 pr-4 pl-1 text-[--text-color] ${contentView === 'upload' ? 'bg-white' : 'hover:font-bold'}`} onClick={() => setContentView('upload')}>
+                <Button variant='default' className={`w-auto min-w-0 flex-1 md:w-32 md:flex-none pr-3 pl-1 text-[--text-color] ${contentView === 'upload' ? 'bg-white' : 'hover:font-bold'}`} onClick={() => setContentView('upload')}>
                   <div className={`flex items-center p-1.5 mr-2 justify-center rounded-full ${contentView === 'upload' ? 'bg-[--background] border-2 border-[--primary-accent]' : 'hover:bg-white'}`}>  
                     <Upload size={16} />
                   </div> Upload
                 </Button>
-                <Button variant='default' className={`w-40 pr-4 pl-1 text-[--text-color] ${contentView === 'ai-generation' ? 'bg-white' : 'hover:font-bold'}`} onClick={() => setContentView('ai-generation')}>
+                <Button variant='default' className={`w-auto min-w-0 flex-1 md:w-40 md:flex-none pr-3 pl-1 text-[--text-color] ${contentView === 'ai-generation' ? 'bg-white' : 'hover:font-bold'}`} onClick={() => setContentView('ai-generation')}>
                   <div className={`flex items-center p-1.5 mr-2 justify-center rounded-full ${contentView === 'ai-generation' ? 'bg-[--background] border-2 border-[--primary-accent]' : 'hover:bg-white'}`}>
                     <Sparkles size={16} />
                   </div> AI Generator
                 </Button>
               </div>
 
-              {/* Content Creation Area */}
-              <div className='w-full h-full max-w-screen-2xl border border-[--border-dark] bg-white shadow-[4px_4px_0px_0px_var(--border-dark)] rounded-lg'>
+              {/* Content Creation Area — extra top padding clears absolute submenu on md+ */}
+              <div className='w-full h-full max-w-screen-2xl border border-[--border-dark] bg-white shadow-[4px_4px_0px_0px_var(--border-dark)] rounded-lg pt-2 md:pt-8'>
 
                 {/* Manual Question Creation */}
                 {contentView === 'create' && (

@@ -434,7 +434,7 @@ export default function AIGenerationForm({
 
   if (reviewQuestions) {
     return (
-      <div className="flex flex-col gap-6 p-2 md:p-4">
+      <div className="flex flex-col gap-6 px-2 pb-4 pt-6 md:px-4 md:pt-8">
         <AIQuestionReviewPanel
           questions={reviewQuestions}
           onCancel={() => setReviewQuestions(null)}

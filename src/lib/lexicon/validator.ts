@@ -16,6 +16,12 @@ const ANSWER_MARKERS = new Set(['a', 'b', 'c', 'd']);
 export interface AuditableQuestion {
   question: string;
   answers: string[];
+  /** Only the stem + correct answer are audited; distractors are ignored. */
+  correctAnswer: string;
+}
+
+function textsForAudit(question: AuditableQuestion): string[] {
+  return [question.question, question.correctAnswer].filter(Boolean);
 }
 
 function tokenize(text: string): string[] {
@@ -93,7 +99,7 @@ export function auditQuestions(
   targetLevel: CefrLevelId
 ): LanguageAudit {
   return auditLanguage(
-    questions.flatMap((question) => [question.question, ...question.answers]),
+    questions.flatMap((question) => textsForAudit(question)),
     targetLevel
   );
 }
@@ -102,7 +108,7 @@ export function auditQuestion(
   question: AuditableQuestion,
   targetLevel: CefrLevelId
 ): LanguageAudit {
-  return auditLanguage([question.question, ...question.answers], targetLevel);
+  return auditLanguage(textsForAudit(question), targetLevel);
 }
 
 export function filterIgnoredIssues(
