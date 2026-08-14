@@ -8,6 +8,12 @@ import { useCustomToast } from '@/components/ui/CustomToast'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -454,289 +460,279 @@ export default function AIGenerationForm({
   }
 
   return (
-    <div className="grandstander flex flex-col gap-5 p-2 text-[--text-color] md:p-4">
-      <div className="rounded-lg border border-[--border-dark] bg-white p-4 shadow-[4px_4px_0px_0px_var(--border-dark)] md:p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-[--primary-accent]" />
-          <h2 className="text-xl font-bold">AI Question Generator</h2>
+    <div className="grandstander flex flex-col gap-5 p-4 text-[--text-color] md:p-6">
+      {aiDisabled && (
+        <Card className="border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+          AI generation is available for multiple-choice quizzes only. Change
+          the quiz type in setup, or add questions manually / via CSV.
+        </Card>
+      )}
+
+      {/* Prefill summary + textbook upload */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="space-y-3 lg:col-span-2">
+          <div>
+            <h3 className="text-lg font-bold leading-tight">
+              {quizTitle || 'Untitled quiz'}
+            </h3>
+            <p className="mt-1 text-sm text-slate-600">
+              {quizDescription || 'No description yet'}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <TagDrawer
+              allTags={ALL_TAG_CATEGORIES}
+              selectedTags={selectedTags}
+              onTagToggle={handleTagToggle}
+              onSelectedTagsChange={applyTags}
+              triggerElement={
+                <Button
+                  id="aiQuizTags"
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 shrink-0 border border-violet-400 bg-violet-50 px-3 text-sm font-semibold text-violet-700 hover:bg-violet-100"
+                >
+                  Edit tags
+                </Button>
+              }
+              title="Edit quiz tags"
+              description="These tags publish with the quiz and guide AI generation."
+            />
+            {selectedTags.length > 0 ? (
+              selectedTags.map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="secondary"
+                  className="h-8 cursor-pointer border-[--primary-accent] px-2 pt-1 text-sm text-[--text-color] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]"
+                  onClick={() => handleTagToggle(tag)}
+                >
+                  {tag}
+                  <span className="ml-2 text-xs font-bold hover:text-red-500">
+                    &times;
+                  </span>
+                </Badge>
+              ))
+            ) : (
+              <span className="text-sm text-gray-500">No tags yet</span>
+            )}
+          </div>
         </div>
+        <div className="lg:col-span-1">
+          <LessonPageCapture
+            compact
+            disabled={aiDisabled}
+            isAnalyzing={isAnalyzing}
+            onAnalyze={analyzeLessonImage}
+          />
+        </div>
+      </div>
 
-        {aiDisabled && (
-          <Card className="mb-4 border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
-            AI generation is available for multiple-choice quizzes only. Change
-            the quiz type in setup, or add questions manually / via CSV.
-          </Card>
-        )}
+      {/* Quiz notes */}
+      <div className="space-y-2">
+        <Label htmlFor="teacherNotes" className="text-sm font-semibold">
+          Quiz notes
+        </Label>
+        <Textarea
+          id="teacherNotes"
+          rows={3}
+          value={teacherNotes}
+          onChange={(event) => setTeacherNotes(event.target.value)}
+          placeholder={NOTES_PLACEHOLDER}
+          disabled={aiDisabled}
+          className="min-h-[5.5rem] rounded-md border-2 border-slate-200 bg-white px-4 py-3 text-[--text-color] placeholder:text-slate-400"
+        />
+      </div>
 
-        {/* Prefill summary + textbook upload */}
-        <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="space-y-3 rounded-lg bg-gray-50 p-4 lg:col-span-2">
-            <div>
-              <p className="mb-1 text-sm font-bold">Quiz</p>
-              <p className="text-base">{quizTitle || 'Untitled quiz'}</p>
-            </div>
-            <div>
-              <p className="mb-1 text-sm font-bold">Description</p>
-              <p className="text-sm text-slate-700">
-                {quizDescription || 'No description yet'}
-              </p>
-            </div>
-            <div>
-              <p className="mb-2 text-sm font-bold">Tags</p>
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                <TagDrawer
-                  allTags={ALL_TAG_CATEGORIES}
-                  selectedTags={selectedTags}
-                  onTagToggle={handleTagToggle}
-                  onSelectedTagsChange={applyTags}
-                  triggerElement={
-                    <div className="flex h-10 w-full cursor-pointer items-center rounded-full border border-violet-400 transition-colors hover:bg-violet-50 sm:w-72">
-                      <span className="flex h-full w-32 items-center rounded-full bg-violet-100 px-4 pb-1 pt-2 text-base font-semibold text-violet-700 hover:bg-violet-200">
-                        Quiz Tags
-                      </span>
-                      <Button
-                        id="aiQuizTags"
-                        type="button"
-                        variant="outline"
-                        className="h-full flex-1 border-none pb-1 pt-2 text-base text-[--text-color]"
-                      >
-                        Select Tags
-                      </Button>
-                    </div>
-                  }
-                  title="Edit quiz tags"
-                  description="These tags publish with the quiz and guide AI generation."
-                />
-                <div className="flex flex-wrap items-center gap-2">
-                  {selectedTags.length > 0 ? (
-                    selectedTags.map((tag) => (
+      {(lessonSummary || keyVocabulary.length > 0 || sentencePatterns.length > 0) && (
+        <div className="space-y-2 rounded-lg border bg-slate-50 p-3">
+          <Label className="text-sm font-semibold">Lesson analysis</Label>
+          <Textarea
+            rows={2}
+            value={lessonSummary}
+            onChange={(event) => setLessonSummary(event.target.value)}
+            className="rounded-md bg-white"
+          />
+          {keyVocabulary.length > 0 && (
+            <p className="text-xs text-gray-600">
+              Vocabulary: {keyVocabulary.join(', ')}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Quick question count */}
+      <div className="flex flex-wrap items-center justify-center gap-3 rounded-xl border-2 border-slate-200 bg-gray-50 px-4 py-3">
+        <p className="text-sm font-semibold">Questions</p>
+        <div className="flex items-center gap-2 rounded-full border-2 border-[--border-dark] bg-white px-2 py-1.5 shadow-[3px_3px_0px_0px_var(--border-dark)]">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full"
+            disabled={aiDisabled || numberOfQuestions <= 1}
+            onClick={() =>
+              setNumberOfQuestions((current) => Math.max(1, current - 1))
+            }
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
+          <span className="min-w-8 text-center text-xl font-bold tabular-nums">
+            {numberOfQuestions}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full"
+            disabled={aiDisabled || numberOfQuestions >= 20}
+            onClick={() =>
+              setNumberOfQuestions((current) => Math.min(20, current + 1))
+            }
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Level stays visible — required */}
+      {levelMissing ? (
+        <div className="space-y-2 rounded-xl border border-[--primary-accent] bg-white p-4">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-sm font-semibold">Level</p>
+            <p className="text-xs text-gray-500">Required — choose one</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {CEFR_LEVELS.map((level) => (
+              <Badge
+                key={level.id}
+                variant="outline"
+                className={pillClass(false)}
+                onClick={() => !aiDisabled && handleLevelSelect(level.id)}
+              >
+                {level.label}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold">Level</p>
+          {CEFR_LEVELS.map((level) => (
+            <Badge
+              key={level.id}
+              variant={selectedLevel === level.id ? 'default' : 'outline'}
+              className={pillClass(selectedLevel === level.id)}
+              onClick={() => !aiDisabled && handleLevelSelect(level.id)}
+            >
+              {level.label}
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      {/* Optional fine-tune — collapsed until opened */}
+      <Accordion type="single" collapsible className="border-none">
+        <AccordionItem value="fine-tune" className="border-none">
+          <AccordionTrigger className="rounded-lg border-2 border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold hover:no-underline">
+            Fine-tune questions
+          </AccordionTrigger>
+          <AccordionContent className="pt-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="rounded-xl border border-[--primary-accent] bg-white p-4">
+                <p className="mb-3 text-sm font-semibold">Sentence form</p>
+                <div className="flex flex-wrap gap-2">
+                  {SENTENCE_FORM_OPTIONS.map((form) => {
+                    const selected = sentenceForms.includes(form)
+                    return (
                       <Badge
-                        key={tag}
-                        variant="secondary"
-                        className="h-8 cursor-pointer border-[--primary-accent] px-2 pt-1 text-sm text-[--text-color] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]"
-                        onClick={() => handleTagToggle(tag)}
+                        key={form}
+                        variant={selected ? 'default' : 'outline'}
+                        className={pillClass(selected)}
+                        onClick={() =>
+                          !aiDisabled &&
+                          setSentenceForms((current) =>
+                            toggleValue(current, form)
+                          )
+                        }
                       >
-                        {tag}
-                        <span className="ml-2 text-xs font-bold hover:text-red-500">
-                          &times;
-                        </span>
+                        {form}
                       </Badge>
-                    ))
-                  ) : (
-                    <p className="text-sm text-gray-500">No tags selected yet.</p>
-                  )}
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-[--primary-accent] bg-white p-4">
+                <p className="mb-3 text-sm font-semibold">Question style</p>
+                <div className="flex flex-wrap gap-2">
+                  {QUESTION_STYLE_OPTIONS.map((style) => {
+                    const selected = questionStyles.includes(style)
+                    return (
+                      <Badge
+                        key={style}
+                        variant={selected ? 'default' : 'outline'}
+                        className={pillClass(selected)}
+                        onClick={() =>
+                          !aiDisabled &&
+                          setQuestionStyles((current) =>
+                            toggleValue(current, style)
+                          )
+                        }
+                      >
+                        {style}
+                      </Badge>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-[--primary-accent] bg-white p-4">
+                <p className="mb-3 text-sm font-semibold">Vocabulary focus</p>
+                <div className="flex flex-wrap gap-2">
+                  {VOCABULARY_FOCUS_OPTIONS.map((option) => {
+                    const selected = vocabularyFocus === option
+                    return (
+                      <Badge
+                        key={option}
+                        variant={selected ? 'default' : 'outline'}
+                        className={pillClass(selected)}
+                        onClick={() =>
+                          !aiDisabled && setVocabularyFocus(option)
+                        }
+                      >
+                        {option}
+                      </Badge>
+                    )
+                  })}
                 </div>
               </div>
             </div>
-          </div>
-          <div className="lg:col-span-1">
-            <LessonPageCapture
-              compact
-              disabled={aiDisabled}
-              isAnalyzing={isAnalyzing}
-              onAnalyze={analyzeLessonImage}
-            />
-          </div>
-        </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
-        {/* Full-width quiz notes */}
-        <div className="mb-2 space-y-2">
-          <Label htmlFor="teacherNotes" className="text-sm font-semibold">
-            Quiz notes
-          </Label>
-          <p className="text-sm text-slate-600">
-            Expand on your description to help generate accurate questions.
-          </p>
-          <Textarea
-            id="teacherNotes"
-            rows={3}
-            value={teacherNotes}
-            onChange={(event) => setTeacherNotes(event.target.value)}
-            placeholder={NOTES_PLACEHOLDER}
-            disabled={aiDisabled}
-            className="min-h-[5.5rem] border-2 border-slate-200 bg-white px-4 py-3 text-[--text-color] placeholder:text-slate-400"
-          />
-        </div>
-
-        {(lessonSummary || keyVocabulary.length > 0 || sentencePatterns.length > 0) && (
-          <div className="mb-5 mt-4 space-y-2 rounded-lg border bg-slate-50 p-3">
-            <Label className="font-bold">Lesson analysis</Label>
-            <Textarea
-              rows={2}
-              value={lessonSummary}
-              onChange={(event) => setLessonSummary(event.target.value)}
-              className="bg-white"
-            />
-            {keyVocabulary.length > 0 && (
-              <p className="text-xs text-gray-600">
-                Vocabulary: {keyVocabulary.join(', ')}
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Quick question count — prominent for fast path */}
-        <div className="my-6 flex flex-wrap items-center justify-center gap-3 rounded-xl border-2 border-slate-200 bg-gray-50 px-4 py-3">
-          <p className="text-sm font-semibold">Questions</p>
-          <div className="flex items-center gap-2 rounded-full border-2 border-[--border-dark] bg-white px-2 py-1.5 shadow-[3px_3px_0px_0px_var(--border-dark)]">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-full"
-              disabled={aiDisabled || numberOfQuestions <= 1}
-              onClick={() =>
-                setNumberOfQuestions((current) => Math.max(1, current - 1))
-              }
-            >
-              <Minus className="h-4 w-4" />
-            </Button>
-            <span className="min-w-8 text-center text-xl font-bold tabular-nums">
-              {numberOfQuestions}
-            </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-full"
-              disabled={aiDisabled || numberOfQuestions >= 20}
-              onClick={() =>
-                setNumberOfQuestions((current) => Math.min(20, current + 1))
-              }
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Optional fine-tune controls */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-bold">Fine-tune questions</h3>
-
-          {levelMissing && (
-            <div className="space-y-2 rounded-xl border border-[--primary-accent] bg-white p-4">
-              <div className="flex items-baseline justify-between gap-2">
-                <p className="font-bold">Level</p>
-                <p className="text-xs text-gray-500">Required — choose one</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {CEFR_LEVELS.map((level) => (
-                  <Badge
-                    key={level.id}
-                    variant="outline"
-                    className={pillClass(false)}
-                    onClick={() => !aiDisabled && handleLevelSelect(level.id)}
-                  >
-                    {level.label}
-                  </Badge>
-                ))}
-              </div>
-            </div>
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          onClick={openConfirm}
+          disabled={isGenerating || aiDisabled}
+          className="flex h-10 items-center gap-2 border border-[#1F6E91] bg-[--text-color] px-5 text-sm font-semibold text-white shadow-[3px_3px_0px_0px_#1F6E91] hover:bg-white hover:text-[--text-color]"
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Generating…
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4" />
+              Generate {numberOfQuestions} question
+              {numberOfQuestions === 1 ? '' : 's'}
+            </>
           )}
-
-          {!levelMissing && (
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-sm font-bold">Level</p>
-              {CEFR_LEVELS.map((level) => (
-                <Badge
-                  key={level.id}
-                  variant={selectedLevel === level.id ? 'default' : 'outline'}
-                  className={pillClass(selectedLevel === level.id)}
-                  onClick={() => !aiDisabled && handleLevelSelect(level.id)}
-                >
-                  {level.label}
-                </Badge>
-              ))}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div className="rounded-xl border border-[--primary-accent] bg-white p-4">
-              <p className="mb-3 font-bold">Sentence form</p>
-              <div className="flex flex-wrap gap-2">
-                {SENTENCE_FORM_OPTIONS.map((form) => {
-                  const selected = sentenceForms.includes(form)
-                  return (
-                    <Badge
-                      key={form}
-                      variant={selected ? 'default' : 'outline'}
-                      className={pillClass(selected)}
-                      onClick={() =>
-                        !aiDisabled &&
-                        setSentenceForms((current) => toggleValue(current, form))
-                      }
-                    >
-                      {form}
-                    </Badge>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-[--primary-accent] bg-white p-4">
-              <p className="mb-3 font-bold">Question style</p>
-              <div className="flex flex-wrap gap-2">
-                {QUESTION_STYLE_OPTIONS.map((style) => {
-                  const selected = questionStyles.includes(style)
-                  return (
-                    <Badge
-                      key={style}
-                      variant={selected ? 'default' : 'outline'}
-                      className={pillClass(selected)}
-                      onClick={() =>
-                        !aiDisabled &&
-                        setQuestionStyles((current) => toggleValue(current, style))
-                      }
-                    >
-                      {style}
-                    </Badge>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-[--primary-accent] bg-white p-4">
-              <p className="mb-3 font-bold">Vocabulary focus</p>
-              <div className="flex flex-wrap gap-2">
-                {VOCABULARY_FOCUS_OPTIONS.map((option) => {
-                  const selected = vocabularyFocus === option
-                  return (
-                    <Badge
-                      key={option}
-                      variant={selected ? 'default' : 'outline'}
-                      className={pillClass(selected)}
-                      onClick={() => !aiDisabled && setVocabularyFocus(option)}
-                    >
-                      {option}
-                    </Badge>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 flex justify-end">
-          <Button
-            type="button"
-            onClick={openConfirm}
-            disabled={isGenerating || aiDisabled}
-            className="flex h-10 items-center gap-2 border border-[#1F6E91] bg-[--text-color] px-5 text-sm font-semibold text-white shadow-[3px_3px_0px_0px_#1F6E91] hover:bg-white hover:text-[--text-color]"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Generating…
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                Generate {numberOfQuestions} question
-                {numberOfQuestions === 1 ? '' : 's'}
-              </>
-            )}
-          </Button>
-        </div>
+        </Button>
       </div>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>

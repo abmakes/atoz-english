@@ -26,7 +26,9 @@ export default function LessonPageCapture({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [fileName, setFileName] = useState<string | null>(null)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [pasteArmed, setPasteArmed] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const zoneRef = useRef<HTMLDivElement>(null)
   const { addToast } = useCustomToast()
 
   const clearImage = useCallback(() => {
@@ -36,6 +38,7 @@ export default function LessonPageCapture({
     })
     setFileName(null)
     setPendingFile(null)
+    setPasteArmed(false)
     if (inputRef.current) inputRef.current.value = ''
   }, [])
 
@@ -70,13 +73,15 @@ export default function LessonPageCapture({
       })
       setFileName(file.name || 'pasted-lesson.png')
       setPendingFile(file)
+      setPasteArmed(false)
     },
     [addToast]
   )
 
   useEffect(() => {
+    if (!pasteArmed || disabled || isAnalyzing) return
+
     const onPaste = (event: ClipboardEvent) => {
-      if (disabled || isAnalyzing) return
       const items = event.clipboardData?.items
       if (!items) return
       for (const item of items) {
@@ -86,10 +91,22 @@ export default function LessonPageCapture({
           return
         }
       }
+      addToast('No image found on the clipboard. Copy an image, then press Ctrl + V.', {
+        variant: 'warning',
+        position: 'top-center',
+      })
     }
+
     window.addEventListener('paste', onPaste)
     return () => window.removeEventListener('paste', onPaste)
-  }, [acceptFile, disabled, isAnalyzing])
+  }, [acceptFile, addToast, disabled, isAnalyzing, pasteArmed])
+
+  const armPaste = () => {
+    if (disabled || isAnalyzing || previewUrl) return
+    setPasteArmed(true)
+    // Focus so the zone feels active and keyboard paste is expected here.
+    requestAnimationFrame(() => zoneRef.current?.focus())
+  }
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault()
@@ -99,10 +116,30 @@ export default function LessonPageCapture({
 
   return (
     <div
+      ref={zoneRef}
+      tabIndex={disabled ? -1 : 0}
+      role="button"
+      aria-label="Paste or upload a textbook page"
       onDragOver={(event) => event.preventDefault()}
       onDrop={handleDrop}
-      className={`rounded-xl border-2 border-dashed border-violet-300 bg-violet-50/60 ${
-        compact ? 'flex h-full min-h-[10rem] flex-col p-3' : 'p-4'
+      onClick={armPaste}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          armPaste()
+        }
+      }}
+      onBlur={(event) => {
+        if (!zoneRef.current?.contains(event.relatedTarget as Node | null)) {
+          setPasteArmed(false)
+        }
+      }}
+      className={`rounded-xl border-2 border-dashed outline-none transition-colors ${
+        pasteArmed
+          ? 'border-violet-500 bg-violet-100/80 ring-2 ring-violet-300'
+          : 'border-violet-300 bg-violet-50/60 hover:border-violet-400'
+      } ${compact ? 'flex h-full min-h-[10rem] flex-col p-3' : 'p-4'} ${
+        disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
       }`}
     >
       <div className={`flex items-start gap-2 ${compact ? 'mb-2' : 'mb-3'}`}>
@@ -121,7 +158,10 @@ export default function LessonPageCapture({
       </div>
 
       {previewUrl ? (
-        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-white">
+        <div
+          className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-white"
+          onClick={(event) => event.stopPropagation()}
+        >
           <Image
             src={previewUrl}
             alt="Lesson page preview"
@@ -161,6 +201,36 @@ export default function LessonPageCapture({
             </div>
           </div>
         </div>
+      ) : pasteArmed ? (
+        <div
+          className={`flex flex-1 flex-col items-center justify-center gap-3 rounded-lg border-2 border-slate-200 bg-white text-center shadow-sm ${
+            compact ? 'min-h-[6.5rem] px-3 py-4' : 'min-h-[8rem] px-4 py-6'
+          }`}
+        >
+          <ClipboardPaste
+            className={`text-violet-600 ${compact ? 'h-7 w-7' : 'h-9 w-9'}`}
+          />
+          <p className="text-sm font-semibold text-[--text-color]">
+            Press Ctrl + V to paste an image
+          </p>
+          <p className="text-xs text-slate-500">
+            Or choose a file below
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8"
+            onClick={(event) => {
+              event.stopPropagation()
+              inputRef.current?.click()
+            }}
+            disabled={disabled || isAnalyzing}
+          >
+            <Upload className="mr-1.5 h-3.5 w-3.5" />
+            Choose image
+          </Button>
+        </div>
       ) : (
         <div
           className={`flex flex-1 flex-col items-center justify-center gap-2 text-center ${
@@ -170,11 +240,18 @@ export default function LessonPageCapture({
           <ClipboardPaste
             className={`text-violet-500 ${compact ? 'h-6 w-6' : 'h-8 w-8'}`}
           />
+          <p className="text-sm font-medium text-violet-800">
+            Click here to paste
+          </p>
+          <p className="text-xs text-slate-500">or choose a file</p>
           <Button
             type="button"
             variant="outline"
             size={compact ? 'sm' : 'default'}
-            onClick={() => inputRef.current?.click()}
+            onClick={(event) => {
+              event.stopPropagation()
+              inputRef.current?.click()
+            }}
             disabled={disabled || isAnalyzing}
           >
             <Upload className="mr-2 h-4 w-4" />

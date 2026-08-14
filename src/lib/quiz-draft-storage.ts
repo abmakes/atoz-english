@@ -55,7 +55,7 @@ export type QuizDraftSnapshot = {
   quizId?: string
   updatedAt: string
   creationStep: 'setup' | 'content' | 'publish'
-  contentView: 'create' | 'upload' | 'ai-generation'
+  contentView: 'create' | 'upload'
   quizSetup: DraftQuizSetup
   questions: DraftQuestion[]
   settings: DraftQuizSettings

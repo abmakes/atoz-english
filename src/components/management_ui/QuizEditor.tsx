@@ -9,12 +9,18 @@ import AIGenerationForm, {
 } from "@/components/management_ui/forms/AIGenerationForm"
 import DownloadButton from "@/components/management_ui/DownloadButton"
 import Image from "next/image"
-import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { QuestionType } from '@/types/question_types'
 import QuizFinalizeForm from "@/components/management_ui/forms/QuizFinalizeForm"
 import { useCustomToast } from '@/components/ui/CustomToast'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Sparkles, Upload, Pencil, ArrowRight, Check, ArrowLeft } from 'lucide-react'
 import {
   clearWorkingDraft,
@@ -206,8 +212,10 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
     }
   )
 
-  // Current view in the content step (create, upload, or AI generation)
-  const [contentView, setContentView] = useState<'create' | 'upload' | 'ai-generation'>('create')
+  // Current view in the content step (manual edit or CSV upload)
+  const [contentView, setContentView] = useState<'create' | 'upload'>('create')
+  const [aiModalOpen, setAiModalOpen] = useState(false)
+  const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [generationBrief, setGenerationBrief] = useState<AIGenerationDraftBrief | null>(null)
 
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
@@ -322,7 +330,14 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
       )
     }
     setCreationStep(draft.creationStep || 'setup')
-    setContentView(draft.contentView || 'create')
+    // Legacy drafts may still store `ai-generation` as a content tab.
+    const storedView = draft.contentView as string
+    if (storedView === 'ai-generation') {
+      setContentView('create')
+      setAiModalOpen(true)
+    } else {
+      setContentView(storedView === 'upload' ? 'upload' : 'create')
+    }
     setDraftSavedAt(draft.updatedAt)
     addToast('Restored your saved draft from this device.', {
       variant: 'info',
@@ -372,8 +387,9 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
 
   const handleSetupAiGenerate = (data: QuizSetupData) => {
     setQuizSetupData(data)
-    setContentView('ai-generation')
+    setContentView('create')
     setCreationStep('content')
+    setAiModalOpen(true)
     addToast('Title, description, and tags are ready — refine notes and generate.', {
       variant: 'success',
       position: 'top-center',
@@ -408,6 +424,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
       mergeApprovedQuestions(prevQuestions, newQuestions)
     )
     setContentView('create')
+    setAiModalOpen(false)
   }
 
   const handleAiTagsSync = (tags: string[]) => {
@@ -1005,12 +1022,12 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
 
             <div className="flex flex-col lg:flex-row flex-grow gap-6 lg:gap-4">
             {/* SIDEBAR - Quiz Information and Navigation */}
-            <div className="basis-1/4 mb-4 flex h-full min-h-0 flex-col gap-4 grandstander border border-[--border-dark] bg-white p-5 text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] rounded-lg lg:mb-0">
-              <div className="flex w-full items-start justify-between gap-3">
-                <h2 className="min-w-0 flex-1 text-left text-xl font-bold leading-tight">
+            <div className="basis-1/4 mb-4 flex h-full min-h-0 flex-col gap-4 grandstander items-center border border-[--border-dark] bg-white p-5 text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] rounded-lg lg:mb-0">
+              <div className="flex w-full flex-col items-center gap-1 text-center">
+                <h2 className="w-full text-xl font-bold leading-tight">
                   {quizSetupData.title || 'Quiz Title'}
                 </h2>
-                <p className="shrink-0 pt-0.5 text-sm font-bold text-slate-700">
+                <p className="text-sm font-bold text-slate-700">
                   Questions: {questionsList.length}
                 </p>
               </div>
@@ -1029,11 +1046,11 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
                 />
               )}
 
-              <p className="text-left text-sm text-slate-700">
+              <p className="w-full text-center text-sm text-slate-700">
                 {quizSetupData.description || 'No description yet.'}
               </p>
 
-              <div className="flex w-full flex-wrap justify-start gap-2">
+              <div className="flex w-full flex-wrap justify-center gap-2">
                 {quizSetupData.tags.length > 0 ? (
                   quizSetupData.tags.map((tag, index) => (
                     <Badge
@@ -1054,7 +1071,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center justify-start gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -1074,8 +1091,8 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
                 </Button>
               </div>
 
-              <div className="mt-auto w-full space-y-2 border-t border-slate-200 pt-4">
-                <p className="inclusive-sans px-1 text-left text-xs text-slate-500">
+              <div className="w-full space-y-2 border-t border-slate-200 pt-4">
+                <p className="inclusive-sans px-1 text-center text-xs text-slate-500">
                   {draftSavedAt
                     ? `Last saved ${new Date(draftSavedAt).toLocaleString([], {
                         month: 'short',
@@ -1085,7 +1102,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
                       })}`
                     : 'Edits autosave on this device'}
                 </p>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center justify-center gap-2">
                   <Button
                     type="button"
                     variant="outline"
@@ -1132,75 +1149,120 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
             {/* MAIN CONTENT AREA - Methods for creating quiz content */}
             <div className="relative basis-3/4 mt-2 flex h-full flex-col items-center gap-4 align-middle grandstander text-[--text-color] md:mt-8 lg:mt-0">
               
-              {/* Content Method Selector — in-flow on narrow screens; floats above panel on md+ */}
-              <div className="relative z-10 flex w-full flex-wrap justify-center gap-1 rounded-lg border border-[--border-dark] bg-[--primary-light] shadow-[4px_4px_0px_0px_var(--border-dark)] md:absolute md:-mt-6 md:w-[540px] md:flex-nowrap md:justify-between md:gap-2">
-                <Button variant='default' className={`w-auto min-w-0 flex-1 md:w-32 md:flex-none pr-3 pl-1 text-[--text-color] ${contentView === 'create' ? 'bg-white' : 'hover:font-bold'}`} onClick={() => setContentView('create')}>
-                  <div className={`flex items-center p-1.5 mr-2 justify-center rounded-full ${contentView === 'create' ? 'bg-[--background] border-2 border-[--primary-accent]' : 'hover:bg-white'}`}>
+              {/* Three separate action buttons */}
+              <div className="relative z-10 flex w-full flex-wrap items-center justify-center gap-2 md:absolute md:-mt-6 md:w-auto">
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={() => {
+                    setContentView('create')
+                    setUploadModalOpen(false)
+                    setAiModalOpen(false)
+                  }}
+                  className="h-10 w-auto shrink-0 border border-[--border-dark] bg-white px-3 pr-4 pl-1 text-sm font-semibold text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] hover:bg-[--primary-light]"
+                >
+                  <div className="mr-2 flex items-center justify-center rounded-full border-2 border-[--primary-accent] bg-[--background] p-1.5">
                     <Pencil size={16} />
-                  </div> Edit 
-                </Button>
-                <Button variant='default' className={`w-auto min-w-0 flex-1 md:w-32 md:flex-none pr-3 pl-1 text-[--text-color] ${contentView === 'upload' ? 'bg-white' : 'hover:font-bold'}`} onClick={() => setContentView('upload')}>
-                  <div className={`flex items-center p-1.5 mr-2 justify-center rounded-full ${contentView === 'upload' ? 'bg-[--background] border-2 border-[--primary-accent]' : 'hover:bg-white'}`}>  
-                    <Upload size={16} />
-                  </div> Upload
-                </Button>
-                <Button variant='default' className={`w-auto min-w-0 flex-1 md:w-40 md:flex-none pr-3 pl-1 text-[--text-color] ${contentView === 'ai-generation' ? 'bg-white' : 'hover:font-bold'}`} onClick={() => setContentView('ai-generation')}>
-                  <div className={`flex items-center p-1.5 mr-2 justify-center rounded-full ${contentView === 'ai-generation' ? 'bg-[--background] border-2 border-[--primary-accent]' : 'hover:bg-white'}`}>
-                    <Sparkles size={16} />
-                  </div> AI Generator
-                </Button>
-              </div>
-
-              {/* Content Creation Area — extra top padding clears absolute submenu on md+ */}
-              <div className='w-full h-full max-w-screen-2xl border border-[--border-dark] bg-white shadow-[4px_4px_0px_0px_var(--border-dark)] rounded-lg pt-2 md:pt-8'>
-
-                {/* Manual Question Creation */}
-                {contentView === 'create' && (
-                  <QuizForm 
-                    ref={quizFormRef}
-                    quizId={quizId}
-                    quizOverallType={quizSetupData.quizType}
-                    onQuizCoverImageChange={handleQuizCoverImageChangeInContentStep}
-                    initialQuestions={questionsList}
-                    onQuestionsChange={handleQuestionsListChange}
-                    onConfirmQuestions={handleQuestionsConfirmed}
-                    className="bg-transparent shadow-none border-0"
-                  />
-                )}
-
-                {/* CSV Upload for Questions */}
-                {contentView === 'upload' && (
-                  <div className="flex w-full justify-">
-                    <Card className="flex h-full w-full flex-col border-none p-6 text-base font-normal">
-                      <UploadForm 
-                        quizOverallType={quizSetupData.quizType}
-                        onAddQuestions={handleAddQuestions}
-                        className="bg-transparent shadow-none border-0"
-                      />
-                      <div className="flex-grow p-4 text-sm font-normal">
-                        <h1 className="mb-2 text-lg font-semibold">Even faster quiz creation</h1>
-                        <p>Use our quiz template to make a quiz in Excel then simply upload the quiz.</p>
-                        <p className='mb-2'>You can add images by going to the quiz list and editing the quiz.</p>
-                        <DownloadButton />
-                      </div>
-                    </Card>
                   </div>
-                )}
-
-                {/* AI Question Generation */}
-                {contentView === 'ai-generation' && (
-                  <AIGenerationForm
-                    onQuestionsGenerated={handleAddQuestions}
-                    onTagsSync={handleAiTagsSync}
-                    quizType={quizSetupData.quizType}
-                    quizTitle={quizSetupData.title}
-                    quizDescription={quizSetupData.description}
-                    existingTags={quizSetupData.tags}
-                    initialBrief={generationBrief}
-                    onBriefChange={setGenerationBrief}
-                  />
-                )}
+                  Edit
+                </Button>
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={() => {
+                    setAiModalOpen(false)
+                    setUploadModalOpen(true)
+                  }}
+                  className="h-10 w-auto shrink-0 border border-[--border-dark] bg-white px-3 pr-4 pl-1 text-sm font-semibold text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] hover:bg-[--primary-light]"
+                >
+                  <div className="mr-2 flex items-center justify-center rounded-full bg-[--background] p-1.5 hover:bg-white">
+                    <Upload size={16} />
+                  </div>
+                  Upload
+                </Button>
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={() => {
+                    setUploadModalOpen(false)
+                    setAiModalOpen(true)
+                  }}
+                  className="h-10 w-auto shrink-0 border border-violet-700 bg-violet-600 px-3 text-sm font-semibold text-white shadow-[4px_4px_0px_0px_var(--border-dark)] hover:bg-violet-500"
+                >
+                  <Sparkles size={16} className="mr-2" />
+                  AI Generator
+                </Button>
               </div>
+
+              {/* Content Creation Area — always the manual editor */}
+              <div className='w-full h-full max-w-screen-2xl border border-[--border-dark] bg-white shadow-[4px_4px_0px_0px_var(--border-dark)] rounded-lg pt-2 md:pt-8'>
+                <QuizForm 
+                  ref={quizFormRef}
+                  quizId={quizId}
+                  quizOverallType={quizSetupData.quizType}
+                  onQuizCoverImageChange={handleQuizCoverImageChangeInContentStep}
+                  initialQuestions={questionsList}
+                  onQuestionsChange={handleQuestionsListChange}
+                  onConfirmQuestions={handleQuestionsConfirmed}
+                  className="bg-transparent shadow-none border-0"
+                />
+              </div>
+
+              <Dialog open={uploadModalOpen} onOpenChange={setUploadModalOpen}>
+                <DialogContent className="flex max-h-[92vh] w-[min(96vw,800px)] max-w-[800px] flex-col gap-0 overflow-hidden border-[--border-dark] bg-white p-0 text-[--text-color] shadow-[6px_6px_0px_0px_var(--border-dark)] sm:rounded-lg">
+                  <DialogHeader className="shrink-0 border-b border-slate-200 px-5 py-4 text-left">
+                    <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+                      <Upload className="h-5 w-5" />
+                      Upload questions
+                    </DialogTitle>
+                    <DialogDescription className="text-sm text-slate-600">
+                      Import from a spreadsheet, then return to the manual editor.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="min-h-0 flex-1 overflow-y-auto p-5">
+                    <UploadForm
+                      quizOverallType={quizSetupData.quizType}
+                      onAddQuestions={(questions) => {
+                        handleAddQuestions(questions)
+                        setUploadModalOpen(false)
+                      }}
+                      className="bg-transparent shadow-none border-0"
+                    />
+                    <div className="mt-4 space-y-2 text-sm font-normal">
+                      <h2 className="text-base font-semibold">Even faster quiz creation</h2>
+                      <p>Use our quiz template to make a quiz in Excel then simply upload the quiz.</p>
+                      <p>You can add images by going to the quiz list and editing the quiz.</p>
+                      <DownloadButton />
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={aiModalOpen} onOpenChange={setAiModalOpen}>
+                <DialogContent className="flex max-h-[92vh] w-[min(96vw,800px)] max-w-[800px] flex-col gap-0 overflow-hidden border-[--border-dark] bg-white p-0 text-[--text-color] shadow-[6px_6px_0px_0px_var(--border-dark)] sm:rounded-lg">
+                  <DialogHeader className="shrink-0 border-b border-slate-200 px-5 py-4 text-left">
+                    <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+                      <Sparkles className="h-5 w-5 text-violet-600" />
+                      AI Question Generator
+                    </DialogTitle>
+                    <DialogDescription className="text-sm text-slate-600">
+                      Generate and review questions here, then return to the manual editor.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="min-h-0 flex-1 overflow-y-auto">
+                    <AIGenerationForm
+                      onQuestionsGenerated={handleAddQuestions}
+                      onTagsSync={handleAiTagsSync}
+                      quizType={quizSetupData.quizType}
+                      quizTitle={quizSetupData.title}
+                      quizDescription={quizSetupData.description}
+                      existingTags={quizSetupData.tags}
+                      initialBrief={generationBrief}
+                      onBriefChange={setGenerationBrief}
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
             </div>
           </div>
