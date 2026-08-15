@@ -49,15 +49,19 @@ const enhanceDbUrl = (url: string): string => {
   }
 };
 
-// Determine the database URL, prioritizing the enhanced pooled URL
-const prismaDbUrl = process.env.POSTGRES_PRISMA_URL
-  ? enhanceDbUrl(process.env.POSTGRES_PRISMA_URL)
-  : undefined; // Ensure it's explicitly undefined if not set
+// Prefer Neon pooled URL; fall back to DATABASE_URL for local/CI stubs.
+const rawPrismaUrl =
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL;
 
+const prismaDbUrl = rawPrismaUrl ? enhanceDbUrl(rawPrismaUrl) : undefined;
 
 function createPrismaClient(): PrismaClient {
   if (!prismaDbUrl) {
-    throw new Error("Database URL (POSTGRES_PRISMA_URL) is not defined in environment variables.");
+    throw new Error(
+      'Database URL is not defined. Set POSTGRES_PRISMA_URL or DATABASE_URL.'
+    );
   }
   console.log('Initializing new PrismaClient...');
 
