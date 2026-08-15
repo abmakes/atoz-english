@@ -1,34 +1,22 @@
-export const ALL_TAG_CATEGORIES = [
-  { 
-    category: "Topic", 
-    tags: [
-      "Animals", "Food & Drink", "Travel & Transport", "History & Culture", "Science & Technology",
-      "Entertainment", "Sports & Activities", "Family & People", "School & Classroom", 
-      "Colors & Numbers", "Feelings & Emotions", "Clothes & Body Parts", 
-      "Toys & Games", "Home & Furniture", "Countries & Places", "Weather & Seasons", 
-      "Nature & Environment", "Plants & Food Types", "Community & Buildings", 
-      "Stories & Fairy Tales", "Health & Daily Life"
-    ]
-  },
-  { 
-    category: "Grammar", 
-    tags: [
-      "Nouns & Articles", "Pronouns", "Adjectives & Adverbs", "Prepositions",
-      "Present Simple", "Present Continuous", "Present Perfect",
-      "Past Simple", "Past Continuous", "Past Perfect",
-      "Future Simple", "Future Continuous", "Future Perfect",
-      "Questions & Negatives", "Comparatives & Superlatives", "Quantifiers", 
-      "Conditionals", "Relative Clauses", "Gerunds & Infinitives", 
-      "Passive Voice", "Reported Speech", "Conjunctions & Linking Words",
-      "Modals", "Phrasal Verbs", "Word Order", "Possessives", "Demonstratives",
-      "Determiners", "Linking Words of Cause & Result", "Time Expressions", 
-      "Direct & Indirect Speech", "Causative"
-    ]
-  },
-  { 
-    category: "Level", 
-    tags: ["Pre-A1", "A1", "A2", "B1", "B2", "C1", "C2", "Beginner", "Elementary", "Intermediate", "Upper-Intermediate", "Advanced"] 
-  },
-];
+import { DISCOVERY_TAG_CATEGORIES } from '@/lib/taxonomy/quiz-taxonomy';
 
-export const FLATTENED_TAGS: string[] = ALL_TAG_CATEGORIES.flatMap(cat => cat.tags);
+/**
+ * Compatibility export for the existing tag picker.
+ *
+ * Discovery tags are Level + Topic + Grammar. Word Class is AI-only and lives
+ * in the generation brief, not browse/create metadata.
+ */
+export const ALL_TAG_CATEGORIES = DISCOVERY_TAG_CATEGORIES.map((category) => ({
+  category: category.category,
+  tags: [...category.tags],
+  groups: category.groups?.map((group) => ({
+    id: group.id,
+    label: group.label,
+    tags: [...group.tags],
+  })),
+  selectionMode: category.selectionMode,
+}));
+
+export const FLATTENED_TAGS: string[] = ALL_TAG_CATEGORIES.flatMap(
+  (category) => category.tags
+);

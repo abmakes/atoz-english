@@ -1,91 +1,97 @@
-# AI Quiz Generator Setup Guide
+# AI Quiz Generator
 
 ## Overview
-The AI Quiz Generator allows you to automatically create multiple choice questions based on your quiz title, description, selected tags, CEFR level, and optional book/unit content.
 
-## Setup Instructions
+The generator helps teachers draft multiple-choice questions from a **teacher
+brief**, not from a hard vocabulary allowlist.
 
-### 1. Environment Variables
-Add the following to your `.env` file:
+Inputs, in priority order:
+
+1. teacher notes and optional model sentence;
+2. optional textbook / worksheet screenshot analysis;
+3. classroom discovery tags (Level, Topic, Grammar);
+4. AI-only controls (sentence form, question style, vocabulary focus);
+5. open lexicon examples used as a **soft** level assistant.
+
+Publisher book names, unit sequences, and proprietary wordlists are not
+generation inputs. Screenshot images are processed in memory and discarded.
+
+## Environment
 
 ```env
 GEMINI_QUIZ_API_KEY="your_gemini_api_key_here"
 ```
 
-To get a Gemini API key:
-1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Create a new API key
-3. Copy the key and add it to your `.env` file
+Optional for image suggestions in the review step:
 
-### 2. Features
+```env
+NEXT_PUBLIC_PIXABAY_API_KEY="your_pixabay_key"
+```
 
-#### Available CEFR Levels:
-- **Pre-A1 (Starters)**: Very basic English for young learners
-- **A1 (Movers)**: Basic English for elementary learners  
-- **A2 (Flyers)**: Elementary English for young learners
+## Supported scope
 
-#### Supported Books:
-- **Macmillan Academy Stars**: 5 levels with 9 units each
-- **Cambridge Primary Path**: 5 levels with 9 units each
+- Pre-A1
+- A1
+- A2
+- B1
 
-#### Tag Categories:
-- **Topic**: Animals, Food, Travel, History, Science, Movies, Music, Sports
-- **Grammar**: Present Simple, Past Simple, Future Simple, Nouns, Verbs, Adjectives, etc.
-- **Vocabulary Level**: Beginner, Elementary, Intermediate, Upper-Intermediate, Advanced
-- **CEFR Level**: A1, A2, B1, B2, C1, C2
-- **Skills**: Reading, Writing, Listening, Speaking
+These bands are app-authored curriculum estimates, not an official
+certification. Lexicon levels remain provisional.
 
-## How to Use
+## Teacher-first generation flow
 
-1. **Create a Quiz**: Go to the quiz creation page
-2. **Fill Basic Info**: Enter quiz title and description
-3. **Select AI Generation**: Click the "Generate with AI" tab
-4. **Configure Settings**:
-   - Select CEFR level (required)
-   - Choose tags (at least one required)
-   - Optionally select a book and unit
-   - Set number of questions (1-20)
-5. **Generate**: Click "Generate Questions" button
-6. **Review**: Generated questions will be added to your quiz
-7. **Edit**: You can edit the generated questions as needed
+1. Teacher completes quiz setup (title, description, tags, type) and chooses
+   **Create Questions** or the premium **AI Generate** path.
+2. AI Generate opens a compact brief with setup values already filled.
+3. Optional image analysis returns an editable lesson summary.
+4. Teacher confirms Level / styles / question count, then reviews a plain-language
+   brief in a confirm dialog before the Gemini call.
+5. Gemini drafts questions from the full `GenerationBrief`.
+6. The lexicon adds **non-blocking** level warnings and replacement suggestions.
+7. Teacher reviews each question: edit, approve, reject, regenerate, simplify, keep words,
+   and choose among three image suggestions (stored library first, then Pixabay).
+8. Only approved questions enter the quiz editor, replacing an empty stub if
+   present, and discovery tags sync back to quiz metadata.
 
-## How It Works
+## API routes
 
-The AI generator:
-1. Uses your quiz title and description for context
-2. Filters vocabulary based on selected CEFR level and tags
-3. Incorporates book/unit content if specified
-4. Generates appropriate multiple choice questions
-5. Returns questions in the correct format for your quiz system
+- `POST /api/ai/analyze-lesson-image` — multipart image upload, ephemeral analysis
+- `POST /api/ai/generate-questions` — accepts a `GenerationBrief` (+ quiz type)
 
-## Example Usage
+## Building the lexicon
 
-**Quiz Title**: "Farm Animals for Beginners"
-**Description**: "Learn about farm animals and their sounds"
-**Level**: Pre-A1 (Starters)
-**Tags**: Animals, Farm Animals, Vocabulary
-**Book**: Macmillan Academy Stars - Unit: Farm Animals
-**Questions**: 5
+See [`lexicon/README.md`](lexicon/README.md).
 
-This will generate 5 multiple choice questions about farm animals appropriate for Pre-A1 level students.
+```bash
+npm run build:lexicon
+npm test
+```
+
+The generated app artifact is
+`src/generated/young-learner-lexicon.json`. Do not edit it manually.
+
+## Licensing and attribution
+
+The lexical artifact is CC BY-SA 4.0 and is built from pinned snapshots of:
+
+- New Dolch List 1.1;
+- New General Service List 1.2;
+- Open English WordNet 2025.
+
+Full provenance and notices are in:
+
+- `lexicon/sources.lock.json`
+- `lexicon/ATTRIBUTION.md`
+- `lexicon/LICENSES/`
+
+CEFR-J is not included in the public artifact because its stated terms do not
+clearly grant redistribution of an adapted dataset.
 
 ## Troubleshooting
 
-### Common Issues:
-1. **"Failed to generate questions"**: Check your GEMINI_QUIZ_API_KEY is correct
-2. **"At least one tag is required"**: Select one or more tags before generating
-3. **"Invalid response from AI service"**: The AI response couldn't be parsed - try again
-
-### Tips:
-- Be specific in your quiz title and description for better results
-- Select relevant tags that match your content
-- Start with fewer questions (3-5) to test the system
-- Review and edit generated questions before publishing
-
-## Technical Details
-
-- Uses Google's Gemini 2.5 Flash Lite model (optimized for cost efficiency and low latency)
-- Processes vocabulary from wordlist.json based on CEFR levels
-- Incorporates book content from Macmillan and Cambridge JSON files
-- Generates questions in JSON format compatible with your quiz system
-- Includes proper error handling and loading states
+- **Multiple-choice only:** AI generation is disabled for other quiz types with
+  an immediate explanation in the form.
+- **Invalid question format:** Gemini did not return the required JSON shape.
+- **Image analysis failed:** check MIME type (PNG/JPEG/WebP) and the 8 MB limit.
+- **Lexicon build checksum error:** an upstream file changed; review and pin a
+  deliberate source update instead of accepting it silently.

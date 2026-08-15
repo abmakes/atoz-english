@@ -6,6 +6,7 @@
     "dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 next dev",
     "build": "prisma generate && next build",
     "start": "next start",
+    "build:lexicon": "python3 lexicon/pipeline/build_lexicon.py",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

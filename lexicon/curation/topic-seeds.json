@@ -1,0 +1,135 @@
+{
+  "Animals": [
+    "animal", "ant", "bat", "bear", "bee", "bird", "butterfly", "camel", "cat",
+    "chicken", "cow", "crocodile", "dog", "dolphin", "donkey", "duck", "eagle",
+    "elephant", "fish", "fly", "fox", "frog", "giraffe", "goat", "hamster",
+    "hippo", "horse", "insect", "kangaroo", "kitten", "lion", "lizard", "monkey",
+    "mouse", "octopus", "panda", "parrot", "penguin", "pet", "pig", "puppy",
+    "rabbit", "shark", "sheep", "snake", "spider", "swan", "tiger", "tortoise",
+    "whale", "zebra", "zoo"
+  ],
+  "Food & Drink": [
+    "apple", "banana", "bean", "bread", "breakfast", "burger", "butter", "cake",
+    "candy", "carrot", "cereal", "cheese", "chicken", "chocolate", "coffee",
+    "cookie", "dinner", "drink", "egg", "fish", "food", "fork", "fruit", "grape",
+    "honey", "ice cream", "juice", "lemon", "lemonade", "lunch", "mango", "meal",
+    "meat", "milk", "noodle", "onion", "orange", "pancake", "pasta", "pea",
+    "pear", "pepper", "pie", "pineapple", "pizza", "plate", "potato", "rice",
+    "salad", "salt", "sandwich", "sausage", "snack", "soup", "spoon", "strawberry",
+    "sugar", "tea", "tomato", "vegetable", "water", "watermelon", "yogurt"
+  ],
+  "Travel & Transport": [
+    "airport", "bicycle", "bike", "boat", "bus", "car", "drive", "driver", "fly",
+    "helicopter", "journey", "lorry", "map", "motorbike", "passenger", "plane",
+    "platform", "railway", "ride", "road", "ship", "station", "taxi", "ticket",
+    "tour", "traffic", "train", "transport", "travel", "trip", "truck", "vehicle",
+    "wheel"
+  ],
+  "History & Culture": [
+    "art", "castle", "century", "culture", "festival", "flag", "history", "king",
+    "museum", "past", "queen", "story", "tradition", "traditional"
+  ],
+  "Science & Technology": [
+    "app", "astronaut", "computer", "earth", "email", "engine", "environment",
+    "experiment", "internet", "laptop", "machine", "moon", "phone", "planet",
+    "robot", "rocket", "science", "screen", "space", "tablet", "technology",
+    "telephone", "video", "website", "wifi"
+  ],
+  "Entertainment": [
+    "actor", "band", "camera", "cartoon", "channel", "cinema", "comic", "concert",
+    "dance", "drum", "film", "fun", "guitar", "magazine", "movie", "music",
+    "piano", "picture", "radio", "show", "sing", "singer", "song", "stage",
+    "television", "theatre", "violin"
+  ],
+  "Sports & Activities": [
+    "badminton", "ball", "baseball", "basketball", "chess", "climb", "cycle",
+    "football", "game", "goal", "golf", "hockey", "jump", "kick", "player",
+    "race", "ride", "run", "sail", "score", "skate", "ski", "soccer", "sport",
+    "swim", "team", "tennis", "volleyball", "walk", "win"
+  ],
+  "Family & People": [
+    "aunt", "baby", "boy", "brother", "child", "children", "cousin", "dad",
+    "daughter", "family", "father", "friend", "girl", "grandfather", "grandma",
+    "grandmother", "grandpa", "grandparent", "husband", "man", "mother", "mum",
+    "parent", "people", "person", "sister", "son", "uncle", "wife", "woman"
+  ],
+  "School & Classroom": [
+    "alphabet", "answer", "book", "board", "class", "classmate", "classroom",
+    "college", "crayon", "desk", "dictionary", "eraser", "example", "homework",
+    "language", "learn", "lesson", "letter", "notebook", "page", "paper", "pen",
+    "pencil", "project", "question", "read", "rubber", "ruler", "school",
+    "sentence", "student", "study", "subject", "teacher", "university", "word",
+    "write"
+  ],
+  "Colors & Numbers": [
+    "black", "blue", "brown", "colour", "eight", "eighteen", "eleven", "fifteen",
+    "five", "four", "fourteen", "gray", "green", "grey", "nine", "nineteen",
+    "number", "one", "orange", "pink", "purple", "red", "seven", "seventeen",
+    "six", "sixteen", "ten", "thirteen", "three", "twelve", "twenty", "two",
+    "white", "yellow", "zero"
+  ],
+  "Feelings & Emotions": [
+    "afraid", "angry", "bored", "brave", "excited", "feeling", "fine",
+    "frightened", "happy", "hungry", "pleased", "proud", "sad", "scared",
+    "surprised", "thirsty", "tired", "unhappy", "worried"
+  ],
+  "Clothes": [
+    "belt", "boot", "cap", "clothes", "coat", "costume", "dress", "glasses",
+    "glove", "handbag", "hat", "jacket", "jeans", "necklace", "pocket",
+    "pyjamas", "scarf", "shirt", "shoe", "shorts", "skirt", "sock", "sweater",
+    "swimsuit", "trainers", "trousers", "t-shirt", "umbrella", "uniform", "wear"
+  ],
+  "Body Parts": [
+    "arm", "body", "ear", "elbow", "eye", "face", "feet", "finger", "foot",
+    "hair", "hand", "head", "knee", "leg", "mouth", "neck", "nose", "shoulder",
+    "stomach", "toe", "tooth"
+  ],
+  "Toys & Games": [
+    "balloon", "board game", "card", "chess", "doll", "game", "kite", "play",
+    "puzzle", "robot", "skateboard", "teddy", "toy"
+  ],
+  "Home & Furniture": [
+    "apartment", "armchair", "balcony", "basement", "bath", "bathroom", "bed",
+    "bedroom", "bookcase", "chair", "clock", "cooker", "cupboard", "dining room",
+    "door", "floor", "fridge", "furniture", "garden", "hall", "home", "house",
+    "kitchen", "lamp", "living room", "mirror", "oven", "room", "rug", "shelf",
+    "shower", "sofa", "stairs", "table", "wall", "window"
+  ],
+  "Countries & Places": [
+    "bank", "beach", "building", "cafe", "city", "country", "countryside",
+    "farm", "forest", "hospital", "hotel", "island", "lake", "library", "market",
+    "mountain", "museum", "office", "park", "place", "restaurant", "river",
+    "road", "sea", "shop", "station", "street", "supermarket", "town", "village",
+    "world"
+  ],
+  "Weather & Seasons": [
+    "autumn", "cloud", "cloudy", "cold", "fog", "foggy", "hot", "rain",
+    "rainbow", "season", "snow", "spring", "storm", "summer", "sun", "sunny",
+    "weather", "wet", "wind", "windy", "winter"
+  ],
+  "Nature & Environment": [
+    "air", "beach", "cave", "desert", "earth", "environment", "field", "flower",
+    "forest", "grass", "hill", "island", "lake", "leaf", "moon", "mountain",
+    "nature", "ocean", "plant", "river", "rock", "sand", "sea", "sky", "star",
+    "stone", "stream", "tree", "water", "waterfall", "wood", "world"
+  ],
+  "Community & Buildings": [
+    "airport", "bank", "building", "bus station", "cafe", "cinema", "city",
+    "college", "factory", "fire station", "hospital", "hotel", "library",
+    "market", "museum", "office", "police station", "post office", "restaurant",
+    "school", "shop", "sports centre", "station", "supermarket", "theatre",
+    "town", "university"
+  ],
+  "Stories & Fantasy": [
+    "adventure", "alien", "castle", "creature", "crown", "dinosaur", "dream",
+    "fairy", "fantasy", "hero", "king", "magic", "monster", "pirate", "queen",
+    "secret", "story", "treasure"
+  ],
+  "Health & Daily Life": [
+    "bandage", "breakfast", "clean", "cough", "dentist", "dinner", "doctor",
+    "dress", "earache", "exercise", "headache", "health", "hospital", "ill",
+    "medicine", "morning", "night", "nurse", "sick", "sleep", "stomach-ache",
+    "temperature", "toothache", "toothbrush", "toothpaste", "wake", "wash",
+    "work"
+  ]
+}

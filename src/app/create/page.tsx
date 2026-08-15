@@ -2,7 +2,7 @@
 
 import QuizEditor from "@/components/management_ui/QuizEditor"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
-import { useSearchParams, useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense } from "react"
 import LoadingSpinner from "@/components/loading_spinner"
 
@@ -15,7 +15,9 @@ function CreateEditor() {
     <QuizEditor
       mode="create"
       resumeDraftId={resumeDraftId}
-      onSuccess={(id) => router.push(`/games/${id}`)}
+      onSuccess={(quizId) => {
+        router.push(`/games/${quizId}`)
+      }}
     />
   )
 }

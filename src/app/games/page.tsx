@@ -19,6 +19,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useGameStore } from '@/stores/useGameStore';
 import { TagDrawer } from '@/components/management_ui/TagDrawer';
 import { ALL_TAG_CATEGORIES } from '@/lib/tags';
+import { discoveryTagMatches } from '@/lib/taxonomy/quiz-taxonomy';
 import LoadingSpinner from '@/components/loading_spinner';
 import QuizCatalogSkeleton from '@/components/management_ui/QuizCatalogSkeleton';
 import { toast } from 'sonner';
@@ -95,6 +96,10 @@ function GamesPageContent({ isSignedIn }: { isSignedIn: boolean }) {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
+  };
+
+  const handleSelectedTagsChange = (tags: string[]) => {
+    setSelectedTags(tags);
   };
 
   const updateQuizLocal = (quizId: string, patch: Partial<QuizListItem>) => {
@@ -231,7 +236,7 @@ function GamesPageContent({ isSignedIn }: { isSignedIn: boolean }) {
     if (selectedTags.length > 0) {
       quizzesToFilter = quizzesToFilter.filter((quiz) =>
         selectedTags.every((selectedTag) =>
-          quiz.tags?.some((quizTag) => quizTag.toLowerCase() === selectedTag.toLowerCase())
+          discoveryTagMatches(quiz.tags ?? [], selectedTag)
         )
       );
     }
@@ -327,6 +332,7 @@ function GamesPageContent({ isSignedIn }: { isSignedIn: boolean }) {
             allTags={ALL_TAG_CATEGORIES}
             selectedTags={selectedTags}
             onTagToggle={handleTagToggle}
+            onSelectedTagsChange={handleSelectedTagsChange}
             triggerElement={
               <Button
                 variant="ghost"

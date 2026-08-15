@@ -35,16 +35,31 @@ export type DraftQuizSettings = {
   soundEffects?: boolean
 }
 
+export type DraftGenerationBrief = {
+  teacherNotes?: string
+  modelSentence?: string
+  selectedTags?: string[]
+  level?: string
+  sentenceForms?: string[]
+  questionStyles?: string[]
+  vocabularyFocus?: string
+  numberOfQuestions?: number
+  lessonSummary?: string
+  keyVocabulary?: string[]
+  sentencePatterns?: string[]
+}
+
 export type QuizDraftSnapshot = {
   id: string
   mode: 'create' | 'edit'
   quizId?: string
   updatedAt: string
   creationStep: 'setup' | 'content' | 'publish'
-  contentView: 'create' | 'upload' | 'ai-generation'
+  contentView: 'create' | 'upload'
   quizSetup: DraftQuizSetup
   questions: DraftQuestion[]
   settings: DraftQuizSettings
+  generationBrief?: DraftGenerationBrief
 }
 
 const STORAGE_KEY = 'atoz-quiz-drafts'
@@ -109,9 +124,13 @@ export function clearWorkingDraft(mode: 'create' | 'edit', quizId?: string): voi
 }
 
 /** True if draft has meaningful content worth keeping */
-export function draftHasContent(draft: Pick<QuizDraftSnapshot, 'quizSetup' | 'questions'>): boolean {
+export function draftHasContent(draft: Pick<QuizDraftSnapshot, 'quizSetup' | 'questions' | 'generationBrief'>): boolean {
   const title = draft.quizSetup.title?.trim()
   const desc = draft.quizSetup.description?.trim()
   const hasQuestionText = draft.questions.some((q) => q.question?.trim())
-  return Boolean(title || desc || hasQuestionText || draft.questions.length > 1)
+  const hasBrief =
+    Boolean(draft.generationBrief?.teacherNotes?.trim()) ||
+    Boolean(draft.generationBrief?.lessonSummary?.trim()) ||
+    Boolean(draft.generationBrief?.modelSentence?.trim())
+  return Boolean(title || desc || hasQuestionText || draft.questions.length > 1 || hasBrief)
 }

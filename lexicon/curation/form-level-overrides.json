@@ -1,0 +1,69 @@
+{
+  "bad": {
+    "bad": "PRE_A1",
+    "worse": "A1",
+    "worst": "A1"
+  },
+  "be": {
+    "be": "PRE_A1",
+    "am": "PRE_A1",
+    "is": "PRE_A1",
+    "are": "PRE_A1",
+    "was": "A1",
+    "were": "A1",
+    "being": "A1",
+    "been": "A2"
+  },
+  "do": {
+    "do": "PRE_A1",
+    "does": "PRE_A1",
+    "did": "A1",
+    "doing": "A1",
+    "done": "A2"
+  },
+  "eat": {
+    "eat": "PRE_A1",
+    "eats": "PRE_A1",
+    "ate": "A1",
+    "eating": "A1",
+    "eaten": "A2"
+  },
+  "go": {
+    "go": "PRE_A1",
+    "goes": "PRE_A1",
+    "went": "A1",
+    "going": "A1",
+    "gone": "A2"
+  },
+  "good": {
+    "good": "PRE_A1",
+    "better": "A1",
+    "best": "A1"
+  },
+  "have": {
+    "have": "PRE_A1",
+    "has": "PRE_A1",
+    "had": "A1",
+    "having": "A1"
+  },
+  "run": {
+    "run": "PRE_A1",
+    "runs": "PRE_A1",
+    "ran": "A1",
+    "running": "A1"
+  },
+  "swim": {
+    "swim": "PRE_A1",
+    "swims": "PRE_A1",
+    "swam": "A1",
+    "swimming": "A1",
+    "swum": "A2"
+  },
+  "write": {
+    "write": "PRE_A1",
+    "writes": "PRE_A1",
+    "wrote": "A1",
+    "writing": "A1",
+    "written": "A2"
+  }
+}

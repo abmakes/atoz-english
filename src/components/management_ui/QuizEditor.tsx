@@ -3,17 +3,26 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import QuizForm, { QuizFormHandle } from "@/components/management_ui/forms/QuizForm"
 import UploadForm from "@/components/management_ui/forms/UploadForm"
+import PromptImportForm from "@/components/management_ui/forms/PromptImportForm"
 import QuizSetupForm from "@/components/management_ui/forms/QuizSetupForm"
-import AIGenerationForm from "@/components/management_ui/forms/AIGenerationForm"
+import AIGenerationForm, {
+  type AIGenerationDraftBrief,
+} from "@/components/management_ui/forms/AIGenerationForm"
 import DownloadButton from "@/components/management_ui/DownloadButton"
 import Image from "next/image"
-import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { QuestionType } from '@/types/question_types'
 import QuizFinalizeForm from "@/components/management_ui/forms/QuizFinalizeForm"
 import { useCustomToast } from '@/components/ui/CustomToast'
-import { Sparkles, Upload, Pencil, ArrowRight, Check, ArrowLeft } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Sparkles, Upload, Pencil, ArrowRight, Check, ArrowLeft, Plus, ClipboardCopy } from 'lucide-react'
 import {
   clearWorkingDraft,
   deleteQuizDraft,
@@ -21,12 +30,58 @@ import {
   getQuizDraft,
   getWorkingDraftId,
   upsertQuizDraft,
+  type DraftGenerationBrief,
   type QuizDraftSnapshot,
 } from '@/lib/quiz-draft-storage'
 import {
   hasAnswersTooLongForSplashDash,
   SPLASH_DASH_MAX_ANSWER_LENGTH,
 } from '@/lib/game-mode-eligibility'
+import {
+  CEFR_LEVELS,
+  QUESTION_STYLE_OPTIONS,
+  SENTENCE_FORM_OPTIONS,
+  VOCABULARY_FOCUS_OPTIONS,
+  normalizeCefrLevel,
+  normalizeDiscoveryTags,
+  type CefrLevelId,
+  type QuestionStyle,
+  type SentenceForm,
+  type VocabularyFocus,
+} from '@/lib/taxonomy/quiz-taxonomy'
+import { mergeApprovedQuestions } from '@/lib/ai/review-commit'
+
+function hydrateGenerationBrief(
+  draft: DraftGenerationBrief,
+  fallbackTags: string[]
+): AIGenerationDraftBrief {
+  const level =
+    (draft.level && normalizeCefrLevel(draft.level)) ||
+    (CEFR_LEVELS.find((candidate) => candidate.id === draft.level)?.id as CefrLevelId | undefined) ||
+    'A1'
+
+  return {
+    teacherNotes: draft.teacherNotes ?? '',
+    modelSentence: draft.modelSentence ?? '',
+    selectedTags: draft.selectedTags ?? fallbackTags,
+    level,
+    sentenceForms: (draft.sentenceForms ?? []).filter((value): value is SentenceForm =>
+      (SENTENCE_FORM_OPTIONS as readonly string[]).includes(value)
+    ),
+    questionStyles: (draft.questionStyles ?? []).filter((value): value is QuestionStyle =>
+      (QUESTION_STYLE_OPTIONS as readonly string[]).includes(value)
+    ),
+    vocabularyFocus: (VOCABULARY_FOCUS_OPTIONS as readonly string[]).includes(
+      draft.vocabularyFocus ?? ''
+    )
+      ? (draft.vocabularyFocus as VocabularyFocus)
+      : 'Mixed',
+    numberOfQuestions: draft.numberOfQuestions ?? 10,
+    lessonSummary: draft.lessonSummary,
+    keyVocabulary: draft.keyVocabulary,
+    sentencePatterns: draft.sentencePatterns,
+  }
+}
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -130,8 +185,8 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
   const quizFormRef = useRef<QuizFormHandle>(null);
 
   // Quiz setup data (title, description, cover image, type, tags)
-  const [quizSetupData, setQuizSetupData] = useState<QuizSetupData>(
-    initialData?.quizSetup || {
+  const [quizSetupData, setQuizSetupData] = useState<QuizSetupData>(() => {
+    const setup = initialData?.quizSetup || {
       title: '',
       description: '',
       coverImageUrl: '/images/placeholder.webp',
@@ -139,7 +194,11 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
       quizType: QuestionType.MULTIPLE_CHOICE,
       tags: [],
     }
-  )
+    return {
+      ...setup,
+      tags: normalizeDiscoveryTags(setup.tags || []),
+    }
+  })
 
   // List of questions for the quiz
   const [questionsList, setQuestionsList] = useState<Question[]>(
@@ -154,11 +213,18 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
     }
   )
 
-  // Current view in the content step (create, upload, or AI generation)
-  const [contentView, setContentView] = useState<'create' | 'upload' | 'ai-generation'>('create')
+  // Current view in the content step (manual edit or CSV upload)
+  const [contentView, setContentView] = useState<'create' | 'upload'>('create')
+  const [aiModalOpen, setAiModalOpen] = useState(false)
+  const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [promptModalOpen, setPromptModalOpen] = useState(false)
+  const [generationBrief, setGenerationBrief] = useState<AIGenerationDraftBrief | null>(null)
+  /** Bumped when discarding so the AI modal remounts with empty notes/vocabulary. */
+  const [aiFormKey, setAiFormKey] = useState(0)
+  const [isPublishing, setIsPublishing] = useState(false)
+  const [publishStatusMessage, setPublishStatusMessage] = useState('')
 
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
-  const [isPublishing, setIsPublishing] = useState(false)
   const draftHydrated = useRef(false)
   const publishCompletedRef = useRef(false)
   const workingDraftId = getWorkingDraftId(mode, quizId)
@@ -188,6 +254,21 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
         type: q.type,
       })),
       settings: quizSettings,
+      generationBrief: generationBrief
+        ? {
+            teacherNotes: generationBrief.teacherNotes,
+            modelSentence: generationBrief.modelSentence,
+            selectedTags: generationBrief.selectedTags,
+            level: generationBrief.level,
+            sentenceForms: generationBrief.sentenceForms,
+            questionStyles: generationBrief.questionStyles,
+            vocabularyFocus: generationBrief.vocabularyFocus,
+            numberOfQuestions: generationBrief.numberOfQuestions,
+            lessonSummary: generationBrief.lessonSummary,
+            keyVocabulary: generationBrief.keyVocabulary,
+            sentencePatterns: generationBrief.sentencePatterns,
+          }
+        : undefined,
     }
   }, [
     resumeDraftId,
@@ -199,6 +280,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
     quizSetupData,
     questionsList,
     quizSettings,
+    generationBrief,
   ])
 
   const persistDraft = useCallback((reason: 'auto' | 'manual' | 'pre-submit' = 'auto') => {
@@ -240,7 +322,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
       coverImageUrl: draft.quizSetup.coverImageUrl || '/images/placeholder.webp',
       coverImageFile: null,
       quizType: draft.quizSetup.quizType,
-      tags: draft.quizSetup.tags || [],
+      tags: normalizeDiscoveryTags(draft.quizSetup.tags || []),
     })
     setQuestionsList(
       draft.questions.map((q) => ({
@@ -250,8 +332,20 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
       }))
     )
     setQuizSettings(draft.settings || { theme: 'default', powerUps: [] })
+    if (draft.generationBrief) {
+      setGenerationBrief(
+        hydrateGenerationBrief(draft.generationBrief, draft.quizSetup.tags || [])
+      )
+    }
     setCreationStep(draft.creationStep || 'setup')
-    setContentView(draft.contentView || 'create')
+    // Legacy drafts may still store `ai-generation` as a content tab.
+    const storedView = draft.contentView as string
+    if (storedView === 'ai-generation') {
+      setContentView('create')
+      setAiModalOpen(true)
+    } else {
+      setContentView(storedView === 'upload' ? 'upload' : 'create')
+    }
     setDraftSavedAt(draft.updatedAt)
     addToast('Restored your saved draft from this device.', {
       variant: 'info',
@@ -296,24 +390,19 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
    */
   const handleSetupComplete = (data: QuizSetupData) => {
     setQuizSetupData(data)
-    
-    // If questionsList is empty and a quiz type is set, add an initial question
-    if (questionsList.length === 0 && data.quizType) {
-      const initialQuestion: Question = {
-        question: '',
-        answers: ["", "", "", ""],
-        correctAnswer: "",
-        imageUrl: '/images/placeholder.webp',
-        imageFile: null,
-        type: data.quizType,
-      };
-      setQuestionsList([initialQuestion]);
-    } else if (questionsList.length > 0 && data.quizType) {
-      // Optionally, update types of existing questions if overall type changes
-      // setQuestionsList(prevQuestions => prevQuestions.map(q => ({ ...q, type: data.quizType })));
-    }
-    
+    // Do not seed an empty question — wait until Manual / Upload / AI adds content.
     setCreationStep('content')
+  }
+
+  const handleSetupAiGenerate = (data: QuizSetupData) => {
+    setQuizSetupData(data)
+    setContentView('create')
+    setCreationStep('content')
+    setAiModalOpen(true)
+    addToast('Title, description, and tags are ready — refine notes and generate.', {
+      variant: 'success',
+      position: 'top-center',
+    })
   }
 
   /**
@@ -336,12 +425,25 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
   };
 
   /**
-   * Adds new questions to the existing list
-   * Used when uploading questions or generating with AI
+   * Adds new questions to the existing list.
+   * Replaces a single empty stub question when present.
    */
   const handleAddQuestions = (newQuestions: Question[]) => {
-    setQuestionsList(prevQuestions => [...prevQuestions, ...newQuestions]);
-  };
+    setQuestionsList((prevQuestions) =>
+      mergeApprovedQuestions(prevQuestions, newQuestions)
+    )
+    setContentView('create')
+    setAiModalOpen(false)
+    setUploadModalOpen(false)
+    setPromptModalOpen(false)
+  }
+
+  const handleAiTagsSync = (tags: string[]) => {
+    setQuizSetupData((prev) => ({
+      ...prev,
+      tags: normalizeDiscoveryTags(tags),
+    }))
+  }
   
   /**
    * Validates all questions and moves to the publish step
@@ -426,6 +528,10 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
         : [...prevData.tags, tag];
       return { ...prevData, tags: newTags };
     });
+  };
+
+  const handleSelectedTagsChange = (tags: string[]) => {
+    setQuizSetupData((prevData) => ({ ...prevData, tags }))
   };
 
   /**
@@ -699,80 +805,71 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
     if (isPublishing || publishCompletedRef.current) return
 
     const action = mode === 'create' ? 'Publishing' : 'Updating';
+    setIsPublishing(true)
+    setPublishStatusMessage('Preparing your quiz…')
     addToast(`${action} your quiz...`, { variant: 'info', position: 'top-center' });
     setIsPublishing(true)
 
     const { quizSetup, questions, settings } = finalizedData;
     setQuizSettings(settings);
-    // Snapshot immediately so a failed publish never loses the finished quiz
     persistDraft('pre-submit');
 
-    // Download and store Pixabay images before submitting
-    const updatedQuestions = await downloadPixabayImages(questions);
-    const updatedQuizSetup = await downloadPixabayCoverImage(quizSetup);
-    
-    // Prepare FormData for submission
-    const formData = new FormData();
-    
-    // Add quiz setup information
-    formData.append('title', updatedQuizSetup.title);
-    formData.append('description', updatedQuizSetup.description || '');
-    formData.append('quizType', updatedQuizSetup.quizType);
-    
-    // Add tags as JSON string (API expects them as a single JSON field)
-    formData.append('tags', JSON.stringify(updatedQuizSetup.tags));
-
-    // Add cover image (either new file or existing URL)
-    if (updatedQuizSetup.coverImageFile) {
-      formData.append('quizImageFile', updatedQuizSetup.coverImageFile);
-    } else {
-      formData.append('quizImageUrl', updatedQuizSetup.coverImageUrl);
-    }
-
-    // Add questions and their potential image files
-    updatedQuestions.forEach((q, index) => {
-      // Add question ID if it exists (for existing questions)
-      if (q.id) {
-        formData.append(`questions[${index}][id]`, q.id);
-      }
-      
-      formData.append(`questions[${index}][question]`, q.question);
-      formData.append(`questions[${index}][correctAnswer]`, q.correctAnswer);
-      formData.append(`questions[${index}][type]`, q.type);
-      
-      // Add answers as JSON string (API expects them as a single JSON field)
-      formData.append(`questions[${index}][answers]`, JSON.stringify(q.answers));
-      
-      if (q.imageFile) {
-        formData.append(`questions[${index}][imageFile]`, q.imageFile);
-      } else if (q.imageUrl) {
-        formData.append(`questions[${index}][imageUrl]`, q.imageUrl);
-      }
-    });
-
-    // Structure and append the defaultSettings JSON object
-    const defaultSettings = {
-      theme: settings.theme ?? 'default',
-      powerUps: settings.powerUps ?? [],
-      gameMode: settings.gameMode ?? 'basic',
-      guessOptions: settings.guessOptions ?? 'zero',
-      timeLimit: settings.timeLimit ?? 'ten',
-      music: settings.music ?? true,
-      soundEffects: settings.soundEffects ?? true,
-    };
-    formData.append('defaultSettings', JSON.stringify(defaultSettings));
-
     try {
-      // Validate quizId for edit mode
+      setPublishStatusMessage('Downloading and storing images…')
+      const updatedQuestions = await downloadPixabayImages(questions);
+      const updatedQuizSetup = await downloadPixabayCoverImage(quizSetup);
+      
+      const formData = new FormData();
+      
+      formData.append('title', updatedQuizSetup.title);
+      formData.append('description', updatedQuizSetup.description || '');
+      formData.append('quizType', updatedQuizSetup.quizType);
+      formData.append('tags', JSON.stringify(updatedQuizSetup.tags));
+
+      if (updatedQuizSetup.coverImageFile) {
+        formData.append('quizImageFile', updatedQuizSetup.coverImageFile);
+      } else {
+        formData.append('quizImageUrl', updatedQuizSetup.coverImageUrl);
+      }
+
+      updatedQuestions.forEach((q, index) => {
+        if (q.id) {
+          formData.append(`questions[${index}][id]`, q.id);
+        }
+        
+        formData.append(`questions[${index}][question]`, q.question);
+        formData.append(`questions[${index}][correctAnswer]`, q.correctAnswer);
+        formData.append(`questions[${index}][type]`, q.type);
+        formData.append(`questions[${index}][answers]`, JSON.stringify(q.answers));
+        
+        if (q.imageFile) {
+          formData.append(`questions[${index}][imageFile]`, q.imageFile);
+        } else if (q.imageUrl) {
+          formData.append(`questions[${index}][imageUrl]`, q.imageUrl);
+        }
+      });
+
+      const defaultSettings = {
+        theme: settings.theme ?? 'default',
+        powerUps: settings.powerUps ?? [],
+        gameMode: settings.gameMode ?? 'basic',
+        guessOptions: settings.guessOptions ?? 'zero',
+        timeLimit: settings.timeLimit ?? 'fifteen',
+        music: settings.music ?? true,
+        soundEffects: settings.soundEffects ?? true,
+      };
+      formData.append('defaultSettings', JSON.stringify(defaultSettings));
+
       if (mode === 'edit' && !quizId) {
         throw new Error('Quiz ID is required for editing');
       }
       
-      // Determine API endpoint and method based on mode
       const url = mode === 'create' ? '/api/quizzes' : `/api/quizzes/${quizId}`;
       const method = mode === 'create' ? 'POST' : 'PUT';
-      
 
+      setPublishStatusMessage(
+        mode === 'create' ? 'Saving quiz to the server…' : 'Updating quiz…'
+      )
       
       const response = await fetch(url, {
         method,
@@ -795,29 +892,33 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
         deleteQuizDraft(resumeDraftId)
       }
       setDraftSavedAt(null)
+      setGenerationBrief(null)
+      setAiFormKey((key) => key + 1)
+      setPublishStatusMessage('Done — redirecting…')
       
       const successMessage = mode === 'create' ? 'Quiz Published Successfully!' : 'Quiz Updated Successfully!';
       addToast(successMessage, { variant: 'success', position: 'top-center' });
       
-      // Call onSuccess callback if provided
-      if (onSuccess && result.data?.id) {
-        onSuccess(result.data.id);
+      const publishedId = result.data?.id as string | undefined
+      if (onSuccess && publishedId) {
+        onSuccess(publishedId);
+      } else {
+        setIsPublishing(false)
+        setPublishStatusMessage('')
       }
     } catch (error) {
       console.error(`Failed to ${mode === 'create' ? 'submit' : 'update'} quiz:`, error);
       persistDraft('pre-submit');
+      setIsPublishing(false)
+      setPublishStatusMessage('')
       addToast(
         `Error ${mode === 'create' ? 'submitting' : 'updating'} quiz: ${error instanceof Error ? error.message : 'Unknown error'}. Your draft was kept on this device.`,
         { variant: 'error', position: 'top-center' }
       );
-      setIsPublishing(false)
-    } 
+      throw error
+    }
   };
 
-  // ============================================================================
-  // UI CONFIGURATION
-  // ============================================================================
-  
   // Define the steps for the progress indicator
   const stepDetails = [
     { id: 'setup', number: 1, title: 'Quiz Setup' },
@@ -904,8 +1005,10 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
             <QuizSetupForm 
               initialData={quizSetupData} 
               onSetupComplete={handleSetupComplete}
+              onAiGenerate={handleSetupAiGenerate}
               selectedTags={quizSetupData.tags}
               onTagToggle={handleTagToggle}
+              onSelectedTagsChange={handleSelectedTagsChange}
             />
           </div>
         )}
@@ -930,70 +1033,77 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
               </div>
             )}
 
-            <div className="flex flex-col lg:flex-row flex-grow gap-4">
+            <div className="flex flex-col lg:flex-row flex-grow gap-6 lg:gap-4">
             {/* SIDEBAR - Quiz Information and Navigation */}
-            <div className={`basis-1/4 flex flex-col h-full min-h-[420px] gap-2 grandstander text-[--text-color] bg-white p-4 items-center align-middle border rounded-lg border-[--border-dark] shadow-[4px_4px_0px_0px_var(--border-dark)]`}>
-              <div className='flex flex-row lg:flex-col gap-2 w-full'>
-                {/* Quiz Title */}
-                <div className='flex flex-col w-full justify-center lg:items-center gap-0 '>
-                  <h2 className='text-2xl w-full text-center font-bold px-4'>{quizSetupData.title || "Quiz Title"}</h2>
-                  
-                  {/* Cover Image */}
-                  {quizSetupData.coverImageUrl && (
-                    <Image 
-                      src={quizSetupData.coverImageFile ? URL.createObjectURL(quizSetupData.coverImageFile) : quizSetupData.coverImageUrl} 
-                      alt={quizSetupData.title || "Quiz cover image"} 
-                      width={300} 
-                      height={200} 
-                      className='rounded-lg hidden lg:block lg:w-full h-auto my-2 object-cover aspect-[16/9]'
-                    />
-                  )}
-                {/* Description */}
-                <span className='text-center'>{quizSetupData.quizType.replace(/_/g, ' ')} QUIZ </span>
-                <p className='text-center text-sm py-0'>{quizSetupData.description || "No description yet."}</p>
-                </div>
-                <div className='flex flex-col w-full justify-center lg:items-center px-6 items-end gap-2 '>
-
-                
-                {/* Tags */}
-                  <div className='flex gap-2 justify-center'>
-                    {quizSetupData.tags.length > 0 && (
-                      <div className='text-center'>
-                        <div className="flex flex-wrap justify-center gap-2">
-                          {quizSetupData.tags.map((tag, index) => (
-                            <Badge key={index} variant="outline" className="text-sm bg-white text-[--text-color] border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]">{tag}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {quizSetupData.tags.length === 0 && (
-                      <div className='text-center'><Badge variant="outline" className="text-xs font-medium bg-white text-[--text-color] border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]">No tags yet</Badge></div>
-                    )}
-                  </div>
-                  
-                  {/* Question Count */}
-                  <h3 className='text-center text-lg font-bold py-2'>Questions: {questionsList.length}</h3>
-                </div>
+            <div className="basis-1/4 mb-4 flex h-full min-h-0 flex-col gap-4 grandstander items-center border border-[--border-dark] bg-white p-5 text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] rounded-lg lg:mb-0">
+              <div className="flex w-full flex-col items-center gap-1 text-center">
+                <h2 className="w-full text-xl font-bold leading-tight">
+                  {quizSetupData.title || 'Quiz Title'}
+                </h2>
+                <p className="text-sm font-bold text-slate-700">
+                  Questions: {questionsList.length}
+                </p>
               </div>
 
-              
-              {/* Navigation Buttons */}
-              <div className='flex flex-row lg:flex-col gap-4 w-full justify-center'> 
-                <Button variant='outline' 
-                  className="flex w-full lg:w-auto items-center h-full text-lg font-semibold border border-[--border-dark] gap-2 bg-[--background] text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] hover:bg-teal-50 hover:border-[--border-dark] hover:shadow-[4px_6px_0px_0px_var(--border-dark)] hover:scale-105 transition-all duration-300"
-                  onClick={() => setCreationStep('setup')}>
-                     <ArrowLeft className="-mt-0.5" size={20} /> Edit Quiz Info
+              {quizSetupData.coverImageUrl && (
+                <Image
+                  src={
+                    quizSetupData.coverImageFile
+                      ? URL.createObjectURL(quizSetupData.coverImageFile)
+                      : quizSetupData.coverImageUrl
+                  }
+                  alt={quizSetupData.title || 'Quiz cover image'}
+                  width={300}
+                  height={200}
+                  className="hidden h-auto w-full rounded-lg object-cover aspect-[16/9] lg:block"
+                />
+              )}
+
+              <p className="w-full text-center text-sm text-slate-700">
+                {quizSetupData.description || 'No description yet.'}
+              </p>
+
+              <div className="flex w-full flex-wrap justify-center gap-2">
+                {quizSetupData.tags.length > 0 ? (
+                  quizSetupData.tags.map((tag, index) => (
+                    <Badge
+                      key={index}
+                      variant="outline"
+                      className="text-sm bg-white text-[--text-color] border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]"
+                    >
+                      {tag}
+                    </Badge>
+                  ))
+                ) : (
+                  <Badge
+                    variant="outline"
+                    className="text-xs font-medium bg-white text-[--text-color] border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]"
+                  >
+                    No tags yet
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button
+                  variant="outline"
+                  className="flex h-12 items-center gap-2 border border-[--border-dark] bg-[--background] px-6 text-lg font-semibold text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] hover:bg-teal-50 hover:border-[--border-dark] hover:shadow-[4px_6px_0px_0px_var(--border-dark)] hover:scale-105 transition-all duration-300"
+                  onClick={() => setCreationStep('setup')}
+                >
+                  <ArrowLeft className="-mt-0.5" size={20} /> Edit Quiz Info
                 </Button>
-                <Button variant='outline' 
-                  className="flex w-full lg:w-auto items-center h-full text-lg font-semibold border border-[#1F6E91] gap-2 bg-[--text-color] text-white shadow-[4px_4px_0px_0px_var(--border-dark)] hover:bg-white hover:border-[#1F6E91] hover:shadow-[4px_6px_0px_0px_var(--border-dark)] hover:scale-105 transition-all duration-300"
-                  onClick={handleGoToPublishStep}>
-                    {mode === 'create' ? 'Publish Quiz' : 'Update Quiz'} <ArrowRight className="-mt-0.5" size={20} /> 
+                <Button
+                  variant="outline"
+                  className="flex h-12 items-center gap-2 border border-[#1F6E91] bg-[--text-color] px-6 text-lg font-semibold text-white shadow-[4px_4px_0px_0px_#1F6E91] hover:bg-white hover:text-[--text-color] hover:border-[#1F6E91] hover:shadow-[4px_6px_0px_0px_#1F6E91] hover:scale-105 transition-all duration-300"
+                  onClick={handleGoToPublishStep}
+                >
+                  {mode === 'create' ? 'Review & Continue' : 'Update Quiz'}{' '}
+                  <ArrowRight className="-mt-0.5" size={20} />
                 </Button>
               </div>
 
-              {/* Draft controls — use leftover sidebar height without cluttering the main editor */}
-              <div className="mt-auto w-full pt-4 border-t border-slate-200 space-y-2">
-                <p className="text-xs text-center text-slate-500 inclusive-sans px-1">
+              <div className="w-full space-y-2 border-t border-slate-200 pt-4">
+                <p className="inclusive-sans px-1 text-center text-xs text-slate-500">
                   {draftSavedAt
                     ? `Last saved ${new Date(draftSavedAt).toLocaleString([], {
                         month: 'short',
@@ -1003,112 +1113,281 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
                       })}`
                     : 'Edits autosave on this device'}
                 </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full grandstander border-2 border-[#1E5167] text-[#114257]"
-                  onClick={() => persistDraft('manual')}
-                >
-                  Save draft
-                </Button>
-                {draftSavedAt ? (
+                <div className="flex flex-wrap items-center justify-center gap-2">
                   <Button
                     type="button"
-                    variant="ghost"
-                    className="w-full grandstander text-red-600"
-                    onClick={() => {
-                      clearWorkingDraft(mode, quizId)
-                      if (resumeDraftId) deleteQuizDraft(resumeDraftId)
-                      setDraftSavedAt(null)
-                      setQuizSetupData({
-                        title: '',
-                        description: '',
-                        coverImageUrl: '/images/placeholder.webp',
-                        coverImageFile: null,
-                        quizType: QuestionType.MULTIPLE_CHOICE,
-                        tags: [],
-                      })
-                      setQuestionsList([])
-                      setQuizSettings({ theme: 'default', powerUps: [] })
-                      setCreationStep('setup')
-                      addToast('Draft discarded.', { variant: 'info', position: 'top-center' })
-                    }}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-auto grandstander border-2 border-[#1E5167] px-3 text-[#114257]"
+                    onClick={() => persistDraft('manual')}
                   >
-                    Discard draft
+                    Save draft
                   </Button>
-                ) : null}
+                  {draftSavedAt ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-auto grandstander px-2 text-red-600"
+                      onClick={() => {
+                        clearWorkingDraft(mode, quizId)
+                        if (resumeDraftId) deleteQuizDraft(resumeDraftId)
+                        setDraftSavedAt(null)
+                        setQuizSetupData({
+                          title: '',
+                          description: '',
+                          coverImageUrl: '/images/placeholder.webp',
+                          coverImageFile: null,
+                          quizType: QuestionType.MULTIPLE_CHOICE,
+                          tags: [],
+                        })
+                        setQuestionsList([])
+                        setQuizSettings({ theme: 'default', powerUps: [] })
+                        setGenerationBrief(null)
+                        setAiFormKey((key) => key + 1)
+                        setAiModalOpen(false)
+                        setUploadModalOpen(false)
+                        setPromptModalOpen(false)
+                        setContentView('create')
+                        setCreationStep('setup')
+                        addToast('Draft discarded.', {
+                          variant: 'info',
+                          position: 'top-center',
+                        })
+                      }}
+                    >
+                      Discard draft
+                    </Button>
+                  ) : null}
+                </div>
               </div>
             </div>
 
             {/* MAIN CONTENT AREA - Methods for creating quiz content */}
-            <div className="basis-3/4 flex flex-col gap-4 grandstander items-center text-[--text-color] h-full align-middle ">
-              
-              {/* Content Method Selector */}
-              <div className="md:absolute md:-mt-6 flex w-full md:w-[540px] justify-between items-center grandstander gap-2 bg-[--primary-light] border border-[--border-dark] rounded-lg shadow-[4px_4px_0px_0px_var(--border-dark)]">
-                <Button variant='default' className={`w-32 pr-4 pl-1 text-[--text-color] ${contentView === 'create' ? 'bg-white' : 'hover:font-bold'}`} onClick={() => setContentView('create')}>
-                  <div className={`flex items-center p-1.5 mr-2 justify-center rounded-full ${contentView === 'create' ? 'bg-[--background] border-2 border-[--primary-accent]' : 'hover:bg-white'}`}>
-                    <Pencil size={16} />
-                  </div> Edit 
-                </Button>
-                <Button variant='default' className={`w-32 pr-4 pl-1 text-[--text-color] ${contentView === 'upload' ? 'bg-white' : 'hover:font-bold'}`} onClick={() => setContentView('upload')}>
-                  <div className={`flex items-center p-1.5 mr-2 justify-center rounded-full ${contentView === 'upload' ? 'bg-[--background] border-2 border-[--primary-accent]' : 'hover:bg-white'}`}>  
-                    <Upload size={16} />
-                  </div> Upload
-                </Button>
-                <Button variant='default' className={`w-40 pr-4 pl-1 text-[--text-color] ${contentView === 'ai-generation' ? 'bg-white' : 'hover:font-bold'}`} onClick={() => setContentView('ai-generation')}>
-                  <div className={`flex items-center p-1.5 mr-2 justify-center rounded-full ${contentView === 'ai-generation' ? 'bg-[--background] border-2 border-[--primary-accent]' : 'hover:bg-white'}`}>
-                    <Sparkles size={16} />
-                  </div> AI Generator
-                </Button>
-              </div>
-
-              {/* Content Creation Area */}
-              <div className='w-full h-full max-w-screen-2xl border border-[--border-dark] bg-white shadow-[4px_4px_0px_0px_var(--border-dark)] rounded-lg'>
-
-                {/* Manual Question Creation */}
-                {contentView === 'create' && (
-                  <QuizForm 
-                    ref={quizFormRef}
-                    quizId={quizId}
-                    quizOverallType={quizSetupData.quizType}
-                    onQuizCoverImageChange={handleQuizCoverImageChangeInContentStep}
-                    initialQuestions={questionsList}
-                    onQuestionsChange={handleQuestionsListChange}
-                    onConfirmQuestions={handleQuestionsConfirmed}
-                    className="bg-transparent shadow-none border-0"
-                  />
-                )}
-
-                {/* CSV Upload for Questions */}
-                {contentView === 'upload' && (
-                  <div className="flex w-full justify-">
-                    <Card className="flex flex-col text-2xl w-full h-full border-none font-bold p-6">
-                      <UploadForm 
-                        quizOverallType={quizSetupData.quizType}
-                        onAddQuestions={handleAddQuestions}
-                        className="bg-transparent shadow-none border-0"
-                      />
-                      <div className="text-base font-normal p-4 flex-grow ">
-                        <h1 className="text-xl font-semibold mb-2">Even faster quiz creation</h1>
-                        <p>Use our quiz template to make a quiz in Excel then simply upload the quiz.</p>
-                        <p className='mb-2'>You can add images by going to the quiz list and editing the quiz.</p>
-                        <DownloadButton />
-                      </div>
-                    </Card>
+            <div className="basis-3/4 mt-2 flex h-full flex-col items-center gap-4 align-middle grandstander text-[--text-color] lg:mt-0">
+              <div className="flex w-full h-full max-w-screen-2xl flex-col border border-[--border-dark] bg-white shadow-[4px_4px_0px_0px_var(--border-dark)] rounded-lg">
+                {questionsList.length === 0 ? (
+                  <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 py-12">
+                    <div className="max-w-md text-center">
+                      <h3 className="text-xl font-bold">Add your first question</h3>
+                      <p className="mt-1 text-sm text-slate-600">
+                        Choose how you want to start building this quiz.
+                      </p>
+                    </div>
+                    <div className="grid w-full max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuestionsList([
+                            {
+                              question: '',
+                              answers: ['', '', '', ''],
+                              correctAnswer: '',
+                              imageUrl: '/images/placeholder.webp',
+                              imageFile: null,
+                              type: quizSetupData.quizType,
+                            },
+                          ])
+                          setContentView('create')
+                        }}
+                        className="flex min-h-[9rem] flex-col items-center justify-center gap-3 rounded-xl border-2 border-[--border-dark] bg-white px-4 py-5 text-center shadow-[4px_4px_0px_0px_var(--border-dark)] transition hover:bg-[--primary-light]"
+                      >
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-[--primary-accent] bg-[--background]">
+                          <Plus size={22} />
+                        </div>
+                        <span className="text-base font-semibold">Add question</span>
+                        <span className="text-xs text-slate-600">Write it manually</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUploadModalOpen(true)}
+                        className="flex min-h-[9rem] flex-col items-center justify-center gap-3 rounded-xl border-2 border-[--border-dark] bg-white px-4 py-5 text-center shadow-[4px_4px_0px_0px_var(--border-dark)] transition hover:bg-[--primary-light]"
+                      >
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-[--border-dark] bg-[--background]">
+                          <Upload size={22} />
+                        </div>
+                        <span className="text-base font-semibold">Upload file</span>
+                        <span className="text-xs text-slate-600">Import from a spreadsheet</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPromptModalOpen(true)}
+                        className="flex min-h-[9rem] flex-col items-center justify-center gap-3 rounded-xl border-2 border-[--border-dark] bg-white px-4 py-5 text-center shadow-[4px_4px_0px_0px_var(--border-dark)] transition hover:bg-[--primary-light]"
+                      >
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-[--border-dark] bg-[--background]">
+                          <ClipboardCopy size={22} />
+                        </div>
+                        <span className="text-base font-semibold">Prompt</span>
+                        <span className="text-xs text-slate-600">Copy for ChatGPT / Gemini</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAiModalOpen(true)}
+                        className="flex min-h-[9rem] flex-col items-center justify-center gap-3 rounded-xl border-2 border-violet-700 bg-violet-600 px-4 py-5 text-center text-white shadow-[4px_4px_0px_0px_var(--border-dark)] transition hover:bg-violet-500"
+                      >
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/80">
+                          <Sparkles size={22} />
+                        </div>
+                        <span className="text-base font-semibold">AI generate</span>
+                        <span className="text-xs text-violet-100">Create with AI</span>
+                      </button>
+                    </div>
                   </div>
-                )}
-
-                {/* AI Question Generation */}
-                {contentView === 'ai-generation' && (
-                  <AIGenerationForm
-                    onQuestionsGenerated={handleAddQuestions}
-                    quizType={quizSetupData.quizType}
-                    quizTitle={quizSetupData.title}
-                    quizDescription={quizSetupData.description}
-                    existingTags={quizSetupData.tags}
-                  />
+                ) : (
+                  <>
+                    <div className="flex flex-wrap items-center justify-center gap-2 border-b border-slate-200 px-4 py-3">
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => {
+                          setContentView('create')
+                          setUploadModalOpen(false)
+                          setPromptModalOpen(false)
+                          setAiModalOpen(false)
+                        }}
+                        className="h-10 w-auto shrink-0 border border-[--border-dark] bg-white px-3 pr-4 pl-1 text-sm font-semibold text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] hover:bg-[--primary-light]"
+                      >
+                        <div className="mr-2 flex items-center justify-center rounded-full border-2 border-[--primary-accent] bg-[--background] p-1.5">
+                          <Pencil size={16} />
+                        </div>
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => {
+                          setAiModalOpen(false)
+                          setPromptModalOpen(false)
+                          setUploadModalOpen(true)
+                        }}
+                        className="h-10 w-auto shrink-0 border border-[--border-dark] bg-white px-3 pr-4 pl-1 text-sm font-semibold text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] hover:bg-[--primary-light]"
+                      >
+                        <div className="mr-2 flex items-center justify-center rounded-full bg-[--background] p-1.5">
+                          <Upload size={16} />
+                        </div>
+                        Upload
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => {
+                          setAiModalOpen(false)
+                          setUploadModalOpen(false)
+                          setPromptModalOpen(true)
+                        }}
+                        className="h-10 w-auto shrink-0 border border-[--border-dark] bg-white px-3 pr-4 pl-1 text-sm font-semibold text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] hover:bg-[--primary-light]"
+                      >
+                        <div className="mr-2 flex items-center justify-center rounded-full bg-[--background] p-1.5">
+                          <ClipboardCopy size={16} />
+                        </div>
+                        Prompt
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => {
+                          setUploadModalOpen(false)
+                          setPromptModalOpen(false)
+                          setAiModalOpen(true)
+                        }}
+                        className="h-10 w-auto shrink-0 border border-violet-700 bg-violet-600 px-3 text-sm font-semibold text-white shadow-[4px_4px_0px_0px_var(--border-dark)] hover:bg-violet-500"
+                      >
+                        <Sparkles size={16} className="mr-2" />
+                        AI Generator
+                      </Button>
+                    </div>
+                    <QuizForm
+                      ref={quizFormRef}
+                      quizId={quizId}
+                      quizOverallType={quizSetupData.quizType}
+                      onQuizCoverImageChange={handleQuizCoverImageChangeInContentStep}
+                      initialQuestions={questionsList}
+                      onQuestionsChange={handleQuestionsListChange}
+                      onConfirmQuestions={handleQuestionsConfirmed}
+                      className="bg-transparent shadow-none border-0"
+                    />
+                  </>
                 )}
               </div>
+
+              <Dialog open={uploadModalOpen} onOpenChange={setUploadModalOpen}>
+                <DialogContent className="flex max-h-[92vh] w-[min(96vw,800px)] max-w-[800px] flex-col gap-0 overflow-hidden border-[--border-dark] bg-white p-0 text-[--text-color] shadow-[6px_6px_0px_0px_var(--border-dark)] sm:rounded-lg">
+                  <DialogHeader className="shrink-0 border-b border-slate-200 px-5 py-4 text-left">
+                    <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+                      <Upload className="h-5 w-5" />
+                      Upload questions
+                    </DialogTitle>
+                    <DialogDescription className="text-sm text-slate-600">
+                      Import from a spreadsheet, then return to the manual editor.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="min-h-0 flex-1 overflow-y-auto p-5">
+                    <UploadForm
+                      quizOverallType={quizSetupData.quizType}
+                      onAddQuestions={(questions) => {
+                        handleAddQuestions(questions)
+                      }}
+                      className="bg-transparent shadow-none border-0"
+                    />
+                    <div className="mt-4 space-y-2 text-sm font-normal">
+                      <h2 className="text-base font-semibold">Even faster quiz creation</h2>
+                      <p>Use our quiz template to make a quiz in Excel then simply upload the quiz.</p>
+                      <p>You can add images by going to the quiz list and editing the quiz.</p>
+                      <DownloadButton />
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={promptModalOpen} onOpenChange={setPromptModalOpen}>
+                <DialogContent className="flex max-h-[92vh] w-[min(96vw,800px)] max-w-[800px] flex-col gap-0 overflow-hidden border-[--border-dark] bg-white p-0 text-[--text-color] shadow-[6px_6px_0px_0px_var(--border-dark)] sm:rounded-lg">
+                  <DialogHeader className="shrink-0 border-b border-slate-200 px-5 py-4 text-left">
+                    <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+                      <ClipboardCopy className="h-5 w-5" />
+                      Prompt import
+                    </DialogTitle>
+                    <DialogDescription className="text-sm text-slate-600">
+                      Fill in the fields, copy the prompt, then paste the JSON back here.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                    <PromptImportForm
+                      quizTitle={quizSetupData.title}
+                      quizDescription={quizSetupData.description}
+                      tags={quizSetupData.tags}
+                      quizOverallType={quizSetupData.quizType}
+                      onAddQuestions={handleAddQuestions}
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={aiModalOpen} onOpenChange={setAiModalOpen}>
+                <DialogContent className="flex max-h-[92vh] w-[min(96vw,800px)] max-w-[800px] flex-col gap-0 overflow-hidden border-[--border-dark] bg-white p-0 text-[--text-color] shadow-[6px_6px_0px_0px_var(--border-dark)] sm:rounded-lg">
+                  <DialogHeader className="shrink-0 border-b border-slate-200 px-5 py-4 text-left">
+                    <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+                      <Sparkles className="h-5 w-5 text-violet-600" />
+                      AI Question Generator
+                    </DialogTitle>
+                    <DialogDescription className="text-sm text-slate-600">
+                      Generate and review questions here, then return to the manual editor.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="min-h-0 flex-1 overflow-y-auto">
+                    <AIGenerationForm
+                      key={aiFormKey}
+                      onQuestionsGenerated={handleAddQuestions}
+                      onTagsSync={handleAiTagsSync}
+                      quizType={quizSetupData.quizType}
+                      quizTitle={quizSetupData.title}
+                      quizDescription={quizSetupData.description}
+                      existingTags={quizSetupData.tags}
+                      initialBrief={generationBrief}
+                      onBriefChange={setGenerationBrief}
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
             </div>
           </div>
@@ -1127,6 +1406,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
               onFinalize={handleFinalQuizSubmit}
               onGoBackToContent={() => setCreationStep('content')}
               isPublishing={isPublishing}
+              publishStatusMessage={publishStatusMessage}
             />
           </div>
         )}
