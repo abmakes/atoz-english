@@ -15,7 +15,7 @@ export class GameBackgroundManager {
 
     private view: PIXI.Container;
     private backgroundSprite: PIXI.Sprite | null = null;
-    private readonly BACKGROUND_IMAGE_NAME = 'bg_image.png';
+    private readonly BACKGROUND_IMAGE_NAME = 'bg_image.webp';
 
     constructor(
         pixiApp: PixiApplication,

@@ -15,9 +15,9 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 | Path | Used by |
 |------|---------|
 | `audio/default/*.mp3` | PixiEngine / GameContainer audio config |
-| `images/default/bg_image.png` | Default theme |
-| `images/dark/bg_image.png` | Dark theme |
-| `images/forest/bg_image.png` | Forest theme |
+| `images/default/bg_image.webp` | Default theme |
+| `images/dark/bg_image.webp` | Dark theme |
+| `images/forest/bg_image.webp` | Forest theme |
 | `images/placeholder.webp` | Quiz/question fallbacks |
 | `images/splash-dash/crate_5_4.png` | Splash Dash crates |
 | `images/splash-dash/capy_spritesheet.png` | Splash Dash players |

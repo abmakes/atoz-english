@@ -127,7 +127,7 @@
     --panel-bg: white;
     --panel-bg-theme: rgba(232, 248, 255, 0.8);
     --panel-border: transparent;
-    --theme-background-image: url('/images/default/bg_image.png');
+    --theme-background-image: url('/images/default/bg_image.webp');
     --text-color: #114257; /* Overrides --foreground */
     --text-light: #175975; /* Potential override for --muted-foreground */
     --heading-color: #114257;
@@ -238,7 +238,7 @@
     --secondary-bg: #ffffff;
     --panel-bg: rgba(55, 65, 81, 0.85);
     --panel-border: #5c687a;
-    --theme-background-image: url('/images/dark/bg_image.png'); /* Assuming dark version */
+    --theme-background-image: url('/images/dark/bg_image.webp'); /* Assuming dark version */
     --text-color: #d1d5db; /* Overrides --foreground */
     --text-light: #ebebeb; /* Overrides --muted-foreground */
     --text-dark: #0b232d;
@@ -284,7 +284,7 @@
     --secondary-bg: #a3c9a8;
     --panel-bg: rgba(240, 255, 240, 0.85);
     --panel-border: #8fbc8f;
-    --theme-background-image: url('/images/forest/bg_image.png'); 
+    --theme-background-image: url('/images/forest/bg_image.webp'); 
     --text-color: #2f4f4f;
     --text-light: #556b2f;
     --heading-color: #006400;
