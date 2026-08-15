@@ -225,7 +225,6 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
   const [publishStatusMessage, setPublishStatusMessage] = useState('')
 
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
-  const [isPublishing, setIsPublishing] = useState(false)
   const draftHydrated = useRef(false)
   const publishCompletedRef = useRef(false)
   const workingDraftId = getWorkingDraftId(mode, quizId)
