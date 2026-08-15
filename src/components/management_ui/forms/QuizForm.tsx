@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
+import { useState, useEffect, forwardRef, useImperativeHandle, memo } from 'react'
 import { Button } from '@/components/ui/button'
-// import { Input } from '@/components/ui/input' // Removed unused import
 import Image from 'next/image'
 import ImageSelectModal from '@/components/management_ui/ImageSelectModal'
 import { QuestionFormMatching, MatchingPair } from './QuestionFormMatching'
@@ -21,28 +20,18 @@ import {
 
 import type { Question as BaseQuestion } from '@/components/management_ui/QuizEditor';
 
-// Extend Question type to include tempId for local state management
 type Question = BaseQuestion & { tempId?: string };
 
 interface QuizFormProps {
   quizId?: string;
-  
-  // quizTitle: string; // No longer used directly in this component for display
-  // quizDescription?: string; // No longer used
-  // quizCoverImageUrl: string; // No longer used
   quizOverallType: QuestionType;
-  // quizTags?: string[]; // No longer used
-
-  onQuizCoverImageChange: (newImageUrl: string, newImageFile?: File | null) => void; // Kept for potential future use or if other parts rely on it
-
+  onQuizCoverImageChange: (newImageUrl: string, newImageFile?: File | null) => void;
   initialQuestions: Omit<Question, 'tempId'>[] | Question[];
   onQuestionsChange: (updatedQuestions: Question[]) => void;
   onConfirmQuestions?: () => void;
-  
   className?: string;
 }
 
-// Define the handle type for methods exposed by QuizForm
 export interface QuizFormHandle {
   triggerSubmit: () => void;
 }
@@ -54,15 +43,141 @@ const ensureTempId = (q: Omit<Question, 'tempId'> | Question): Question => {
   return { ...q, tempId: q.id || `new-${Date.now()}-${Math.random()}` } as Question;
 };
 
-// Wrap QuizForm with forwardRef
+function useObjectUrl(file: File | null | undefined, fallbackUrl: string): string {
+  const [url, setUrl] = useState(fallbackUrl);
+
+  useEffect(() => {
+    if (!file) {
+      setUrl(fallbackUrl);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(file);
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file, fallbackUrl]);
+
+  return url;
+}
+
+function QuestionImage({
+  file,
+  imageUrl,
+  alt,
+  width,
+  height,
+  className,
+}: {
+  file?: File | null;
+  imageUrl: string;
+  alt: string;
+  width: number;
+  height: number;
+  className?: string;
+}) {
+  const src = useObjectUrl(file, imageUrl);
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      width={width}
+      height={height}
+      className={className}
+    />
+  );
+}
+
+interface MultipleChoiceFormProps {
+  question: Question;
+  questionIndex: number;
+  onUpdate: (index: number, fields: Partial<Question>) => void;
+}
+
+const MultipleChoiceForm = memo(function MultipleChoiceForm({
+  question,
+  questionIndex,
+  onUpdate,
+}: MultipleChoiceFormProps) {
+  const [localAnswers, setLocalAnswers] = useState<string[]>(() => {
+    const answers = [...(question.answers || [])];
+    while (answers.length < 4) answers.push('');
+    return answers;
+  });
+
+  useEffect(() => {
+    const answers = [...(question.answers || [])];
+    while (answers.length < 4) answers.push('');
+    setLocalAnswers(answers);
+  }, [question.answers, question.tempId]);
+
+  const handleLocalAnswerChange = (aIndex: number, value: string) => {
+    const updatedLocalAnswers = [...localAnswers];
+    updatedLocalAnswers[aIndex] = value;
+    setLocalAnswers(updatedLocalAnswers);
+  };
+
+  const saveAnswerTextOnBlur = (aIndex: number) => {
+    const value = localAnswers[aIndex];
+    const currentGlobalAnswers = question.answers || [];
+    const newAnswers = [...currentGlobalAnswers];
+    while (newAnswers.length < 4) newAnswers.push('');
+
+    if (value !== newAnswers[aIndex]) {
+      newAnswers[aIndex] = value;
+      let newCorrectAnswer = question.correctAnswer;
+      if (currentGlobalAnswers[aIndex] === question.correctAnswer) {
+        newCorrectAnswer = value;
+      }
+      onUpdate(questionIndex, { answers: newAnswers, correctAnswer: newCorrectAnswer });
+    }
+  };
+
+  const selectCorrectAnswer = (answerText: string) => {
+    onUpdate(questionIndex, { correctAnswer: answerText });
+  };
+
+  return (
+    <div className="space-y-4 text-lg text-[--text-color] grandstander">
+      <h3 className='-mb-3 ml-4 text-xl font-bold'>Answers</h3>
+      <div className='grid grid-cols-2 gap-2'>
+        {localAnswers.map((localAnswer, aIndex) => (
+          <div key={`answer-container-${question.tempId}-${aIndex}`} className="relative">
+            <Textarea
+              rows={1}
+              className='w-full border-2 border-slate-200 bg-white py-4 pl-6 pr-12 text-base text-[--text-color]'
+              name={`question-${question.tempId}-answer-${aIndex}`}
+              value={localAnswer}
+              onChange={(e) => handleLocalAnswerChange(aIndex, e.target.value)}
+              onBlur={() => saveAnswerTextOnBlur(aIndex)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  saveAnswerTextOnBlur(aIndex);
+                }
+              }}
+              placeholder={`Answer ${aIndex + 1}`}
+              required
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => selectCorrectAnswer(localAnswer)}
+              className={`absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 transform items-center justify-center rounded-full p-1
+                          ${question.correctAnswer === localAnswer ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-slate-300 text-slate-600 hover:bg-slate-400'}`}
+              title={question.correctAnswer === localAnswer ? "Marked as correct" : "Mark as correct"}
+            >
+              {question.correctAnswer === localAnswer ? <Check size={20} strokeWidth={4} /> : <X size={20} strokeWidth={4} color="white"/>}
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+});
+
 const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({ 
   quizId, 
-  // quizTitle, // Removed
-  // quizDescription, // Removed
-  // quizCoverImageUrl, // Removed
   quizOverallType,
-  // quizTags, // Removed
-  onQuizCoverImageChange, // Kept
+  onQuizCoverImageChange,
   initialQuestions,
   onQuestionsChange,
   onConfirmQuestions,
@@ -75,8 +190,7 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
   const mode = quizId ? 'edit' : 'create';
   
   const [questions, setQuestionsState] = useState<Question[]>(() => {
-    const initialQuestionsWithTempId = initialQuestions.map(ensureTempId);
-    return initialQuestionsWithTempId;
+    return initialQuestions.map(ensureTempId);
   });
   
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -87,13 +201,8 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
     setQuestionsState(processedQuestions);
     if (mode === 'create' && processedQuestions.length > 0) {
         setOpenAccordionItems([processedQuestions[processedQuestions.length - 1].tempId!]);
-    } else if (processedQuestions.length > 0 && processedQuestions[0]?.tempId) {
-        // Optionally open the first one in edit mode, or none
-        // setOpenAccordionItems([processedQuestions[0].tempId]); 
     }
   }, [initialQuestions, mode]);
-
-
 
   const updateQuestionsAndNotifyParent = (newQuestions: Question[]) => {
     setQuestionsState(newQuestions);
@@ -160,22 +269,14 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
 
         switch (quizOverallType) {
           case QuestionType.MATCHING:
-            newQuestionAnswers = []; // Answers for matching are derived from correct pairs
+            newQuestionAnswers = [];
             newQuestionCorrectAnswer = JSON.stringify([{ left: '', right: '' }]);
             break;
           case QuestionType.SORTING:
-            newQuestionAnswers = []; // Answers for sorting are the items themselves in correct order
+            newQuestionAnswers = [];
             newQuestionCorrectAnswer = JSON.stringify(['', '', '']); 
             break;
-          // case QuestionType.TRUE_FALSE:
-          //   newQuestionAnswers = ['True', 'False']; 
-          //   newQuestionCorrectAnswer = 'True'; 
-          //   break;
-          // case QuestionType.SHORT_ANSWER:
-          //   newQuestionAnswers = []; 
-          //   newQuestionCorrectAnswer = ''; 
-          //   break;
-          default: // MULTIPLE_CHOICE
+          default:
             newQuestionAnswers = ['', '', '', ''];
             newQuestionCorrectAnswer = '';
             break;
@@ -198,157 +299,14 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
   };
 
   const duplicateQuestion = (indexToDuplicate: number) => {
-    const questionToDup = questions[indexToDuplicate];
-    addQuestion(questionToDup);
+    addQuestion(questions[indexToDuplicate]);
   };
-
-  const MultipleChoiceForm = ({ questionIndex }: { questionIndex: number }) => {
-    const question = questions[questionIndex];
-    
-    // Local state for each answer input to avoid lag
-    const [localAnswers, setLocalAnswers] = useState<string[]>(() => {
-      // Ensure we have at least 4 answer slots for multiple choice
-      const answers = question.answers || [];
-      while (answers.length < 4) {
-        answers.push('');
-      }
-      return answers;
-    });
-
-    useEffect(() => {
-      // Sync localAnswers if the question.answers prop changes from parent
-      // This might happen if questions are reordered, added, or overall type changes.
-      // Ensure we always have at least 4 answer slots for multiple choice
-      const answers = question.answers || [];
-      const paddedAnswers = [...answers];
-      while (paddedAnswers.length < 4) {
-        paddedAnswers.push('');
-      }
-      
-      setLocalAnswers(paddedAnswers);
-    }, [question.answers, questionIndex, question.tempId]);
-
-    const handleLocalAnswerChange = (aIndex: number, value: string) => {
-      const updatedLocalAnswers = [...localAnswers];
-      updatedLocalAnswers[aIndex] = value;
-      setLocalAnswers(updatedLocalAnswers);
-    };
-
-    const saveAnswerTextOnBlur = (aIndex: number) => {
-      const value = localAnswers[aIndex];
-      const currentGlobalAnswers = questions[questionIndex].answers || [];
-      
-      // Ensure we have a proper answers array with at least 4 slots
-      const newAnswers = [...currentGlobalAnswers];
-      while (newAnswers.length < 4) {
-        newAnswers.push('');
-      }
-      
-      // Only update global state if the value actually changed from what's in global state
-      if (value !== newAnswers[aIndex]) {
-        newAnswers[aIndex] = value;
-        let newCorrectAnswer = question.correctAnswer;
-        // If the edited answer was the correct one, update the correctAnswer string as well
-        if (currentGlobalAnswers[aIndex] === question.correctAnswer) {
-          newCorrectAnswer = value;
-        }
-        updateQuestion(questionIndex, { answers: newAnswers, correctAnswer: newCorrectAnswer });
-      }
-    };
-    
-    const selectCorrectAnswer = (answerText: string) => {
-      // Ensure the answerText for correctAnswer is from the global state perspective
-      // or from localAnswers if it's being selected *before* blur potentially.
-      // For simplicity, we assume answerText is one of the current localAnswers.
-      updateQuestion(questionIndex, { correctAnswer: answerText });
-    };
-    
-    // answer section //////////////////////////////////////////////////////////
-    return (
-      <div className="space-y-4 grandstander text-lg text-[--text-color]">
-        <h3 className='font-bold text-xl ml-4 -mb-3'>Answers</h3>
-        <div className='grid gap-2 grid-cols-2'>
-          {localAnswers.map((localAnswer, aIndex) => (
-            <div key={`answer-container-${question.tempId}-${aIndex}`} className="relative">
-              <Textarea
-                rows={1}
-                className='bg-white text-base text-[--text-color] border-2 border-slate-200 pl-6 py-4 pr-12 w-full'
-                key={`answer-${question.tempId}-${aIndex}`}
-                name={`question-${question.tempId}-answer-${aIndex}`}
-                value={localAnswer} // Use local state for value
-                onChange={(e) => handleLocalAnswerChange(aIndex, e.target.value)} // Update local state on change
-                onBlur={() => saveAnswerTextOnBlur(aIndex)} // Update global state on blur
-                onKeyDown={(e) => {
-                  // Also save on Enter key for better UX
-                  if (e.key === 'Enter') {
-                    saveAnswerTextOnBlur(aIndex);
-                  }
-                }}
-                placeholder={`Answer ${aIndex + 1}`}
-                required
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => selectCorrectAnswer(localAnswer)} // Use localAnswer for selection
-                className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-full h-8 w-8 flex items-center justify-center
-                            ${question.correctAnswer === localAnswer ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-600'}`}
-                title={question.correctAnswer === localAnswer ? "Mark as incorrect" : "Mark as correct"}
-              >
-                {question.correctAnswer === localAnswer ? <Check size={20} strokeWidth={4} /> : <X size={20} strokeWidth={4} color="white"/>}
-              </Button>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  // const TrueFalseForm = ({ questionIndex }: { questionIndex: number }) => {
-  //   const question = questions[questionIndex];
-  //   return (
-  //     <div className="space-y-4">
-  //       <h3 className='font-bold ml-2 -my-2'>Correct Answer</h3>
-  //       <div className="flex space-x-4">
-  //         {['True', 'False'].map(val => (
-  //           <Button 
-  //             key={val}
-  //             variant={question.correctAnswer === val ? "default" : "outline"}
-  //             onClick={() => updateQuestion(questionIndex, { correctAnswer: val })}
-  //             className={question.correctAnswer === val ? "bg-[--primary-accent]" : ""}
-  //           >
-  //             {val}
-  //           </Button>
-  //         ))}
-  //       </div>
-  //     </div>
-  //   );
-  // };
-
-  // const ShortAnswerForm = ({ questionIndex }: { questionIndex: number }) => {
-  //   const question = questions[questionIndex];
-  //   return (
-  //     <div className="space-y-4">
-  //       <h3 className='font-bold ml-2 -my-2'>Accepted Answer(s)</h3>
-  //       <Textarea
-  //         rows={2}
-  //         className='bg-white h-16 text-[--text-color] border-2 border-slate-200 px-6 py-4'
-  //         key={`short-answer-${question.tempId}`}
-  //         name={`question-${question.tempId}-short-answer`}
-  //         defaultValue={question.correctAnswer} 
-  //         onBlur={(e) => updateQuestion(questionIndex, { correctAnswer: e.target.value })}
-  //         placeholder="Enter the accepted answer(s), comma-separated for multiple"
-  //       />
-  //     </div>
-  //   );
-  // };
 
   const renderQuestionForm = (questionIndex: number) => {
     const question = questions[questionIndex];
     if (!question) return null; 
     switch (question.type) {
-      case QuestionType.MATCHING:
+      case QuestionType.MATCHING: {
         let initialPairs: MatchingPair[] = [{left: '', right: ''}];
         try {
             const parsed = JSON.parse(question.correctAnswer);
@@ -360,7 +318,8 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
                     initialPairs={initialPairs} 
                     onSave={(pairs) => updateQuestion(questionIndex, { correctAnswer: JSON.stringify(pairs), answers: pairs.flatMap(p => [p.left, p.right]) })} 
                 />;
-      case QuestionType.SORTING:
+      }
+      case QuestionType.SORTING: {
         let initialItems: string[] = ['', '', ''];
         try {
             const parsed = JSON.parse(question.correctAnswer);
@@ -372,23 +331,23 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
                     initialItems={initialItems} 
                     onSave={(items) => updateQuestion(questionIndex, { correctAnswer: JSON.stringify(items), answers: [...items]})} 
                 />;
-      // case QuestionType.TRUE_FALSE:
-      //   return <TrueFalseForm questionIndex={questionIndex} />;
-      // case QuestionType.SHORT_ANSWER:
-      //   return <ShortAnswerForm questionIndex={questionIndex} />;
+      }
       case QuestionType.MULTIPLE_CHOICE:
       default:
-        return <MultipleChoiceForm questionIndex={questionIndex} />;
+        return (
+          <MultipleChoiceForm
+            question={question}
+            questionIndex={questionIndex}
+            onUpdate={updateQuestion}
+          />
+        );
     }
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    console.log("QuizForm internal submit (if used):");
     if (onConfirmQuestions) {
       onConfirmQuestions(); 
-    } else {
-      console.warn("QuizForm submitted but no onConfirmQuestions handler was provided.");
     }
   };
 
@@ -400,15 +359,12 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
     addToast('Question deleted.', { variant: 'error', position: 'top-center' })
   };
 
-  // Function to sync all local answers to global state before submission
   const syncAllAnswersToGlobalState = () => {
-    // Force blur on all active textarea elements to trigger saveAnswerTextOnBlur
     const activeElement = document.activeElement;
     if (activeElement && activeElement.tagName === 'TEXTAREA') {
       (activeElement as HTMLElement).blur();
     }
     
-    // Force blur on all answer textareas for multiple choice questions
     questions.forEach((question) => {
       if (question.type === QuestionType.MULTIPLE_CHOICE) {
         const answerTextareas = document.querySelectorAll(`textarea[name*="question-${question.tempId}-answer"]`);
@@ -419,63 +375,62 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
     });
   };
 
-  // Expose triggerSubmit function using useImperativeHandle
   useImperativeHandle(ref, () => ({
     triggerSubmit: () => {
-      // Sync all answers to global state before submission
       syncAllAnswersToGlobalState();
-      
-      // This directly calls the onConfirmQuestions prop if it exists,
-      // which in CreatePage is handleQuestionsConfirmed (validation + step change)
       if (onConfirmQuestions) {
         onConfirmQuestions();
-      } else {
-        console.warn("QuizForm's triggerSubmit called but no onConfirmQuestions handler was provided.");
       }
     }
   }));
 
   return (
     <>
-    <form onSubmit={handleSubmit} className={`space-y-8 pt-4 p-6 ${className} border-none shadow-none`}>
-
-      {/* {onConfirmQuestions && questions.length > 0 && (
-        <div className="flex justify-end -mt-10 -mb-4">
-          <Button type="button" onClick={onConfirmQuestions} className="flex items-center pt-1 gap-2 p-4 bg-violet-100 text-[--text-color] border border-violet-500 shadow-[4px_4px_0px_0px_#8b5cf6] hover:bg-violet-200 hover:border-violet-600 hover:shadow-[4px_6px_0px_0px_#8b5cf6] hover:scale-105 transition-all duration-300">
-            Next Step <CircleArrowRight className="ml-2 -mt-0.5" size={20} />
+    <form onSubmit={handleSubmit} className={`space-y-8 border-none p-6 pt-4 shadow-none ${className}`}>
+      {questions.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-4 rounded-xl bg-[var(--surface-stone)] px-6 py-16 text-center">
+          <p className="text-xl font-semibold text-[--text-color]">No questions yet</p>
+          <p className="max-w-md text-sm text-slate-600">
+            Add your first question manually, or use Upload / AI from the toolbar above.
+          </p>
+          <Button
+            type="button"
+            onClick={() => addQuestion()}
+            className="rounded-full border border-[--border-dark] bg-white px-6 py-3 text-lg font-semibold text-[--text-color] shadow-[3px_3px_0px_0px_var(--border-dark)] hover:bg-[var(--surface-cloud)]"
+          >
+            <Plus className="mb-0.5 mr-2 h-5 w-5" /> Add New Question
           </Button>
         </div>
-      )} */}
-
-      <Accordion type="multiple" value={openAccordionItems} onValueChange={setOpenAccordionItems} className="mt-4 s border-none">
+      ) : (
+      <Accordion type="multiple" value={openAccordionItems} onValueChange={setOpenAccordionItems} className="mt-4 border-none">
         {questions.map((question, index) => (
           <AccordionItem value={question.tempId || `q-${index}`} key={question.tempId || `q-${index}`} className="border-b border-[--border-light]">
-            <Card className="p-0 relative border-none rounded-none overflow-hidden">
-              <div className="flex items-center px-2 bg-[--background] border-none ">
+            <Card className="relative overflow-hidden rounded-none border-none p-0">
+              <div className="flex items-center border-none bg-[--background] px-2">
                 <AccordionTrigger className="flex w-full px-4 py-2 text-left hover:no-underline focus:no-underline">
-                  <div className="flex items-center gap-3 w-full">
-                    {/* Image container - always rendered, visibility toggled by class */}
-                    <div className={`relative ml-2 h-14 w-full max-w-20 bg-slate-300 rounded-sm overflow-hidden ${openAccordionItems.includes(question.tempId || '') ? 'hidden' : 'block'}`}>
-                      <Image 
-                        src={question.imageFile ? URL.createObjectURL(question.imageFile) : question.imageUrl} 
+                  <div className="flex w-full items-center gap-3">
+                    <div className={`relative ml-2 h-14 w-full max-w-20 overflow-hidden rounded-sm bg-slate-300 ${openAccordionItems.includes(question.tempId || '') ? 'hidden' : 'block'}`}>
+                      <QuestionImage
+                        file={question.imageFile}
+                        imageUrl={question.imageUrl}
                         alt="Question image thumbnail"
                         width={84}
                         height={84}
-                        className="rounded-md object-cover bg-slate-300"
+                        className="rounded-md bg-slate-300 object-cover"
                       />
                     </div>
-                    <h2 className="text-xl flex  pt-1 font-semibold text-[--text-color] text-left">
-                      {openAccordionItems.includes(question.tempId || '') ? <></> : <> 
-                        <div className="flex text-lg items-center gap-2">
+                    <h2 className="flex pt-1 text-left text-xl font-semibold text-[--text-color]">
+                      {openAccordionItems.includes(question.tempId || '') ? null : ( 
+                        <div className="flex items-center gap-2 text-lg">
                           <span className="text-lg">Question {index + 1}</span>
                           {question.question ? <span>- {question.question.substring(0,50)}{question.question.length > 50 ? '...' : ''}</span> : ''}
                         </div>
-                      </>}
+                      )}
                     </h2>
                   </div>
                 </AccordionTrigger>
-                <div className="flex items-center text-[--text-color] gap-1 pl-2 justify-end">
-                    <Button type="button" size="icon" variant="ghost" onClick={() => openImageModal(index)} title="Duplicate Question">
+                <div className="flex items-center justify-end gap-1 pl-2 text-[--text-color]">
+                    <Button type="button" size="icon" variant="ghost" onClick={() => openImageModal(index)} title="Change question image">
                       <Picture className="h-5 w-5 " />
                     </Button>
                     <Button type="button" size="icon" variant="ghost" onClick={() => { duplicateQuestion(index); }} title="Duplicate Question">
@@ -486,39 +441,37 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
                     </Button>
                 </div>
               </div>
-              <AccordionContent className="px-6 py-4 bg-slate-100 rounded-lg">
-                <h3 className="font-bold text-xl ml-4 grandstander text-[--text-color]">Question {index + 1}</h3>
+              <AccordionContent className="rounded-lg bg-[var(--surface-stone)] px-6 py-4">
+                <h3 className="ml-4 text-xl font-bold text-[--text-color] grandstander">Question {index + 1}</h3>
                 <div className="flex gap-4">
-                  <div className="basis-1/5 relative flex flex-col">
-                    {/* <Label className="text-md font-semibold text-[--text-color] mb-1">Image (Optional)</Label> */}
+                  <div className="relative flex basis-1/5 flex-col">
                     <div className="relative w-full">
-                      <Image 
-                        src={question.imageFile ? URL.createObjectURL(question.imageFile) : question.imageUrl} 
-                        alt={`Question ${index + 1} image`} 
+                      <QuestionImage
+                        file={question.imageFile}
+                        imageUrl={question.imageUrl}
+                        alt={`Question ${index + 1} image`}
                         width={240}
                         height={120}
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        className="rounded-md h-24 object-cover bg-slate-200"
+                        className="h-24 rounded-md bg-slate-200 object-cover"
                       />
                       <Button 
                         type="button" 
                         variant="outline" 
                         onClick={() => openImageModal(index)} 
-                        className="absolute bottom-1 right-1 text-xs p-1 px-2 h-auto bg-white/80 hover:bg-white"
+                        className="absolute bottom-1 right-1 h-auto bg-white/80 p-1 px-2 text-xs hover:bg-white"
                       >
                         Change Image
                       </Button>
                     </div>
                   </div>
-                  <div className="basis-4/5 space-y-1 flex flex-col text-base">
-                    {/* <Label htmlFor={`question-${index}-text`} className="text-md font-semibold text-[--text-color]">Question Text</Label> */}
+                  <div className="flex basis-4/5 flex-col space-y-1 text-base">
                     <Textarea
                       rows={2}
                       id={`question-${index}-text`}
                       value={question.question}
                       onChange={(e) => handleQuestionChange(index, 'question', e.target.value)}
                       placeholder="Enter your question here"
-                      className="bg-white font-semibold p-6 text-[--text-color] grandstander border-2 border-slate-200 w-full flex-grow"
+                      className="w-full flex-grow border-2 border-slate-200 bg-white p-6 font-semibold text-[--text-color] grandstander"
                       required
                     />
                   </div>
@@ -531,12 +484,15 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
           </AccordionItem>
         ))}
       </Accordion>
+      )}
 
-      <div className="flex w-full items-center justify-center">
-        <Button type="button" onClick={() => addQuestion()} className="bg-white text-lg hover:border hover:border-[--border-dark] font-semibold px-6 py-3 text-[--text-color] rounded-full">
-          <Plus className="h-5 w-5 mr-2 mb-0.5" /> Add New Question
-        </Button>
-      </div>
+      {questions.length > 0 && (
+        <div className="flex w-full items-center justify-center">
+          <Button type="button" onClick={() => addQuestion()} className="rounded-full bg-white px-6 py-3 text-lg font-semibold text-[--text-color] hover:border hover:border-[--border-dark]">
+            <Plus className="mb-0.5 mr-2 h-5 w-5" /> Add New Question
+          </Button>
+        </div>
+      )}
     </form>
 
       {isImageModalOpen && (
@@ -550,7 +506,6 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
   );
 });
 
-// Add display name for better debugging
 QuizForm.displayName = "QuizForm";
 
 export default QuizForm;

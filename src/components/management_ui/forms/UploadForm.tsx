@@ -149,13 +149,13 @@ export default function UploadForm({
                 setError(null); // Clear previous error on new file selection
                 setSuccess(false); // Clear previous success message
               }}
-              className="w-full h-full text-sm text-gray-600
+              className="w-full h-full text-sm text-slate-600
                 file:mr-4 file:py-2 file:px-4
                 file:rounded-lg file:border-0
                 file:text-sm file:font-semibold
-                file:bg-violet-100 file:text-violet-700
-                hover:file:bg-violet-200 hover:bg-violet-50 transition-colors cursor-pointer
-                border border-violet-400 shadow-[4px_4px_0px_0px_#8b5cf6)]
+                file:bg-[var(--surface-cloud)] file:text-[--text-color]
+                hover:file:bg-[var(--primary-accent)]/20 hover:bg-[var(--surface-cloud)] transition-colors cursor-pointer
+                border border-[--border-dark] shadow-[3px_3px_0px_0px_var(--border-dark)]
                 p-0
                 "
               required
@@ -163,7 +163,7 @@ export default function UploadForm({
             <button
               type="submit"
               disabled={loading || !file} // Removed warmingUp and success from disabled condition here
-              className="w-full inline-flex items-center justify-center px-4 border-transparent text-base font-medium rounded-md text-violet-700 bg-violet-200 shadow-[4px_4px_0px_0px_#6366f1] hover:bg-violet-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-white disabled:text-gray-400 border  border-violet-400 disabled:shadow-[4px_4px_0px_0px_#6366f1] transition-colors"
+              className="w-full inline-flex items-center justify-center px-4 border-transparent text-base font-medium rounded-md text-white bg-[--text-color] shadow-[4px_4px_0px_0px_#1F6E91] hover:bg-white hover:text-[--text-color] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[--primary-accent] disabled:bg-white disabled:text-gray-400 border border-[#1F6E91] disabled:shadow-[4px_4px_0px_0px_#94a3b8] transition-colors"
               >
               {loading ? 'Processing CSV...' : 'Add Questions from CSV'}
             </button>

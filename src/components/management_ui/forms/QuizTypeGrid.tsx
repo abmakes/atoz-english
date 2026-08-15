@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
@@ -16,36 +16,79 @@ interface QuizTypeSelectorProps {
   setQuizType: (type: QuestionType) => void
 }
 
-const MultipleChoicePreview = ({ isSelected }: { isSelected: boolean }) => {
+/** Two autoplay cycles on select; replay on hover / click. Never infinite. */
+function useCappedPreviewPlay(isSelected: boolean) {
+  const [cyclesLeft, setCyclesLeft] = useState(0)
+
+  useEffect(() => {
+    setCyclesLeft(isSelected ? 2 : 0)
+  }, [isSelected])
+
+  const playing = isSelected && cyclesLeft > 0
+
+  const onCycleComplete = useCallback(() => {
+    setCyclesLeft((prev) => Math.max(0, prev - 1))
+  }, [])
+
+  const replay = useCallback(() => {
+    if (isSelected) setCyclesLeft(2)
+  }, [isSelected])
+
+  return {
+    playing,
+    onCycleComplete,
+    replay,
+  }
+}
+
+const MultipleChoicePreview = ({
+  isSelected,
+  playing,
+  onCycleComplete,
+}: {
+  isSelected: boolean
+  playing: boolean
+  onCycleComplete: () => void
+}) => {
   const [selectedOption, setSelectedOption] = useState(1)
+
+  useEffect(() => {
+    if (!playing) return
+    const id = window.setTimeout(() => {
+      setSelectedOption((prev) => (prev + 1) % 4)
+      onCycleComplete()
+    }, 900)
+    return () => window.clearTimeout(id)
+  }, [playing, selectedOption, onCycleComplete])
 
   return (
     <div className="space-y-2">
-      <div className="h-2 bg-gray-300 rounded w-3/4 mb-3"></div>
+      <div className="mb-3 h-2 w-3/4 rounded bg-slate-300"></div>
       <div className="grid grid-cols-2 gap-2">
         {[0, 1, 2, 3].map((index) => (
           <motion.div
             key={index}
             className="flex items-center space-x-1.5"
             animate={isSelected ? { opacity: 1 } : { opacity: 0.7 }}
-            transition={{ delay: index * 0.1 }}
+            transition={{ delay: index * 0.05 }}
           >
             <motion.div
               className={cn(
-                "w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center",
-                selectedOption === index && isSelected ? "border-violet-500 bg-violet-500" : "border-gray-300",
+                "flex h-2.5 w-2.5 items-center justify-center rounded-full border-2",
+                selectedOption === index && isSelected
+                  ? "border-[var(--primary-accent)] bg-[var(--primary-accent)]"
+                  : "border-slate-300",
               )}
-              animate={isSelected && selectedOption === index ? { scale: [1, 1.2, 1] } : { scale: 1 }}
-              transition={{ duration: 0.3, repeat: isSelected ? Number.POSITIVE_INFINITY : 0, repeatDelay: 2 }}
-              onAnimationComplete={() => {
-                if (isSelected) {
-                  setTimeout(() => setSelectedOption((prev) => (prev + 1) % 4), 2000)
-                }
-              }}
+              animate={
+                playing && selectedOption === index ? { scale: [1, 1.25, 1] } : { scale: 1 }
+              }
+              transition={{ duration: 0.35 }}
             >
-              {selectedOption === index && isSelected && <div className="w-1 h-1 bg-white rounded-full" />}
+              {selectedOption === index && isSelected && (
+                <div className="h-1 w-1 rounded-full bg-white" />
+              )}
             </motion.div>
-            <div className="h-1 bg-gray-300 rounded flex-1"></div>
+            <div className="h-1 flex-1 rounded bg-slate-300"></div>
           </motion.div>
         ))}
       </div>
@@ -53,43 +96,53 @@ const MultipleChoicePreview = ({ isSelected }: { isSelected: boolean }) => {
   )
 }
 
-const SortingPreview = ({ isSelected }: { isSelected: boolean }) => {
+const SortingPreview = ({
+  isSelected,
+  playing,
+  onCycleComplete,
+}: {
+  isSelected: boolean
+  playing: boolean
+  onCycleComplete: () => void
+}) => {
   const [items, setItems] = useState([0, 1, 2])
+
+  useEffect(() => {
+    if (!playing) return
+    const id = window.setTimeout(() => {
+      setItems((prev) => [...prev].sort(() => Math.random() - 0.5))
+      onCycleComplete()
+    }, 1100)
+    return () => window.clearTimeout(id)
+  }, [playing, items, onCycleComplete])
 
   return (
     <div className="space-y-1">
-      <div className="h-1.5 bg-gray-300 rounded w-2/3 mb-2"></div>
+      <div className="mb-2 h-1.5 w-2/3 rounded bg-slate-300"></div>
       <AnimatePresence>
         {items.map((item, index) => (
           <motion.div
             key={item}
-            className="flex items-center space-x-1 bg-gray-100 p-1 rounded"
+            className="flex items-center space-x-1 rounded bg-slate-100 p-1"
             layout
             animate={
               isSelected
                 ? {
                     y: 0,
                     opacity: 1,
-                    transition: { delay: index * 0.2 },
+                    transition: { delay: index * 0.08 },
                   }
                 : { y: 0, opacity: 0.7 }
             }
             whileHover={isSelected ? { scale: 1.02 } : {}}
-            onAnimationComplete={() => {
-              if (isSelected && index === items.length - 1) {
-                setTimeout(() => {
-                  setItems([...items].sort(() => Math.random() - 0.5))
-                }, 3000)
-              }
-            }}
           >
-            <div className="w-1.5 h-1.5 bg-gray-400 rounded grid grid-cols-2 gap-0.5">
-              <div className="w-0.5 h-0.5 bg-gray-600 rounded-full"></div>
-              <div className="w-0.5 h-0.5 bg-gray-600 rounded-full"></div>
-              <div className="w-0.5 h-0.5 bg-gray-600 rounded-full"></div>
-              <div className="w-0.5 h-0.5 bg-gray-600 rounded-full"></div>
+            <div className="grid h-1.5 w-1.5 grid-cols-2 gap-0.5 rounded bg-slate-400">
+              <div className="h-0.5 w-0.5 rounded-full bg-slate-600"></div>
+              <div className="h-0.5 w-0.5 rounded-full bg-slate-600"></div>
+              <div className="h-0.5 w-0.5 rounded-full bg-slate-600"></div>
+              <div className="h-0.5 w-0.5 rounded-full bg-slate-600"></div>
             </div>
-            <div className="h-1 bg-gray-300 rounded flex-1"></div>
+            <div className="h-1 flex-1 rounded bg-slate-300"></div>
           </motion.div>
         ))}
       </AnimatePresence>
@@ -97,55 +150,63 @@ const SortingPreview = ({ isSelected }: { isSelected: boolean }) => {
   )
 }
 
-const MatchingPreview = ({ isSelected }: { isSelected: boolean }) => {
+const MatchingPreview = ({
+  isSelected,
+  playing,
+  onCycleComplete,
+}: {
+  isSelected: boolean
+  playing: boolean
+  onCycleComplete: () => void
+}) => {
   const [selectedLeft, setSelectedLeft] = useState(0)
   const [selectedRight, setSelectedRight] = useState(0)
 
+  useEffect(() => {
+    if (!playing) return
+    const id = window.setTimeout(() => {
+      setSelectedLeft((prev) => (prev + 1) % 3)
+      setSelectedRight((prev) => (prev + 1) % 3)
+      onCycleComplete()
+    }, 900)
+    return () => window.clearTimeout(id)
+  }, [playing, selectedLeft, selectedRight, onCycleComplete])
+
   return (
     <div className="space-y-2">
-      <div className="h-2 bg-gray-300 rounded w-2/3 mb-3"></div>
+      <div className="mb-3 h-2 w-2/3 rounded bg-slate-300"></div>
       <div className="flex justify-between gap-3">
-        <div className="space-y-2 flex-1">
+        <div className="flex-1 space-y-2">
           {[0, 1, 2].map((index) => (
             <motion.div
               key={index}
               className={cn(
-                "h-1.5 rounded w-4/5 transition-colors duration-300",
-                isSelected && selectedLeft === index ? "bg-violet-500" : "bg-gray-300",
+                "h-1.5 w-4/5 rounded transition-colors duration-300",
+                isSelected && selectedLeft === index
+                  ? "bg-[var(--primary-accent)]"
+                  : "bg-slate-300",
               )}
-              animate={isSelected && selectedLeft === index ? { scale: [1, 1.05, 1] } : { scale: 1 }}
-              transition={{
-                duration: 0.3,
-                repeat: isSelected && selectedLeft === index ? Number.POSITIVE_INFINITY : 0,
-                repeatDelay: 2,
-              }}
-              onAnimationComplete={() => {
-                if (isSelected && selectedLeft === index) {
-                  setTimeout(() => {
-                    const newLeft = (selectedLeft + 1) % 3
-                    const newRight = (selectedRight + 1) % 3
-                    setSelectedLeft(newLeft)
-                    setSelectedRight(newRight)
-                  }, 2000)
-                }
-              }}
+              animate={
+                playing && selectedLeft === index ? { scale: [1, 1.05, 1] } : { scale: 1 }
+              }
+              transition={{ duration: 0.3 }}
             />
           ))}
         </div>
-        <div className="space-y-2 flex-1">
+        <div className="flex-1 space-y-2">
           {[0, 1, 2].map((index) => (
             <motion.div
               key={index}
               className={cn(
-                "h-1.5 rounded w-4/5 ml-auto transition-colors duration-300",
-                isSelected && selectedRight === index ? "bg-violet-500" : "bg-gray-300",
+                "ml-auto h-1.5 w-4/5 rounded transition-colors duration-300",
+                isSelected && selectedRight === index
+                  ? "bg-[var(--primary-accent)]"
+                  : "bg-slate-300",
               )}
-              animate={isSelected && selectedRight === index ? { scale: [1, 1.05, 1] } : { scale: 1 }}
-              transition={{
-                duration: 0.3,
-                repeat: isSelected && selectedRight === index ? Number.POSITIVE_INFINITY : 0,
-                repeatDelay: 2,
-              }}
+              animate={
+                playing && selectedRight === index ? { scale: [1, 1.05, 1] } : { scale: 1 }
+              }
+              transition={{ duration: 0.3 }}
             />
           ))}
         </div>
@@ -172,59 +233,95 @@ const questionTypeConfig = {
   },
 }
 
+function TypeCard({
+  type,
+  quizType,
+  setQuizType,
+}: {
+  type: QuestionType
+  quizType: QuestionType
+  setQuizType: (type: QuestionType) => void
+}) {
+  const config = questionTypeConfig[type]
+  const PreviewComponent = config.component
+  const isSelected = quizType === type
+  const { playing, onCycleComplete, replay } = useCappedPreviewPlay(isSelected)
+
+  return (
+    <motion.div
+      className={cn(
+        "relative cursor-pointer rounded-lg border-2 p-3 transition-all duration-200",
+        isSelected
+          ? "border-[var(--primary-accent)] bg-[var(--surface-cloud)] shadow-[3px_3px_0px_0px_var(--border-dark)]"
+          : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm",
+      )}
+      onClick={() => {
+        setQuizType(type)
+        if (isSelected) replay()
+      }}
+      onMouseEnter={() => {
+        if (isSelected) replay()
+      }}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      layout
+    >
+      {isSelected && (
+        <motion.div
+          className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--primary-accent)]"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        >
+          <div className="h-1.5 w-1.5 rounded-full bg-white" />
+        </motion.div>
+      )}
+
+      <div className="flex h-20 flex-row items-center gap-3 p-2">
+        <div className="flex min-w-0 flex-1 flex-col justify-center">
+          <h3
+            className={cn(
+              "mb-0.5 truncate text-xs font-medium",
+              isSelected ? "text-[var(--text-color)]" : "text-slate-700",
+            )}
+          >
+            {config.title}
+          </h3>
+          <p
+            className={cn(
+              "line-clamp-2 text-xs",
+              isSelected ? "text-[var(--text-light)]" : "text-slate-500",
+            )}
+          >
+            {config.description}
+          </p>
+        </div>
+
+        <div className="flex h-16 w-20 flex-shrink-0 items-center justify-center">
+          <div className="h-12 w-16 overflow-hidden">
+            <PreviewComponent
+              isSelected={isSelected}
+              playing={playing}
+              onCycleComplete={onCycleComplete}
+            />
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
 export default function QuizTypeSelector({ quizType, setQuizType }: QuizTypeSelectorProps) {
   return (
-    <div className="flex flex-col lg:flex-row bg-gray-50 rounded-lg">
-      <Label className="pr-4 block text-base text-nowrap text-[--text-color] font-medium mb-2 lg:mb-0">Select Quiz Type:</Label>
+    <div className="flex flex-col rounded-lg bg-[var(--surface-cloud)] lg:flex-row">
+      <Label className="mb-2 block pr-4 text-nowrap text-base font-medium text-[--text-color] lg:mb-0">
+        Select Quiz Type:
+      </Label>
 
-      <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-3">
-        {Object.values(QuestionType).map((type) => {
-          const config = questionTypeConfig[type]
-          const PreviewComponent = config.component
-          const isSelected = quizType === type
-
-          return (
-            <motion.div
-              key={type}
-              className={cn(
-                "relative p-3 rounded-lg border-2 cursor-pointer transition-all duration-200",
-                isSelected
-                  ? "border-violet-500 bg-violet-50 shadow-md"
-                  : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm",
-              )}
-              onClick={() => setQuizType(type)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              layout
-            >
-              {isSelected && (
-                <motion.div
-                  className="absolute top-1.5 right-1.5 w-4 h-4 bg-violet-500 rounded-full flex items-center justify-center"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                >
-                  <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                </motion.div>
-              )}
-
-              <div className="flex flex-row items-center gap-3 h-20 p-2">
-                <div className="flex-1 flex flex-col justify-center min-w-0">
-                  <h3 className={cn("font-medium text-xs mb-0.5 truncate", isSelected ? "text-violet-700" : "text-gray-700")}>
-                    {config.title}
-                  </h3>
-                  <p className={cn("text-xs line-clamp-2", isSelected ? "text-violet-600" : "text-gray-500")}>{config.description}</p>
-                </div>
-
-                <div className="w-20 h-16 flex items-center justify-center flex-shrink-0">
-                  <div className="w-16 h-12 overflow-hidden">
-                    <PreviewComponent isSelected={isSelected} />
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )
-        })}
+      <div className="grid w-full grid-cols-1 gap-3 md:grid-cols-3">
+        {Object.values(QuestionType).map((type) => (
+          <TypeCard key={type} type={type} quizType={quizType} setQuizType={setQuizType} />
+        ))}
       </div>
     </div>
   )

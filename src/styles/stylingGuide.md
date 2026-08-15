@@ -47,6 +47,8 @@ This document outlines the styling approach used in the application, combining T
     *   **Reusable/Complex Component Styles:** If a complex style structure is needed, or if modifying existing components like `GameSetupPanel`, check if a suitable class exists in **`themes.module.css`**. Use or modify these classes. Consider migrating them to Tailwind if feasible for consistency.
     *   **Theme-Specific React Styles:** Modify the CSS variables under the theme classes (e.g., `.dark`) within **`globals.css`**.
 
+*   **Site chrome atmosphere (create-quiz / management UI):** Prefer `--surface-cloud` (sky wash) and `--surface-stone` (warm paper) over raw `gray-50`. Reserve `--accent-premium` / `--accent-premium-muted` for AI and signed-in micro-moments (sparkles, AI CTA borders) — not large panels. In-game theme greens/darks stay in `themes.ts` / Pixi only; publish theme swatches should read from `getPixiThemeConfig`.
+
 *   **Activating Theme Variables for React:** Ensure the correct theme class (e.g., `styles.themeDark`) from **`themes.module.css`** is applied to a parent wrapper element in the React component tree (like in `GameSetupPanel` or potentially `GameContainer`).
 
 *   **PixiJS Game Elements (Question Text, Answer Buttons visuals, Timer Graphics, Scene Backgrounds, etc.):**
