@@ -76,15 +76,16 @@ export class NinjaClimbPlayerManager {
       const color = colors[i % colors.length]
       const team = teams[i]
 
-      const idleA = await this._loadSheet(`${ASSET_BASE}/ninja_${color}_idle.png`, 2)
-      const idleB = await this._loadSheet(`${ASSET_BASE}/ninja_${color}_idle_b.png`, 2)
+      const idleA = await this._loadSheet(`${ASSET_BASE}/ninja_${color}_idle.webp`, 2)
+      const idleB = await this._loadSheet(`${ASSET_BASE}/ninja_${color}_idle_b.webp`, 2)
       const climbSheet = await this._loadSheet(`${ASSET_BASE}/ninja_${color}_climb.png`, 4)
 
       const actionTextures: NinjaActor['actionTextures'] = {}
       for (const action of ['teleport', 'rope', 'smoke', 'cheer'] as const) {
         try {
+          const ext = action === 'rope' ? 'webp' : 'png'
           actionTextures[action] = await PIXI.Assets.load(
-            `${ASSET_BASE}/ninja_${color}_${action}.png`
+            `${ASSET_BASE}/ninja_${color}_${action}.${ext}`
           )
         } catch (e) {
           console.warn(`NinjaClimbPlayerManager: missing ${color} ${action}`, e)

@@ -21,10 +21,10 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 | `images/placeholder.webp` | Quiz/question fallbacks |
 | `images/splash-dash/crate_5_4.png` | Splash Dash crates |
 | `images/splash-dash/capy_spritesheet.png` | Splash Dash players |
-| `images/ninja-climb/ninja_blue_idle.png` | Ninja Climb blue team |
-| `images/ninja-climb/ninja_red_idle.png` | Ninja Climb red team |
-| `images/ninja-climb/ninja_blue_idle_b.png` | Ninja Climb blue idle pose B |
-| `images/ninja-climb/ninja_red_idle_b.png` | Ninja Climb red idle pose B |
+| `images/ninja-climb/ninja_blue_idle.webp` | Ninja Climb blue team |
+| `images/ninja-climb/ninja_red_idle.webp` | Ninja Climb red team |
+| `images/ninja-climb/ninja_blue_idle_b.webp` | Ninja Climb blue idle pose B |
+| `images/ninja-climb/ninja_red_idle_b.webp` | Ninja Climb red idle pose B |
 | `images/ninja-climb/sky.webp` | Ninja Climb sky |
 | `images/ninja-climb/cliff_a.webp` | Ninja Climb cliff tile A |
 | `images/ninja-climb/summit.webp` | Ninja Climb summit tile |
@@ -43,9 +43,9 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 
 ## Ninja Climb notes
 
-- Character strips: `ninja_{blue|red}_idle.png` / `idle_b.png` (2 frames each), `ninja_{blue|red}_climb.png` (4 frames).
-- Mountain tiles: `cliff_{a|b|c}.webp`, `plateau_{1|2|3}.webp`, `summit.webp` (vector cartoon; no band_* art).
-- UI: `answer_cloud.png` for sky answers; `deco_{tree|bush|hut}.png` for sparse ledge props.
+- Character strips: `ninja_{blue|red}_idle.webp` / `idle_b.webp` (2 frames each), `ninja_{blue|red}_climb.png` (4 frames), `ninja_{blue|red}_rope.webp` (action).
+- Mountain tiles: `cliff_{a|b|c}.webp`, `plateau_{1|2|3}.webp`, `summit.webp` (transparent; no band_* art).
+- UI: `answer_cloud.png` for sky answers; `deco_{tree|bush|hut}.webp` for sparse ledge props.
 - Shared rope VFX: `images/shared/kunai_tip.png`, `images/shared/rope_segment.png` (used by `RopeProjectile`).
 - Mode picker thumb: `public/images/marketing/ninjaclimb_thumb.png`.
 

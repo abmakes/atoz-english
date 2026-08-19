@@ -189,7 +189,7 @@ export class NinjaClimbMountainManager {
   }
 
   private async _placeDecorations(): Promise<void> {
-    const decoFiles = ['deco_tree.png', 'deco_bush.png', 'deco_hut.png']
+    const decoFiles = ['deco_tree.webp', 'deco_bush.webp', 'deco_hut.webp']
     for (let i = 0; i < this.path.length; i += 3) {
       if (i === 0 || i === this.path.length - 1) continue
       const wp = this.path[i]

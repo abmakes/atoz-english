@@ -319,8 +319,8 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
                   {
                     name: 'ninja-climb',
                     assets: [
-                      { key: 'ninja_blue_idle', src: '/images/ninja-climb/ninja_blue_idle.png' },
-                      { key: 'ninja_red_idle', src: '/images/ninja-climb/ninja_red_idle.png' },
+                      { key: 'ninja_blue_idle', src: '/images/ninja-climb/ninja_blue_idle.webp' },
+                      { key: 'ninja_red_idle', src: '/images/ninja-climb/ninja_red_idle.webp' },
                       { key: 'ninja_blue_climb', src: '/images/ninja-climb/ninja_blue_climb.png' },
                       { key: 'ninja_red_climb', src: '/images/ninja-climb/ninja_red_climb.png' },
                       { key: 'sky', src: '/images/ninja-climb/sky.webp' },
