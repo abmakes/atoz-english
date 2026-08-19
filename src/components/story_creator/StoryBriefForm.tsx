@@ -6,10 +6,16 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useCustomToast } from '@/components/ui/CustomToast'
 import LessonPageCapture from '@/components/management_ui/LessonPageCapture'
+import ArtStylePicker from '@/components/story_creator/ArtStylePicker'
 import { CEFR_LEVELS, GRAMMAR_TAGS, type CefrLevelId } from '@/lib/taxonomy/quiz-taxonomy'
 import { STORY_TYPES, type StoryType } from '@/lib/stories/schemas'
+import {
+  DEFAULT_STORY_ART_STYLE_ID,
+  getStoryArtStyle,
+  type StoryArtStyleId,
+} from '@/lib/stories/art-styles'
 import { createStory, type StoryDto } from '@/components/story_creator/api'
-import { Loader2, Sparkles } from 'lucide-react'
+import { Loader2, Sparkles, Palette } from 'lucide-react'
 
 interface StoryBriefFormProps {
   onCreated: (story: StoryDto) => void
@@ -22,10 +28,17 @@ export default function StoryBriefForm({ onCreated }: StoryBriefFormProps) {
   const [storyType, setStoryType] = useState<StoryType>('Everyday mishap')
   const [grammarFocus, setGrammarFocus] = useState<string[]>(['Past Simple'])
   const [characters, setCharacters] = useState('')
+  const [artStyleId, setArtStyleId] = useState<StoryArtStyleId>(
+    DEFAULT_STORY_ART_STYLE_ID
+  )
+  const [artStyleNote, setArtStyleNote] = useState('')
+  const [stylePickerOpen, setStylePickerOpen] = useState(false)
   const [lessonSummary, setLessonSummary] = useState<string | undefined>()
   const [keyVocabulary, setKeyVocabulary] = useState<string[] | undefined>()
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+
+  const selectedStyle = getStoryArtStyle(artStyleId)
 
   const toggleGrammar = (tag: string) => {
     setGrammarFocus((current) =>
@@ -96,6 +109,8 @@ export default function StoryBriefForm({ onCreated }: StoryBriefFormProps) {
         storyType,
         grammarFocus,
         characters: characters.trim(),
+        artStyleId,
+        artStyleNote: artStyleNote.trim(),
         lessonSummary,
         keyVocabulary,
       })
@@ -160,7 +175,44 @@ export default function StoryBriefForm({ onCreated }: StoryBriefFormProps) {
 
         <div>
           <label className="mb-1 block font-semibold text-[#114257]">
-            Grammar to practise <span className="text-sm font-normal text-slate-500">(up to 4 — the example story models these)</span>
+            Art style
+          </label>
+          <button
+            type="button"
+            onClick={() => setStylePickerOpen(true)}
+            disabled={isGenerating}
+            className="flex w-full items-stretch overflow-hidden rounded-xl border-2 border-violet-200 bg-violet-50/40 text-left transition-colors hover:border-violet-400 disabled:opacity-60"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={selectedStyle.previewSrc}
+              alt=""
+              className="h-24 w-32 flex-none object-cover"
+            />
+            <div className="flex flex-1 flex-col justify-center px-4 py-3">
+              <p className="grandstander text-lg font-bold text-[#114257]">
+                {selectedStyle.label}
+              </p>
+              <p className="text-xs text-slate-500">{selectedStyle.ageHint}</p>
+              {artStyleNote ? (
+                <p className="mt-1 truncate text-xs italic text-violet-700">
+                  “{artStyleNote}”
+                </p>
+              ) : null}
+              <p className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-violet-600">
+                <Palette className="h-3.5 w-3.5" />
+                Change style
+              </p>
+            </div>
+          </button>
+        </div>
+
+        <div>
+          <label className="mb-1 block font-semibold text-[#114257]">
+            Grammar to practise{' '}
+            <span className="text-sm font-normal text-slate-500">
+              (up to 4 — the example story models these)
+            </span>
           </label>
           <div className="flex max-h-36 flex-wrap gap-1.5 overflow-y-auto rounded-lg border bg-slate-50 p-2">
             {GRAMMAR_TAGS.map((tag) => (
@@ -182,7 +234,8 @@ export default function StoryBriefForm({ onCreated }: StoryBriefFormProps) {
 
         <div>
           <label className="mb-1 block font-semibold text-[#114257]">
-            Main character <span className="text-sm font-normal text-slate-500">(optional)</span>
+            Main character{' '}
+            <span className="text-sm font-normal text-slate-500">(optional)</span>
           </label>
           <Input
             value={characters}
@@ -233,6 +286,17 @@ export default function StoryBriefForm({ onCreated }: StoryBriefFormProps) {
           vocabulary are filled in automatically.
         </p>
       </div>
+
+      <ArtStylePicker
+        open={stylePickerOpen}
+        onOpenChange={setStylePickerOpen}
+        value={artStyleId}
+        note={artStyleNote}
+        onSave={(id, note) => {
+          setArtStyleId(id)
+          setArtStyleNote(note)
+        }}
+      />
     </div>
   )
 }

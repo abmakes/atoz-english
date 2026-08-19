@@ -1,5 +1,6 @@
 import { levelLabelFromId } from '@/lib/taxonomy/quiz-taxonomy';
 import { resolveLexicon } from '@/lib/lexicon/resolver';
+import { getStoryArtStyle, resolveArtStylePrompt } from '@/lib/stories/art-styles';
 import {
   storyPlanSchema,
   type StoryBrief,
@@ -39,6 +40,8 @@ export function createStoryPlanPrompt(brief: StoryBrief): string {
     brief.keyVocabulary && brief.keyVocabulary.length > 0
       ? brief.keyVocabulary.join(', ')
       : 'None provided';
+  const artStyle = resolveArtStylePrompt(brief.artStyleId, brief.artStyleNote);
+  const stylePreset = getStoryArtStyle(brief.artStyleId);
 
   return `You are an expert young-learner ESL storyteller preparing a Cambridge YLE "tell the story" speaking task.
 Create a 4-picture story a child aged 7-11 can narrate, one or two sentences per picture.
@@ -49,6 +52,8 @@ TEACHER BRIEF (highest priority):
 - Story type: ${brief.storyType}
 - Grammar to practise: ${grammar}
 - Main character request: ${brief.characters || 'Invent one friendly child or animal character'}
+- Illustration style preset: ${stylePreset.label} (${stylePreset.ageHint})
+- Locked art direction (copy this EXACTLY into the artStyle field — do not invent a different style): ${artStyle}
 - Lesson context (if any): ${brief.lessonSummary || 'None provided'}
 - Vocabulary to prefer: ${vocabulary}
 
@@ -65,15 +70,15 @@ LANGUAGE RULES:
 - Words typical for this level that may help: ${selection.words.slice(0, 60).join(', ') || 'common classroom words'}
 
 IMAGE PLANNING RULES (these feed a detailed image-generation prompt — write rich visual prose, not short labels):
-- characterSheet: 2-4 sentences describing the main character(s) in reusable visual detail — age/species, hair color and style, skin tone, exact clothing colors and items, one distinctive prop or feature. Every picture must show the SAME character(s) looking identical.
-- artStyle: 1-2 sentences locking the illustration look (e.g. "Bright flat children's picture-book cartoon with thick clean outlines, soft rounded shapes, warm cheerful palette, simple uncluttered backgrounds."). Keep it kid-friendly — never photorealistic, never dark or scary.
+- characterSheet: 2-4 sentences describing the main character(s) in reusable visual detail — age/species, hair color and style, skin tone, exact clothing colors and items, one distinctive prop or feature. Design the character so they fit the locked art direction above. Every picture must show the SAME character(s) looking identical.
+- artStyle: return EXACTLY this locked art direction string, character-for-character: ${JSON.stringify(artStyle)}
 - sceneDescription: 2-4 sentences of what is VISIBLE in that picture only — setting, foreground/background layout, action, props, lighting, and the character's expression. No text, no speech bubbles, no panel numbers in the picture. The character's face and mouth must be clearly visible and fairly large in frame.
 
 Return ONLY JSON with this exact shape:
 {
   "title": "Short fun story title",
   "characterSheet": "...",
-  "artStyle": "...",
+  "artStyle": ${JSON.stringify(artStyle)},
   "panels": [
     { "sceneDescription": "...", "exampleSentence": "..." },
     { "sceneDescription": "...", "exampleSentence": "..." },

@@ -1,5 +1,9 @@
 import { z } from 'zod';
 import { CEFR_LEVELS, GRAMMAR_TAGS, type CefrLevelId } from '@/lib/taxonomy/quiz-taxonomy';
+import {
+  DEFAULT_STORY_ART_STYLE_ID,
+  STORY_ART_STYLE_IDS,
+} from '@/lib/stories/art-styles';
 
 export const STORY_PANEL_COUNT = 4;
 
@@ -56,6 +60,10 @@ export const storyBriefSchema = z.object({
     .default([])
     .transform((tags) => tags.filter((tag) => grammarTags.includes(tag))),
   characters: z.string().trim().max(300).default(''),
+  /** Preset art style chosen in the style picker modal. */
+  artStyleId: z.enum(STORY_ART_STYLE_IDS).default(DEFAULT_STORY_ART_STYLE_ID),
+  /** Optional one-line refinement of the chosen style. */
+  artStyleNote: z.string().trim().max(160).default(''),
   /** Optional context carried over from a lesson screenshot analysis. */
   lessonSummary: z.string().trim().max(600).optional(),
   keyVocabulary: z.array(z.string().trim().min(1)).max(30).optional(),

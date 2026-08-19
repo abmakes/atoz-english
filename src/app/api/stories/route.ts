@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse, handleApiError } from '@/lib/api-utils';
 import { levelLabelFromId } from '@/lib/taxonomy/quiz-taxonomy';
 import { storyBriefSchema } from '@/lib/stories/schemas';
+import { resolveArtStylePrompt } from '@/lib/stories/art-styles';
 import {
   buildExampleStory,
   createStoryPlanPrompt,
@@ -60,6 +61,11 @@ export async function POST(request: NextRequest) {
       return errorResponse('Invalid story brief', parsed.error.flatten(), 400);
     }
     const brief = parsed.data;
+    // Teacher-chosen style always wins — never trust the model to invent one.
+    const lockedArtStyle = resolveArtStylePrompt(
+      brief.artStyleId,
+      brief.artStyleNote
+    );
 
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
     const result = await model.generateContent(createStoryPlanPrompt(brief));
@@ -78,7 +84,7 @@ export async function POST(request: NextRequest) {
         tags,
         storyType: brief.storyType,
         characterSheet: plan.characterSheet,
-        artStyle: plan.artStyle,
+        artStyle: lockedArtStyle,
         exampleStory: buildExampleStory(
           plan.panels.map((panel) => panel.exampleSentence)
         ),
