@@ -72,8 +72,10 @@ export default function Navigation() {
   const clerkActive = useIsClerkActive();
 
   const isGamePage = pathname.startsWith('/games/') && pathname.length > '/games/'.length;
+  // Student-facing story pages (recording / watching) get a clean, nav-free screen.
+  const isStudentStoryPage = pathname.startsWith('/story/');
 
-  if (isGamePage) {
+  if (isGamePage || isStudentStoryPage) {
     return null;
   }
 
@@ -88,11 +90,13 @@ export default function Navigation() {
         {clerkActive ? (
           <SignedIn>
             <Link href="/create" className="text-[--text-color] transition-colors hover:font-semibold">Create</Link>
+            <Link href="/tools" className="text-[--text-color] transition-colors hover:font-semibold">Tools</Link>
             <Link href="/quizzes" className="text-violet-500 transition-colors hover:font-semibold">Profile</Link>
           </SignedIn>
         ) : (
           <>
             <Link href="/create" className="text-[--text-color] transition-colors hover:font-semibold">Create</Link>
+            <Link href="/tools" className="text-[--text-color] transition-colors hover:font-semibold">Tools</Link>
             <Link href="/quizzes" className="text-violet-500 transition-colors hover:font-semibold">Profile</Link>
           </>
         )}
@@ -133,6 +137,13 @@ export default function Navigation() {
                   Create
                 </Link>
                 <Link
+                  href="/tools"
+                  className="text-[--text-color] transition-colors hover:font-semibold py-2"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Tools
+                </Link>
+                <Link
                   href="/quizzes"
                   className="text-violet-500 transition-colors hover:font-semibold py-2"
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -148,6 +159,13 @@ export default function Navigation() {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Create
+                </Link>
+                <Link
+                  href="/tools"
+                  className="text-[--text-color] transition-colors hover:font-semibold py-2"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Tools
                 </Link>
                 <Link
                   href="/quizzes"
