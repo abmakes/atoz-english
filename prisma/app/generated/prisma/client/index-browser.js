@@ -186,6 +186,52 @@ exports.Prisma.TagScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.StoryScalarFieldEnum = {
+  id: 'id',
+  authorId: 'authorId',
+  title: 'title',
+  topicPrompt: 'topicPrompt',
+  tags: 'tags',
+  storyType: 'storyType',
+  characterSheet: 'characterSheet',
+  artStyle: 'artStyle',
+  exampleStory: 'exampleStory',
+  showExampleToStudents: 'showExampleToStudents',
+  status: 'status',
+  shareToken: 'shareToken',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.StoryPanelScalarFieldEnum = {
+  id: 'id',
+  storyId: 'storyId',
+  order: 'order',
+  imageUrl: 'imageUrl',
+  sceneDescription: 'sceneDescription',
+  imagePrompt: 'imagePrompt',
+  exampleSentence: 'exampleSentence',
+  mouth: 'mouth'
+};
+
+exports.Prisma.StorySubmissionScalarFieldEnum = {
+  id: 'id',
+  storyId: 'storyId',
+  studentName: 'studentName',
+  status: 'status',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.StoryRecordingScalarFieldEnum = {
+  id: 'id',
+  submissionId: 'submissionId',
+  panelOrder: 'panelOrder',
+  audioUrl: 'audioUrl',
+  mimeType: 'mimeType',
+  durationMs: 'durationMs',
+  envelope: 'envelope'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -222,13 +268,28 @@ exports.QuestionType = exports.$Enums.QuestionType = {
   OPEN_ENDED: 'OPEN_ENDED'
 };
 
+exports.StoryStatus = exports.$Enums.StoryStatus = {
+  DRAFT: 'DRAFT',
+  READY: 'READY',
+  ARCHIVED: 'ARCHIVED'
+};
+
+exports.StorySubmissionStatus = exports.$Enums.StorySubmissionStatus = {
+  SUBMITTED: 'SUBMITTED',
+  REVIEWED: 'REVIEWED'
+};
+
 exports.Prisma.ModelName = {
   Quiz: 'Quiz',
   QuizLike: 'QuizLike',
   QuizFavorite: 'QuizFavorite',
   Question: 'Question',
   StoredImage: 'StoredImage',
-  Tag: 'Tag'
+  Tag: 'Tag',
+  Story: 'Story',
+  StoryPanel: 'StoryPanel',
+  StorySubmission: 'StorySubmission',
+  StoryRecording: 'StoryRecording'
 };
 
 /**
