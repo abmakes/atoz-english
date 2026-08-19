@@ -13,7 +13,7 @@ Cambridge YLE Movers includes a speaking task where students see a 4-picture sto
 2. **Teacher reviews**: regenerates any weak picture, edits example sentences, and places a cartoon mouth on the character in each picture.
 3. **Teacher prints** a 2×2 worksheet with writing lines under each picture; students write their own version of the story on paper.
 4. **Teacher shares a link**; students (often on a parent's phone) open it, record one voice clip per picture, listen back, re-record if needed, and submit.
-5. **Output**: a playable "movie" — the 4 pictures in sequence with the student's audio, the character's mouth animating in sync with the voice. Teacher reviews submissions; the movie page is shareable; downloadable video export is a later phase.
+5. **Output**: a playable "movie" performed live in the browser — a virtual camera zooms and pans across the 4 pictures while the student's audio plays and the character's mouth animates in sync with the voice. **No video file is ever generated.** Teacher reviews submissions; the movie page is shareable; optional file download via in-browser capture is a later bonus.
 
 Future tools under the same tab (placeholders only for now): class timer, random name picker.
 
@@ -93,9 +93,9 @@ Mobile-first, giant buttons, minimal text (students are ~8 years old, possibly o
 `/tools/story-creator/[storyId]/submissions`:
 
 - List of submissions (student name, time, status).
-- Each opens the **movie player**: full-screen Pixi stage that shows panel 1–4 in sequence, plays that panel's audio, and animates the mouth sprite from the audio's amplitude (see §6). Simple transitions between panels; title card with the story title and student name; end card.
+- Each opens the **cinematic movie player** (see §6): a full-screen Pixi stage with a virtual camera that zooms and pans across the panels while the mouth animates to the student's audio — the movie is *performed live in the browser*, never encoded as a video file. Title card with the story title and student name; end card ("A film by Mia").
 - Teacher can mark a submission reviewed, or delete it (re-recording is just the student opening the link again).
-- The movie page itself is shareable read-only via its own token (`/story/[token]/watch/[submissionId]`), so parents can watch. Downloadable MP4 is Phase 6.
+- The movie page itself is shareable read-only via its own token (`/story/[token]/watch/[submissionId]`), so parents can watch on any device. Optional file download is a bonus, not a requirement (see §7).
 
 ---
 
@@ -178,22 +178,41 @@ The existing `/api/ai/analyze-lesson-image` route is reused as-is for the screen
 
 ## 6. Lip sync & movie playback
 
-**Approach: amplitude-driven mouth animation** (not phoneme-level lip sync). For exaggerated cartoon mouths this reads as "talking" and is entirely client-side:
+**Core decision: the movie is never encoded as a video file.** It is performed live in the browser by a Pixi stage — mouth animation + virtual camera + audio. This removes video generation from the product entirely; file download becomes an optional bonus (§7).
 
-1. On playback, decode the clip with Web Audio (`AudioContext.decodeAudioData`), or precompute an **amplitude envelope** (RMS per ~50 ms window) once at submit time and store it alongside the recording (small JSON) — precomputing makes playback dumb and cheap.
-2. The Pixi movie player renders each panel as a sprite, with the mouth sprite at the stored placement. Each mouth style is a tiny frame set (closed / half / open / wide); envelope value maps to frame + a slight scale wobble. This is deliberately simple and very forgiving.
-3. Same renderer is used in three places: student preview (§3.3 step 3), teacher review, and shared watch page — one component, one code path.
+### Lip sync: amplitude-driven mouth animation
+
+Not phoneme-level — for exaggerated cartoon mouths, volume-driven animation reads as "talking" and is entirely client-side:
+
+1. Precompute an **amplitude envelope** (RMS per ~50 ms window) once at submit time via Web Audio and store it alongside the recording (small JSON). Playback then never touches audio analysis — it just looks up `envelope[t]`.
+2. Each mouth style is a tiny frame set (closed / half / open / wide); envelope value maps to frame + a slight scale wobble. Deliberately simple and very forgiving.
+
+### Virtual camera: making 4 stills feel like a film
+
+All four panels live in one Pixi container laid out as a **horizontal 1×4 filmstrip** (the *player* layout is independent of the 2×2 *print* layout — same images, arranged however the camera wants). The "camera" is just an animated transform on that container:
+
+- **Ken Burns per panel**: while a panel's audio plays, the camera slowly zooms in (odd panels) or out (even panels), with gentle ease-in/out. Static image + moving camera + moving mouth + voice = film, not slideshow.
+- **Transitions between panels**: default is a smooth lateral **pan/sweep** along the strip to the next panel (single-axis, accordion feel). Alternative transition styles (fade-to-black, crossfade) are a per-story or per-player setting — cheap to offer since they're all just container/alpha tweens.
+- **Framing**: 16:9 letterbox with black bars; title card in, end card out. Panel duration = that clip's audio length + a beat of padding.
+- The whole performance is **deterministic**: given the images, mouth placements, envelopes, and clip durations, frame `t` is a pure function of time. That matters for §7.
+
+Same player component is used in three places: student preview (§3.3 step 3), teacher review, and the shared watch page — one code path.
 
 The player follows existing engine rules where it applies (single Pixi lifecycle owned by a React view, destroyed on unmount), but it's a lightweight standalone stage — it does **not** need the full `PixiEngine`/manager/RuleEngine stack, which is quiz-game infrastructure.
 
-## 7. Video export (deferred — Phase 6)
+## 7. Download options (all optional, none require a video-generation server)
 
-The shareable **watch page is the primary "movie"** deliverable; a downloadable MP4 is a bonus:
+The shareable **watch page is the primary deliverable** — replayable on any device, nothing to encode or store. If teachers want a file, options in ascending effort:
 
-- **Option A (preferred): client-side capture** — render the Pixi canvas playback in real time and record it with `canvas.captureStream()` + audio track → `MediaRecorder` → WebM download. Works on the teacher's desktop Chrome; we don't need export to work on student phones.
-- **Option B: server-side ffmpeg** — not viable on Vercel serverless directly; would need a background worker or third-party rendering service. Only pursue if teachers need MP4 for platforms that reject WebM.
+| Option | How | Output | Trade-offs |
+|--------|-----|--------|------------|
+| **A. Share link only** (default) | Watch URL with its own token | — | Zero cost; requires internet to view |
+| **B. Realtime canvas capture** | `canvas.captureStream()` + Web Audio destination → `MediaRecorder` | WebM | Near-zero code on top of the player; records in realtime (2-min movie = 2-min wait); desktop Chrome/Edge |
+| **C. WebCodecs offline render** | Because playback is deterministic (§6), render frame-by-frame with `VideoEncoder`/`AudioEncoder` + `mp4-muxer` | Real MP4, faster than realtime | More code; Chrome/Edge only — fine for a teacher-side export button |
+| **D. ffmpeg.wasm** | Encode/mux in-browser via wasm ffmpeg | MP4/WebM | ~30 MB wasm download, slower than C, no advantage here — not recommended |
+| **E. Server-side render** (Remotion / ffmpeg worker) | Background worker or rendering service | MP4 at scale | Real infra + cost; doesn't fit Vercel serverless; only if bulk auto-generation is ever needed |
 
-Deferring this keeps the risky part (video encoding) out of the critical path while the watch link delivers the full experience.
+**Plan: ship A with the player; add B as the first export button if requested; upgrade to C if teachers need MP4 specifically.** D and E are documented dead ends unless requirements change.
 
 ## 8. Recording: mobile constraints we design around
 
@@ -223,7 +242,7 @@ Each phase is a shippable PR; order chosen so risk is proven early.
 3. **Phase 3 — Story generation pipeline.** Prisma models + migrations, brief UI (with screenshot paste reuse), story plan + example story generation with lexicon audit, image generation → Blob, review UI with per-panel regenerate, story CRUD.
 4. **Phase 4 — Mouth placement + printout.** Auto mouth detection via Gemini vision, drag/resize editor, mouth styles; print page with scaffold toggle.
 5. **Phase 5 — Student recording flow + submissions.** Share tokens, public session API, mobile recording UX (record → playback → confirm/redo per picture → full preview → submit), Blob upload, teacher submissions list.
-6. **Phase 6 — Movie player + export.** Amplitude-envelope lip-sync Pixi player used in preview/review/watch pages; shareable watch links; then client-side WebM export.
+6. **Phase 6 — Cinematic movie player.** Pixi player with amplitude-envelope lip sync and the virtual camera (filmstrip layout, Ken Burns zoom, pan/fade transitions, title/end cards), used in preview/review/watch pages; shareable watch links. **No video encoding.** Export buttons (§7 options B/C) only if teachers ask for files.
 
 ## 12. Key risks & open questions
 
