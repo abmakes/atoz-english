@@ -17,7 +17,8 @@ import { detectMouthPlacement } from '@/lib/stories/mouth-detection';
 import { getOwnedStory, parseMouth, toPanelDto } from '@/lib/stories/service';
 
 export const runtime = 'nodejs';
-export const maxDuration = 120;
+// Hobby plan caps serverless maxDuration at 60s.
+export const maxDuration = 60;
 
 type RouteContext = { params: Promise<{ id: string; order: string }> };
 
