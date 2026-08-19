@@ -66,12 +66,12 @@ export type StoryBrief = z.infer<typeof storyBriefSchema>;
 /** Structured plan returned by the story-plan Gemini call. */
 export const storyPlanSchema = z.object({
   title: z.string().trim().min(1).max(120),
-  characterSheet: z.string().trim().min(1).max(600),
-  artStyle: z.string().trim().min(1).max(300),
+  characterSheet: z.string().trim().min(1).max(1200),
+  artStyle: z.string().trim().min(1).max(500),
   panels: z
     .array(
       z.object({
-        sceneDescription: z.string().trim().min(1).max(500),
+        sceneDescription: z.string().trim().min(1).max(1000),
         exampleSentence: z.string().trim().min(1).max(300),
       })
     )
@@ -89,7 +89,7 @@ export const storyPatchSchema = z.object({
 
 export const panelPatchSchema = z.object({
   exampleSentence: z.string().trim().max(300).optional(),
-  sceneDescription: z.string().trim().min(1).max(500).optional(),
+  sceneDescription: z.string().trim().min(1).max(1000).optional(),
   mouth: mouthPlacementSchema.optional(),
 });
 

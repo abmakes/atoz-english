@@ -270,5 +270,6 @@ Decisions taken during implementation, where they differ from or refine the plan
 - **Story becomes shareable automatically** once all four panels have images (status `READY`); no separate publish step.
 - **Envelope is computed client-side at record time** and uploaded with the submission, so playback (student preview, teacher review, watch page) never analyzes audio.
 - **DB migration** `20260819060000_add_story_creator` adds `Story`, `StoryPanel`, `StorySubmission`, `StoryRecording`. Run `prisma migrate deploy` on the production DB.
-- **Still to validate on real devices** (the deferred Phase 2 spike): character consistency quality of `gemini-2.5-flash-image` reference chaining with the production API key, and MediaRecorder capture on physical iOS Safari / Android Chrome.
+- **Image generation uses OpenRouter**, not the free Google Gemini image quota. Set `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` (e.g. `google/gemini-2.5-flash-image`). Panel prompts are rich single-scene prose (composition, character, setting, lighting, color) in a children's picture-book style — text planning still uses `GEMINI_QUIZ_API_KEY`.
+- **Still to validate on real devices** (the deferred Phase 2 spike): character consistency quality of OpenRouter Gemini Flash Image reference chaining with the production key, and MediaRecorder capture on physical iOS Safari / Android Chrome.
 - **Not yet built:** download/export buttons (§7 B/C), retention cron, per-teacher generation caps, class timer, name picker.

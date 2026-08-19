@@ -64,11 +64,10 @@ LANGUAGE RULES:
 - Age-appropriate, cheerful, nothing scary or sad.
 - Words typical for this level that may help: ${selection.words.slice(0, 60).join(', ') || 'common classroom words'}
 
-IMAGE PLANNING RULES:
-- characterSheet: one reusable visual description of the main character(s) - species/age, hair, clothing colors, distinguishing features. Every picture must show the SAME character(s).
-- artStyle: one short reusable description of the illustration style (e.g. "bright flat cartoon, thick outlines, simple shapes, warm colors, children's book style").
-- sceneDescription: what is VISIBLE in that picture (setting, action, expression). No text or speech bubbles in the pictures.
-- The character's face and mouth must be clearly visible in every scene.
+IMAGE PLANNING RULES (these feed a detailed image-generation prompt — write rich visual prose, not short labels):
+- characterSheet: 2-4 sentences describing the main character(s) in reusable visual detail — age/species, hair color and style, skin tone, exact clothing colors and items, one distinctive prop or feature. Every picture must show the SAME character(s) looking identical.
+- artStyle: 1-2 sentences locking the illustration look (e.g. "Bright flat children's picture-book cartoon with thick clean outlines, soft rounded shapes, warm cheerful palette, simple uncluttered backgrounds."). Keep it kid-friendly — never photorealistic, never dark or scary.
+- sceneDescription: 2-4 sentences of what is VISIBLE in that picture only — setting, foreground/background layout, action, props, lighting, and the character's expression. No text, no speech bubbles, no panel numbers in the picture. The character's face and mouth must be clearly visible and fairly large in frame.
 
 Return ONLY JSON with this exact shape:
 {
@@ -94,7 +93,12 @@ export function parseStoryPlan(raw: string): StoryPlan {
   return storyPlanSchema.parse(parsed);
 }
 
-/** Build the image-generation prompt for one panel. */
+/**
+ * Build a rich, single-scene image prompt for OpenRouter / Gemini Flash Image.
+ * Matches the density of detail of a good image-model prompt (composition,
+ * character, setting, lighting, color, mood) while staying a children's
+ * picture-book illustration — never photoreal editorial photography.
+ */
 export function createPanelImagePrompt(input: {
   characterSheet: string;
   artStyle: string;
@@ -103,24 +107,39 @@ export function createPanelImagePrompt(input: {
   hasReferenceImage: boolean;
   tweak?: string;
 }): string {
-  const lines = [
-    `Children's book illustration, panel ${input.panelOrder} of a 4-picture story.`,
-    `Art style: ${input.artStyle}`,
-    `Main character(s): ${input.characterSheet}`,
-    `Scene: ${input.sceneDescription}`,
-    'The main character\'s face must be clearly visible, mouth closed or neutral.',
-    'No text, no speech bubbles, no panel borders, no watermarks.',
-    'Bright, friendly, suitable for children aged 7-11.',
+  const character =
+    input.characterSheet.trim() ||
+    'a friendly cartoon child with simple round features and bright clothing';
+  const style =
+    input.artStyle.trim() ||
+    'bright flat children\'s picture-book cartoon with thick clean outlines, soft rounded shapes, and a warm cheerful color palette';
+  const scene =
+    input.sceneDescription.trim() ||
+    'a clear everyday outdoor setting with the character in the center of the frame';
+
+  const paragraphs = [
+    `Children's picture-book illustration for panel ${input.panelOrder} of a four-picture classroom story, rendered as a single full-bleed scene (not a comic strip, not a collage). Art direction: ${style}. Soft, friendly, and clearly readable for children aged 7–11 — never photorealistic, never dark, never scary.`,
+
+    `Main character, kept identical across every panel of this story: ${character}. Place the character prominently in the frame so their face is large, frontal or three-quarter view, and easy to see. Mouth closed or gently neutral (a separate cartoon mouth will be overlaid later).`,
+
+    `Scene and composition: ${scene}. Describe a clear foreground, midground, and simple background. Keep the layout uncluttered so a child can tell the story from the picture alone. Use warm, inviting lighting and saturated but soft colors that match the art direction.`,
+
+    'Hard constraints: no written text of any kind, no letters, no signs with words, no speech bubbles, no captions, no watermarks, no panel borders, no UI chrome. One continuous illustration filling the frame in a landscape 4:3 composition.',
   ];
+
   if (input.hasReferenceImage) {
-    lines.push(
-      'Use the attached reference image for the exact character design, colors, and art style. Keep the character identical; only the scene changes.'
+    paragraphs.push(
+      'A reference image is attached. Match that exact character design, clothing colors, proportions, and art style. Only the scene, pose, and expression may change — the character must look like the same person or animal from the reference.'
     );
   }
+
   if (input.tweak?.trim()) {
-    lines.push(`Teacher adjustment for this picture: ${input.tweak.trim()}`);
+    paragraphs.push(
+      `Teacher adjustment for this picture only: ${input.tweak.trim()}. Apply this change while keeping the character identity and overall art style intact.`
+    );
   }
-  return lines.join('\n');
+
+  return paragraphs.join('\n\n');
 }
 
 /** Assemble the printable example story from panel sentences. */

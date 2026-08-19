@@ -1,50 +1,66 @@
-const IMAGE_MODEL = 'gemini-2.5-flash-image';
-const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const DEFAULT_OPENROUTER_IMAGE_MODEL = 'google/gemini-2.5-flash-image';
 
 export interface GeneratedImage {
   bytes: Buffer;
   mimeType: string;
 }
 
-interface InlineDataPart {
-  inlineData?: { mimeType?: string; data?: string };
+interface OpenRouterImagePart {
+  type?: string;
+  image_url?: { url?: string };
+  imageUrl?: { url?: string };
+}
+
+interface OpenRouterMessage {
+  images?: OpenRouterImagePart[];
+  content?: unknown;
 }
 
 /**
- * Generate one story panel image with Gemini image generation.
+ * Generate one story panel image via OpenRouter (Gemini Flash Image).
+ * Uses OPENROUTER_API_KEY + OPENROUTER_MODEL from the environment.
  * Optionally passes a reference image so the character stays consistent
- * across panels (reference-image chaining).
+ * across panels (image-to-image).
  */
 export async function generatePanelImage(input: {
   prompt: string;
   referenceImage?: { mimeType: string; base64: string };
 }): Promise<GeneratedImage> {
-  const apiKey = process.env.GEMINI_QUIZ_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    throw new Error('GEMINI_QUIZ_API_KEY is not configured');
+    throw new Error('OPENROUTER_API_KEY is not configured');
   }
 
-  const parts: Array<Record<string, unknown>> = [{ text: input.prompt }];
+  const model =
+    process.env.OPENROUTER_MODEL?.trim() || DEFAULT_OPENROUTER_IMAGE_MODEL;
+
+  const content: Array<Record<string, unknown>> = [
+    { type: 'text', text: input.prompt },
+  ];
   if (input.referenceImage) {
-    parts.push({
-      inlineData: {
-        mimeType: input.referenceImage.mimeType,
-        data: input.referenceImage.base64,
+    content.push({
+      type: 'image_url',
+      image_url: {
+        url: `data:${input.referenceImage.mimeType};base64,${input.referenceImage.base64}`,
       },
     });
   }
 
-  const response = await fetch(`${API_BASE}/${IMAGE_MODEL}:generateContent`, {
+  const response = await fetch(OPENROUTER_URL, {
     method: 'POST',
     headers: {
-      'x-goog-api-key': apiKey,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
+      'HTTP-Referer': process.env.OPENROUTER_HTTP_REFERER ?? 'https://playtoz.com',
+      'X-Title': process.env.OPENROUTER_APP_TITLE ?? 'PlaytoZ Story Creator',
     },
     body: JSON.stringify({
-      contents: [{ parts }],
-      generationConfig: {
-        responseModalities: ['IMAGE'],
-        imageConfig: { aspectRatio: '4:3' },
+      model,
+      messages: [{ role: 'user', content }],
+      modalities: ['image', 'text'],
+      image_config: {
+        aspect_ratio: '4:3',
       },
     }),
   });
@@ -57,19 +73,55 @@ export async function generatePanelImage(input: {
   }
 
   const payload = (await response.json()) as {
-    candidates?: Array<{ content?: { parts?: InlineDataPart[] } }>;
+    choices?: Array<{ message?: OpenRouterMessage }>;
+    error?: { message?: string };
   };
-  const imagePart = payload.candidates?.[0]?.content?.parts?.find(
-    (part) => part.inlineData?.data
-  );
 
-  if (!imagePart?.inlineData?.data) {
+  if (payload.error?.message) {
+    throw new Error(`Image generation failed: ${payload.error.message}`);
+  }
+
+  const message = payload.choices?.[0]?.message;
+  const dataUrl = extractImageDataUrl(message);
+  if (!dataUrl) {
     throw new Error('Image generation returned no image data');
   }
 
+  return parseDataUrl(dataUrl);
+}
+
+function extractImageDataUrl(message: OpenRouterMessage | undefined): string | null {
+  if (!message) return null;
+
+  for (const image of message.images ?? []) {
+    const url = image.image_url?.url ?? image.imageUrl?.url;
+    if (url?.startsWith('data:image/')) return url;
+  }
+
+  // Some providers embed a data URL in the text content.
+  if (typeof message.content === 'string') {
+    const match = message.content.match(/data:image\/[a-zA-Z+]+;base64,[A-Za-z0-9+/=]+/);
+    if (match) return match[0];
+  }
+
+  if (Array.isArray(message.content)) {
+    for (const part of message.content as OpenRouterImagePart[]) {
+      const url = part.image_url?.url ?? part.imageUrl?.url;
+      if (url?.startsWith('data:image/')) return url;
+    }
+  }
+
+  return null;
+}
+
+function parseDataUrl(dataUrl: string): GeneratedImage {
+  const match = /^data:(image\/[a-zA-Z+]+);base64,(.+)$/s.exec(dataUrl);
+  if (!match) {
+    throw new Error('Image generation returned an unrecognized image payload');
+  }
   return {
-    bytes: Buffer.from(imagePart.inlineData.data, 'base64'),
-    mimeType: imagePart.inlineData.mimeType ?? 'image/png',
+    mimeType: match[1],
+    bytes: Buffer.from(match[2], 'base64'),
   };
 }
 

@@ -24,7 +24,7 @@ Also ships **Teacher Tools** (`/tools`): small classroom helpers. First tool is 
 | Data | Prisma → PostgreSQL; Zod validation |
 | Auth | Clerk (optional; falls back to local `"admin"`) |
 | Tests | **Vitest** (`tests/`) |
-| AI / media | Google Gemini teacher-first quiz brief + soft lexicon audit; Gemini image generation (Story Creator panels); Giphy / Pixabay + Vercel Blob |
+| AI / media | Google Gemini teacher-first quiz brief + soft lexicon audit; OpenRouter (`OPENROUTER_API_KEY` / `OPENROUTER_MODEL`) for Story Creator panel images (Gemini Flash Image); Giphy / Pixabay + Vercel Blob |
 
 ### Explicit non-goals (do not revive)
 
