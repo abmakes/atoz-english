@@ -1,6 +1,6 @@
 # Teacher Tools & Story Creator — Implementation Plan
 
-**Status:** Proposal — no code written yet.
+**Status:** Implemented (v1). Phases 1 and 3–6 are shipped; the Phase 2 spike was folded into the implementation and still needs real-device validation (see "Post-implementation notes" at the end).
 **Owner surface:** New "Teacher Tools" tab; first tool is the **Story Creator** (Cambridge Movers storytelling practice).
 
 ---
@@ -256,3 +256,19 @@ Each phase is a shippable PR; order chosen so risk is proven early.
 | Storage growth (audio + images on Blob) | Size caps, teacher delete, later retention cron |
 
 **Open decisions to confirm before Phase 3:** whether the example story is visible to students on the recording page (or paper-only); whether one story link is shared class-wide (proposed — simplest) vs per-student links; mouth style art (commission/generate a small sprite set).
+
+---
+
+## Post-implementation notes (v1)
+
+Decisions taken during implementation, where they differ from or refine the plan above:
+
+- **Player is Canvas 2D, not Pixi.** The movie player, mouth editor, and student screens use plain `<canvas>` 2D. The player is a deterministic `render(t)` over a filmstrip — it needs images, transforms, and a few drawn shapes, not the engine. This keeps the student page light on old phones and stays out of the quiz engine's lifecycle rules. The engine remains untouched.
+- **Mouth art is procedural.** Three styles (big cartoon lips, duck bill, monster with teeth) are drawn in code (`src/lib/stories/mouth-draw.ts`), so no sprite assets were commissioned. Openness is driven by the amplitude envelope.
+- **Example story visibility is a per-story toggle** (`showExampleToStudents`), default off (paper-only), set in the editor.
+- **Class-wide share link** as proposed; the token can be reset from the editor to revoke old links.
+- **Story becomes shareable automatically** once all four panels have images (status `READY`); no separate publish step.
+- **Envelope is computed client-side at record time** and uploaded with the submission, so playback (student preview, teacher review, watch page) never analyzes audio.
+- **DB migration** `20260819060000_add_story_creator` adds `Story`, `StoryPanel`, `StorySubmission`, `StoryRecording`. Run `prisma migrate deploy` on the production DB.
+- **Still to validate on real devices** (the deferred Phase 2 spike): character consistency quality of `gemini-2.5-flash-image` reference chaining with the production API key, and MediaRecorder capture on physical iOS Safari / Android Chrome.
+- **Not yet built:** download/export buttons (§7 B/C), retention cron, per-teacher generation caps, class timer, name picker.

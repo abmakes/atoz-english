@@ -11,6 +11,8 @@ How to keep docs honest after changes: [project_docs/DOCUMENTATION_MAINTENANCE.m
 
 Teacher-centric quiz platform: create quizzes (form, CSV, AI), then play them as classroom PixiJS games (multiple-choice and Splash Dash) with teams, timers, scoring, themes, and power-ups.
 
+Also ships **Teacher Tools** (`/tools`): small classroom helpers. First tool is the **Story Creator** — AI-generated 4-picture stories (Gemini text + image), a printable 2×2 worksheet, a public student link for per-picture voice recording, and a live lip-synced "movie" player (canvas virtual camera; no video files are generated). Plan/architecture: [TEACHER_TOOLS_STORY_CREATOR_PLAN.md](TEACHER_TOOLS_STORY_CREATOR_PLAN.md).
+
 ## Stack snapshot (working)
 
 | Layer | Technology |
@@ -22,7 +24,7 @@ Teacher-centric quiz platform: create quizzes (form, CSV, AI), then play them as
 | Data | Prisma → PostgreSQL; Zod validation |
 | Auth | Clerk (optional; falls back to local `"admin"`) |
 | Tests | **Vitest** (`tests/`) |
-| AI / media | Google Gemini teacher-first quiz brief + soft lexicon audit; Giphy / Pixabay + Vercel Blob |
+| AI / media | Google Gemini teacher-first quiz brief + soft lexicon audit; Gemini image generation (Story Creator panels); Giphy / Pixabay + Vercel Blob |
 
 ### Explicit non-goals (do not revive)
 
@@ -56,6 +58,8 @@ src/lib/prisma.ts       Prisma client
 src/lib/ai/              GenerationBrief, teacher-first prompts, lesson-image helpers
 src/lib/lexicon/         Open lexicon resolver + soft language audit
 src/lib/taxonomy/        Discovery tags + AI-only generation controls
+src/lib/stories/         Story Creator: schemas, prompts, Gemini image gen, timeline, lip-sync
+src/components/story_creator/  Story Creator UI (brief form, editor, recorder, movie player)
 src/stores/             Zustand stores
 src/styles/             globals.css + stylingGuide.md
 src/types/              Shared TS types
