@@ -17,10 +17,29 @@ describe('quiz taxonomy aliases', () => {
   })
 
   it('maps legacy grammar and word-class labels without polluting discovery', () => {
-    expect(resolveGrammarTags(['Nouns & Articles'])).toEqual(['Countable & Uncountable'])
+    expect(resolveGrammarTags(['Nouns & Articles'])).toEqual([
+      'Countable & Uncountable',
+      'Articles (A/An/The)',
+    ])
     expect(resolveGrammarTags(['Nouns'])).toEqual([])
     expect(isKnownQuizTag('Nouns')).toBe(false)
     expect(isKnownQuizTag('Present Simple')).toBe(true)
+    expect(isKnownQuizTag('Future Simple (Will)')).toBe(true)
+    expect(isKnownQuizTag('Prepositions')).toBe(false)
+  })
+
+  it('expands the generic Prepositions label onto place/time/movement tags', () => {
+    expect(resolveGrammarTags(['Prepositions'])).toEqual([
+      'Prepositions of Place',
+      'Prepositions of Time',
+      'Prepositions of Movement',
+    ])
+    expect(
+      discoveryTagMatches(['Prepositions'], 'Prepositions of Place')
+    ).toBe(true)
+    expect(
+      discoveryTagMatches(['Prepositions of Time'], 'Prepositions')
+    ).toBe(true)
   })
 
   it('normalizes legacy labels for editing and browse filtering', () => {
