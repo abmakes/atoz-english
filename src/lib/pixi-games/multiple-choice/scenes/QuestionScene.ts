@@ -5,7 +5,6 @@ import { GifSprite } from 'pixi.js/gif';
 import { EventBus } from '@/lib/pixi-engine/core/EventBus'; // Example manager
 // Assume AssetLoader provides a method like getDisplayObject
 import { AssetLoader } from '@/lib/pixi-engine/assets/AssetLoader';
-import { signalFirstQuestionReady } from '@/lib/load-timer';
 import { PixiApplication } from '@/lib/pixi-engine/core/PixiApplication'; // Import PixiApplication
 // Import the theme config type
 import type { PixiSpecificConfig } from '../../../themes'; // Use correct relative path
@@ -129,10 +128,8 @@ export class QuestionScene extends PIXI.Container {
                             }, 50);
                         }
                     }
-                    signalFirstQuestionReady({ noMedia: false });
                 } else {
                     console.warn(`AssetLoader.getDisplayObject returned null for: ${imageUrl}`);
-                    signalFirstQuestionReady({ noMedia: true });
                 }
             } catch (error) {
                 console.error(`Error during AssetLoader.getDisplayObject for ${imageUrl}:`, error);
@@ -143,10 +140,7 @@ export class QuestionScene extends PIXI.Container {
                     this.questionMedia?.destroy();
                     this.questionMedia = null;
                 }
-                signalFirstQuestionReady({ noMedia: true });
             }
-        } else {
-            signalFirstQuestionReady({ noMedia: true });
         }
         console.log("--- QuestionSceneV2 updateQuestion END ---");
     }
