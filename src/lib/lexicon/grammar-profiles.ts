@@ -1,4 +1,7 @@
-import type { CefrLevelId } from '@/lib/taxonomy/quiz-taxonomy';
+import {
+  resolveGrammarTags,
+  type CefrLevelId,
+} from '@/lib/taxonomy/quiz-taxonomy';
 
 export interface GrammarProfile {
   tag: string;
@@ -83,6 +86,22 @@ export const GRAMMAR_PROFILES: readonly GrammarProfile[] = [
     sentenceForms: ['Negative', 'Yes/No question', 'Wh-question'],
   },
   {
+    tag: 'Imperatives',
+    minimumLevel: 'PRE_A1',
+    wordClasses: ['verb'],
+    patterns: ['base verb + object', "don't + base verb"],
+    questionStyles: ['Choose the correct form', 'Picture description', 'Choose the right question'],
+    sentenceForms: ['Affirmative', 'Negative'],
+  },
+  {
+    tag: 'Verb Patterns (Like -ing / Want to)',
+    minimumLevel: 'A1',
+    wordClasses: ['verb'],
+    patterns: ['like/enjoy + verb-ing', 'want/need + to + base verb'],
+    questionStyles: ['Choose the correct form', 'Fill the gap', 'Find the mistake'],
+    sentenceForms: ['Affirmative', 'Negative', 'Yes/No question'],
+  },
+  {
     tag: 'Countable & Uncountable',
     minimumLevel: 'A2',
     wordClasses: ['noun'],
@@ -91,11 +110,43 @@ export const GRAMMAR_PROFILES: readonly GrammarProfile[] = [
     sentenceForms: ['Affirmative', 'Negative'],
   },
   {
+    tag: 'Articles (A/An/The)',
+    minimumLevel: 'PRE_A1',
+    wordClasses: ['noun'],
+    patterns: ['a/an + singular countable noun', 'the + known noun'],
+    questionStyles: ['Choose the correct form', 'Fill the gap', 'Find the mistake'],
+    sentenceForms: ['Affirmative'],
+  },
+  {
+    tag: 'Demonstratives (This/That)',
+    minimumLevel: 'PRE_A1',
+    wordClasses: ['noun'],
+    patterns: ['this/that + singular noun', 'these/those + plural noun'],
+    questionStyles: ['Picture description', 'Choose the correct form', 'Fill the gap'],
+    sentenceForms: ['Affirmative'],
+  },
+  {
+    tag: 'Plural Nouns',
+    minimumLevel: 'PRE_A1',
+    wordClasses: ['noun'],
+    patterns: ['regular plural +s/+es', 'common irregular plurals'],
+    questionStyles: ['Choose the correct form', 'Picture description', 'Vocabulary meaning'],
+    sentenceForms: ['Affirmative'],
+  },
+  {
     tag: 'Future with going to',
     minimumLevel: 'A2',
     wordClasses: ['verb'],
     patterns: ['subject + am/is/are + going to + base verb'],
     questionStyles: ['Choose the correct form', 'Fill the gap', 'Picture description'],
+    sentenceForms: ['Affirmative', 'Negative', 'Yes/No question'],
+  },
+  {
+    tag: 'Future Simple (Will)',
+    minimumLevel: 'A2',
+    wordClasses: ['verb'],
+    patterns: ['subject + will + base verb', 'will + subject + base verb'],
+    questionStyles: ['Choose the correct form', 'Fill the gap', 'Choose the right question'],
     sentenceForms: ['Affirmative', 'Negative', 'Yes/No question'],
   },
   {
@@ -115,6 +166,14 @@ export const GRAMMAR_PROFILES: readonly GrammarProfile[] = [
     sentenceForms: ['Affirmative', 'Negative'],
   },
   {
+    tag: "Suggestions (Let's / How about)",
+    minimumLevel: 'A1',
+    wordClasses: ['verb'],
+    patterns: ["let's + base verb", 'how about + noun/verb-ing'],
+    questionStyles: ['Choose the correct form', 'Choose the right question', 'Fill the gap'],
+    sentenceForms: ['Affirmative', 'Yes/No question'],
+  },
+  {
     tag: 'Adjectives & Adverbs',
     minimumLevel: 'A1',
     wordClasses: ['adjective', 'adverb'],
@@ -123,10 +182,26 @@ export const GRAMMAR_PROFILES: readonly GrammarProfile[] = [
     sentenceForms: ['Affirmative'],
   },
   {
-    tag: 'Prepositions',
+    tag: 'Prepositions of Place',
     minimumLevel: 'PRE_A1',
     wordClasses: ['noun'],
-    patterns: ['preposition + place/time noun'],
+    patterns: ['in/on/under/next to + place'],
+    questionStyles: ['Picture description', 'Fill the gap', 'Choose the correct form'],
+    sentenceForms: ['Affirmative'],
+  },
+  {
+    tag: 'Prepositions of Time',
+    minimumLevel: 'A1',
+    wordClasses: ['noun'],
+    patterns: ['in/on/at + time expression'],
+    questionStyles: ['Choose the correct form', 'Fill the gap', 'Find the mistake'],
+    sentenceForms: ['Affirmative'],
+  },
+  {
+    tag: 'Prepositions of Movement',
+    minimumLevel: 'A2',
+    wordClasses: ['noun', 'verb'],
+    patterns: ['to/from/into/out of/up/down + place'],
     questionStyles: ['Picture description', 'Fill the gap', 'Choose the correct form'],
     sentenceForms: ['Affirmative'],
   },
@@ -181,7 +256,9 @@ export const GRAMMAR_PROFILES: readonly GrammarProfile[] = [
 ] as const;
 
 export function profilesForTags(tags: string[]): GrammarProfile[] {
-  const normalized = new Set(tags.map((tag) => tag.toLowerCase()));
+  const normalized = new Set(
+    [...tags, ...resolveGrammarTags(tags)].map((tag) => tag.toLowerCase())
+  );
   return GRAMMAR_PROFILES.filter((profile) =>
     normalized.has(profile.tag.toLowerCase())
   );

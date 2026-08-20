@@ -214,7 +214,7 @@ export default function StoryBriefForm({ onCreated }: StoryBriefFormProps) {
               (up to 4 — the example story models these)
             </span>
           </label>
-          <div className="flex max-h-36 flex-wrap gap-1.5 overflow-y-auto rounded-lg border bg-slate-50 p-2">
+          <div className="flex max-h-52 flex-wrap gap-1.5 overflow-y-auto rounded-lg border bg-slate-50 p-2">
             {GRAMMAR_TAGS.map((tag) => (
               <button
                 key={tag}

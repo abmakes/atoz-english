@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { balanceTagGroupColumns } from '@/lib/tags'
 import { normalizeCefrLevel } from '@/lib/taxonomy/quiz-taxonomy'
 
 export interface TagGroup {
@@ -113,11 +114,7 @@ export function TagDrawer({
     (grammarCategory
       ? [{ id: 'all', label: 'All', tags: grammarCategory.tags }]
       : [])
-  const grammarMid = Math.ceil(grammarGroups.length / 2)
-  const grammarColumns = [
-    grammarGroups.slice(0, grammarMid),
-    grammarGroups.slice(grammarMid),
-  ]
+  const grammarColumns = balanceTagGroupColumns(grammarGroups, 2)
 
   return (
     <Drawer>
@@ -160,63 +157,67 @@ export function TagDrawer({
               {description}
             </DrawerDescription>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-6 lg:items-stretch">
+            <div className="flex flex-col gap-4">
               {levelCategory && (
-                <section className="rounded-xl border border-[--primary-accent] bg-white/80 p-4 lg:col-span-1">
-                  <div className="mb-2 flex flex-col gap-1">
-                    <h3 className="text-lg font-semibold">Level</h3>
-                    <p className="text-xs text-gray-500">Choose one</p>
-                  </div>
-                  <div className="flex flex-row flex-wrap gap-2">
-                    {levelCategory.tags.map((tag) => {
-                      const isSelected = selectedTags.includes(tag)
-                      return (
-                        <Badge
-                          key={tag}
-                          variant={isSelected ? 'default' : 'outline'}
-                          onClick={() => handleToggle(levelCategory, tag)}
-                          className={`${pillClass(isSelected)} w-fit`}
-                        >
-                          {tag}
-                        </Badge>
-                      )
-                    })}
+                <section className="rounded-xl border border-[--primary-accent] bg-white/80 p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-lg font-semibold">Level</h3>
+                      <p className="text-xs text-gray-500">Choose one</p>
+                    </div>
+                    <div className="flex flex-row flex-wrap gap-2">
+                      {levelCategory.tags.map((tag) => {
+                        const isSelected = selectedTags.includes(tag)
+                        return (
+                          <Badge
+                            key={tag}
+                            variant={isSelected ? 'default' : 'outline'}
+                            onClick={() => handleToggle(levelCategory, tag)}
+                            className={`${pillClass(isSelected)} w-fit`}
+                          >
+                            {tag}
+                          </Badge>
+                        )
+                      })}
+                    </div>
                   </div>
                 </section>
               )}
 
-              {topicCategory && (
-                <section className="rounded-xl border border-[--primary-accent] bg-white/80 p-4 lg:col-span-2">
-                  <h3 className="mb-1 text-lg font-semibold">Topic</h3>
-                  <p className="mb-3 text-xs text-gray-500">
-                    Choose a classroom theme
-                  </p>
-                  {renderChips(topicCategory, topicCategory.tags)}
-                </section>
-              )}
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-stretch">
+                {grammarCategory && (
+                  <section className="rounded-xl border border-[--primary-accent] bg-white/80 p-4 lg:col-span-2">
+                    <h3 className="mb-1 text-lg font-semibold">Grammar</h3>
+                    <p className="mb-3 text-xs text-gray-500">
+                      Coursebook structures
+                    </p>
+                    <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+                      {grammarColumns.map((column, columnIndex) => (
+                        <div key={`grammar-col-${columnIndex}`} className="space-y-3">
+                          {column.map((group) => (
+                            <div key={group.id}>
+                              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                {group.label}
+                              </p>
+                              {renderChips(grammarCategory, [...group.tags])}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
 
-              {grammarCategory && (
-                <section className="rounded-xl border border-[--primary-accent] bg-white/80 p-4 lg:col-span-3">
-                  <h3 className="mb-1 text-lg font-semibold">Grammar</h3>
-                  <p className="mb-3 text-xs text-gray-500">
-                    Coursebook structures
-                  </p>
-                  <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
-                    {grammarColumns.map((column, columnIndex) => (
-                      <div key={`grammar-col-${columnIndex}`} className="space-y-3">
-                        {column.map((group) => (
-                          <div key={group.id}>
-                            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                              {group.label}
-                            </p>
-                            {renderChips(grammarCategory, [...group.tags])}
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
+                {topicCategory && (
+                  <section className="rounded-xl border border-[--primary-accent] bg-white/80 p-4 lg:col-span-1">
+                    <h3 className="mb-1 text-lg font-semibold">Topic</h3>
+                    <p className="mb-3 text-xs text-gray-500">
+                      Choose a classroom theme
+                    </p>
+                    {renderChips(topicCategory, topicCategory.tags)}
+                  </section>
+                )}
+              </div>
             </div>
 
             {otherCategories.map((category) => (
