@@ -61,6 +61,7 @@ export const GRAMMAR_GROUPS = [
       'Past Continuous',
       'Present Perfect',
       'Future with going to',
+      'Future Simple (Will)',
       'Time Expressions',
     ],
   },
@@ -72,12 +73,20 @@ export const GRAMMAR_GROUPS = [
       'There is / There are',
       'Word Order',
       'First Conditional',
+      'Imperatives',
+      'Verb Patterns (Like -ing / Want to)',
     ],
   },
   {
     id: 'nouns-quantity',
     label: 'Nouns & quantity',
-    tags: ['Countable & Uncountable', 'Quantifiers'],
+    tags: [
+      'Countable & Uncountable',
+      'Quantifiers',
+      'Articles (A/An/The)',
+      'Demonstratives (This/That)',
+      'Plural Nouns',
+    ],
   },
   {
     id: 'describing',
@@ -87,12 +96,23 @@ export const GRAMMAR_GROUPS = [
   {
     id: 'modals-functions',
     label: 'Modals & functions',
-    tags: ['Can / Could', 'Must / Have to / Should', 'Phrasal Verbs'],
+    tags: [
+      'Can / Could',
+      'Must / Have to / Should',
+      'Phrasal Verbs',
+      "Suggestions (Let's / How about)",
+    ],
   },
   {
     id: 'linking',
     label: 'Word order & linking',
-    tags: ['Conjunctions & Linking Words', 'Prepositions', 'Pronouns & Possessives'],
+    tags: [
+      'Prepositions of Place',
+      'Prepositions of Time',
+      'Prepositions of Movement',
+      'Conjunctions & Linking Words',
+      'Pronouns & Possessives',
+    ],
   },
 ] as const;
 
@@ -178,10 +198,17 @@ const LEGACY_GRAMMAR_ALIASES: Record<string, GrammarTag[]> = {
   adjectives: [],
   adverbs: [],
   'function words': [],
-  'nouns & articles': ['Countable & Uncountable'],
+  'nouns & articles': ['Countable & Uncountable', 'Articles (A/An/The)'],
   modals: ['Can / Could', 'Must / Have to / Should'],
   conditionals: ['First Conditional'],
   'questions & negatives': ['Questions & Negatives'],
+  prepositions: [
+    'Prepositions of Place',
+    'Prepositions of Time',
+    'Prepositions of Movement',
+  ],
+  'future simple': ['Future Simple (Will)'],
+  will: ['Future Simple (Will)'],
 };
 
 export function normalizeCefrLevel(level: string): CefrLevelId | null {
