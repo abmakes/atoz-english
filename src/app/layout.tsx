@@ -6,9 +6,9 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { ClerkActiveProvider } from "@/components/auth/ClerkActiveProvider";
 
 export const metadata: Metadata = {
-  title: "PlaytoZ — English quizzes that play like fair fights",
+  title: "PlaytoZ — Classroom games for English teachers",
   description:
-    "Create English quizzes in clicks. Students compete with skill and speed in Team Quiz or Splash Dash — timers, power-ups, and teams without luck replacing learning.",
+    "Create grammar and vocabulary quizzes, choose a classroom game, and keep every team engaged through the final question.",
 };
 
 export default function RootLayout({
