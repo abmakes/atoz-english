@@ -42,7 +42,7 @@ export class NinjaClimbUIManager {
   private questionContainer: PIXI.Container
   private questionText: PIXI.Text
   private questionCounter: PIXI.Text
-  private questionImage: PIXI.Container | null = null
+  private questionImage: PIXI.Sprite | null = null
   private questionImageCloud: PIXI.Container | null = null
   private cloudPanel: PIXI.Container
   private feedbackPanel: PIXI.Container
@@ -184,15 +184,9 @@ export class NinjaClimbUIManager {
             1
           )
           display.scale.set(scale)
-          const isSprite = display instanceof PIXI.Sprite
-          if (isSprite) {
-            display.anchor.set(0.5)
-            display.x = display.width / 2
-            display.y = -display.height * 0.22
-          } else {
-            display.x = 0
-            display.y = -display.height * 0.72
-          }
+          display.anchor.set(0.5)
+          display.x = display.width / 2
+          display.y = -display.height * 0.22
           this.questionImage = display
           this.questionContainer.addChild(display)
           await this._placeQuestionImageCloud()
@@ -716,13 +710,8 @@ export class NinjaClimbUIManager {
         .stroke({ width: 3, color: 0x94a3b8, alpha: 0.7 })
       cloud = g
     }
-    if (img instanceof PIXI.Sprite) {
-      cloud.x = img.x
-      cloud.y = img.y
-    } else {
-      cloud.x = img.x + img.width / 2
-      cloud.y = img.y + img.height / 2
-    }
+    cloud.x = img.x
+    cloud.y = img.y
     cloud.eventMode = 'none'
     this.questionImageCloud = cloud
     this.questionContainer.addChildAt(cloud, 0)
