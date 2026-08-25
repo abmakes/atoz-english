@@ -12,7 +12,12 @@ export interface NinjaClimbLayoutProfile {
   topPadding: number
   ninjaDisplaySize: number
   timerRadius: number
+  /** Extra drop below the React nav cluster so the timer is not covered. */
+  timerNavClearance: number
+  questionImageMaxWidth: number
   questionImageMaxHeight: number
+  /** Gap between Team 1 power tray and the question image. */
+  questionImageGap: number
   stepHeight: number
   stepsPerSection: number
   pathMargin: number
@@ -26,16 +31,19 @@ export class NinjaClimbLayoutManager {
     bottomBarHeight: 150,
     questionFontSize: 22,
     questionCounterFontSize: 14,
-    answerFontSize: 16,
-    cloudWidth: 220,
-    cloudHeight: 110,
+    answerFontSize: 18,
+    cloudWidth: 270,
+    cloudHeight: 148,
     powerupButtonSize: 44,
     trayPadding: 10,
     sidePadding: 16,
     topPadding: 10,
     ninjaDisplaySize: 64,
-    timerRadius: 34,
-    questionImageMaxHeight: 110,
+    timerRadius: 52,
+    timerNavClearance: 88,
+    questionImageMaxWidth: 156,
+    questionImageMaxHeight: 143,
+    questionImageGap: 32,
     stepHeight: 90,
     stepsPerSection: 4,
     pathMargin: 140,
@@ -95,7 +103,10 @@ export class NinjaClimbLayoutManager {
     profile.topPadding = Math.round(profile.topPadding * heightScale)
     profile.ninjaDisplaySize = Math.round(profile.ninjaDisplaySize * widthScale)
     profile.timerRadius = Math.round(profile.timerRadius * widthScale)
+    profile.timerNavClearance = Math.round(profile.timerNavClearance * heightScale)
+    profile.questionImageMaxWidth = Math.round(profile.questionImageMaxWidth * widthScale)
     profile.questionImageMaxHeight = Math.round(profile.questionImageMaxHeight * heightScale)
+    profile.questionImageGap = Math.round(profile.questionImageGap * widthScale)
     profile.stepHeight = Math.round(profile.stepHeight * heightScale)
     profile.pathMargin = Math.round(profile.pathMargin * widthScale)
   }

@@ -12,6 +12,7 @@ import type { ShortcutKind } from './NinjaClimbRaceManager'
 
 const ASSET_BASE = '/images/ninja-climb'
 export const QUESTION_TIMER_ID = 'ninja-climb-question-timer'
+const TIMER_BASE_RADIUS = 52
 
 export interface NinjaAnswerOption {
   id: string
@@ -42,6 +43,7 @@ export class NinjaClimbUIManager {
   private questionText: PIXI.Text
   private questionCounter: PIXI.Text
   private questionImage: PIXI.Container | null = null
+  private questionImageCloud: PIXI.Container | null = null
   private cloudPanel: PIXI.Container
   private feedbackPanel: PIXI.Container
   private shortcutPanel: PIXI.Container
@@ -111,13 +113,13 @@ export class NinjaClimbUIManager {
     this.questionCounter.anchor.set(0, 0)
 
     this.timer = new PixiTimer({
-      radius: 34,
+      radius: TIMER_BASE_RADIUS,
       textColor: this._hex(pixiConfig.timerColor || pixiConfig.textColor),
-      textSize: 26,
+      textSize: 40,
       fontFamily: pixiConfig.fontFamilyTheme || 'Grandstander',
       progressBarColor: this._hex(pixiConfig.primaryAccent || '#49C8FF'),
-      progressBarWidth: 8,
-      backgroundAlpha: 0.2,
+      progressBarWidth: 11,
+      backgroundAlpha: 0.55,
       backgroundColor: 0xffffff,
     })
 
@@ -167,11 +169,7 @@ export class NinjaClimbUIManager {
     this.questionText.text = questionText
     this.questionCounter.text = `Question ${counter.current} of ${counter.total}`
 
-    if (this.questionImage) {
-      this.questionContainer.removeChild(this.questionImage)
-      this.questionImage.destroy({ children: true })
-      this.questionImage = null
-    }
+    this._clearQuestionImage()
 
     if (imageUrl) {
       try {
@@ -179,13 +177,25 @@ export class NinjaClimbUIManager {
         if (display) {
           const layout = this.layoutManager.getLayoutParams()
           const maxH = layout.questionImageMaxHeight
-          const maxW = 120
-          const scale = Math.min(maxW / Math.max(1, display.width), maxH / Math.max(1, display.height), 1)
+          const maxW = layout.questionImageMaxWidth
+          const scale = Math.min(
+            maxW / Math.max(1, display.width),
+            maxH / Math.max(1, display.height),
+            1
+          )
           display.scale.set(scale)
-          display.x = 0
-          display.y = -display.height / 2
+          const isSprite = display instanceof PIXI.Sprite
+          if (isSprite) {
+            display.anchor.set(0.5)
+            display.x = display.width / 2
+            display.y = -display.height * 0.22
+          } else {
+            display.x = 0
+            display.y = -display.height * 0.72
+          }
           this.questionImage = display
           this.questionContainer.addChild(display)
+          await this._placeQuestionImageCloud()
         }
       } catch {
         /* ignore */
@@ -195,7 +205,7 @@ export class NinjaClimbUIManager {
     await this._buildAnswerClouds(options)
     this.updateTimerDisplay(questionDurationMs, questionDurationMs)
     this.setAnswerButtonsEnabled(true)
-    this._layoutBottomBar()
+    this._layoutAll()
   }
 
   public updateTimerDisplay(remainingMs: number, durationMs?: number): void {
@@ -421,11 +431,7 @@ export class NinjaClimbUIManager {
     this.clearAnswers()
     this.questionText.text = ''
     this.questionCounter.text = ''
-    if (this.questionImage) {
-      this.questionContainer.removeChild(this.questionImage)
-      this.questionImage.destroy({ children: true })
-      this.questionImage = null
-    }
+    this._clearQuestionImage()
   }
 
   public clearAnswers(): void {
@@ -467,9 +473,15 @@ export class NinjaClimbUIManager {
     const { width } = this.pixiApp.getScreenSize()
     const layout = this.layoutManager.getLayoutParams()
     const n = options.length
-    const gap = 16
-    const totalW = n * layout.cloudWidth + (n - 1) * gap
-    let startX = Math.max(layout.sidePadding, (width - totalW) / 2)
+    const gap = 20
+    const timerReserve = layout.timerRadius * 2 + layout.sidePadding + 20
+    const available = Math.max(200, width - layout.sidePadding - timerReserve)
+    const rawTotal = n * layout.cloudWidth + (n - 1) * gap
+    const fit = Math.min(1, available / Math.max(1, rawTotal))
+    const cloudW = Math.round(layout.cloudWidth * fit)
+    const cloudH = Math.round(layout.cloudHeight * fit)
+    const totalW = n * cloudW + (n - 1) * gap
+    let startX = layout.sidePadding + Math.max(0, (available - totalW) / 2)
 
     let cloudTex: PIXI.Texture | null = null
     try {
@@ -483,12 +495,12 @@ export class NinjaClimbUIManager {
       if (cloudTex) {
         const sprite = new PIXI.Sprite(cloudTex)
         sprite.anchor.set(0.5)
-        sprite.width = layout.cloudWidth
-        sprite.height = layout.cloudHeight
+        sprite.width = cloudW
+        sprite.height = cloudH
         container.addChild(sprite)
       } else {
         const g = new PIXI.Graphics()
-        g.roundRect(-layout.cloudWidth / 2, -layout.cloudHeight / 2, layout.cloudWidth, layout.cloudHeight, 24)
+        g.roundRect(-cloudW / 2, -cloudH / 2, cloudW, cloudH, 24)
           .fill({ color: 0xffffff, alpha: 0.92 })
           .stroke({ width: 3, color: 0x334155 })
         container.addChild(g)
@@ -502,19 +514,18 @@ export class NinjaClimbUIManager {
           fill: 0x1f2937,
           fontWeight: 'bold',
           wordWrap: true,
-          wordWrapWidth: layout.cloudWidth * 0.72,
+          wordWrapWidth: cloudW * 0.72,
           align: 'center',
         },
       })
       label.anchor.set(0.5)
-      // Shrink if still too tall
-      if (label.height > layout.cloudHeight * 0.55) {
+      if (label.height > cloudH * 0.55) {
         label.style.fontSize = Math.max(12, layout.answerFontSize - 4)
       }
       container.addChild(label)
 
-      const x = startX + layout.cloudWidth / 2
-      const y = layout.topPadding + layout.cloudHeight / 2 + 8 + (index % 2) * 12
+      const x = startX + cloudW / 2
+      const y = layout.topPadding + cloudH / 2 + 8 + (index % 2) * 12
       container.x = x
       container.y = y
       container.eventMode = 'static'
@@ -526,7 +537,7 @@ export class NinjaClimbUIManager {
 
       this.cloudPanel.addChild(container)
       this.cloudButtons.push({ container, label, option, baseY: y })
-      startX += layout.cloudWidth + gap
+      startX += cloudW + gap
     })
   }
 
@@ -612,8 +623,9 @@ export class NinjaClimbUIManager {
     this._layoutBottomBar()
     const { width } = this.pixiApp.getScreenSize()
     const layout = this.layoutManager.getLayoutParams()
+    this.timer.resize(layout.timerRadius / TIMER_BASE_RADIUS)
     this.timer.x = width - layout.sidePadding - layout.timerRadius - 8
-    this.timer.y = layout.topPadding + layout.timerRadius + 4
+    this.timer.y = layout.timerNavClearance + layout.timerRadius
   }
 
   private _layoutBottomBar(): void {
@@ -631,14 +643,14 @@ export class NinjaClimbUIManager {
     this.rightTray.x = width - layout.sidePadding - layout.trayPadding
     this.rightTray.y = layout.bottomBarHeight / 2 - layout.powerupButtonSize / 2 + 6
 
-    const leftEdge = trayWidth + layout.sidePadding + 8
-    const rightEdge = width - trayWidth - layout.sidePadding - 8
+    const leftEdge = trayWidth + layout.sidePadding + layout.questionImageGap
+    const rightEdge = width - trayWidth - layout.sidePadding - layout.questionImageGap
     const available = Math.max(200, rightEdge - leftEdge)
 
     this.questionContainer.x = leftEdge
     this.questionContainer.y = layout.bottomBarHeight / 2
 
-    const imageW = this.questionImage ? this.questionImage.width + 12 : 0
+    const imageW = this.questionImage ? this.questionImage.width + 16 : 0
     this.questionText.x = imageW
     this.questionText.y = -8
     this.questionText.style.fontSize = layout.questionFontSize
@@ -663,6 +675,57 @@ export class NinjaClimbUIManager {
   private _onTimerTick = (payload: TimerEventPayload): void => {
     if (payload.timerId !== QUESTION_TIMER_ID) return
     this.updateTimerDisplay(payload.remaining ?? 0, payload.duration)
+  }
+
+  private _clearQuestionImage(): void {
+    if (this.questionImageCloud) {
+      this.questionContainer.removeChild(this.questionImageCloud)
+      this.questionImageCloud.destroy({ children: true })
+      this.questionImageCloud = null
+    }
+    if (this.questionImage) {
+      this.questionContainer.removeChild(this.questionImage)
+      this.questionImage.destroy({ children: true })
+      this.questionImage = null
+    }
+  }
+
+  private async _placeQuestionImageCloud(): Promise<void> {
+    if (!this.questionImage) return
+    if (this.questionImageCloud) {
+      this.questionContainer.removeChild(this.questionImageCloud)
+      this.questionImageCloud.destroy({ children: true })
+      this.questionImageCloud = null
+    }
+
+    const img = this.questionImage
+    const cloudW = img.width * 1.55
+    const cloudH = img.height * 1.7
+    let cloud: PIXI.Container
+    try {
+      const tex = await PIXI.Assets.load(`${ASSET_BASE}/answer_cloud.png`)
+      const sprite = new PIXI.Sprite(tex)
+      sprite.anchor.set(0.5)
+      sprite.width = cloudW
+      sprite.height = cloudH
+      cloud = sprite
+    } catch {
+      const g = new PIXI.Graphics()
+      g.ellipse(0, 0, cloudW / 2, cloudH / 2)
+        .fill({ color: 0xffffff, alpha: 0.92 })
+        .stroke({ width: 3, color: 0x94a3b8, alpha: 0.7 })
+      cloud = g
+    }
+    if (img instanceof PIXI.Sprite) {
+      cloud.x = img.x
+      cloud.y = img.y
+    } else {
+      cloud.x = img.x + img.width / 2
+      cloud.y = img.y + img.height / 2
+    }
+    cloud.eventMode = 'none'
+    this.questionImageCloud = cloud
+    this.questionContainer.addChildAt(cloud, 0)
   }
 
   private _hex(color: string | number): number {
