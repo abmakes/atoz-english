@@ -174,7 +174,7 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({
           bg-[var(--panel-bg-theme)]
           backdrop-blur-sm
           rounded-[32px] sm:rounded-[64px]
-          w-[calc(100%-2rem)] sm:w-auto
+          w-[calc(100%_-_2rem)] sm:w-auto
           px-4 py-5 sm:px-16 sm:pt-6 sm:pb-24
           shadow-[var(--shadow-xl)]
           border
