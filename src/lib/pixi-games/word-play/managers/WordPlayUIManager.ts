@@ -264,7 +264,12 @@ export class WordPlayUIManager {
         const { width: screenWidth, height: screenHeight } = this.pixiApp.getScreenSize();
         const contentWidth = screenWidth - 2 * params.sidePadding;
 
-        const promptBottom = this._buildPrompt(round, screenWidth, params.topPadding, contentWidth);
+        const promptBottom = this._buildPrompt(
+            round,
+            screenWidth,
+            params.contentTop,
+            contentWidth
+        );
 
         if (round.kind === 'sorting') {
             this._buildSortingBoard(round, promptBottom, screenWidth, screenHeight, contentWidth);
@@ -282,10 +287,15 @@ export class WordPlayUIManager {
         const params = this.layoutManager.getLayoutParams();
         let currentY = topPadding;
 
-        if (round.imageUrl) {
+        const imageUrl = round.imageUrl;
+        const hasUsableImage =
+            imageUrl &&
+            params.imageMaxHeight > 0 &&
+            !imageUrl.toLowerCase().includes('placeholder.webp');
+        if (hasUsableImage) {
             try {
                 // getDisplayObject returns Sprite | AnimatedSprite | GifSprite | null.
-                const displayObject = this.assetLoader.getDisplayObject(round.imageUrl);
+                const displayObject = this.assetLoader.getDisplayObject(imageUrl);
                 if (displayObject) {
                     this.promptImage = displayObject as PIXI.Sprite;
                     this.promptImage.anchor.set(0.5, 0);
@@ -314,7 +324,7 @@ export class WordPlayUIManager {
                     }
                 }
             } catch (error) {
-                console.error(`[WordPlayUI] Error loading question image: ${round.imageUrl}`, error);
+                console.error(`[WordPlayUI] Error loading question image: ${imageUrl}`, error);
             }
         }
 
@@ -326,7 +336,7 @@ export class WordPlayUIManager {
                 fontFamily: this.themeConfig.fontFamilyTheme,
                 align: 'center',
                 wordWrap: true,
-                wordWrapWidth: contentWidth,
+                wordWrapWidth: Math.min(contentWidth, params.promptMaxWidth),
             },
         });
         this.promptText.anchor.set(0.5, 0);
@@ -359,8 +369,19 @@ export class WordPlayUIManager {
             params.tileGap,
             params.rowGap
         );
+        const trayTop = this._buildTray(
+            round.tiles.map((t) => ({ id: t.id, text: t.text })),
+            tileWidth,
+            tileHeight,
+            screenWidth,
+            screenHeight,
+            contentWidth
+        );
         const slotsBlockWidth = Math.max(...slotPositions.map((p) => p.x + slotWidth), 0);
+        const slotsBlockHeight = Math.max(...slotPositions.map((p) => p.y + slotHeight), 0);
         const slotsOffsetX = params.sidePadding + (contentWidth - slotsBlockWidth) / 2;
+        const boardHeight = Math.max(0, trayTop - params.rowGap - boardTop);
+        const slotsOffsetY = boardTop + Math.max(0, (boardHeight - slotsBlockHeight) / 2);
 
         round.correctOrder.forEach((_, i) => {
             const slotId = `slot-${i}`;
@@ -373,13 +394,12 @@ export class WordPlayUIManager {
                 onTap: this._onSlotTap,
             });
             slot.x = slotsOffsetX + slotPositions[i].x;
-            slot.y = boardTop + slotPositions[i].y;
+            slot.y = slotsOffsetY + slotPositions[i].y;
             this.boardContainer.addChild(slot);
             this.slots.set(slotId, slot);
             this.orderedSlotIds.push(slotId);
         });
 
-        this._buildTray(round.tiles.map((t) => ({ id: t.id, text: t.text })), tileWidth, tileHeight, screenWidth, screenHeight, contentWidth);
     }
 
     private _buildMatchingBoard(
@@ -400,9 +420,20 @@ export class WordPlayUIManager {
         const rowWidth = leftWidth + columnGap + slotWidth;
         const rowsOffsetX = params.sidePadding + (contentWidth - rowWidth) / 2;
         const rowStride = slotHeight + params.rowGap;
+        const trayTop = this._buildTray(
+            round.rightTiles.map((t) => ({ id: t.id, text: t.text })),
+            rightWidth,
+            tileHeight,
+            screenWidth,
+            screenHeight,
+            contentWidth
+        );
+        const rowsHeight = Math.max(0, round.leftItems.length * rowStride - params.rowGap);
+        const boardHeight = Math.max(0, trayTop - params.rowGap - boardTop);
+        const rowsOffsetY = boardTop + Math.max(0, (boardHeight - rowsHeight) / 2);
 
         round.leftItems.forEach((leftItem, i) => {
-            const rowY = boardTop + i * rowStride;
+            const rowY = rowsOffsetY + i * rowStride;
 
             // Fixed left anchor drawn in the tile style (not draggable).
             const anchor = this._createAnchorPanel(leftItem.text, leftWidth, tileHeight);
@@ -425,8 +456,6 @@ export class WordPlayUIManager {
             this.orderedSlotIds.push(slotId);
             this.matchingLeftTexts.push(leftItem.text);
         });
-
-        this._buildTray(round.rightTiles.map((t) => ({ id: t.id, text: t.text })), rightWidth, tileHeight, screenWidth, screenHeight, contentWidth);
     }
 
     private _buildTray(
@@ -436,11 +465,14 @@ export class WordPlayUIManager {
         screenWidth: number,
         screenHeight: number,
         contentWidth: number
-    ): void {
+    ): number {
         const params = this.layoutManager.getLayoutParams();
 
-        // Reserve room on the right for the Check button.
-        const buttonReserve = params.checkButtonWidth + params.tileGap * 2;
+        // Landscape/desktop keeps Check beside the tiles. Portrait stacks it
+        // below the tile rows so tiles can use the full width (2–3 per row).
+        const buttonReserve = params.stackTrayControls
+            ? 0
+            : params.checkButtonWidth + params.tileGap * 2;
         const trayFlowWidth = Math.max(tileWidth + SLOT_PADDING, contentWidth - buttonReserve);
 
         const positions = this._flowLayout(
@@ -453,13 +485,22 @@ export class WordPlayUIManager {
         );
         const rowsHeight = Math.max(...positions.map((p) => p.y + tileHeight), params.trayMinHeight);
         const trayPadding = params.isCompact ? 10 : 16;
-        const trayHeight = rowsHeight + trayPadding * 2;
+        const stackedButtonHeight = params.stackTrayControls
+            ? params.rowGap + params.checkButtonHeight
+            : 0;
+        const trayHeight = rowsHeight + trayPadding * 2 + stackedButtonHeight;
         const trayTop = screenHeight - trayHeight;
 
         // Tray backdrop panel (matches the MC bottom panel look).
         this.trayPanel.clear();
         this.trayPanel
-            .roundRect(params.sidePadding / 2, trayTop, screenWidth - params.sidePadding, trayHeight + 24, 20)
+            .roundRect(
+                params.sidePadding / 2,
+                trayTop,
+                screenWidth - params.sidePadding,
+                trayHeight,
+                20
+            )
             .fill({ color: this.themeConfig.panelBg, alpha: 0.92 });
 
         const blockWidth = Math.max(...positions.map((p) => p.x + tileWidth), 0);
@@ -485,7 +526,8 @@ export class WordPlayUIManager {
             this.tiles.set(data.id, tile);
         });
 
-        this._positionCheckButton(screenWidth, trayTop, trayHeight);
+        this._positionCheckButton(screenWidth, trayTop, trayHeight, rowsHeight, trayPadding);
+        return trayTop;
     }
 
     /** Simple centered flow layout; returns relative positions per item. */
@@ -753,11 +795,23 @@ export class WordPlayUIManager {
         this.checkButtonLabel.y = h / 2;
     }
 
-    private _positionCheckButton(screenWidth: number, trayTop: number, trayHeight: number): void {
+    private _positionCheckButton(
+        screenWidth: number,
+        trayTop: number,
+        trayHeight: number,
+        rowsHeight: number,
+        trayPadding: number
+    ): void {
         if (!this.checkButtonView) return;
         const params = this.layoutManager.getLayoutParams();
-        this.checkButtonView.x = screenWidth - params.checkButtonWidth - params.sidePadding;
-        this.checkButtonView.y = trayTop + (trayHeight - params.checkButtonHeight) / 2;
+        if (params.stackTrayControls) {
+            this.checkButtonView.x = (screenWidth - params.checkButtonWidth) / 2;
+            this.checkButtonView.y =
+                trayTop + trayPadding + rowsHeight + params.rowGap;
+        } else {
+            this.checkButtonView.x = screenWidth - params.checkButtonWidth - params.sidePadding;
+            this.checkButtonView.y = trayTop + (trayHeight - params.checkButtonHeight) / 2;
+        }
     }
 
     private _updateCheckButtonState(): void {
@@ -791,9 +845,9 @@ export class WordPlayUIManager {
     private _positionTimer(): void {
         const { width: screenWidth, height: screenHeight } = this.pixiApp.getScreenSize();
         const params = this.layoutManager.getLayoutParams();
-        this.pixiTimerInstance.x = screenWidth - 64 - params.sidePadding;
-        this.pixiTimerInstance.y = screenHeight * 0.2;
-        this.pixiTimerInstance.resize(params.isCompact ? 0.8 : 1);
+        this.pixiTimerInstance.x = screenWidth - (params.isPortrait ? 50 : 64 + params.sidePadding);
+        this.pixiTimerInstance.y = params.timerY;
+        this.pixiTimerInstance.resize(params.timerScale);
     }
 
     private _handleResize = (): void => {

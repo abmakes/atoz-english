@@ -145,7 +145,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   // Screen size detection for mobile view
   useEffect(() => {
     const handleResize = () => {
-      setIsMobileView(window.innerHeight < 600);
+      setIsMobileView(window.innerWidth < 640 || window.innerHeight < 600);
     };
     
     handleResize(); // Check on mount
@@ -361,7 +361,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   return (
     <div ref={gameContainerRef} className={`${themeClassName} relative min-h-screen w-full overflow-hidden`}>
         {/* Overlays */}
-        <div className={`absolute flex flex-col gap-2 top-4 left-4 z-10`}>
+        <div className={`absolute flex flex-col gap-2 ${isMobileView ? 'top-2 left-2' : 'top-4 left-4'} z-10`}>
             {playerScores.map((player: PlayerScoreState) => {
                 console.log(`Rendering PlayerScore for teamId: ${player.teamId}. Current activeTeamId: ${activeTeamId}. Will set isActive to: ${player.teamId === activeTeamId}`);
                 return (
@@ -371,14 +371,17 @@ const GameplayView: React.FC<GameplayViewProps> = ({
                 score={player.score}
                 isActive={player.teamId === activeTeamId}
                 isMobile={isMobileView}
-                isCompact={config.gameSlug === 'splash-dash'} // Make smaller for splash-dash
+                isCompact={
+                  config.gameSlug === 'splash-dash' ||
+                  config.gameSlug === 'word-play'
+                }
                 className={`${themeClassName}`}
             />
                 );
             })}
         </div>
 
-        <div className={`absolute top-6 right-6 z-10`}>
+        <div className={`absolute ${isMobileView ? 'top-3 right-3' : 'top-6 right-6'} z-10`}>
              <NavMenu items={navMenuItems}/>
         </div>
 

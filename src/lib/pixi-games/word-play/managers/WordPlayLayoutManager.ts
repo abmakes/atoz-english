@@ -5,6 +5,8 @@
  */
 export interface WordPlayLayoutProfile {
     promptFontSize: number;
+    /** Maximum width of prompt text relative to the viewport. */
+    promptMaxWidth: number;
     /** Max height reserved for an optional question image. */
     imageMaxHeight: number;
     tileFontSize: number;
@@ -16,7 +18,8 @@ export interface WordPlayLayoutProfile {
     /** Vertical gap between slot rows / tray rows. */
     rowGap: number;
     sidePadding: number;
-    topPadding: number;
+    /** Top of game content after accounting for overlay HUD controls. */
+    contentTop: number;
     /** Height of the bottom tray panel (tiles waiting to be placed). */
     trayMinHeight: number;
     checkButtonWidth: number;
@@ -24,6 +27,13 @@ export interface WordPlayLayoutProfile {
     checkButtonFontSize: number;
     /** True below the mobile breakpoint; used for tighter padding. */
     isCompact: boolean;
+    /** Portrait phones use a vertically stacked tray and a HUD-safe header. */
+    isPortrait: boolean;
+    /** Whether the Check button sits below the tile rows instead of beside them. */
+    stackTrayControls: boolean;
+    /** Timer scale and center position for the current viewport. */
+    timerScale: number;
+    timerY: number;
 }
 
 const TOUCH_TARGET_MIN = 48;
@@ -33,6 +43,7 @@ export class WordPlayLayoutManager {
 
     private readonly defaultProfile: WordPlayLayoutProfile = {
         promptFontSize: 32,
+        promptMaxWidth: 760,
         imageMaxHeight: 140,
         tileFontSize: 24,
         tileHeight: 56,
@@ -42,12 +53,16 @@ export class WordPlayLayoutManager {
         tileGap: 14,
         rowGap: 16,
         sidePadding: 40,
-        topPadding: 20,
+        contentTop: 48,
         trayMinHeight: 90,
         checkButtonWidth: 190,
         checkButtonHeight: 60,
         checkButtonFontSize: 26,
         isCompact: false,
+        isPortrait: false,
+        stackTrayControls: false,
+        timerScale: 1,
+        timerY: 96,
     };
 
     constructor(initialScreenWidth: number, initialScreenHeight: number) {
@@ -58,7 +73,10 @@ export class WordPlayLayoutManager {
         const profile = { ...this.defaultProfile };
         const baseHeight = 600;
         const clampedHeight = Math.max(400, Math.min(1000, screenHeight));
+        profile.isPortrait = screenWidth < 640 && screenHeight > screenWidth;
         profile.isCompact = screenHeight < 700 || screenWidth < 640;
+        profile.stackTrayControls = profile.isPortrait;
+        profile.promptMaxWidth = Math.min(760, screenWidth * (profile.isPortrait ? 0.88 : 0.72));
 
         if (clampedHeight < baseHeight) {
             const scale = Math.max(0.7, clampedHeight / baseHeight);
@@ -69,7 +87,6 @@ export class WordPlayLayoutManager {
             profile.tileGap = Math.round(profile.tileGap * scale);
             profile.rowGap = Math.round(profile.rowGap * scale);
             profile.sidePadding = Math.round(profile.sidePadding * scale);
-            profile.topPadding = Math.round(profile.topPadding * scale);
             profile.imageMaxHeight = Math.round(profile.imageMaxHeight * scale);
             profile.checkButtonWidth = Math.round(profile.checkButtonWidth * scale);
             profile.checkButtonHeight = Math.max(
@@ -91,10 +108,32 @@ export class WordPlayLayoutManager {
 
         // Narrow screens: cap tile width so several tiles fit per row.
         if (screenWidth < 640) {
-            profile.tileMaxWidth = Math.round(screenWidth * 0.42);
+            profile.tileMaxWidth = Math.round(screenWidth * (profile.isPortrait ? 0.38 : 0.42));
             profile.sidePadding = Math.min(profile.sidePadding, 14);
         } else {
             profile.tileMaxWidth = Math.min(profile.tileMaxWidth, Math.round(screenWidth * 0.4));
+        }
+
+        if (profile.isPortrait) {
+            // Two compact score cards occupy the top-left and navigation occupies
+            // the top-right. Start game content below both overlays.
+            profile.contentTop = Math.max(170, Math.min(210, Math.round(screenHeight * 0.22)));
+            profile.promptFontSize = Math.min(profile.promptFontSize, 26);
+            profile.tileFontSize = Math.min(profile.tileFontSize, 20);
+            profile.tileHeight = TOUCH_TARGET_MIN;
+            profile.rowGap = Math.min(profile.rowGap, 10);
+            profile.tileGap = Math.min(profile.tileGap, 10);
+            profile.imageMaxHeight = 0;
+            profile.checkButtonWidth = Math.min(220, screenWidth - profile.sidePadding * 4);
+            profile.checkButtonHeight = TOUCH_TARGET_MIN;
+            profile.checkButtonFontSize = Math.min(profile.checkButtonFontSize, 21);
+            profile.timerScale = 0.7;
+            profile.timerY = Math.max(105, Math.round(profile.contentTop * 0.62));
+        } else {
+            // Keep content away from the top edge while leaving the center clear.
+            profile.contentTop = Math.max(28, Math.round(screenHeight * 0.08));
+            profile.timerScale = profile.isCompact ? 0.78 : 0.9;
+            profile.timerY = Math.max(86, Math.round(screenHeight * 0.18));
         }
 
         this.currentProfile = profile;
