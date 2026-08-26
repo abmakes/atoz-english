@@ -17,6 +17,7 @@ import { WordPlayLayoutManager } from './WordPlayLayoutManager';
 import { DraggableTile, TileStyle } from '../ui/DraggableTile';
 import { DropSlot } from '../ui/DropSlot';
 import { WordPlayRound, SortingRound, MatchingRound } from '../wordPlayQuestion';
+import { findFirstEmptySlotId } from '../wordPlayPlacement';
 
 /** Extra size of a slot relative to the tile it hosts. */
 const SLOT_PADDING = 8;
@@ -39,6 +40,7 @@ export class WordPlayUIManager {
     private readonly promptContainer: PIXI.Container;
     private readonly boardContainer: PIXI.Container;
     private readonly trayPanel: PIXI.Graphics;
+    private readonly workspacePanel: PIXI.Graphics;
     private readonly tileLayer: PIXI.Container;
     private readonly pixiTimerInstance: PixiTimer;
     private readonly visualEffectsManager: VisualEffectsManager;
@@ -87,11 +89,14 @@ export class WordPlayUIManager {
         this.boardContainer.label = 'WordPlayBoard';
         this.trayPanel = new PIXI.Graphics();
         this.trayPanel.label = 'WordPlayTrayPanel';
+        this.workspacePanel = new PIXI.Graphics();
+        this.workspacePanel.label = 'WordPlayWorkspacePanel';
         this.tileLayer = new PIXI.Container();
         this.tileLayer.label = 'WordPlayTileLayer';
         this.tileLayer.sortableChildren = true;
 
         this.view.addChild(this.trayPanel);
+        this.view.addChild(this.workspacePanel);
         this.view.addChild(this.promptContainer);
         this.view.addChild(this.boardContainer);
         this.view.addChild(this.tileLayer);
@@ -143,6 +148,7 @@ export class WordPlayUIManager {
         this.matchingLeftTexts = [];
         this.boardContainer.removeChildren().forEach((child) => child.destroy({ children: true }));
         this.tileLayer.removeChildren();
+        this.workspacePanel.clear();
         this._clearPrompt();
         this.currentRound = null;
         this.visualEffectsManager.clearAllEffects();
@@ -383,6 +389,7 @@ export class WordPlayUIManager {
             screenHeight,
             contentWidth
         );
+        this._drawWorkspacePanel(screenWidth, trayTop);
         const slotsBlockWidth = Math.max(...slotPositions.map((p) => p.x + slotWidth), 0);
         const slotsBlockHeight = Math.max(...slotPositions.map((p) => p.y + slotHeight), 0);
         const slotsOffsetX = params.sidePadding + (contentWidth - slotsBlockWidth) / 2;
@@ -434,6 +441,7 @@ export class WordPlayUIManager {
             screenHeight,
             contentWidth
         );
+        this._drawWorkspacePanel(screenWidth, trayTop);
         const rowsHeight = Math.max(0, round.leftItems.length * rowStride - params.rowGap);
         const boardHeight = Math.max(0, trayTop - params.rowGap - boardTop);
         const rowsOffsetY = boardTop + Math.max(0, (boardHeight - rowsHeight) / 2);
@@ -507,7 +515,8 @@ export class WordPlayUIManager {
                 trayHeight,
                 20
             )
-            .fill({ color: this.themeConfig.panelBg, alpha: 0.92 });
+            .fill({ color: 0xffffff, alpha: 0.97 })
+            .stroke({ color: this.themeConfig.primaryAccent, width: 2, alpha: 0.28 });
 
         const blockWidth = Math.max(...positions.map((p) => p.x + tileWidth), 0);
         const offsetX = params.sidePadding + (trayFlowWidth - blockWidth) / 2;
@@ -534,6 +543,23 @@ export class WordPlayUIManager {
 
         this._positionCheckButton(screenWidth, trayTop, trayHeight, rowsHeight, trayPadding);
         return trayTop;
+    }
+
+    private _drawWorkspacePanel(screenWidth: number, trayTop: number): void {
+        const params = this.layoutManager.getLayoutParams();
+        this.workspacePanel.clear();
+        if (!params.isPortrait) return;
+
+        const x = params.sidePadding / 2;
+        const y = params.contentTop - 14;
+        const width = screenWidth - params.sidePadding;
+        const height = Math.max(0, trayTop - params.rowGap - y);
+        if (height <= 0) return;
+
+        this.workspacePanel
+            .roundRect(x, y, width, height, 24)
+            .fill({ color: 0xffffff, alpha: 0.62 })
+            .stroke({ color: this.themeConfig.primaryAccent, width: 2, alpha: 0.16 });
     }
 
     /** Simple centered flow layout; returns relative positions per item. */
@@ -659,12 +685,26 @@ export class WordPlayUIManager {
             slot?.setOccupant(null);
             tile.returnHome();
             this._clearSelection();
-        } else if (this.selectedTile === tile) {
-            this._clearSelection();
         } else {
+            // Bamboozle-style quick entry: tapping an available word places it
+            // directly into the first empty answer slot. Dragging remains
+            // available for precise placement and reordering.
             this._clearSelection();
-            this.selectedTile = tile;
-            tile.setSelected(true);
+            const occupiedSlotIds = new Set(
+                this.orderedSlotIds.filter(
+                    (slotId) => !this.slots.get(slotId)?.isEmpty()
+                )
+            );
+            const firstEmptySlotId = findFirstEmptySlotId(
+                this.orderedSlotIds,
+                occupiedSlotIds
+            );
+            const firstEmptySlot = firstEmptySlotId
+                ? this.slots.get(firstEmptySlotId)
+                : undefined;
+            if (firstEmptySlot) {
+                this._placeTileInSlot(tile, firstEmptySlot, null);
+            }
         }
         this._updateCheckButtonState();
     };

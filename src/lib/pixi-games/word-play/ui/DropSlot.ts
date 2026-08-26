@@ -110,13 +110,13 @@ export class DropSlot extends PIXI.Container {
         const radius = 12;
         const outline = this.highlighted ? this.style.shadowColor : this.style.borderColor;
         const outlineWidth = this.highlighted ? 4 : 2;
-        const fillAlpha = this.highlighted ? 0.35 : 0.18;
+        const fillAlpha = this.highlighted ? 0.92 : 0.72;
 
         this.body.clear();
         this.body
             .roundRect(0, 0, this.slotWidth, this.slotHeight, radius)
             .fill({ color: this.style.fillColor, alpha: fillAlpha })
-            .stroke({ color: outline, width: outlineWidth, alpha: 0.9 });
+            .stroke({ color: outline, width: outlineWidth, alpha: this.highlighted ? 0.9 : 0.62 });
     }
 
     public override destroy(options?: Parameters<PIXI.Container['destroy']>[0]): void {

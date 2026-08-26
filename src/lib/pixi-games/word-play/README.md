@@ -39,8 +39,10 @@ matching derives consecutive pairs from `answers`.
 - **Drag and drop:** pointer events (`pointerdown` on the tile, move/up on the
   stage) work identically for touch and mouse; tiles lift and scale while
   dragging; slots highlight under the pointer; drops snap-animate.
-- **Tap-to-place:** a short press selects a tile, tapping a slot places it;
-  tapping a placed tile (or an occupied slot) returns the tile to the tray.
+- **Tap-to-place:** tapping a tray tile immediately fills the first empty slot
+  from left to right (Bamboozle-style); tapping a placed tile (or its occupied
+  slot) returns it to the tray. Dragging remains available for exact placement
+  and reordering.
 - Tiles keep ≥48px touch targets on small screens plus padded hit areas.
 
 ## Structure

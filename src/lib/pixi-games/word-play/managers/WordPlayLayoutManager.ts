@@ -119,14 +119,16 @@ export class WordPlayLayoutManager {
             // the top-right. Start game content below both overlays.
             profile.contentTop = Math.max(170, Math.min(210, Math.round(screenHeight * 0.22)));
             profile.promptFontSize = Math.min(profile.promptFontSize, 26);
-            profile.tileFontSize = Math.min(profile.tileFontSize, 20);
-            profile.tileHeight = TOUCH_TARGET_MIN;
-            profile.rowGap = Math.min(profile.rowGap, 10);
-            profile.tileGap = Math.min(profile.tileGap, 10);
+            profile.tileFontSize = Math.min(profile.tileFontSize, 23);
+            profile.tileHeight = 58;
+            profile.tilePaddingX = Math.max(profile.tilePaddingX, 24);
+            profile.rowGap = Math.min(profile.rowGap, 12);
+            profile.tileGap = Math.min(profile.tileGap, 12);
+            profile.trayMinHeight = 72;
             profile.imageMaxHeight = 0;
             profile.checkButtonWidth = Math.min(220, screenWidth - profile.sidePadding * 4);
-            profile.checkButtonHeight = TOUCH_TARGET_MIN;
-            profile.checkButtonFontSize = Math.min(profile.checkButtonFontSize, 21);
+            profile.checkButtonHeight = 56;
+            profile.checkButtonFontSize = Math.min(profile.checkButtonFontSize, 23);
             profile.timerScale = 0.7;
             profile.timerY = Math.max(105, Math.round(profile.contentTop * 0.62));
         } else {
