@@ -1,9 +1,13 @@
 import { QuestionType } from '@/types/question_types'
 
-export type GameModeId = 'multiple-choice' | 'splash-dash'
+export type GameModeId = 'multiple-choice' | 'splash-dash' | 'word-play'
 
 /** Max answer length that still fits Splash Dash crate tiers. */
 export const SPLASH_DASH_MAX_ANSWER_LENGTH = 40
+
+/** Max items (words or pairs) that fit the Word Play board comfortably. */
+export const WORD_PLAY_MAX_SORTING_ITEMS = 10
+export const WORD_PLAY_MAX_MATCHING_PAIRS = 6
 
 export interface EligibilityQuestion {
   type?: string | null
@@ -60,10 +64,64 @@ export function isSplashDashEligible(quiz: EligibilityQuiz): boolean {
   return questions.every((q) => questionFailsSplashDash(q) === null)
 }
 
+function isWordPlayType(type: string | null | undefined): boolean {
+  return type === QuestionType.SORTING || type === QuestionType.MATCHING
+}
+
+function questionFailsWordPlay(
+  question: EligibilityQuestion
+): 'type' | 'count' | null {
+  if (!isWordPlayType(question.type)) return 'type'
+  const answers = normalizeAnswers(question.answers)
+  if (question.type === QuestionType.MATCHING) {
+    if (answers.length < 4 || answers.length % 2 !== 0) return 'count'
+    if (answers.length / 2 > WORD_PLAY_MAX_MATCHING_PAIRS) return 'count'
+  } else {
+    if (answers.length < 2 || answers.length > WORD_PLAY_MAX_SORTING_ITEMS) return 'count'
+  }
+  return null
+}
+
+/**
+ * Word Play is eligible when every question is SORTING (word order)
+ * or MATCHING (pairs), with a board-friendly item count.
+ */
+export function isWordPlayEligible(quiz: EligibilityQuiz): boolean {
+  const questions = quiz.questions
+  if (!questions?.length) return false
+  return questions.every((q) => questionFailsWordPlay(q) === null)
+}
+
+export function getWordPlayBlockReason(quiz: EligibilityQuiz): string | null {
+  if (isWordPlayEligible(quiz)) return null
+
+  const questions = quiz.questions
+  if (!questions?.length) {
+    return 'This quiz has no questions yet.'
+  }
+
+  for (const q of questions) {
+    const fail = questionFailsWordPlay(q)
+    if (fail === 'type') {
+      return 'Word Play only supports word order (sorting) and matching questions.'
+    }
+    if (fail === 'count') {
+      return q.type === QuestionType.MATCHING
+        ? `Word Play needs 2–${WORD_PLAY_MAX_MATCHING_PAIRS} matching pairs per question.`
+        : `Word Play needs 2–${WORD_PLAY_MAX_SORTING_ITEMS} words per sorting question.`
+    }
+  }
+
+  return 'This quiz cannot be played in Word Play.'
+}
+
 export function getEligibleGameModes(quiz: EligibilityQuiz): GameModeId[] {
   const modes: GameModeId[] = ['multiple-choice']
   if (isSplashDashEligible(quiz)) {
     modes.push('splash-dash')
+  }
+  if (isWordPlayEligible(quiz)) {
+    modes.push('word-play')
   }
   return modes
 }
