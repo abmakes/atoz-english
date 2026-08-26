@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image'; // For the background image
 import PlayerScore, { PlayerScoreProps } from './PlayerScore';
 import NavMenu, { NavMenuProps } from './NavMenu';
@@ -64,6 +64,15 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({
   onExit,
   celebrationImage,
 }) => {
+  const [isNarrow, setIsNarrow] = useState(false);
+
+  useEffect(() => {
+    const updateViewport = () => setIsNarrow(window.innerWidth < 640);
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    return () => window.removeEventListener('resize', updateViewport);
+  }, []);
+
   // --- Calculate Tie/Winner ---
   const { titleMessage, winningPlayerNames } = useMemo(() => {
     if (!finalScores || finalScores.length === 0) {
@@ -135,19 +144,21 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({
       </div>
 
       {/* Player Scores Overlay */}
-      <div className={`absolute flex flex-col gap-2 top-4 left-4 z-10`}>
+      <div className={`absolute flex flex-col gap-2 ${isNarrow ? 'top-2 left-2' : 'top-4 left-4'} z-10`}>
         {finalScores.map((player) => (
           <PlayerScore
             key={player.playerName}
             playerName={player.playerName}
             score={player.score}
             isActive={winningPlayerNames.has(player.playerName)}
+            isMobile={isNarrow}
+            isCompact={isNarrow}
           />
         ))}
       </div>
 
       {/* NavMenu Overlay */}
-      <div className={`absolute top-6 right-6 z-10`}>
+      <div className={`absolute ${isNarrow ? 'top-3 right-3' : 'top-6 right-6'} z-10`}>
          <NavMenu
             items={gameOverNavItems}
           />
@@ -157,27 +168,28 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({
       {/* Central Results Panel */}
       <div className="
           absolute
-          -bottom-16
-          z-8
+          bottom-4 sm:-bottom-16
+          z-20
           font-[var(--font-theme)]
           bg-[var(--panel-bg-theme)]
           backdrop-blur-sm
-          rounded-[64px]
-          px-16 pt-6 pb-24
+          rounded-[32px] sm:rounded-[64px]
+          w-[calc(100%-2rem)] sm:w-auto
+          px-4 py-5 sm:px-16 sm:pt-6 sm:pb-24
           shadow-[var(--shadow-xl)]
           border
           border-[var(--panel-border)] 
           text-center
-          max-w-[80%] 
+          max-w-lg sm:max-w-[80%]
         ">
-        <h2 className={`titleXLarge grandstander font-bold my-0`}>
+        <h2 className="grandstander font-bold my-0 text-4xl leading-tight sm:text-6xl lg:text-7xl">
           {titleMessage}
         </h2>
-        <div className="w-full max-w-3xl mx-auto flex justify-center gap-6">
-          <button onClick={onPlayAgain} className={`w-96 buttonXLarge md:text-4xl text-2xl font-bold grandstander -mb-2`}>
+        <div className="mt-4 grid w-full grid-cols-2 gap-3 sm:mt-2 sm:flex sm:max-w-3xl sm:justify-center sm:gap-6">
+          <button onClick={onPlayAgain} className="buttonXLarge w-full sm:w-72 md:w-96 !px-3 !py-3 text-xl sm:text-2xl md:text-4xl font-bold grandstander sm:-mb-2">
             Play Again
           </button>
-          <button onClick={onExit} className={`w-96 buttonXLarge md:text-4xl text-2xl font-bold grandstander -mb-2`}>
+          <button onClick={onExit} className="buttonXLarge w-full sm:w-72 md:w-96 !px-3 !py-3 text-xl sm:text-2xl md:text-4xl font-bold grandstander sm:-mb-2">
             Exit
           </button>
         </div>
