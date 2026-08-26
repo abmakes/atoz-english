@@ -74,6 +74,7 @@ CONTEXT.md              This hub
 | **Startup / config handoff** | [.cursor/rules/GAME_STARTUP_FLOW.mdc](.cursor/rules/GAME_STARTUP_FLOW.mdc) | Engine, games, game_ui changes |
 | **Styling & themes** | [src/styles/stylingGuide.md](src/styles/stylingGuide.md) | React themes or Pixi colors/fonts |
 | **Engine architecture** | [src/lib/pixi-engine/engineHelperDoc.md](src/lib/pixi-engine/engineHelperDoc.md) | Managers, EventBus, lifecycle |
+| **PixiJS 8.17 migration** | [project_docs/PIXIJS_8_17_MIGRATION_GUIDE.md](project_docs/PIXIJS_8_17_MIGRATION_GUIDE.md) | Runtime upgrade, GIF validation, optional Layout and AI skills |
 | **Pixi / TS lessons** | [project_docs/lessons-learned.md](project_docs/lessons-learned.md) | GIFs, Assets.unload, React↔Pixi pitfalls |
 | **Adding a game** | [project_docs/game-development-guide.md](project_docs/game-development-guide.md) | New game mode |
 | **Splash Dash behavior** | [src/lib/pixi-games/splash-dash/SPLASH_DASH_MECHANICS.md](src/lib/pixi-games/splash-dash/SPLASH_DASH_MECHANICS.md) | SD scoring/timer/movement |
