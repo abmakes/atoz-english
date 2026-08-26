@@ -361,11 +361,17 @@ export class WordPlayUIManager {
         const slotHeight = tileHeight + SLOT_PADDING;
 
         // Slots: one per word in the correct order, flow-wrapped and centered.
+        const portraitColumns = params.isPortrait
+            ? Math.ceil(Math.sqrt(round.correctOrder.length))
+            : undefined;
+        const slotFlowWidth = portraitColumns
+            ? portraitColumns * slotWidth + (portraitColumns - 1) * params.tileGap
+            : contentWidth;
         const slotPositions = this._flowLayout(
             round.correctOrder.length,
             slotWidth,
             slotHeight,
-            contentWidth,
+            Math.min(contentWidth, slotFlowWidth),
             params.tileGap,
             params.rowGap
         );
