@@ -9,7 +9,7 @@ How to keep docs honest after changes: [project_docs/DOCUMENTATION_MAINTENANCE.m
 
 ## What this product is
 
-Teacher-centric quiz platform: create quizzes (form, CSV, AI), then play them as classroom PixiJS games (multiple-choice and Splash Dash) with teams, timers, scoring, themes, and power-ups.
+Teacher-centric quiz platform: create quizzes (form, CSV, AI), then play them as classroom PixiJS games (multiple-choice, Splash Dash, and Word Play drag-and-drop) with teams, timers, scoring, themes, and power-ups.
 
 ## Stack snapshot (working)
 
@@ -34,7 +34,7 @@ Teacher-centric quiz platform: create quizzes (form, CSV, AI), then play them as
 
 ## Architecture in one paragraph
 
-`GameSetupPanel` collects setup → `GameContainer` builds `GameConfig` and switches views → `GameplayView` creates/destroys a single `PixiEngine` → engine inits managers (EventBus, timers, scoring, audio, RuleEngine last) → `gameFactory` creates a `BaseGame` subclass (`MultipleChoiceGame` or `SplashDashGame`). React HUD listens on the EventBus; scoring normally goes through RuleEngine rules, not ad-hoc `addScore` calls.
+`GameSetupPanel` collects setup → `GameContainer` builds `GameConfig` and switches views → `GameplayView` creates/destroys a single `PixiEngine` → engine inits managers (EventBus, timers, scoring, audio, RuleEngine last) → `gameFactory` creates a `BaseGame` subclass (`MultipleChoiceGame`, `SplashDashGame`, or `WordPlayGame`). React HUD listens on the EventBus; scoring normally goes through RuleEngine rules, not ad-hoc `addScore` calls.
 
 Canonical init sequence: [.cursor/rules/GAME_STARTUP_FLOW.mdc](.cursor/rules/GAME_STARTUP_FLOW.mdc)
 
@@ -50,7 +50,7 @@ scripts/                CI helpers (verify-assets)
 src/app/                Pages + REST API routes
 src/components/game_ui/ React game shell (GameContainer, GameplayView, setup)
 src/lib/pixi-engine/    Shared engine (PixiEngine, BaseGame, managers)
-src/lib/pixi-games/     Game implementations (multiple-choice, splash-dash)
+src/lib/pixi-games/     Game implementations (multiple-choice, splash-dash, word-play)
 src/lib/schemas.ts      Zod schemas
 src/lib/prisma.ts       Prisma client
 src/lib/ai/              GenerationBrief, teacher-first prompts, lesson-image helpers
@@ -79,6 +79,7 @@ CONTEXT.md              This hub
 | **Splash Dash behavior** | [src/lib/pixi-games/splash-dash/SPLASH_DASH_MECHANICS.md](src/lib/pixi-games/splash-dash/SPLASH_DASH_MECHANICS.md) | SD scoring/timer/movement |
 | **Splash Dash integration** | [src/lib/pixi-games/splash-dash/README.md](src/lib/pixi-games/splash-dash/README.md) | SD wiring checklist |
 | **Multiple-choice flow** | [src/lib/pixi-games/multiple-choice/MultipleChoiceFlow.md](src/lib/pixi-games/multiple-choice/MultipleChoiceFlow.md) | MC-specific deep dive |
+| **Word Play (drag & drop)** | [src/lib/pixi-games/word-play/README.md](src/lib/pixi-games/word-play/README.md) | SORTING/MATCHING gameplay, drag-drop controls |
 | **API / Zod conventions** | [src/lib/README.md](src/lib/README.md) | API routes, schemas, responses |
 | **Assets contract** | [public/ASSETS.md](public/ASSETS.md) | public/ files, CI verify |
 | **AI quiz + lexicon setup** | [AI_QUIZ_GENERATOR_SETUP.md](AI_QUIZ_GENERATOR_SETUP.md) | Teacher brief, screenshot analysis, soft lexicon audit, review step |
