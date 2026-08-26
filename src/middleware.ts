@@ -7,6 +7,7 @@ const isClerkEnabled = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 const isProtectedRoute = createRouteMatcher([
   '/quizzes(.*)',
   '/create(.*)',
+  '/dev(.*)',
 ])
 
 const clerkHandler = isClerkEnabled
