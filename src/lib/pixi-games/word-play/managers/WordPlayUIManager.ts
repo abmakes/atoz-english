@@ -843,7 +843,7 @@ export class WordPlayUIManager {
     }
 
     private _positionTimer(): void {
-        const { width: screenWidth, height: screenHeight } = this.pixiApp.getScreenSize();
+        const { width: screenWidth } = this.pixiApp.getScreenSize();
         const params = this.layoutManager.getLayoutParams();
         this.pixiTimerInstance.x = screenWidth - (params.isPortrait ? 50 : 64 + params.sidePadding);
         this.pixiTimerInstance.y = params.timerY;
