@@ -33,7 +33,7 @@ const NavMenu: React.FC<NavMenuProps> = ({
 }) => {
 
   return (
-    <nav className={`flex flex-row items-center justify-center gap-2`} aria-label={ariaLabel}>
+    <nav className={`flex flex-row items-center justify-center gap-1 sm:gap-2`} aria-label={ariaLabel}>
       {items.map((item) => {
         // If item has custom interaction, render the icon directly (assuming it's a component like DropdownMenuTrigger)
         // Otherwise, wrap the icon in a button.
@@ -49,7 +49,7 @@ const NavMenu: React.FC<NavMenuProps> = ({
             <Button
               key={item.id}
               variant="navIcon"
-              className={`bg-[var(--secondary-bg)] text-[var(--text-color)] rounded-full flex items-center justify-center border-2 border-[var(--primary-accent)]`}
+              className={`bg-[var(--secondary-bg)] text-[var(--text-color)] rounded-full flex items-center justify-center border-2 border-[var(--primary-accent)] h-8 w-8 p-1.5 sm:h-10 sm:w-10 sm:p-2 [&_svg]:h-4 [&_svg]:w-4 sm:[&_svg]:h-5 sm:[&_svg]:w-5`}
               onClick={item.onClick}
               aria-label={item.label}
               aria-pressed={item.active !== undefined ? item.active : undefined}

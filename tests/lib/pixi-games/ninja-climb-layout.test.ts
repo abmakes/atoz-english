@@ -9,8 +9,8 @@ describe('NinjaClimbLayoutManager HUD sizes', () => {
     expect(p.cloudHeight).toBeGreaterThanOrEqual(140)
     expect(p.timerRadius).toBeGreaterThanOrEqual(50)
     expect(p.timerNavClearance).toBeGreaterThanOrEqual(80)
-    expect(p.questionImageMaxWidth).toBeGreaterThanOrEqual(150)
-    expect(p.questionImageMaxHeight).toBeGreaterThanOrEqual(140)
+    expect(p.questionImageMaxWidth).toBeGreaterThanOrEqual(200)
+    expect(p.questionImageMaxHeight).toBeGreaterThanOrEqual(200)
     expect(p.questionImageGap).toBeGreaterThanOrEqual(28)
   })
 

@@ -18,7 +18,6 @@ export class NinjaClimbMountainManager {
   private world: PIXI.Container
   private skySprite: PIXI.Sprite | null = null
   private trailGraphics: PIXI.Graphics
-  private cloudSprites: PIXI.Sprite[] = []
   private gateSprites: Map<string, PIXI.Sprite> = new Map()
   private barrierSprite: PIXI.Sprite | null = null
   private flagSprite: PIXI.Sprite | null = null
@@ -31,7 +30,6 @@ export class NinjaClimbMountainManager {
   private targetCameraX = 0
   private targetCameraY = 0
   private targetZoom = 1
-  private cloudPhase = 0
   private destroyed = false
   private pulseStep: number | null = null
   private pulseTime = 0
@@ -81,23 +79,6 @@ export class NinjaClimbMountainManager {
       const g = new PIXI.Graphics()
       g.rect(0, 0, width, height).fill({ color: 0x87ceeb })
       this.view.addChildAt(g, 0)
-    }
-
-    // Ambient sky clouds (screen-space, not in world)
-    for (let i = 1; i <= 3; i++) {
-      try {
-        const tex = await PIXI.Assets.load(`${ASSET_BASE}/cloud_${i}.png`)
-        const cloud = new PIXI.Sprite(tex)
-        cloud.anchor.set(0.5)
-        cloud.scale.set(0.35 + i * 0.06)
-        cloud.alpha = 0.7
-        cloud.x = (width * i) / 4
-        cloud.y = 30 + i * 28
-        this.view.addChild(cloud)
-        this.cloudSprites.push(cloud)
-      } catch {
-        /* optional */
-      }
     }
 
     const worldBottomY = totalSteps * layout.stepHeight + 200
@@ -320,7 +301,8 @@ export class NinjaClimbMountainManager {
 
     const spanY = Math.max(80, maxY - minY)
     const margin = 160
-    this.targetZoom = Math.max(0.45, Math.min(1, play.height / (spanY + margin)))
+    // 1.3× fit so the ninjas read larger on screen.
+    this.targetZoom = Math.max(0.45, Math.min(1.3, (play.height / (spanY + margin)) * 1.3))
 
     if (immediate) {
       this.cameraX = this.targetCameraX
@@ -331,14 +313,6 @@ export class NinjaClimbMountainManager {
   }
 
   public update(deltaMs: number): void {
-    this.cloudPhase += deltaMs * 0.02
-    for (let i = 0; i < this.cloudSprites.length; i++) {
-      const cloud = this.cloudSprites[i]
-      cloud.x += (0.12 + i * 0.04) * (deltaMs / 16)
-      if (cloud.x > this.screenW + 80) cloud.x = -80
-      cloud.y += Math.sin(this.cloudPhase + i) * 0.04
-    }
-
     // Ease camera
     const t = Math.min(1, (deltaMs / 16) * 0.08)
     this.cameraX += (this.targetCameraX - this.cameraX) * t

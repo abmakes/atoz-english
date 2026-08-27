@@ -145,7 +145,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   // Screen size detection for mobile view
   useEffect(() => {
     const handleResize = () => {
-      setIsMobileView(window.innerHeight < 600);
+      setIsMobileView(window.innerWidth < 640 || window.innerHeight < 600);
     };
     
     handleResize(); // Check on mount
@@ -361,7 +361,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   return (
     <div ref={gameContainerRef} className={`${themeClassName} relative min-h-screen w-full overflow-hidden`}>
         {/* Overlays */}
-        <div className={`absolute flex flex-col gap-2 top-4 left-4 z-10`}>
+        <div className={`absolute flex flex-col gap-1 top-2 left-2 sm:gap-2 sm:top-4 sm:left-4 z-10`}>
             {playerScores.map((player: PlayerScoreState) => {
                 console.log(`Rendering PlayerScore for teamId: ${player.teamId}. Current activeTeamId: ${activeTeamId}. Will set isActive to: ${player.teamId === activeTeamId}`);
                 return (
@@ -378,7 +378,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
             })}
         </div>
 
-        <div className={`absolute top-6 right-6 z-10`}>
+        <div className={`absolute top-3 right-3 sm:top-6 sm:right-6 z-10`}>
              <NavMenu items={navMenuItems}/>
         </div>
 

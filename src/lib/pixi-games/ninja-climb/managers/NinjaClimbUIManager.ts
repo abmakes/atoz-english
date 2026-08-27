@@ -43,7 +43,6 @@ export class NinjaClimbUIManager {
   private questionText: PIXI.Text
   private questionCounter: PIXI.Text
   private questionImage: PIXI.Sprite | null = null
-  private questionImageCloud: PIXI.Container | null = null
   private cloudPanel: PIXI.Container
   private feedbackPanel: PIXI.Container
   private shortcutPanel: PIXI.Container
@@ -53,6 +52,7 @@ export class NinjaClimbUIManager {
     container: PIXI.Container
     label: PIXI.Text
     option: NinjaAnswerOption
+    baseX: number
     baseY: number
   }> = []
   private trayButtons: Map<
@@ -119,7 +119,7 @@ export class NinjaClimbUIManager {
       fontFamily: pixiConfig.fontFamilyTheme || 'Grandstander',
       progressBarColor: this._hex(pixiConfig.primaryAccent || '#49C8FF'),
       progressBarWidth: 11,
-      backgroundAlpha: 0.55,
+      backgroundAlpha: 1,
       backgroundColor: 0xffffff,
     })
 
@@ -189,7 +189,6 @@ export class NinjaClimbUIManager {
           display.y = -display.height * 0.22
           this.questionImage = display
           this.questionContainer.addChild(display)
-          await this._placeQuestionImageCloud()
         }
       } catch {
         /* ignore */
@@ -444,7 +443,9 @@ export class NinjaClimbUIManager {
     this.bobPhase += deltaMs * 0.003
     for (let i = 0; i < this.cloudButtons.length; i++) {
       const btn = this.cloudButtons[i]
-      btn.container.y = btn.baseY + Math.sin(this.bobPhase + i) * 4
+      // Clouds drift side to side instead of bobbing vertically.
+      btn.container.x = btn.baseX + Math.sin(this.bobPhase + i * 1.4) * 7
+      btn.container.y = btn.baseY
     }
   }
 
@@ -467,15 +468,33 @@ export class NinjaClimbUIManager {
     const { width } = this.pixiApp.getScreenSize()
     const layout = this.layoutManager.getLayoutParams()
     const n = options.length
-    const gap = 20
-    const timerReserve = layout.timerRadius * 2 + layout.sidePadding + 20
-    const available = Math.max(200, width - layout.sidePadding - timerReserve)
-    const rawTotal = n * layout.cloudWidth + (n - 1) * gap
-    const fit = Math.min(1, available / Math.max(1, rawTotal))
-    const cloudW = Math.round(layout.cloudWidth * fit)
-    const cloudH = Math.round(layout.cloudHeight * fit)
-    const totalW = n * cloudW + (n - 1) * gap
-    let startX = layout.sidePadding + Math.max(0, (available - totalW) / 2)
+
+    // Keep clear of the React score panel (left) and nav + timer (right).
+    const leftReserve = 200
+    const rightReserve = Math.max(
+      layout.timerRadius * 2 + layout.sidePadding + 24,
+      180
+    )
+    const available = Math.max(240, width - leftReserve - rightReserve)
+
+    let cloudW = layout.cloudWidth
+    let cloudH = layout.cloudHeight
+    let gap = 12
+    // Staggered rows let neighbouring clouds overlap up to 22% horizontally.
+    const overlapFraction = 0.22
+    let totalW = n * cloudW + (n - 1) * gap
+    if (totalW > available && n > 1) {
+      gap = (available - n * cloudW) / (n - 1)
+      const minGap = -overlapFraction * cloudW
+      if (gap < minGap) {
+        const fit = available / (n * cloudW + (n - 1) * minGap)
+        cloudW = Math.round(cloudW * fit)
+        cloudH = Math.round(cloudH * fit)
+        gap = (available - n * cloudW) / (n - 1)
+      }
+      totalW = n * cloudW + (n - 1) * gap
+    }
+    let startX = leftReserve + Math.max(0, (available - totalW) / 2)
 
     let cloudTex: PIXI.Texture | null = null
     try {
@@ -518,10 +537,13 @@ export class NinjaClimbUIManager {
       }
       container.addChild(label)
 
+      // Alternate rows: odd clouds sit half a cloud lower so overlapped
+      // neighbours stay readable.
       const x = startX + cloudW / 2
-      const y = layout.topPadding + cloudH / 2 + 8 + (index % 2) * 12
+      const y = layout.topPadding + cloudH / 2 + 8 + (index % 2) * cloudH * 0.5
       container.x = x
       container.y = y
+      container.zIndex = index % 2 === 0 ? 2 : 1
       container.eventMode = 'static'
       container.cursor = 'pointer'
       container.on('pointertap', () => {
@@ -530,9 +552,10 @@ export class NinjaClimbUIManager {
       })
 
       this.cloudPanel.addChild(container)
-      this.cloudButtons.push({ container, label, option, baseY: y })
+      this.cloudButtons.push({ container, label, option, baseX: x, baseY: y })
       startX += cloudW + gap
     })
+    this.cloudPanel.sortableChildren = true
   }
 
   private async _buildTrays(teams: Array<{ id: string; name: string }>): Promise<void> {
@@ -644,7 +667,7 @@ export class NinjaClimbUIManager {
     this.questionContainer.x = leftEdge
     this.questionContainer.y = layout.bottomBarHeight / 2
 
-    const imageW = this.questionImage ? this.questionImage.width + 16 : 0
+    const imageW = this.questionImage ? this.questionImage.width + 20 : 0
     this.questionText.x = imageW
     this.questionText.y = -8
     this.questionText.style.fontSize = layout.questionFontSize
@@ -672,49 +695,11 @@ export class NinjaClimbUIManager {
   }
 
   private _clearQuestionImage(): void {
-    if (this.questionImageCloud) {
-      this.questionContainer.removeChild(this.questionImageCloud)
-      this.questionImageCloud.destroy({ children: true })
-      this.questionImageCloud = null
-    }
     if (this.questionImage) {
       this.questionContainer.removeChild(this.questionImage)
       this.questionImage.destroy({ children: true })
       this.questionImage = null
     }
-  }
-
-  private async _placeQuestionImageCloud(): Promise<void> {
-    if (!this.questionImage) return
-    if (this.questionImageCloud) {
-      this.questionContainer.removeChild(this.questionImageCloud)
-      this.questionImageCloud.destroy({ children: true })
-      this.questionImageCloud = null
-    }
-
-    const img = this.questionImage
-    const cloudW = img.width * 1.55
-    const cloudH = img.height * 1.7
-    let cloud: PIXI.Container
-    try {
-      const tex = await PIXI.Assets.load(`${ASSET_BASE}/answer_cloud.png`)
-      const sprite = new PIXI.Sprite(tex)
-      sprite.anchor.set(0.5)
-      sprite.width = cloudW
-      sprite.height = cloudH
-      cloud = sprite
-    } catch {
-      const g = new PIXI.Graphics()
-      g.ellipse(0, 0, cloudW / 2, cloudH / 2)
-        .fill({ color: 0xffffff, alpha: 0.92 })
-        .stroke({ width: 3, color: 0x94a3b8, alpha: 0.7 })
-      cloud = g
-    }
-    cloud.x = img.x
-    cloud.y = img.y
-    cloud.eventMode = 'none'
-    this.questionImageCloud = cloud
-    this.questionContainer.addChildAt(cloud, 0)
   }
 
   private _hex(color: string | number): number {

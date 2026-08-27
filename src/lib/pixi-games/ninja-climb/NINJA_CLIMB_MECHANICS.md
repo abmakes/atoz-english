@@ -74,10 +74,10 @@ Fit-zoom on both climbers: midpoint in the play window (between sky band and bot
 
 ## UI regions
 
-- **Top sky band:** larger answer clouds (fit left of the timer), ambient clouds
-- **Timer:** enlarged ring, dropped below the React nav cluster (right side)
-- **Middle play window:** tiled mountain world
-- **Bottom bar:** Splash Dash pattern — larger question image (may overlap the play window, with an answer-cloud backdrop), text, counter, two corner power trays. Extra padding between Team 1 powers and the photo.
+- **Top sky band:** answer clouds clustered mid-screen (clear of the score panel and nav/timer), staggered rows that may overlap slightly, drifting side to side. No ambient clouds.
+- **Timer:** enlarged ring on a solid white disc, dropped below the React nav cluster (right side)
+- **Middle play window:** tiled mountain world, camera fits climbers at 1.3× so characters read larger
+- **Bottom bar:** Splash Dash pattern — question image up to 200×200 (overlaps the play window), 20px gap to the question text, two corner power trays. Extra padding between Team 1 powers and the photo.
 
 ## Turn model
 
