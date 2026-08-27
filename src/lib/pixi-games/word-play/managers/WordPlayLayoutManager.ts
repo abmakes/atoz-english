@@ -29,7 +29,7 @@ export interface WordPlayLayoutProfile {
     isCompact: boolean;
     /** Portrait phones use a vertically stacked tray and a HUD-safe header. */
     isPortrait: boolean;
-    /** Whether the Check button sits below the tile rows instead of beside them. */
+    /** Whether Check sits below the tile rows so selectable tiles stay centered. */
     stackTrayControls: boolean;
     /** Timer scale and center position for the current viewport. */
     timerScale: number;
@@ -42,22 +42,22 @@ export class WordPlayLayoutManager {
     private currentProfile!: WordPlayLayoutProfile;
 
     private readonly defaultProfile: WordPlayLayoutProfile = {
-        promptFontSize: 32,
-        promptMaxWidth: 760,
+        promptFontSize: 38,
+        promptMaxWidth: 960,
         imageMaxHeight: 140,
-        tileFontSize: 24,
-        tileHeight: 56,
-        tileMinWidth: 72,
-        tileMaxWidth: 300,
-        tilePaddingX: 22,
+        tileFontSize: 28,
+        tileHeight: 64,
+        tileMinWidth: 96,
+        tileMaxWidth: 360,
+        tilePaddingX: 26,
         tileGap: 14,
         rowGap: 16,
-        sidePadding: 40,
+        sidePadding: 48,
         contentTop: 48,
-        trayMinHeight: 90,
-        checkButtonWidth: 190,
-        checkButtonHeight: 60,
-        checkButtonFontSize: 26,
+        trayMinHeight: 110,
+        checkButtonWidth: 220,
+        checkButtonHeight: 68,
+        checkButtonFontSize: 28,
         isCompact: false,
         isPortrait: false,
         stackTrayControls: false,
@@ -75,8 +75,8 @@ export class WordPlayLayoutManager {
         const clampedHeight = Math.max(400, Math.min(1000, screenHeight));
         profile.isPortrait = screenWidth < 640 && screenHeight > screenWidth;
         profile.isCompact = screenHeight < 700 || screenWidth < 640;
-        profile.stackTrayControls = profile.isPortrait;
-        profile.promptMaxWidth = Math.min(760, screenWidth * (profile.isPortrait ? 0.88 : 0.72));
+        profile.stackTrayControls = profile.isPortrait || screenWidth >= 900;
+        profile.promptMaxWidth = Math.min(960, screenWidth * (profile.isPortrait ? 0.88 : 0.72));
 
         if (clampedHeight < baseHeight) {
             const scale = Math.max(0.7, clampedHeight / baseHeight);

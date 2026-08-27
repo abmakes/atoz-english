@@ -310,6 +310,18 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
                   ]
               }
           ]
+      } : gameSlug === 'word-play' ? {
+          bundles: [
+              {
+                  name: 'word-play',
+                  assets: [
+                      {
+                          key: 'word-play-capy-helper',
+                          src: '/images/splash-dash/capy_spritesheet.png'
+                      }
+                  ]
+              }
+          ]
       } : DEFAULT_GAME_CONFIG.assets; // Use default for other games
 
       // --- Define Audio Configuration ---

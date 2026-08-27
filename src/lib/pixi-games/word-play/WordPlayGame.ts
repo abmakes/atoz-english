@@ -163,6 +163,7 @@ export class WordPlayGame extends BaseGame<WordPlayGameState> {
     public update(delta: number): void {
         const deltaTimeMs = delta > 5 ? delta : delta * 1000;
         this.powerUpManager.update(deltaTimeMs);
+        this.uiManager?.update(deltaTimeMs);
         if (this.transitionScreen) {
             this.transitionScreen.update(deltaTimeMs);
         }

@@ -18,6 +18,12 @@ import { DraggableTile, TileStyle } from '../ui/DraggableTile';
 import { DropSlot } from '../ui/DropSlot';
 import { WordPlayRound, SortingRound, MatchingRound } from '../wordPlayQuestion';
 import { findFirstEmptySlotId } from '../wordPlayPlacement';
+import {
+    WORD_PLAY_VISUAL_THEME,
+    wordPlayOutline,
+    wordPlaySoftFill,
+} from '../wordPlayVisualTheme';
+import { WordPlayHelperCharacter } from '../ui/WordPlayHelperCharacter';
 
 /** Extra size of a slot relative to the tile it hosts. */
 const SLOT_PADDING = 8;
@@ -44,6 +50,7 @@ export class WordPlayUIManager {
     private readonly tileLayer: PIXI.Container;
     private readonly pixiTimerInstance: PixiTimer;
     private readonly visualEffectsManager: VisualEffectsManager;
+    private readonly helperCharacter: WordPlayHelperCharacter;
 
     private promptText: PIXI.Text | null = null;
     private promptImage: PIXI.Sprite | null = null;
@@ -61,6 +68,8 @@ export class WordPlayUIManager {
     private dragOriginSlotId: string | null = null;
     private interactionEnabled = true;
     private initialDurationMs = 0;
+    private pendingHelperPlacements = 0;
+    private pendingHelperTileIds = new Set<string>();
 
     constructor(
         private readonly pixiApp: PixiApplication,
@@ -72,10 +81,10 @@ export class WordPlayUIManager {
     ) {
         this.themeConfig = themeConfig;
         this.tileStyle = {
-            fillColor: themeConfig.buttonFillColor,
-            textColor: themeConfig.buttonTextColor,
-            borderColor: themeConfig.primaryAccent,
-            shadowColor: themeConfig.primaryAccentHover,
+            fillColor: WORD_PLAY_VISUAL_THEME.cardFill,
+            textColor: WORD_PLAY_VISUAL_THEME.text,
+            borderColor: wordPlayOutline(0),
+            shadowColor: wordPlayOutline(0),
             fontFamily: themeConfig.fontFamilyTheme,
             fontSize: this.layoutManager.getLayoutParams().tileFontSize,
         };
@@ -100,6 +109,8 @@ export class WordPlayUIManager {
         this.view.addChild(this.promptContainer);
         this.view.addChild(this.boardContainer);
         this.view.addChild(this.tileLayer);
+        this.helperCharacter = new WordPlayHelperCharacter();
+        this.view.addChild(this.helperCharacter);
 
         this.pixiTimerInstance = new PixiTimer({
             textColor: this.themeConfig.timerColor,
@@ -140,6 +151,9 @@ export class WordPlayUIManager {
     public clearRoundState(): void {
         this.selectedTile = null;
         this.dragOriginSlotId = null;
+        this.pendingHelperPlacements = 0;
+        this.pendingHelperTileIds.clear();
+        this.helperCharacter.reset();
         this.tiles.forEach((tile) => tile.destroy());
         this.tiles.clear();
         this.slots.forEach((slot) => slot.destroy());
@@ -338,7 +352,7 @@ export class WordPlayUIManager {
             text: round.prompt,
             style: {
                 fontSize: params.promptFontSize,
-                fill: this.themeConfig.questionTextColor,
+                fill: WORD_PLAY_VISUAL_THEME.text,
                 fontFamily: this.themeConfig.fontFamilyTheme,
                 align: 'center',
                 wordWrap: true,
@@ -361,15 +375,21 @@ export class WordPlayUIManager {
         contentWidth: number
     ): void {
         const params = this.layoutManager.getLayoutParams();
-        const tileWidth = this._measureUniformTileWidth(round.correctOrder, contentWidth);
+        const targetColumns = params.isPortrait
+            ? Math.ceil(Math.sqrt(round.correctOrder.length))
+            : Math.min(round.correctOrder.length, 6);
+        const tileWidth = this._measureUniformTileWidth(
+            round.correctOrder,
+            contentWidth,
+            targetColumns,
+            params.isPortrait ? 0.9 : 0.82
+        );
         const tileHeight = params.tileHeight;
         const slotWidth = tileWidth + SLOT_PADDING;
         const slotHeight = tileHeight + SLOT_PADDING;
 
         // Slots: one per word in the correct order, flow-wrapped and centered.
-        const portraitColumns = params.isPortrait
-            ? Math.ceil(Math.sqrt(round.correctOrder.length))
-            : undefined;
+        const portraitColumns = params.isPortrait ? targetColumns : undefined;
         const slotFlowWidth = portraitColumns
             ? portraitColumns * slotWidth + (portraitColumns - 1) * params.tileGap
             : contentWidth;
@@ -402,7 +422,7 @@ export class WordPlayUIManager {
                 id: slotId,
                 width: slotWidth,
                 height: slotHeight,
-                style: this.tileStyle,
+                style: this._tileStyleForIndex(i),
                 placeholder: `${i + 1}`,
                 onTap: this._onSlotTap,
             });
@@ -423,8 +443,18 @@ export class WordPlayUIManager {
         contentWidth: number
     ): void {
         const params = this.layoutManager.getLayoutParams();
-        const leftWidth = this._measureUniformTileWidth(round.leftItems.map((i) => i.text), contentWidth * 0.45);
-        const rightWidth = this._measureUniformTileWidth(round.rightTiles.map((t) => t.text), contentWidth * 0.45);
+        const leftWidth = this._measureUniformTileWidth(
+            round.leftItems.map((i) => i.text),
+            contentWidth * 0.44,
+            1,
+            0.78
+        );
+        const rightWidth = this._measureUniformTileWidth(
+            round.rightTiles.map((t) => t.text),
+            contentWidth * 0.44,
+            1,
+            0.78
+        );
         const tileHeight = params.tileHeight;
         const slotWidth = rightWidth + SLOT_PADDING;
         const slotHeight = tileHeight + SLOT_PADDING;
@@ -450,7 +480,7 @@ export class WordPlayUIManager {
             const rowY = rowsOffsetY + i * rowStride;
 
             // Fixed left anchor drawn in the tile style (not draggable).
-            const anchor = this._createAnchorPanel(leftItem.text, leftWidth, tileHeight);
+            const anchor = this._createAnchorPanel(leftItem.text, leftWidth, tileHeight, i);
             anchor.x = rowsOffsetX;
             anchor.y = rowY + SLOT_PADDING / 2;
             this.boardContainer.addChild(anchor);
@@ -460,7 +490,7 @@ export class WordPlayUIManager {
                 id: slotId,
                 width: slotWidth,
                 height: slotHeight,
-                style: this.tileStyle,
+                style: this._tileStyleForIndex(i),
                 onTap: this._onSlotTap,
             });
             slot.x = rowsOffsetX + leftWidth + columnGap;
@@ -515,8 +545,8 @@ export class WordPlayUIManager {
                 trayHeight,
                 20
             )
-            .fill({ color: 0xffffff, alpha: 0.97 })
-            .stroke({ color: this.themeConfig.primaryAccent, width: 2, alpha: 0.28 });
+            .fill({ color: WORD_PLAY_VISUAL_THEME.trayFill, alpha: 0.98 })
+            .stroke({ color: wordPlayOutline(0), width: 2, alpha: 0.35 });
 
         const blockWidth = Math.max(...positions.map((p) => p.x + tileWidth), 0);
         const offsetX = params.sidePadding + (trayFlowWidth - blockWidth) / 2;
@@ -528,7 +558,7 @@ export class WordPlayUIManager {
                 text: data.text,
                 width: tileWidth,
                 height: tileHeight,
-                style: this.tileStyle,
+                style: this._tileStyleForIndex(i),
                 dragSurface: stage,
                 onDragStart: this._onTileDragStart,
                 onDragMove: this._onTileDragMove,
@@ -548,18 +578,29 @@ export class WordPlayUIManager {
     private _drawWorkspacePanel(screenWidth: number, trayTop: number): void {
         const params = this.layoutManager.getLayoutParams();
         this.workspacePanel.clear();
-        if (!params.isPortrait) return;
 
-        const x = params.sidePadding / 2;
+        const x = params.isPortrait
+            ? params.sidePadding / 2
+            : Math.max(params.sidePadding, screenWidth * 0.08);
         const y = params.contentTop - 14;
-        const width = screenWidth - params.sidePadding;
+        const width = screenWidth - x * 2;
         const height = Math.max(0, trayTop - params.rowGap - y);
         if (height <= 0) return;
+        this.helperCharacter.setHomePosition(x + width - 44, trayTop - 42);
 
         this.workspacePanel
             .roundRect(x, y, width, height, 24)
-            .fill({ color: 0xffffff, alpha: 0.62 })
-            .stroke({ color: this.themeConfig.primaryAccent, width: 2, alpha: 0.16 });
+            .fill({ color: WORD_PLAY_VISUAL_THEME.workspaceFill, alpha: 0.82 })
+            .stroke({ color: wordPlayOutline(0), width: 2, alpha: 0.22 });
+
+        for (let i = 0; i < 9; i++) {
+            const color = WORD_PLAY_VISUAL_THEME.outlines[
+                i % WORD_PLAY_VISUAL_THEME.outlines.length
+            ];
+            const sideX = i % 2 === 0 ? x + 14 : x + width - 14;
+            const dotY = y + 34 + i * Math.max(18, (height - 68) / 9);
+            this.workspacePanel.circle(sideX, dotY, 3 + (i % 3)).fill(color);
+        }
     }
 
     /** Simple centered flow layout; returns relative positions per item. */
@@ -589,7 +630,12 @@ export class WordPlayUIManager {
         return positions;
     }
 
-    private _measureUniformTileWidth(texts: readonly string[], maxAllowed: number): number {
+    private _measureUniformTileWidth(
+        texts: readonly string[],
+        maxAllowed: number,
+        targetColumns = 1,
+        targetCoverage = 0
+    ): number {
         const params = this.layoutManager.getLayoutParams();
         const probe = new PIXI.Text({
             text: '',
@@ -601,26 +647,39 @@ export class WordPlayUIManager {
             widest = Math.max(widest, probe.width);
         }
         probe.destroy();
-        const width = widest + params.tilePaddingX * 2;
+        const measuredWidth = widest + params.tilePaddingX * 2;
+        const desiredWidth =
+            targetCoverage > 0
+                ? (
+                    maxAllowed * targetCoverage -
+                    Math.max(0, targetColumns - 1) * params.tileGap
+                ) / Math.max(1, targetColumns)
+                : 0;
+        const width = Math.max(measuredWidth, desiredWidth);
         return Math.round(
             Math.min(Math.max(width, params.tileMinWidth), Math.min(params.tileMaxWidth, maxAllowed))
         );
     }
 
-    private _createAnchorPanel(text: string, width: number, height: number): PIXI.Container {
+    private _createAnchorPanel(
+        text: string,
+        width: number,
+        height: number,
+        index: number
+    ): PIXI.Container {
         const container = new PIXI.Container();
         const body = new PIXI.Graphics();
         body
             .roundRect(0, 0, width, height, 12)
-            .fill({ color: this.themeConfig.secondaryBg, alpha: 0.95 })
-            .stroke({ color: this.tileStyle.borderColor, width: 2 });
+            .fill({ color: wordPlaySoftFill(index), alpha: 1 })
+            .stroke({ color: wordPlayOutline(index), width: 3 });
         container.addChild(body);
 
         const label = new PIXI.Text({
             text,
             style: {
                 fontSize: this.tileStyle.fontSize,
-                fill: this.themeConfig.textColor,
+                fill: WORD_PLAY_VISUAL_THEME.text,
                 fontFamily: this.themeConfig.fontFamilyTheme,
                 align: 'center',
             },
@@ -703,7 +762,7 @@ export class WordPlayUIManager {
                 ? this.slots.get(firstEmptySlotId)
                 : undefined;
             if (firstEmptySlot) {
-                this._placeTileInSlot(tile, firstEmptySlot, null);
+                this._placeTileWithHelper(tile, firstEmptySlot);
             }
         }
         this._updateCheckButtonState();
@@ -717,6 +776,7 @@ export class WordPlayUIManager {
             this._clearSelection();
             this._placeTileInSlot(tile, slot, tile.currentSlotId);
         } else if (slot.occupantTileId) {
+            if (this.pendingHelperTileIds.has(slot.occupantTileId)) return;
             // Tapping an occupied slot with nothing selected frees it.
             const occupant = this.tiles.get(slot.occupantTileId);
             slot.setOccupant(null);
@@ -764,6 +824,27 @@ export class WordPlayUIManager {
         tile.snapTo(slot.x + SLOT_PADDING / 2, slot.y + SLOT_PADDING / 2);
     }
 
+    private _placeTileWithHelper(tile: DraggableTile, slot: DropSlot): void {
+        slot.setOccupant(tile.tileId);
+        tile.currentSlotId = slot.slotId;
+        tile.setEnabled(false);
+        this.pendingHelperPlacements += 1;
+        this.pendingHelperTileIds.add(tile.tileId);
+        this._updateCheckButtonState();
+
+        const targetX = slot.x + SLOT_PADDING / 2;
+        const targetY = slot.y + SLOT_PADDING / 2;
+        void this.helperCharacter.carryTile(tile, targetX, targetY).finally(() => {
+            this.pendingHelperPlacements = Math.max(0, this.pendingHelperPlacements - 1);
+            this.pendingHelperTileIds.delete(tile.tileId);
+            if (!tile.destroyed) {
+                tile.position.set(targetX, targetY);
+                tile.setEnabled(this.interactionEnabled);
+            }
+            this._updateCheckButtonState();
+        });
+    }
+
     private _findSlotAtGlobalPoint(globalPos: PIXI.Point): DropSlot | null {
         for (const slot of this.slots.values()) {
             if (slot.containsGlobalPoint(globalPos)) {
@@ -791,7 +872,7 @@ export class WordPlayUIManager {
             text: 'Check!',
             style: {
                 fontSize: params.checkButtonFontSize,
-                fill: this.themeConfig.buttonTextColor,
+                fill: WORD_PLAY_VISUAL_THEME.text,
                 fontFamily: this.themeConfig.fontFamilyTheme,
                 align: 'center',
             },
@@ -829,11 +910,13 @@ export class WordPlayUIManager {
         this.checkButtonView.clear();
         this.checkButtonView
             .roundRect(shadowOffset, shadowOffset, w, h, radius)
-            .fill(this.themeConfig.primaryAccentHover);
-        this.checkButtonView.roundRect(0, 0, w, h, radius).fill(this.themeConfig.primaryAccent);
+            .fill(WORD_PLAY_VISUAL_THEME.checkShadow);
+        this.checkButtonView
+            .roundRect(0, 0, w, h, radius)
+            .fill(WORD_PLAY_VISUAL_THEME.checkBorder);
         this.checkButtonView
             .roundRect(borderWidth, borderWidth, w - 2 * borderWidth, h - 2 * borderWidth, radius - borderWidth)
-            .fill(this.themeConfig.buttonFillColor);
+            .fill(WORD_PLAY_VISUAL_THEME.checkFill);
         this.checkButtonView.hitArea = new PIXI.Rectangle(0, 0, w, h);
 
         this.checkButtonLabel.style.fontSize = params.checkButtonFontSize;
@@ -861,7 +944,11 @@ export class WordPlayUIManager {
     }
 
     private _updateCheckButtonState(): void {
-        this._setCheckButtonEnabled(this.interactionEnabled && this.isArrangementComplete());
+        this._setCheckButtonEnabled(
+            this.interactionEnabled &&
+            this.pendingHelperPlacements === 0 &&
+            this.isArrangementComplete()
+        );
     }
 
     private _setCheckButtonEnabled(enabled: boolean): void {
@@ -944,6 +1031,19 @@ export class WordPlayUIManager {
         this.promptContainer.removeChildren();
     }
 
+    public update(deltaMs: number): void {
+        this.helperCharacter.update(deltaMs);
+    }
+
+    private _tileStyleForIndex(index: number): TileStyle {
+        const border = wordPlayOutline(index);
+        return {
+            ...this.tileStyle,
+            borderColor: border,
+            shadowColor: border,
+        };
+    }
+
     public destroy(): void {
         this.eventBus.off(TIMER_EVENTS.TIMER_TICK, this._handleTimerTick);
         this.eventBus.off(ENGINE_EVENTS.RESIZED, this._handleResize);
@@ -951,6 +1051,7 @@ export class WordPlayUIManager {
         this.eventBus.off(GAME_STATE_EVENTS.GAME_RESUMED, this._handleGameResumed);
 
         this.clearRoundState();
+        this.helperCharacter.destroy();
         this.visualEffectsManager?.destroy();
         this.pixiTimerInstance?.destroy();
         this.view.destroy({ children: true });

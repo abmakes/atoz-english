@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { WordPlayLayoutManager } from '@/lib/pixi-games/word-play/managers/WordPlayLayoutManager'
 
 describe('WordPlayLayoutManager', () => {
-  it('keeps desktop and landscape controls in a horizontal tray', () => {
+  it('centers desktop controls below tiles while compact landscape stays horizontal', () => {
     const desktop = new WordPlayLayoutManager(1024, 504).getLayoutParams()
     expect(desktop.isPortrait).toBe(false)
-    expect(desktop.stackTrayControls).toBe(false)
+    expect(desktop.stackTrayControls).toBe(true)
     expect(desktop.contentTop).toBeGreaterThanOrEqual(28)
     expect(desktop.promptMaxWidth).toBeLessThan(1024)
 
@@ -21,9 +21,18 @@ describe('WordPlayLayoutManager', () => {
     expect(portrait.stackTrayControls).toBe(true)
     expect(portrait.contentTop).toBeGreaterThanOrEqual(170)
     expect(portrait.imageMaxHeight).toBe(0)
-    expect(portrait.tileHeight).toBeGreaterThanOrEqual(48)
+    expect(portrait.tileHeight).toBe(58)
     expect(portrait.tileMaxWidth).toBeLessThan(440 / 2)
     expect(portrait.checkButtonWidth).toBeLessThanOrEqual(220)
+  })
+
+  it('scales typography and cards up for fullscreen play', () => {
+    const fullscreen = new WordPlayLayoutManager(1920, 1080).getLayoutParams()
+    expect(fullscreen.promptFontSize).toBeGreaterThanOrEqual(42)
+    expect(fullscreen.tileFontSize).toBeGreaterThanOrEqual(30)
+    expect(fullscreen.tileHeight).toBeGreaterThanOrEqual(70)
+    expect(fullscreen.tileMaxWidth).toBe(360)
+    expect(fullscreen.stackTrayControls).toBe(true)
   })
 
   it('recalculates when orientation changes', () => {

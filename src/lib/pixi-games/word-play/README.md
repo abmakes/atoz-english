@@ -43,7 +43,19 @@ matching derives consecutive pairs from `answers`.
   from left to right (Bamboozle-style); tapping a placed tile (or its occupied
   slot) returns it to the tray. Dragging remains available for exact placement
   and reordering.
+- **Character assist:** the existing animated capybara mascot runs from its
+  clubhouse, carries quick-tapped cards to their slots along a sparkle arc,
+  and returns home. Rapid taps queue so animations never collide.
 - Tiles keep ≥48px touch targets on small screens plus padded hit areas.
+
+## Visual treatment
+
+`wordPlayVisualTheme.ts` provides a child-friendly palette scoped to this
+game: white high-contrast cards, dark readable text, alternating cyan/orange/
+pink/green/purple outlines, a warm yellow Check button, and a cream-white
+workspace over the selected theme background. Card sizing expands to occupy
+most of the sentence row on fullscreen displays instead of remaining at
+mobile-sized widths.
 
 ## Structure
 
@@ -57,7 +69,8 @@ word-play/
 │   └── WordPlayLayoutManager.ts # Responsive sizing (touch-friendly minimums)
 └── ui/
     ├── DraggableTile.ts         # Drag + tap gestures, snap animations
-    └── DropSlot.ts              # Drop target with hover highlight, tap-to-place
+    ├── DropSlot.ts              # Drop target with hover highlight, tap-to-place
+    └── WordPlayHelperCharacter.ts # Animated capy carry/return-home sequence
 ```
 
 Reused from the shared engine / Team Quiz: `GameBackgroundManager`,
