@@ -7,6 +7,10 @@ export {
   type Vec2,
 } from './RopeProjectile'
 export {
+  MountainCloudOverlay,
+  type MountainCloudOverlayOptions,
+} from './MountainCloudOverlay'
+export {
   sampleRope,
   timingToPhase,
   lerpVec,
