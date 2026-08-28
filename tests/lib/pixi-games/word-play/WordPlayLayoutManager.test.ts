@@ -1,5 +1,46 @@
 import { describe, expect, it } from 'vitest'
-import { WordPlayLayoutManager } from '@/lib/pixi-games/word-play/managers/WordPlayLayoutManager'
+import {
+  calculateCenteredFlowLayout,
+  WordPlayLayoutManager,
+} from '@/lib/pixi-games/word-play/managers/WordPlayLayoutManager'
+
+function rowCenter(
+  positions: { x: number; y: number }[],
+  itemWidth: number,
+  rowY: number
+): number {
+  const row = positions.filter((position) => position.y === rowY)
+  const left = Math.min(...row.map((position) => position.x))
+  const right = Math.max(...row.map((position) => position.x + itemWidth))
+  return (left + right) / 2
+}
+
+describe('calculateCenteredFlowLayout', () => {
+  it('centers a single short row exactly once', () => {
+    const positions = calculateCenteredFlowLayout(4, 100, 60, 800, 20, 12)
+    expect(rowCenter(positions, 100, 0)).toBe(400)
+  })
+
+  it('centers full and partial rows on the same axis', () => {
+    const positions = calculateCenteredFlowLayout(8, 100, 60, 340, 20, 12)
+    expect(rowCenter(positions, 100, 0)).toBe(170)
+    expect(rowCenter(positions, 100, 72)).toBe(170)
+    expect(rowCenter(positions, 100, 144)).toBe(170)
+  })
+
+  it('returns no positions for an empty item set', () => {
+    expect(calculateCenteredFlowLayout(0, 100, 60, 800, 20, 12)).toEqual([])
+  })
+
+  it('maps a centered content region to the viewport center', () => {
+    const viewportWidth = 1024
+    const regionLeft = 48
+    const regionWidth = viewportWidth - regionLeft * 2
+    const positions = calculateCenteredFlowLayout(4, 180, 60, regionWidth, 16, 12)
+    const globalCenter = regionLeft + rowCenter(positions, 180, 0)
+    expect(globalCenter).toBe(viewportWidth / 2)
+  })
+})
 
 describe('WordPlayLayoutManager', () => {
   it('centers desktop controls below tiles while compact landscape stays horizontal', () => {

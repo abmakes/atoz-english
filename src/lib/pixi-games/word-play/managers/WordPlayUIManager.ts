@@ -13,7 +13,10 @@ import {
 } from '@/lib/pixi-engine/core/EventTypes';
 import { PixiTimer } from '@/lib/pixi-games/multiple-choice/ui/PixiTimer';
 import { VisualEffectsManager } from '@/lib/pixi-engine/ui/VisualEffectsManager';
-import { WordPlayLayoutManager } from './WordPlayLayoutManager';
+import {
+    calculateCenteredFlowLayout,
+    WordPlayLayoutManager,
+} from './WordPlayLayoutManager';
 import { DraggableTile, TileStyle } from '../ui/DraggableTile';
 import { DropSlot } from '../ui/DropSlot';
 import { WordPlayRound, SortingRound, MatchingRound } from '../wordPlayQuestion';
@@ -393,11 +396,12 @@ export class WordPlayUIManager {
         const slotFlowWidth = portraitColumns
             ? portraitColumns * slotWidth + (portraitColumns - 1) * params.tileGap
             : contentWidth;
-        const slotPositions = this._flowLayout(
+        const actualSlotRegionWidth = Math.min(contentWidth, slotFlowWidth);
+        const slotPositions = calculateCenteredFlowLayout(
             round.correctOrder.length,
             slotWidth,
             slotHeight,
-            Math.min(contentWidth, slotFlowWidth),
+            actualSlotRegionWidth,
             params.tileGap,
             params.rowGap
         );
@@ -410,9 +414,9 @@ export class WordPlayUIManager {
             contentWidth
         );
         this._drawWorkspacePanel(screenWidth, trayTop);
-        const slotsBlockWidth = Math.max(...slotPositions.map((p) => p.x + slotWidth), 0);
         const slotsBlockHeight = Math.max(...slotPositions.map((p) => p.y + slotHeight), 0);
-        const slotsOffsetX = params.sidePadding + (contentWidth - slotsBlockWidth) / 2;
+        const slotsOffsetX =
+            params.sidePadding + (contentWidth - actualSlotRegionWidth) / 2;
         const boardHeight = Math.max(0, trayTop - params.rowGap - boardTop);
         const slotsOffsetY = boardTop + Math.max(0, (boardHeight - slotsBlockHeight) / 2);
 
@@ -519,7 +523,7 @@ export class WordPlayUIManager {
             : params.checkButtonWidth + params.tileGap * 2;
         const trayFlowWidth = Math.max(tileWidth + SLOT_PADDING, contentWidth - buttonReserve);
 
-        const positions = this._flowLayout(
+        const positions = calculateCenteredFlowLayout(
             tileData.length,
             tileWidth,
             tileHeight,
@@ -548,8 +552,9 @@ export class WordPlayUIManager {
             .fill({ color: WORD_PLAY_VISUAL_THEME.trayFill, alpha: 0.98 })
             .stroke({ color: wordPlayOutline(0), width: 2, alpha: 0.35 });
 
-        const blockWidth = Math.max(...positions.map((p) => p.x + tileWidth), 0);
-        const offsetX = params.sidePadding + (trayFlowWidth - blockWidth) / 2;
+        // Positions are already centered within trayFlowWidth; apply its
+        // top-left origin exactly once.
+        const offsetX = params.sidePadding;
 
         const stage = this.pixiApp.getApp().stage;
         tileData.forEach((data, i) => {
@@ -601,33 +606,6 @@ export class WordPlayUIManager {
             const dotY = y + 34 + i * Math.max(18, (height - 68) / 9);
             this.workspacePanel.circle(sideX, dotY, 3 + (i % 3)).fill(color);
         }
-    }
-
-    /** Simple centered flow layout; returns relative positions per item. */
-    private _flowLayout(
-        count: number,
-        itemWidth: number,
-        itemHeight: number,
-        maxWidth: number,
-        gapX: number,
-        gapY: number
-    ): { x: number; y: number }[] {
-        const positions: { x: number; y: number }[] = [];
-        const perRow = Math.max(1, Math.floor((maxWidth + gapX) / (itemWidth + gapX)));
-        for (let i = 0; i < count; i++) {
-            const row = Math.floor(i / perRow);
-            const col = i % perRow;
-            // Center the (possibly shorter) last row.
-            const itemsInRow = Math.min(perRow, count - row * perRow);
-            const rowWidth = itemsInRow * itemWidth + (itemsInRow - 1) * gapX;
-            const fullRowWidth = perRow * itemWidth + (perRow - 1) * gapX;
-            const rowOffset = (fullRowWidth - rowWidth) / 2;
-            positions.push({
-                x: rowOffset + col * (itemWidth + gapX),
-                y: row * (itemHeight + gapY),
-            });
-        }
-        return positions;
     }
 
     private _measureUniformTileWidth(

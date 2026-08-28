@@ -38,6 +38,54 @@ export interface WordPlayLayoutProfile {
 
 const TOUCH_TARGET_MIN = 48;
 
+export interface WordPlayFlowPosition {
+    x: number;
+    y: number;
+}
+
+/**
+ * Places every row around the exact center of its region.
+ *
+ * The previous implementation centered a short row inside a theoretical full
+ * row, then callers centered those already-offset bounds a second time. That
+ * shifted single/partial rows to the right. Here each row gets one origin:
+ *
+ *   rowStartX = (regionWidth - actualRowWidth) / 2
+ */
+export function calculateCenteredFlowLayout(
+    count: number,
+    itemWidth: number,
+    itemHeight: number,
+    regionWidth: number,
+    gapX: number,
+    gapY: number
+): WordPlayFlowPosition[] {
+    if (count <= 0) return [];
+
+    const columns = Math.max(
+        1,
+        Math.floor((regionWidth + gapX) / (itemWidth + gapX))
+    );
+    const positions: WordPlayFlowPosition[] = [];
+
+    for (let rowStart = 0; rowStart < count; rowStart += columns) {
+        const itemsInRow = Math.min(columns, count - rowStart);
+        const rowWidth =
+            itemsInRow * itemWidth + Math.max(0, itemsInRow - 1) * gapX;
+        const rowStartX = Math.max(0, (regionWidth - rowWidth) / 2);
+        const row = Math.floor(rowStart / columns);
+
+        for (let column = 0; column < itemsInRow; column++) {
+            positions.push({
+                x: rowStartX + column * (itemWidth + gapX),
+                y: row * (itemHeight + gapY),
+            });
+        }
+    }
+
+    return positions;
+}
+
 export class WordPlayLayoutManager {
     private currentProfile!: WordPlayLayoutProfile;
 
