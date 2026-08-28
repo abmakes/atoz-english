@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "verify-assets": "node scripts/verify-assets.mjs",
+    "seed:word-play": "node scripts/seed-word-play-quiz.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {

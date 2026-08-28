@@ -475,7 +475,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
   // --- Render ---
   return (
     // Apply themeWrapper and the *local* dynamic theme class for preview
-    <div className={`${themeClassName} flex flex-col items-center justify-center min-h-screen p-4 grandstander` }>
+    <div className={`${themeClassName} relative flex min-h-screen w-full flex-col items-center justify-start overflow-x-hidden px-3 py-4 grandstander sm:justify-center sm:p-4` }>
       {/* Background Elements (like clouds - placeholder) */}
 
 
@@ -488,11 +488,11 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
       </button>
 
-      <div className={`max-w-4xl mx-auto bg-[var(--panel-bg)] filter-blur-sm rounded-[32px] p-8 border-2 border-[var(--border-dark)] shadow-solid z-20`}>
+      <div className="z-20 mx-auto w-full min-w-0 max-w-4xl overflow-hidden rounded-[24px] border-2 border-[var(--border-dark)] bg-[var(--panel-bg)] p-4 shadow-solid filter-blur-sm sm:rounded-[32px] sm:p-8">
 
         {/* Quiz Title */}
         {selectedQuiz && (
-            <h2 className={`grandstander flex justify-center text-2xl font-semibold text-[var(--text-color)] mb-4`}>
+            <h2 className="grandstander mb-4 flex break-words justify-center text-center text-xl font-semibold text-[var(--text-color)] sm:text-2xl">
               {selectedQuiz.title}
             </h2>
         )}
@@ -508,13 +508,13 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
             <button
               onClick={handlePlayGame}
               disabled={isStartingPlay}
-              className="grandstander buttonXLarge w-72 disabled:opacity-70"
+              className="grandstander buttonXLarge w-full max-w-[18rem] !px-4 disabled:opacity-70"
             >
               {isStartingPlay ? 'Starting…' : 'Play'}
             </button>
           ) : (
             <div
-              className="relative w-72 h-[4.25rem] rounded-full border-[6px] border-[var(--primary-accent-600)] bg-white overflow-hidden shadow-[4px_6px_0px_0px_var(--primary-accent-hover)]"
+              className="relative h-[4.25rem] w-full max-w-[18rem] overflow-hidden rounded-full border-[6px] border-[var(--primary-accent-600)] bg-white shadow-[4px_6px_0px_0px_var(--primary-accent-hover)]"
               role="progressbar"
               aria-valuenow={Math.round(assetsProgress * 100)}
               aria-valuemin={0}
@@ -534,15 +534,15 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
 
         {/* Teams Section */}
         <div className={"mb-4 flex flex-col justify-center items-center"}>
-          <ul className={`flex flex-row flex-wrap gap-2 justify-center items-center mb-3 text-3xl`}>
+          <ul className="mb-3 flex w-full flex-row flex-wrap items-center justify-center gap-2 text-xl sm:text-3xl">
             {teams.map((team, index) => (
-              <li key={team.id} className={`flex flex-row justify-center items-center`}>
-                <span className={`relative text-center -right-6 text-[var(--text-light)] p-2 w-10 bg-[var(--input-label-grey)] border-2 border-[var(--input-border)] rounded-[12px] font-bold`}>{index + 1}</span>                
+              <li key={team.id} className="flex w-full min-w-0 max-w-md flex-row items-center justify-center gap-2">
+                <span className="w-10 shrink-0 rounded-[12px] border-2 border-[var(--input-border)] bg-[var(--input-label-grey)] p-2 text-center font-bold text-[var(--text-light)]">{index + 1}</span>
                 <input
                   type="text"
                   value={team.name}
                   onChange={(e) => handleTeamNameChange(team.id, e.target.value)}
-                  className={`py-2 px-6 ml-3 mr-1 rounded-[12px] text-lg border-2 border-[var(--input-border)] inputfield text-[var(--heading-color)]`}
+                  className="inputField min-w-0 flex-1 rounded-[12px] border-2 border-[var(--input-border)] px-3 py-2 text-base text-[var(--heading-color)] sm:px-6 sm:text-lg"
                   aria-label={`Team ${index + 1} name`}
                 />
                  {!isSplashDash && (
@@ -552,13 +552,13 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
             ))}
           </ul>
           {!isSplashDash && (
-          <div className={`flex items-center`}>
+          <div className="flex w-full min-w-0 max-w-md items-center">
             <input
               type="text"
               value={newTeamName}
               onChange={(e) => setNewTeamName(e.target.value)}
               placeholder="New team name"
-              className={`inputField grandstander`}
+              className="inputField grandstander min-w-0"
             />
             <Button
               variant="solidAccent"
@@ -574,7 +574,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
         {/* Settings Section */}
         <div className={`mb-4 flex flex-col justify-center items-center`}>
           <h2 className={`grandstander text-2xl font-semibold text-[var(--text-color)] mb-2 pt-2`}>Settings:</h2>
-          <div className={`flex flex-row gap-4 items-center`}>
+          <div className="flex w-full flex-col flex-wrap items-center justify-center gap-2 sm:flex-row sm:gap-4">
             {(Object.keys(settings) as Array<keyof LocalGameSettings>)
               .filter(key => key === 'music' || key === 'sounds') // Only show music/sounds
               .map((key) => (
@@ -592,15 +592,15 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
             ))}
           </div>
 
-          <div className={"flex flex-row gap-4 items-center"}>
+          <div className="grid w-full min-w-0 max-w-xl grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
           {/* Theme Selection */}
-            <div className={`flex flex-row gap-4 items-center mb-4 justify-center`}>
+            <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 sm:mb-4">
               <label htmlFor="theme-select" className={'text-[var(--text-color)]'}>Theme:</label>
               <select
                 id="theme-select"
                 value={selectedTheme}
                 onChange={handleThemeChange}
-                className={`selectField`}
+                className="selectField min-w-0 w-full"
               >
                 <option value="basic">Basic (clouds)</option>
                 <option value="dark">Dark Mode</option>
@@ -611,13 +611,13 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
 
             {/* Game Features Selection — Team Quiz only */}
             {!isSplashDash && (
-            <div className={`flex flex-row gap-4 items-center mb-4 justify-center`}>
+            <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 sm:mb-4">
               <label htmlFor="features-select" className={`text-[var(--text-color)]`}>Game Mode:</label>
               <select
                 id="features-select"
                 value={selectedGameFeatures}
                 onChange={handleGameFeaturesChange}
-                className={`selectField`}
+                className="selectField min-w-0 w-full"
               >
                 <option value="basic" >Basic</option>
                 <option value="boosted">Boosted mode</option>

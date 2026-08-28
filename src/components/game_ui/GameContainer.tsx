@@ -50,6 +50,10 @@ async function loadGameConstructor(gameSlug: string): Promise<GameConstructor> {
     const mod = await import('@/lib/pixi-games/splash-dash/SplashDashGame');
     return mod.SplashDashGame as unknown as GameConstructor;
   }
+  if (gameSlug === 'word-play') {
+    const mod = await import('@/lib/pixi-games/word-play/WordPlayGame');
+    return mod.WordPlayGame as unknown as GameConstructor;
+  }
   const mod = await import('@/lib/pixi-games/multiple-choice/MultipleChoiceGame');
   return mod.MultipleChoiceGame as unknown as GameConstructor;
 }
@@ -163,7 +167,10 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
            if (setupData.gameFeatures === 'boosted') {
                console.log("GameContainer: Applying BOOSTED scoring rules.");
                modifyScoreAction.params.mode = 'progressive';
-               modifyScoreAction.params.timerId = 'multipleChoiceQuestionTimer'; // Make sure this ID matches game timer
+               // Timer ID must match the question timer created by the active game.
+               modifyScoreAction.params.timerId = gameSlug === 'word-play'
+                   ? 'wordPlayQuestionTimer'
+                   : 'multipleChoiceQuestionTimer';
                modifyScoreAction.params.pointsPerSecond = 5; // Set progressive points
                delete modifyScoreAction.params.points; // Clean up fixed points param
            } else { // 'basic' or default
@@ -259,6 +266,17 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
               { playerId: 'player2', deviceType: 'keyboard' }
           ],
           gamepadDeadzone: DEFAULT_GAME_CONFIG.controls.gamepadDeadzone,
+      } : gameSlug === 'word-play' ? {
+          // Word Play is pointer/touch driven (drag-and-drop + tap-to-place);
+          // only a minimal keyboard fallback is mapped.
+          actionMap: {
+              ACTION_A: { keyboard: 'Space' },
+              ACTION_B: { keyboard: 'Enter' },
+          },
+          playerMappings: [
+              { playerId: 'player1', deviceType: 'touch' }
+          ],
+          gamepadDeadzone: DEFAULT_GAME_CONFIG.controls.gamepadDeadzone,
       } : {
           // Multiple Choice controls
           actionMap: { // Use action names consistent with DEFAULT_CONTROLS_CONFIG
@@ -288,6 +306,18 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
                       {
                           key: 'crate_square',
                           src: '/images/splash-dash/crate_square.png'
+                      }
+                  ]
+              }
+          ]
+      } : gameSlug === 'word-play' ? {
+          bundles: [
+              {
+                  name: 'word-play',
+                  assets: [
+                      {
+                          key: 'word-play-capy-helper',
+                          src: '/images/splash-dash/capy_spritesheet.png'
                       }
                   ]
               }

@@ -437,6 +437,14 @@
   background-color: var(--primary-accent-600);
   transform: scale(1.05);
 }
+@media (max-width: 639px) {
+  .buttonXLarge {
+    max-width: 100%;
+    border-width: 4px;
+    padding: 0.75rem 1rem;
+    font-size: 1.5rem;
+  }
+}
 .buttonAddTeam {
   composes: button;
   background-color: var(--input-bg);
@@ -510,6 +518,8 @@
 
 .inputField {
   flex-grow: 1;
+  min-width: 0;
+  max-width: 100%;
   background-color: var(--input-bg);
   border: 2px solid var(--input-border);
   border-radius: var(--border-radius-md);
@@ -522,6 +532,8 @@
   opacity: 0.7;
 }
 .selectField {
+  min-width: 0;
+  max-width: 100%;
   background-color: var(--input-bg);
   border: 1px solid var(--input-border);
   border-radius: var(--border-radius-md);
@@ -605,6 +617,8 @@
   font-family: var(--font-theme);
 }
 .optionsGrid {
+  width: 100%;
+  min-width: 0;
   display: grid;
   grid-template-columns: repeat(1, minmax(0, 1fr)); /* Mobile default */
   gap: 1.5rem; /* Tailwind gap-6 */
@@ -615,6 +629,9 @@
   }
 }
 .optionBox {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   height: 100%;
   display: flex;
   flex-direction: column;

@@ -4,11 +4,13 @@ import { useEffect, useState, type ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Bookmark, Heart, Play, Users, Zap } from 'lucide-react'
+import { ArrowLeft, Bookmark, Heart, Play, Shuffle, Users, Zap } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
   getSplashDashBlockReason,
+  getWordPlayBlockReason,
   isSplashDashEligible,
+  isWordPlayEligible,
 } from '@/lib/game-mode-eligibility'
 import {
   extractQuestionImageUrls,
@@ -184,6 +186,8 @@ export default function GameModePickerPage() {
 
   const splashEligible = quiz ? isSplashDashEligible(quiz) : false
   const splashReason = quiz ? getSplashDashBlockReason(quiz) : null
+  const wordPlayEligible = quiz ? isWordPlayEligible(quiz) : false
+  const wordPlayReason = quiz ? getWordPlayBlockReason(quiz) : null
   const title = quiz?.title ?? 'Loading quiz…'
   const description = quiz?.description?.trim() || null
   const coverSrc = quiz?.imageUrl || '/images/placeholder.webp'
@@ -364,6 +368,61 @@ export default function GameModePickerPage() {
                 icon={<Zap size={20} className="text-slate-400" />}
                 title="Splash Dash"
                 description={splashReason ?? 'Not available for this quiz.'}
+                cta="Unavailable"
+                muted
+              />
+            </div>
+          )}
+
+          {loading && !quiz ? (
+            <div className={`${modeCardClass} opacity-70 animate-pulse`} aria-hidden>
+              <ModeThumb src="/images/marketing/teamquiz_thumb.png" alt="" muted />
+              <ModeDetails
+                icon={<Shuffle size={20} className="text-slate-400" />}
+                title="Word Play"
+                description="Checking eligibility…"
+                cta="…"
+                muted
+              />
+            </div>
+          ) : wordPlayEligible ? (
+            <Link
+              href={`/games/${quizPathId}/word-play`}
+              onClick={() => setNavigatingSlug('word-play')}
+              className={`${modeCardClass} ${
+                navigatingSlug === 'word-play' ? 'opacity-70 pointer-events-none' : ''
+              }`}
+            >
+              {navigatingSlug === 'word-play' && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[22px] bg-white/60">
+                  <span className="grandstander font-bold text-lg">Opening…</span>
+                </div>
+              )}
+              <ModeThumb
+                src="/images/marketing/teamquiz_thumb.png"
+                alt="Word Play board with draggable word tiles and drop slots"
+              />
+              <ModeDetails
+                icon={<Shuffle size={20} />}
+                title="Word Play"
+                description="Drag and drop words into order, or match pairs together."
+                cta="Play →"
+              />
+            </Link>
+          ) : (
+            <div
+              className="relative flex aspect-[3/2] overflow-hidden rounded-[24px] border-2 border-slate-300 bg-slate-50 opacity-80"
+              aria-disabled="true"
+            >
+              <ModeThumb
+                src="/images/marketing/teamquiz_thumb.png"
+                alt="Word Play preview"
+                muted
+              />
+              <ModeDetails
+                icon={<Shuffle size={20} className="text-slate-400" />}
+                title="Word Play"
+                description={wordPlayReason ?? 'Not available for this quiz.'}
                 cta="Unavailable"
                 muted
               />

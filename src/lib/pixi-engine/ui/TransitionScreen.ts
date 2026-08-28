@@ -184,9 +184,14 @@ export class TransitionScreen extends PIXI.Container {
   private _centerMessageText(powerupRoll = false): void {
       this.messageText.style.wordWrapWidth = this.panelWidth * 0.9;
       if (powerupRoll) {
-        // Top band — keep clear of the fully visible spinner
-        this.messageText.style.fontSize = 36;
-        this.messageText.position.set(this.app.screen.width / 2, this.app.screen.height * 0.12);
+        // Portrait wheel intentionally crops at the sides; keep the turn label
+        // compact in the HUD-safe top band.
+        const portrait = this.panelWidth < 640 && this.panelHeight > this.panelWidth;
+        this.messageText.style.fontSize = portrait ? 30 : 36;
+        this.messageText.position.set(
+          this.app.screen.width / 2,
+          this.app.screen.height * (portrait ? 0.14 : 0.12)
+        );
       } else {
         this.messageText.style.fontSize = 64;
         this.messageText.position.set(this.app.screen.width / 2, this.app.screen.height * 0.4);

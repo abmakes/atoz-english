@@ -26,6 +26,39 @@ interface WheelSegment {
 const TWO_PI = Math.PI * 2;
 const WEDGE_FLASH_MS = 400;
 const RESULT_HOLD_MS = 2800;
+const PORTRAIT_WHEEL_MIN_RADIUS = 220;
+
+export interface PowerupWheelLayout {
+  centerX: number;
+  centerY: number;
+  radius: number;
+  isPortrait: boolean;
+}
+
+/**
+ * Portrait deliberately keeps the wheel readable instead of shrinking it to
+ * fit the narrow edge. The viewport clips the outer rim; the pointer, center,
+ * labels, and result overlay remain visible.
+ */
+export function calculatePowerupWheelLayout(
+  screenWidth: number,
+  screenHeight: number
+): PowerupWheelLayout {
+  const isPortrait = screenWidth < 640 && screenHeight > screenWidth;
+  const radius = isPortrait
+    ? Math.max(
+        PORTRAIT_WHEEL_MIN_RADIUS,
+        Math.min(screenHeight * 0.3, 260)
+      )
+    : Math.min(screenWidth * 0.38, screenHeight * 0.34);
+  const centerX = screenWidth / 2;
+  const desiredCenterY = screenHeight * (isPortrait ? 0.58 : 0.58);
+  const minCenterY = radius + (isPortrait ? 24 : 56);
+  const maxCenterY = screenHeight - radius - 24;
+  const centerY = Math.min(maxCenterY, Math.max(minCenterY, desiredCenterY));
+
+  return { centerX, centerY, radius, isPortrait };
+}
 
 /**
  * Spin wheel for powerup selection.
@@ -136,12 +169,10 @@ export class PowerupSpinWheel extends PIXI.Container {
 
   /** Full wheel on screen — centered in the lower half with room for the pointer. */
   private layoutForScreen(screenWidth: number, screenHeight: number): void {
-    this.centerX = screenWidth / 2;
-    this.radius = Math.min(screenWidth * 0.38, screenHeight * 0.34);
-    this.centerY = screenHeight * 0.58;
-    const minCenterY = this.radius + 56;
-    const maxCenterY = screenHeight - this.radius - 24;
-    this.centerY = Math.min(maxCenterY, Math.max(minCenterY, this.centerY));
+    const layout = calculatePowerupWheelLayout(screenWidth, screenHeight);
+    this.centerX = layout.centerX;
+    this.centerY = layout.centerY;
+    this.radius = layout.radius;
   }
 
   private segmentCenterLocalAngle(index: number): number {
@@ -274,22 +305,26 @@ export class PowerupSpinWheel extends PIXI.Container {
     const accent = isDebuff ? 0xfca5a5 : 0x5eead4;
 
     const card = new PIXI.Container();
-    const padX = 48;
-    const padY = 28;
+    const screenWidth = this.centerX * 2;
+    const isPortrait = screenWidth < 640;
+    const padX = isPortrait ? 24 : 48;
+    const padY = isPortrait ? 20 : 28;
 
     const label = new Text(powerup.displayName, {
       fontFamily: 'Grandstander',
-      fontSize: 56,
+      fontSize: isPortrait ? 36 : 56,
       fontWeight: 'bold',
       fill: 0xffffff,
       align: 'center',
       stroke: { color: 0x000000, width: 5 },
+      wordWrap: isPortrait,
+      wordWrapWidth: isPortrait ? screenWidth * 0.68 : screenWidth * 0.8,
     });
     label.anchor.set(0.5);
 
     const subtitle = new Text(isDebuff ? 'Power-down!' : 'Power-up!', {
       fontFamily: 'Grandstander',
-      fontSize: 22,
+      fontSize: isPortrait ? 18 : 22,
       fontWeight: 'bold',
       fill: accent,
       align: 'center',
