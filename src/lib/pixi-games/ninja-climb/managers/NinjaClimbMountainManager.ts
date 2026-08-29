@@ -2,7 +2,6 @@ import * as PIXI from 'pixi.js'
 import { EventBus } from '@/lib/pixi-engine/core/EventBus'
 import { ENGINE_EVENTS } from '@/lib/pixi-engine/core/EventTypes'
 import type { PixiApplication } from '@/lib/pixi-engine/core/PixiApplication'
-import { MountainCloudOverlay } from '@/lib/pixi-engine/fx/MountainCloudOverlay'
 import type { NinjaClimbLayoutManager } from './NinjaClimbLayoutManager'
 import type { ShortcutNodeDef } from './NinjaClimbRaceManager'
 import { buildPath, type Waypoint } from '../mountainPath'
@@ -19,7 +18,6 @@ export class NinjaClimbMountainManager {
   private world: PIXI.Container
   private skySprite: PIXI.Sprite | null = null
   private trailGraphics: PIXI.Graphics
-  private cloudOverlay: MountainCloudOverlay | null = null
   private gateSprites: Map<string, PIXI.Sprite> = new Map()
   private barrierSprite: PIXI.Sprite | null = null
   private flagSprite: PIXI.Sprite | null = null
@@ -110,10 +108,6 @@ export class NinjaClimbMountainManager {
       this.targetCameraY = this.cameraY
     }
     this._applyCameraTransform()
-
-    // Atmospheric cloud bank over the world (screen-space, under the HUD).
-    this.cloudOverlay = new MountainCloudOverlay(width, height)
-    this.view.addChild(this.cloudOverlay)
   }
 
   private async _buildSections(): Promise<void> {
@@ -319,8 +313,6 @@ export class NinjaClimbMountainManager {
   }
 
   public update(deltaMs: number): void {
-    this.cloudOverlay?.update(deltaMs)
-
     // Ease camera
     const t = Math.min(1, (deltaMs / 16) * 0.08)
     this.cameraX += (this.targetCameraX - this.cameraX) * t
@@ -376,7 +368,6 @@ export class NinjaClimbMountainManager {
       this.skySprite.width = width
       this.skySprite.height = height
     }
-    this.cloudOverlay?.resize(width, height)
     this._applyCameraTransform()
   }
 

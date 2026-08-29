@@ -3,98 +3,69 @@ import * as PIXI from 'pixi.js'
 export interface AnswerCloudShapeOptions {
   width: number
   height: number
-  /** Soft edge blur (default 10). */
-  blurStrength?: number
-  /** Noise breakup on soft edge (default 0.05). */
-  noise?: number
-  /** Seed for deterministic blob layout (default 0). */
+  /** Seed for deterministic puff layout (default 0). */
   seed?: number
 }
 
 /**
- * Answer-option cloud badge matching the MountainCloudOverlay look:
- * soft blurred oval blobs around a solid white oval core so answer text stays readable.
- *
- * Filters only apply to the soft edge layer — the white core and any children
- * you add (labels) stay crisp.
+ * Cartoon cumulus badge for answer text: overlapping puffs of mixed sizes,
+ * not a blurred oval. The interior is solid white so labels stay readable.
  */
 export class AnswerCloudShape extends PIXI.Container {
   readonly cloudWidth: number
   readonly cloudHeight: number
-  /** Inset rectangle safe for text (inside the solid white core). */
   readonly textSafeWidth: number
   readonly textSafeHeight: number
-
-  private softLayer: PIXI.Container
-  private core: PIXI.Graphics
 
   constructor(options: AnswerCloudShapeOptions) {
     super()
     this.cloudWidth = options.width
     this.cloudHeight = options.height
-    this.textSafeWidth = options.width * 0.72
-    this.textSafeHeight = options.height * 0.55
+    this.textSafeWidth = options.width * 0.62
+    this.textSafeHeight = options.height * 0.42
 
-    this.softLayer = new PIXI.Container()
-    this.core = new PIXI.Graphics()
-    this.addChild(this.softLayer)
-    this.addChild(this.core)
-
-    this._buildSoftHalo(options.seed ?? 0)
-    this._buildWhiteCore()
-
-    this.softLayer.filters = [
-      new PIXI.BlurFilter({ strength: options.blurStrength ?? 10, quality: 3 }),
-      new PIXI.NoiseFilter({ noise: options.noise ?? 0.05 }),
-    ]
-  }
-
-  public override destroy(options?: PIXI.DestroyOptions): void {
-    this.softLayer.filters = []
-    super.destroy(options)
-  }
-
-  private _buildSoftHalo(seed: number): void {
     const g = new PIXI.Graphics()
+    this._drawPuffs(g, options.seed ?? 0)
+    this.addChild(g)
+  }
+
+  private _drawPuffs(g: PIXI.Graphics, seed: number): void {
     const w = this.cloudWidth
     const h = this.cloudHeight
-    const rnd = mulberry32(seed + 1)
+    const rnd = mulberry32(seed + 11)
 
-    // Main soft oval mass — slightly larger than the white core.
-    g.ellipse(0, 0, w * 0.52, h * 0.48).fill({ color: 0xffffff, alpha: 0.55 })
+    // Relative puffs: [cx, cy, rx, ry] in fractions of width/height.
+    // A lumpy cumulus: wide base, taller knobs along the top, extra side bumps.
+    const puffs: Array<[number, number, number, number]> = [
+      [0.0, 0.18, 0.42, 0.32],
+      [-0.28, 0.12, 0.26, 0.28],
+      [0.28, 0.14, 0.27, 0.27],
+      [-0.16, -0.18, 0.24, 0.3],
+      [0.14, -0.22, 0.27, 0.32],
+      [0.0, -0.08, 0.3, 0.28],
+      [-0.36, -0.02, 0.18, 0.22],
+      [0.36, 0.0, 0.19, 0.22],
+      [-0.08, 0.28, 0.22, 0.2],
+      [0.18, 0.26, 0.2, 0.18],
+    ]
 
-    // Irregular overlapping blobs around the rim (same recipe as the bank).
-    const blobs = 8 + Math.floor(rnd() * 4)
-    for (let i = 0; i < blobs; i++) {
-      const angle = (i / blobs) * Math.PI * 2 + rnd() * 0.4
-      const dist = 0.28 + rnd() * 0.22
-      const px = Math.cos(angle) * w * dist
-      const py = Math.sin(angle) * h * dist * 0.85
-      const rx = w * (0.16 + rnd() * 0.14)
-      const ry = h * (0.22 + rnd() * 0.18)
-      g.ellipse(px, py, rx, ry).fill({
-        color: 0xffffff,
-        alpha: 0.35 + rnd() * 0.3,
-      })
+    // Jitter so each option looks like a different cloud, not clones.
+    const jittered = puffs.map(([cx, cy, rx, ry]) => {
+      const jx = (rnd() - 0.5) * 0.06
+      const jy = (rnd() - 0.5) * 0.05
+      const js = 0.92 + rnd() * 0.16
+      return [cx + jx, cy + jy, rx * js, ry * js] as const
+    })
+
+    // Fill first so overlaps stay solid white, then a thin rim on the outer puffs.
+    for (const [cx, cy, rx, ry] of jittered) {
+      g.ellipse(cx * w, cy * h, rx * w, ry * h).fill({ color: 0xffffff, alpha: 1 })
     }
-
-    // Extra top/side puffs so it reads as a cloud, not a plain oval.
-    g.ellipse(-w * 0.22, -h * 0.12, w * 0.28, h * 0.32).fill({ color: 0xffffff, alpha: 0.45 })
-    g.ellipse(w * 0.2, -h * 0.08, w * 0.26, h * 0.3).fill({ color: 0xffffff, alpha: 0.42 })
-    g.ellipse(0, h * 0.18, w * 0.4, h * 0.28).fill({ color: 0xf4f6f7, alpha: 0.35 })
-
-    this.softLayer.addChild(g)
-  }
-
-  private _buildWhiteCore(): void {
-    // Opaque white oval — the readable answer plate.
-    this.core
-      .ellipse(0, 0, this.cloudWidth * 0.42, this.cloudHeight * 0.38)
-      .fill({ color: 0xffffff, alpha: 0.97 })
+    // Extra fill in the middle so the answer text sits on solid white.
+    g.ellipse(0, 0.04 * h, w * 0.36, h * 0.28).fill({ color: 0xffffff, alpha: 1 })
   }
 }
 
-/** Small deterministic PRNG so clouds stay stable across rebuilds for a seed. */
 function mulberry32(seed: number): () => number {
   let t = seed >>> 0
   return () => {
