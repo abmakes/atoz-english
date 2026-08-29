@@ -4,6 +4,7 @@ import { ENGINE_EVENTS, TIMER_EVENTS, TimerEventPayload } from '@/lib/pixi-engin
 import type { PixiApplication } from '@/lib/pixi-engine/core/PixiApplication'
 import type { PixiSpecificConfig } from '@/lib/themes'
 import { AssetLoader } from '@/lib/pixi-engine/assets/AssetLoader'
+import { AnswerCloudShape } from '@/lib/pixi-engine/fx/AnswerCloudShape'
 import { PixiTimer } from '@/lib/pixi-games/multiple-choice/ui/PixiTimer'
 import type { NinjaClimbLayoutManager } from './NinjaClimbLayoutManager'
 import type { NinjaPowerupId } from '../ninjaPowerups'
@@ -496,28 +497,14 @@ export class NinjaClimbUIManager {
     }
     let startX = leftReserve + Math.max(0, (available - totalW) / 2)
 
-    let cloudTex: PIXI.Texture | null = null
-    try {
-      cloudTex = await PIXI.Assets.load(`${ASSET_BASE}/answer_cloud.png`)
-    } catch {
-      cloudTex = null
-    }
-
     options.forEach((option, index) => {
       const container = new PIXI.Container()
-      if (cloudTex) {
-        const sprite = new PIXI.Sprite(cloudTex)
-        sprite.anchor.set(0.5)
-        sprite.width = cloudW
-        sprite.height = cloudH
-        container.addChild(sprite)
-      } else {
-        const g = new PIXI.Graphics()
-        g.roundRect(-cloudW / 2, -cloudH / 2, cloudW, cloudH, 24)
-          .fill({ color: 0xffffff, alpha: 0.92 })
-          .stroke({ width: 3, color: 0x334155 })
-        container.addChild(g)
-      }
+      const cloud = new AnswerCloudShape({
+        width: cloudW,
+        height: cloudH,
+        seed: index * 17 + 3,
+      })
+      container.addChild(cloud)
 
       const label = new PIXI.Text({
         text: option.text,
@@ -527,12 +514,12 @@ export class NinjaClimbUIManager {
           fill: 0x1f2937,
           fontWeight: 'bold',
           wordWrap: true,
-          wordWrapWidth: cloudW * 0.72,
+          wordWrapWidth: cloud.textSafeWidth,
           align: 'center',
         },
       })
       label.anchor.set(0.5)
-      if (label.height > cloudH * 0.55) {
+      if (label.height > cloud.textSafeHeight) {
         label.style.fontSize = Math.max(12, layout.answerFontSize - 4)
       }
       container.addChild(label)

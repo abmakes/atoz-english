@@ -11,6 +11,10 @@ export {
   type MountainCloudOverlayOptions,
 } from './MountainCloudOverlay'
 export {
+  AnswerCloudShape,
+  type AnswerCloudShapeOptions,
+} from './AnswerCloudShape'
+export {
   sampleRope,
   timingToPhase,
   lerpVec,

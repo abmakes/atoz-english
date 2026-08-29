@@ -34,7 +34,6 @@ export function getNinjaClimbSceneAssetUrls(): string[] {
     '/images/ninja-climb/plateau_2.webp',
     '/images/ninja-climb/plateau_3.webp',
     '/images/ninja-climb/summit.webp',
-    '/images/ninja-climb/answer_cloud.png',
     '/images/ninja-climb/deco_tree.webp',
     '/images/ninja-climb/deco_bush.webp',
     '/images/ninja-climb/deco_hut.webp',

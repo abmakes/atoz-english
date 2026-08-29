@@ -74,7 +74,7 @@ Fit-zoom on both climbers: midpoint in the play window (between sky band and bot
 
 ## UI regions
 
-- **Top sky band:** answer clouds clustered mid-screen (clear of the score panel and nav/timer), staggered rows that may overlap slightly, drifting side to side. No ambient cloud sprites.
+- **Top sky band:** answer clouds built with `AnswerCloudShape` (soft blurred oval blobs + solid white core for readable text), clustered mid-screen clear of the score panel and nav/timer, staggered rows, drifting side to side.
 - **Cloud bank:** `MountainCloudOverlay` (engine `fx/`) — three drifting blob layers (dense / wispy / faint) with blur + noise + displacement filters and a vertical gradient alpha mask; covers ~top 62% of the screen and fades out so the mountain stays readable. Screen-space, above the world, below the HUD.
 - **Timer:** enlarged ring on a solid white disc, dropped below the React nav cluster (right side)
 - **Middle play window:** tiled mountain world, camera fits climbers at 1.3× so characters read larger

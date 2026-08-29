@@ -35,7 +35,6 @@ const REQUIRED_ASSETS = [
   'public/images/ninja-climb/plateau_2.webp',
   'public/images/ninja-climb/plateau_3.webp',
   'public/images/ninja-climb/summit.webp',
-  'public/images/ninja-climb/answer_cloud.png',
   'public/images/ninja-climb/icon_teleport.png',
   'public/images/ninja-climb/icon_rope.png',
   'public/images/ninja-climb/icon_smoke.png',
