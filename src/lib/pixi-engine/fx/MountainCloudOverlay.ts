@@ -16,8 +16,6 @@ interface CloudLayerSpec {
   /** Blob alpha range. */
   alphaMin: number
   alphaMax: number
-  /** Blob tint — whiter for the dense ceiling, grayer for low haze. */
-  color: number
   blurStrength: number
   noise: number
   /** Horizontal drift amplitude in px and phase speed. */
@@ -51,30 +49,28 @@ export class MountainCloudOverlay extends PIXI.Container {
   private time = 0
 
   private static readonly LAYER_SPECS: CloudLayerSpec[] = [
-    // Dense ceiling — near-solid white, slow.
+    // Dense ceiling — slow.
     {
       bandTop: 0.0,
-      bandBottom: 0.48,
-      masses: 7,
-      alphaMin: 0.72,
-      alphaMax: 0.95,
-      color: 0xffffff,
-      blurStrength: 20,
-      noise: 0.06,
-      driftAmpX: 8,
+      bandBottom: 0.42,
+      masses: 5,
+      alphaMin: 0.3,
+      alphaMax: 0.5,
+      blurStrength: 18,
+      noise: 0.08,
+      driftAmpX: 10,
       driftAmpY: 0,
-      driftSpeed: 0.0001,
+      driftSpeed: 0.00012,
       driftPhase: 0,
     },
     // Broken wisps — medium, drifts opposite.
     {
       bandTop: 0.28,
       bandBottom: 0.72,
-      masses: 5,
-      alphaMin: 0.2,
-      alphaMax: 0.38,
-      color: 0xf7f9fa,
-      blurStrength: 14,
+      masses: 4,
+      alphaMin: 0.14,
+      alphaMax: 0.28,
+      blurStrength: 13,
       noise: 0.06,
       driftAmpX: 16,
       driftAmpY: 0,
@@ -88,7 +84,6 @@ export class MountainCloudOverlay extends PIXI.Container {
       masses: 3,
       alphaMin: 0.06,
       alphaMax: 0.13,
-      color: 0xe9eef1,
       blurStrength: 9,
       noise: 0.05,
       driftAmpX: 6,
@@ -178,8 +173,6 @@ export class MountainCloudOverlay extends PIXI.Container {
   }
 
   private _build(): void {
-    this._attachCeilingSheet()
-
     for (const spec of MountainCloudOverlay.LAYER_SPECS) {
       const layer = this._buildLayer(spec)
       this.layers.push(layer)
@@ -188,21 +181,6 @@ export class MountainCloudOverlay extends PIXI.Container {
 
     this._attachDisplacement()
     this._attachFadeMask()
-  }
-
-  /**
-   * Solid white sheet across the very top of the bank so the ceiling reads
-   * almost opaque white, dissolving into the drifting blobs below it.
-   */
-  private _attachCeilingSheet(): void {
-    const tex = this._makeCeilingTexture()
-    if (!tex) return
-    this.generatedTextures.push(tex)
-    const sheet = new PIXI.Sprite(tex)
-    sheet.width = this.screenW
-    // Cover most of the upper bank so the top reads as a white ceiling.
-    sheet.height = this.cloudHeight * 0.58
-    this.layersRoot.addChild(sheet)
   }
 
   private _buildLayer(spec: CloudLayerSpec): PIXI.Container {
@@ -226,14 +204,14 @@ export class MountainCloudOverlay extends PIXI.Container {
         const rx = massW * (0.12 + Math.random() * 0.2)
         const ry = massH * (0.25 + Math.random() * 0.35)
         g.ellipse(px, py, rx, ry).fill({
-          color: spec.color,
+          color: 0xf4f6f7,
           alpha: spec.alphaMin + Math.random() * (spec.alphaMax - spec.alphaMin),
         })
       }
 
       // Broad haze pad under each mass keeps blobs reading as one cloud.
       g.ellipse(cx, cy + massH * 0.2, massW * 0.75, massH * 0.5).fill({
-        color: spec.color,
+        color: 0xe9eef1,
         alpha: spec.alphaMin * 0.6,
       })
     }
@@ -283,25 +261,6 @@ export class MountainCloudOverlay extends PIXI.Container {
     this.layersRoot.mask = mask
   }
 
-  /** Opaque white at the very top, dissolving to nothing by mid-bank. */
-  private _makeCeilingTexture(): PIXI.Texture | null {
-    if (typeof document === 'undefined') return null
-    const canvas = document.createElement('canvas')
-    canvas.width = 4
-    canvas.height = 256
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return null
-    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height)
-    grad.addColorStop(0, 'rgba(255,255,255,1)')
-    grad.addColorStop(0.28, 'rgba(255,255,255,0.98)')
-    grad.addColorStop(0.55, 'rgba(255,255,255,0.72)')
-    grad.addColorStop(0.82, 'rgba(255,255,255,0.22)')
-    grad.addColorStop(1, 'rgba(255,255,255,0)')
-    ctx.fillStyle = grad
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    return PIXI.Texture.from(canvas)
-  }
-
   /** Vertical alpha gradient: solid ceiling → broken middle → clear bottom. */
   private _makeGradientTexture(): PIXI.Texture | null {
     if (typeof document === 'undefined') return null
@@ -311,11 +270,10 @@ export class MountainCloudOverlay extends PIXI.Container {
     const ctx = canvas.getContext('2d')
     if (!ctx) return null
     const grad = ctx.createLinearGradient(0, 0, 0, canvas.height)
-    // Hold full opacity longer so the top third stays a white cloud bank.
     grad.addColorStop(0, 'rgba(255,255,255,1)')
-    grad.addColorStop(0.55, 'rgba(255,255,255,1)')
-    grad.addColorStop(0.74, 'rgba(255,255,255,0.5)')
-    grad.addColorStop(0.9, 'rgba(255,255,255,0.12)')
+    grad.addColorStop(0.45, 'rgba(255,255,255,1)')
+    grad.addColorStop(0.7, 'rgba(255,255,255,0.45)')
+    grad.addColorStop(0.88, 'rgba(255,255,255,0.12)')
     grad.addColorStop(1, 'rgba(255,255,255,0)')
     ctx.fillStyle = grad
     ctx.fillRect(0, 0, canvas.width, canvas.height)
