@@ -210,7 +210,9 @@ export class NinjaClimbUIManager {
     this.answersEnabled = enabled
     for (const btn of this.cloudButtons) {
       btn.container.eventMode = enabled ? 'static' : 'none'
-      btn.container.alpha = enabled ? 1 : 0.7
+      btn.container.cursor = enabled ? 'pointer' : 'default'
+      // Keep alpha at 1. Fading the container makes overlapping puffs composite
+      // separately and shows the circles that make up the cloud.
     }
   }
 

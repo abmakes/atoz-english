@@ -8,8 +8,10 @@ export interface AnswerCloudShapeOptions {
 }
 
 /**
- * Cartoon cumulus badge for answer text: overlapping puffs of mixed sizes,
- * not a blurred oval. The interior is solid white so labels stay readable.
+ * Cumulus answer badge: overlapping puffs flattened to one silhouette, then
+ * blurred as a whole so edges match the atmospheric bank. A solid white core
+ * keeps labels readable. Never draw per-puff alpha — parent fade would show
+ * the individual circles.
  */
 export class AnswerCloudShape extends PIXI.Container {
   readonly cloudWidth: number
@@ -24,9 +26,38 @@ export class AnswerCloudShape extends PIXI.Container {
     this.textSafeWidth = options.width * 0.62
     this.textSafeHeight = options.height * 0.42
 
-    const g = new PIXI.Graphics()
-    this._drawPuffs(g, options.seed ?? 0)
-    this.addChild(g)
+    const w = this.cloudWidth
+    const h = this.cloudHeight
+
+    const puffs = new PIXI.Graphics()
+    this._drawPuffs(puffs, options.seed ?? 0)
+
+    // Flatten first so overlapping ellipses become one opaque sprite. Then blur
+    // that silhouette — not each circle — so seams cannot reappear if the
+    // parent is ever faded.
+    const flat = new PIXI.Container()
+    flat.addChild(puffs)
+    flat.cacheAsTexture(true)
+
+    const bank = new PIXI.Container()
+    bank.addChild(flat)
+    bank.filterArea = new PIXI.Rectangle(-w, -h, w * 2, h * 2)
+    try {
+      bank.filters = [
+        new PIXI.BlurFilter({
+          strength: 12,
+          quality: 3,
+          padding: 24,
+        }),
+      ]
+    } catch (e) {
+      console.warn('AnswerCloudShape: BlurFilter unavailable', e)
+    }
+    this.addChild(bank)
+
+    const core = new PIXI.Graphics()
+    core.ellipse(0, 0.04 * h, w * 0.38, h * 0.3).fill({ color: 0xffffff, alpha: 1 })
+    this.addChild(core)
   }
 
   private _drawPuffs(g: PIXI.Graphics, seed: number): void {
@@ -35,7 +66,6 @@ export class AnswerCloudShape extends PIXI.Container {
     const rnd = mulberry32(seed + 11)
 
     // Relative puffs: [cx, cy, rx, ry] in fractions of width/height.
-    // A lumpy cumulus: wide base, taller knobs along the top, extra side bumps.
     const puffs: Array<[number, number, number, number]> = [
       [0.0, 0.18, 0.42, 0.32],
       [-0.28, 0.12, 0.26, 0.28],
@@ -49,7 +79,6 @@ export class AnswerCloudShape extends PIXI.Container {
       [0.18, 0.26, 0.2, 0.18],
     ]
 
-    // Jitter so each option looks like a different cloud, not clones.
     const jittered = puffs.map(([cx, cy, rx, ry]) => {
       const jx = (rnd() - 0.5) * 0.06
       const jy = (rnd() - 0.5) * 0.05
@@ -57,11 +86,9 @@ export class AnswerCloudShape extends PIXI.Container {
       return [cx + jx, cy + jy, rx * js, ry * js] as const
     })
 
-    // Fill first so overlaps stay solid white, then a thin rim on the outer puffs.
     for (const [cx, cy, rx, ry] of jittered) {
       g.ellipse(cx * w, cy * h, rx * w, ry * h).fill({ color: 0xffffff, alpha: 1 })
     }
-    // Extra fill in the middle so the answer text sits on solid white.
     g.ellipse(0, 0.04 * h, w * 0.36, h * 0.28).fill({ color: 0xffffff, alpha: 1 })
   }
 }
