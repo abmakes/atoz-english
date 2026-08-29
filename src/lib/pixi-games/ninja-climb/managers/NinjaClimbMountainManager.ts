@@ -56,6 +56,11 @@ export class NinjaClimbMountainManager {
     return this.world
   }
 
+  /** Screen-space blur bank; NinjaClimbGame parents this above the world, below the HUD. */
+  public getCloudOverlay(): MountainCloudOverlay | null {
+    return this.cloudOverlay
+  }
+
   public getPath(): Waypoint[] {
     return this.path
   }
@@ -111,9 +116,14 @@ export class NinjaClimbMountainManager {
     }
     this._applyCameraTransform()
 
-    // Original light atmospheric bank: mountain stays visible; answer puffs sit on top in the HUD.
-    this.cloudOverlay = new MountainCloudOverlay(width, height)
-    this.view.addChild(this.cloudOverlay)
+    // Light first-version bank (blur + noise + displacement). Game view parents it
+    // above this world and below the puff answer HUD.
+    try {
+      this.cloudOverlay = new MountainCloudOverlay(this.screenW, this.screenH)
+    } catch (e) {
+      console.warn('NinjaClimbMountainManager: cloud overlay failed', e)
+      this.cloudOverlay = null
+    }
   }
 
   private async _buildSections(): Promise<void> {
@@ -383,6 +393,10 @@ export class NinjaClimbMountainManager {
   public destroy(): void {
     this.destroyed = true
     this.eventBus.off(ENGINE_EVENTS.RESIZED, this._onResize)
+    if (this.cloudOverlay) {
+      this.cloudOverlay.destroy({ children: true })
+      this.cloudOverlay = null
+    }
     this.view.destroy({ children: true })
   }
 }

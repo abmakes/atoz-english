@@ -162,6 +162,10 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
       this.ninjaPowerupsConfig.shortcuts ? this.raceManager.getNodes() : []
     )
     this.view.addChildAt(this.mountainManager.getView(), 0)
+    const cloudOverlay = this.mountainManager.getCloudOverlay()
+    if (cloudOverlay) {
+      this.view.addChild(cloudOverlay)
+    }
 
     this.playerManager = new NinjaClimbPlayerManager(
       this.pixiApp,

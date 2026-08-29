@@ -33,6 +33,9 @@ interface CloudLayerSpec {
  * displacement filter, and faded out vertically by a gradient alpha mask so
  * the mountain below stays readable while the summit feels hidden.
  *
+ * Light first version: blob alphas stay in the 0.06–0.50 range. Do not add
+ * a solid white ceiling sheet — that hid the mountain.
+ *
  * Screen-space: add above the game world, below the HUD.
  */
 export class MountainCloudOverlay extends PIXI.Container {
@@ -41,6 +44,8 @@ export class MountainCloudOverlay extends PIXI.Container {
   private coverage: number
   private cloudHeight: number
 
+  /** Owns the fade mask so it is not combined with displacement on the same node. */
+  private maskedBank: PIXI.Container
   private layersRoot: PIXI.Container
   private layers: PIXI.Container[] = []
   private maskSprite: PIXI.Sprite | null = null
@@ -95,14 +100,17 @@ export class MountainCloudOverlay extends PIXI.Container {
 
   constructor(screenWidth: number, screenHeight: number, options: MountainCloudOverlayOptions = {}) {
     super()
-    this.screenW = screenWidth
-    this.screenH = screenHeight
+    this.label = 'MountainCloudOverlay'
+    this.screenW = Math.max(1, screenWidth)
+    this.screenH = Math.max(1, screenHeight)
     this.coverage = options.coverage ?? 0.62
-    this.cloudHeight = screenHeight * this.coverage
+    this.cloudHeight = this.screenH * this.coverage
 
+    this.maskedBank = new PIXI.Container()
     this.layersRoot = new PIXI.Container()
-    this.addChild(this.layersRoot)
-    this.layersRoot.alpha = options.intensity ?? 1
+    this.maskedBank.addChild(this.layersRoot)
+    this.addChild(this.maskedBank)
+    this.maskedBank.alpha = options.intensity ?? 1
 
     // Overlay is atmosphere only — never block answer clicks.
     this.eventMode = 'none'
@@ -113,7 +121,7 @@ export class MountainCloudOverlay extends PIXI.Container {
 
   /** 0 = clear sky, 1 = full cloud bank. Handy for storms / summit reveals. */
   public setIntensity(value: number): void {
-    this.layersRoot.alpha = Math.max(0, Math.min(1, value))
+    this.maskedBank.alpha = Math.max(0, Math.min(1, value))
   }
 
   public update(deltaMs: number): void {
@@ -136,9 +144,9 @@ export class MountainCloudOverlay extends PIXI.Container {
   }
 
   public resize(width: number, height: number): void {
-    this.screenW = width
-    this.screenH = height
-    this.cloudHeight = height * this.coverage
+    this.screenW = Math.max(1, width)
+    this.screenH = Math.max(1, height)
+    this.cloudHeight = this.screenH * this.coverage
     this._clear()
     this._build()
   }
@@ -148,8 +156,12 @@ export class MountainCloudOverlay extends PIXI.Container {
     super.destroy(options)
   }
 
+  private _filterArea(): PIXI.Rectangle {
+    return new PIXI.Rectangle(0, 0, this.screenW, this.cloudHeight)
+  }
+
   private _clear(): void {
-    this.layersRoot.mask = null
+    this.maskedBank.mask = null
     this.layersRoot.filters = []
     for (const layer of this.layers) {
       layer.filters = []
@@ -173,6 +185,10 @@ export class MountainCloudOverlay extends PIXI.Container {
   }
 
   private _build(): void {
+    this.filterArea = this._filterArea()
+    this.maskedBank.filterArea = this._filterArea()
+    this.layersRoot.filterArea = this._filterArea()
+
     for (const spec of MountainCloudOverlay.LAYER_SPECS) {
       const layer = this._buildLayer(spec)
       this.layers.push(layer)
@@ -185,11 +201,16 @@ export class MountainCloudOverlay extends PIXI.Container {
 
   private _buildLayer(spec: CloudLayerSpec): PIXI.Container {
     const layer = new PIXI.Container()
+    layer.filterArea = this._filterArea()
     const w = this.screenW
     const bandTop = spec.bandTop * this.cloudHeight
     const bandH = (spec.bandBottom - spec.bandTop) * this.cloudHeight
 
     const g = new PIXI.Graphics()
+    // Near-invisible pad so BlurFilter's framebuffer covers the whole bank
+    // instead of clipping to sparse ellipse bounds (which made the overlay vanish).
+    g.rect(0, 0, w, this.cloudHeight).fill({ color: 0xf4f6f7, alpha: 0.02 })
+
     for (let m = 0; m < spec.masses; m++) {
       // Masses tile across the width with jitter and heavy overlap.
       const cx = w * ((m + 0.5) / spec.masses + (Math.random() - 0.5) * 0.18)
@@ -217,10 +238,26 @@ export class MountainCloudOverlay extends PIXI.Container {
     }
     layer.addChild(g)
 
-    layer.filters = [
-      new PIXI.BlurFilter({ strength: spec.blurStrength, quality: 3 }),
-      new PIXI.NoiseFilter({ noise: spec.noise }),
-    ]
+    const filters: PIXI.Filter[] = []
+    try {
+      filters.push(
+        new PIXI.BlurFilter({
+          strength: spec.blurStrength,
+          quality: 3,
+          padding: spec.blurStrength * 2,
+        })
+      )
+    } catch (e) {
+      console.warn('MountainCloudOverlay: BlurFilter unavailable', e)
+    }
+    try {
+      filters.push(new PIXI.NoiseFilter({ noise: spec.noise }))
+    } catch (e) {
+      console.warn('MountainCloudOverlay: NoiseFilter unavailable', e)
+    }
+    if (filters.length > 0) {
+      layer.filters = filters
+    }
     return layer
   }
 
@@ -237,14 +274,15 @@ export class MountainCloudOverlay extends PIXI.Container {
     const sprite = new PIXI.Sprite(noiseTex)
     sprite.width = this.screenW
     sprite.height = this.cloudHeight
-    sprite.renderable = false
+    // DisplacementFilter also sets renderable=false; keep it in the tree for sampling.
     this.addChild(sprite)
     this.displacementSprite = sprite
 
-    // Gentle deformation — atmospheric crawl, not boiling water.
-    this.layersRoot.filters = [
-      new PIXI.DisplacementFilter({ sprite, scale: 14 }),
-    ]
+    try {
+      this.layersRoot.filters = [new PIXI.DisplacementFilter({ sprite, scale: 14 })]
+    } catch (e) {
+      console.warn('MountainCloudOverlay: DisplacementFilter unavailable', e)
+    }
   }
 
   private _attachFadeMask(): void {
@@ -257,8 +295,9 @@ export class MountainCloudOverlay extends PIXI.Container {
     mask.height = this.cloudHeight
     this.addChild(mask)
     this.maskSprite = mask
-    // Sprite masks alpha-mask in Pixi v8 (Graphics masks are binary stencil).
-    this.layersRoot.mask = mask
+    // Mask the wrapper, not the displacement node — Pixi v8 drops filtered
+    // content when mask + filters share the same container.
+    this.maskedBank.mask = mask
   }
 
   /** Vertical alpha gradient: solid ceiling → broken middle → clear bottom. */
