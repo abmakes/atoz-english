@@ -54,27 +54,27 @@ export class MountainCloudOverlay extends PIXI.Container {
     // Dense ceiling — near-solid white, slow.
     {
       bandTop: 0.0,
-      bandBottom: 0.42,
-      masses: 5,
-      alphaMin: 0.55,
-      alphaMax: 0.85,
+      bandBottom: 0.48,
+      masses: 7,
+      alphaMin: 0.72,
+      alphaMax: 0.95,
       color: 0xffffff,
-      blurStrength: 18,
-      noise: 0.08,
-      driftAmpX: 10,
+      blurStrength: 20,
+      noise: 0.06,
+      driftAmpX: 8,
       driftAmpY: 0,
-      driftSpeed: 0.00012,
+      driftSpeed: 0.0001,
       driftPhase: 0,
     },
     // Broken wisps — medium, drifts opposite.
     {
       bandTop: 0.28,
       bandBottom: 0.72,
-      masses: 4,
-      alphaMin: 0.16,
-      alphaMax: 0.3,
-      color: 0xf4f6f7,
-      blurStrength: 13,
+      masses: 5,
+      alphaMin: 0.2,
+      alphaMax: 0.38,
+      color: 0xf7f9fa,
+      blurStrength: 14,
       noise: 0.06,
       driftAmpX: 16,
       driftAmpY: 0,
@@ -200,7 +200,8 @@ export class MountainCloudOverlay extends PIXI.Container {
     this.generatedTextures.push(tex)
     const sheet = new PIXI.Sprite(tex)
     sheet.width = this.screenW
-    sheet.height = this.cloudHeight * 0.5
+    // Cover most of the upper bank so the top reads as a white ceiling.
+    sheet.height = this.cloudHeight * 0.58
     this.layersRoot.addChild(sheet)
   }
 
@@ -291,9 +292,10 @@ export class MountainCloudOverlay extends PIXI.Container {
     const ctx = canvas.getContext('2d')
     if (!ctx) return null
     const grad = ctx.createLinearGradient(0, 0, 0, canvas.height)
-    grad.addColorStop(0, 'rgba(255,255,255,0.97)')
-    grad.addColorStop(0.35, 'rgba(255,255,255,0.8)')
-    grad.addColorStop(0.7, 'rgba(255,255,255,0.35)')
+    grad.addColorStop(0, 'rgba(255,255,255,1)')
+    grad.addColorStop(0.28, 'rgba(255,255,255,0.98)')
+    grad.addColorStop(0.55, 'rgba(255,255,255,0.72)')
+    grad.addColorStop(0.82, 'rgba(255,255,255,0.22)')
     grad.addColorStop(1, 'rgba(255,255,255,0)')
     ctx.fillStyle = grad
     ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -309,10 +311,11 @@ export class MountainCloudOverlay extends PIXI.Container {
     const ctx = canvas.getContext('2d')
     if (!ctx) return null
     const grad = ctx.createLinearGradient(0, 0, 0, canvas.height)
+    // Hold full opacity longer so the top third stays a white cloud bank.
     grad.addColorStop(0, 'rgba(255,255,255,1)')
-    grad.addColorStop(0.45, 'rgba(255,255,255,1)')
-    grad.addColorStop(0.7, 'rgba(255,255,255,0.45)')
-    grad.addColorStop(0.88, 'rgba(255,255,255,0.12)')
+    grad.addColorStop(0.55, 'rgba(255,255,255,1)')
+    grad.addColorStop(0.74, 'rgba(255,255,255,0.5)')
+    grad.addColorStop(0.9, 'rgba(255,255,255,0.12)')
     grad.addColorStop(1, 'rgba(255,255,255,0)')
     ctx.fillStyle = grad
     ctx.fillRect(0, 0, canvas.width, canvas.height)
