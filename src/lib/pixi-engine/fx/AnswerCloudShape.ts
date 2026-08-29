@@ -8,16 +8,16 @@ export interface AnswerCloudShapeOptions {
 }
 
 /**
- * Cumulus answer badge: overlapping puffs flattened to one silhouette, then
- * blurred as a whole so edges match the atmospheric bank. A solid white core
- * keeps labels readable. Never draw per-puff alpha — parent fade would show
- * the individual circles.
+ * Cumulus answer badge: overlapping white puffs of mixed sizes (classic cloud
+ * silhouette). Drawn solid, then softened as ONE shape so construction circles
+ * never show through. No hard oval substitute — the lumpy puffs are the look.
  */
 export class AnswerCloudShape extends PIXI.Container {
   readonly cloudWidth: number
   readonly cloudHeight: number
   readonly textSafeWidth: number
   readonly textSafeHeight: number
+  private ownedTexture: PIXI.Texture | null = null
 
   constructor(options: AnswerCloudShapeOptions) {
     super()
@@ -26,47 +26,102 @@ export class AnswerCloudShape extends PIXI.Container {
     this.textSafeWidth = options.width * 0.62
     this.textSafeHeight = options.height * 0.42
 
-    const w = this.cloudWidth
-    const h = this.cloudHeight
-
-    const puffs = new PIXI.Graphics()
-    this._drawPuffs(puffs, options.seed ?? 0)
-
-    // Flatten first so overlapping ellipses become one opaque sprite. Then blur
-    // that silhouette — not each circle — so seams cannot reappear if the
-    // parent is ever faded.
-    const flat = new PIXI.Container()
-    flat.addChild(puffs)
-    flat.cacheAsTexture(true)
-
-    const bank = new PIXI.Container()
-    bank.addChild(flat)
-    bank.filterArea = new PIXI.Rectangle(-w, -h, w * 2, h * 2)
-    try {
-      bank.filters = [
-        new PIXI.BlurFilter({
-          strength: 12,
-          quality: 3,
-          padding: 24,
-        }),
-      ]
-    } catch (e) {
-      console.warn('AnswerCloudShape: BlurFilter unavailable', e)
+    const seed = options.seed ?? 0
+    const sprite = this._makeSoftPuffSprite(seed)
+    if (sprite) {
+      this.addChild(sprite)
+      return
     }
-    this.addChild(bank)
 
-    const core = new PIXI.Graphics()
-    core.ellipse(0, 0.04 * h, w * 0.38, h * 0.3).fill({ color: 0xffffff, alpha: 1 })
-    this.addChild(core)
+    // SSR / no-canvas fallback: same overlapping puffs, no soft edge.
+    const g = new PIXI.Graphics()
+    this._drawPuffsOnGraphics(g, seed)
+    this.addChild(g)
   }
 
-  private _drawPuffs(g: PIXI.Graphics, seed: number): void {
+  public override destroy(options?: PIXI.DestroyOptions): void {
+    if (this.ownedTexture) {
+      this.ownedTexture.destroy(true)
+      this.ownedTexture = null
+    }
+    super.destroy(options)
+  }
+
+  /**
+   * Paint overlapping puffs onto a canvas, blur the whole silhouette once, and
+   * return a centered sprite. Every option gets the same soft-cloud treatment.
+   */
+  private _makeSoftPuffSprite(seed: number): PIXI.Sprite | null {
+    if (typeof document === 'undefined') return null
+
+    const blurPx = Math.max(6, Math.round(Math.min(this.cloudWidth, this.cloudHeight) * 0.07))
+    const pad = blurPx * 2 + 8
+    const cw = Math.max(8, Math.ceil(this.cloudWidth))
+    const ch = Math.max(8, Math.ceil(this.cloudHeight))
+    const tw = cw + pad * 2
+    const th = ch + pad * 2
+
+    const hard = document.createElement('canvas')
+    hard.width = tw
+    hard.height = th
+    const hctx = hard.getContext('2d')
+    if (!hctx) return null
+
+    const ox = tw / 2
+    const oy = th / 2
+    const puffs = this._puffLayout(seed)
+    hctx.fillStyle = '#ffffff'
+    for (const [cx, cy, rx, ry] of puffs) {
+      hctx.beginPath()
+      hctx.ellipse(ox + cx * cw, oy + cy * ch, rx * cw, ry * ch, 0, 0, Math.PI * 2)
+      hctx.fill()
+    }
+
+    // Soften the silhouette as a whole (not per circle).
+    const soft = document.createElement('canvas')
+    soft.width = tw
+    soft.height = th
+    const sctx = soft.getContext('2d')
+    if (!sctx) return null
+    sctx.filter = `blur(${blurPx}px)`
+    sctx.drawImage(hard, 0, 0)
+    sctx.filter = 'none'
+    // Re-stamp solid puffs slightly smaller so the center stays readable white
+    // while the outer knobs keep the soft cloud halo.
+    sctx.fillStyle = '#ffffff'
+    for (const [cx, cy, rx, ry] of puffs) {
+      sctx.beginPath()
+      sctx.ellipse(
+        ox + cx * cw,
+        oy + cy * ch,
+        rx * cw * 0.88,
+        ry * ch * 0.88,
+        0,
+        0,
+        Math.PI * 2
+      )
+      sctx.fill()
+    }
+
+    const texture = PIXI.Texture.from(soft)
+    this.ownedTexture = texture
+    const sprite = new PIXI.Sprite(texture)
+    sprite.anchor.set(0.5)
+    return sprite
+  }
+
+  private _drawPuffsOnGraphics(g: PIXI.Graphics, seed: number): void {
     const w = this.cloudWidth
     const h = this.cloudHeight
-    const rnd = mulberry32(seed + 11)
+    for (const [cx, cy, rx, ry] of this._puffLayout(seed)) {
+      g.ellipse(cx * w, cy * h, rx * w, ry * h).fill({ color: 0xffffff, alpha: 1 })
+    }
+  }
 
-    // Relative puffs: [cx, cy, rx, ry] in fractions of width/height.
-    const puffs: Array<[number, number, number, number]> = [
+  /** Relative puffs: [cx, cy, rx, ry] in fractions of width/height. */
+  private _puffLayout(seed: number): Array<readonly [number, number, number, number]> {
+    const rnd = mulberry32(seed + 11)
+    const base: Array<[number, number, number, number]> = [
       [0.0, 0.18, 0.42, 0.32],
       [-0.28, 0.12, 0.26, 0.28],
       [0.28, 0.14, 0.27, 0.27],
@@ -77,19 +132,16 @@ export class AnswerCloudShape extends PIXI.Container {
       [0.36, 0.0, 0.19, 0.22],
       [-0.08, 0.28, 0.22, 0.2],
       [0.18, 0.26, 0.2, 0.18],
+      // Dense center so answer text sits on solid white.
+      [0.0, 0.04, 0.36, 0.28],
     ]
 
-    const jittered = puffs.map(([cx, cy, rx, ry]) => {
+    return base.map(([cx, cy, rx, ry]) => {
       const jx = (rnd() - 0.5) * 0.06
       const jy = (rnd() - 0.5) * 0.05
       const js = 0.92 + rnd() * 0.16
       return [cx + jx, cy + jy, rx * js, ry * js] as const
     })
-
-    for (const [cx, cy, rx, ry] of jittered) {
-      g.ellipse(cx * w, cy * h, rx * w, ry * h).fill({ color: 0xffffff, alpha: 1 })
-    }
-    g.ellipse(0, 0.04 * h, w * 0.36, h * 0.28).fill({ color: 0xffffff, alpha: 1 })
   }
 }
 
