@@ -211,8 +211,7 @@ export class NinjaClimbUIManager {
     for (const btn of this.cloudButtons) {
       btn.container.eventMode = enabled ? 'static' : 'none'
       btn.container.cursor = enabled ? 'pointer' : 'default'
-      // Keep alpha at 1. Fading the container makes overlapping puffs composite
-      // separately and shows the circles that make up the cloud.
+      // Do not fade the container — text stays opaque; cloud shape owns its alpha.
     }
   }
 
@@ -443,7 +442,8 @@ export class NinjaClimbUIManager {
   }
 
   public update(deltaMs: number): void {
-    this.bobPhase += deltaMs * 0.003
+    // Half the previous drift rate so side-to-side motion reads calmer.
+    this.bobPhase += deltaMs * 0.0015
     for (let i = 0; i < this.cloudButtons.length; i++) {
       const btn = this.cloudButtons[i]
       // Clouds drift side to side instead of bobbing vertically.
@@ -506,6 +506,8 @@ export class NinjaClimbUIManager {
         height: cloudH,
         seed: index * 17 + 3,
       })
+      // Flat silhouette — safe to tint transparency without showing puff seams.
+      cloud.alpha = 0.9
       container.addChild(cloud)
 
       const label = new PIXI.Text({
