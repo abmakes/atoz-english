@@ -73,8 +73,8 @@ Init order inside `ThreeRuntime`:
 
 1. `ThreeWorld.init(mount)` — WebGLRenderer, canvas appended to the HUD mount node
 2. `GameSession.init(config)` — managers, **RuleEngine last**
-3. Emit `ENGINE_EVENTS.ENGINE_READY_FOR_GAME` (background music rule)
-4. `gameFactory(context)` then `game.init()`
+3. `await game.init()` (QuizDataSource + scene + raycast)
+4. Emit `ENGINE_EVENTS.ENGINE_READY_FOR_GAME` (background music rule)
 5. `GameplayView` subscribes to HUD events, then `runtime.start()` → `game.start()` + RAF
 
 Destroy order: cancel RAF → unbind HUD pause listeners → `game.destroy()` → `session.destroy()` → `world.destroy()` (renderer dispose + context loss + canvas remove).
@@ -196,7 +196,7 @@ Source of truth: `src/lib/pixi-engine/core/EventTypes.ts`. 3D games must use the
 
 | Constant | Payload | 3D note |
 |----------|---------|---------|
-| `ENGINE_EVENTS.ENGINE_READY_FOR_GAME` | none | Emitted by `ThreeRuntime` after session init (music rule) |
+| `ENGINE_EVENTS.ENGINE_READY_FOR_GAME` | none | Emitted by `ThreeRuntime` after `ThreeGame.init()` (music rule) |
 | `ENGINE_EVENTS.RESIZED` | `{ width, height }` | Pixi path. Three uses `runtime.resize` directly |
 
 ### Game state

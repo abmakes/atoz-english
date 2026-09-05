@@ -50,7 +50,6 @@ export class ThreeRuntime implements GameRuntime {
       const services = session.getServices()
       services.eventBus.on(GAME_STATE_EVENTS.GAME_PAUSED, this.handleHudPaused)
       services.eventBus.on(GAME_STATE_EVENTS.GAME_RESUMED, this.handleHudResumed)
-      services.eventBus.emit(ENGINE_EVENTS.ENGINE_READY_FOR_GAME)
 
       const game = this.gameFactory({
         config: Object.freeze({ ...config }),
@@ -61,6 +60,10 @@ export class ThreeRuntime implements GameRuntime {
       this.game = game
       await game.init()
       if (this.destroyRequested) return
+
+      // After the 3D game is ready so a failed quiz fetch does not start music
+      // and immediately tear the session down.
+      services.eventBus.emit(ENGINE_EVENTS.ENGINE_READY_FOR_GAME)
     } catch (error) {
       await this.destroy()
       throw error

@@ -16,13 +16,16 @@ type FetchLike = (
   init?: RequestInit
 ) => Promise<Response>
 
+/** Window.fetch throws "Illegal invocation" if called without a window receiver. */
+const boundFetch: FetchLike = (input, init) => globalThis.fetch(input, init)
+
 /**
  * Fetches and validates quiz content without preloading renderer-specific
  * media. Pixi data managers may keep their AssetLoader path; Three games use
  * this source and choose TextureLoader/GLTFLoader only when required.
  */
 export class QuizDataSource {
-  constructor(private readonly fetcher: FetchLike = fetch) {}
+  constructor(private readonly fetcher: FetchLike = boundFetch) {}
 
   public async loadQuiz(quizId: string): Promise<RuntimeQuizData> {
     if (!quizId.trim()) {

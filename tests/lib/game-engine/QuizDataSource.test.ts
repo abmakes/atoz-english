@@ -65,6 +65,38 @@ describe('QuizDataSource', () => {
     await expect(badType.loadQuiz('quiz-1')).rejects.toThrow(/unsupported type/)
   })
 
+  it('uses a window-bound fetch so browsers do not throw Illegal invocation', async () => {
+    function windowFetch(
+      this: unknown,
+      input: RequestInfo | URL,
+      init?: RequestInit
+    ): Promise<Response> {
+      if (this !== globalThis) {
+        throw new TypeError(
+          "Failed to execute 'fetch' on 'Window': Illegal invocation"
+        )
+      }
+      return Promise.resolve(
+        jsonResponse({
+          id: 'quiz-1',
+          questions: [validQuestion],
+          quizType: QuestionType.MULTIPLE_CHOICE,
+        })
+      )
+    }
+
+    vi.stubGlobal('fetch', windowFetch)
+    try {
+      const source = new QuizDataSource()
+      await expect(source.loadQuiz('quiz-1')).resolves.toMatchObject({
+        id: 'quiz-1',
+        questions: [{ id: 'q1' }],
+      })
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('rejects empty quiz ids and HTTP errors', async () => {
     const source = new QuizDataSource(
       vi.fn().mockResolvedValue(jsonResponse({}, false, 404))

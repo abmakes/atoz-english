@@ -394,8 +394,8 @@ This flow ensures that all dependencies are properly initialized before they are
 
 1. `ThreeWorld.init(mount)` — Scene, PerspectiveCamera, WebGLRenderer (pixel ratio ≤ 1.75)
 2. `GameSession.init(config)` — same managers as Pixi, RuleEngine last
-3. Emit `ENGINE_READY_FOR_GAME`
-4. Construct `ThreeGame`, `await game.init()` (QuizDataSource + procedural scene + raycast)
+3. `await game.init()` (QuizDataSource + procedural scene + raycast)
+4. Emit `ENGINE_READY_FOR_GAME` (after the 3D game is ready so a failed quiz fetch does not start music)
 5. `start()` — `game.start()` + one `requestAnimationFrame` loop
 6. HUD `GAME_PAUSED` / `GAME_RESUMED` pause timers and the game
 7. Destroy: cancel RAF → game → session → world (including `disposeObject3D` and context loss)
