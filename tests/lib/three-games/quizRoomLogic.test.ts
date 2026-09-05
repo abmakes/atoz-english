@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   createQuizRoomAnswerPayload,
   isQuizRoomQuestionEligible,
+  resolveQuizRoomImageUrl,
+  uniqueQuizRoomImageUrls,
 } from '@/lib/three-games/quiz-room/quizRoomLogic'
 import { QuestionType } from '@/types/question_types'
 import type { QuestionData } from '@/types'
@@ -48,5 +50,21 @@ describe('quizRoomLogic', () => {
       isCorrect: false,
       remainingTimeMs: 0,
     })
+  })
+
+  it('resolves real question image URLs and skips placeholders', () => {
+    expect(resolveQuizRoomImageUrl('  https://cdn.example/cat.jpg ')).toBe(
+      'https://cdn.example/cat.jpg'
+    )
+    expect(resolveQuizRoomImageUrl('/images/placeholder.webp')).toBeNull()
+    expect(resolveQuizRoomImageUrl('')).toBeNull()
+    expect(resolveQuizRoomImageUrl(undefined)).toBeNull()
+    expect(
+      uniqueQuizRoomImageUrls([
+        { ...mc, imageUrl: '/images/placeholder.webp' },
+        { ...mc, id: 'q2', imageUrl: '/photos/a.jpg' },
+        { ...mc, id: 'q3', imageUrl: '/photos/a.jpg' },
+      ])
+    ).toEqual(['/photos/a.jpg'])
   })
 })

@@ -18,6 +18,8 @@ import { disposeObject3D } from '@/lib/three-engine/ThreeWorld'
 import {
   createQuizRoomAnswerPayload,
   isQuizRoomQuestionEligible,
+  resolveQuizRoomImageUrl,
+  uniqueQuizRoomImageUrls,
 } from './quizRoomLogic'
 
 const QUESTION_TIMER_ID = 'quizRoom3dQuestionTimer'
@@ -48,6 +50,7 @@ export class QuizRoom3DGame implements ThreeGame {
   private disposed = false
   private elapsedMs = 0
   private feedbackTimeout: ReturnType<typeof setTimeout> | null = null
+  private questionGeneration = 0
 
   constructor(private readonly context: ThreeGameContext) {
     this.scene = context.world.getScene()
@@ -69,6 +72,7 @@ export class QuizRoom3DGame implements ThreeGame {
     this.totalQuestions = this.sequencer.getTotalQuestionsToAsk()
 
     this._buildRoom()
+    prefetchQuizRoomImages(uniqueQuizRoomImageUrls(this.questions))
     this.context.world
       .getCanvas()
       .addEventListener('pointerup', this.handlePointerUp)
@@ -111,6 +115,7 @@ export class QuizRoom3DGame implements ThreeGame {
 
   public destroy(): void {
     this.disposed = true
+    this.questionGeneration += 1
     if (this.feedbackTimeout) {
       clearTimeout(this.feedbackTimeout)
       this.feedbackTimeout = null
@@ -136,8 +141,8 @@ export class QuizRoom3DGame implements ThreeGame {
     this.scene.background = new THREE.Color(0x9bdcff)
     this.scene.fog = new THREE.Fog(0x9bdcff, 14, 30)
 
-    this.camera.position.set(0, 4.8, 10)
-    this.camera.lookAt(0, 1.8, 0)
+    this.camera.position.set(0, 4.5, 10.4)
+    this.camera.lookAt(0, 2.15, 0)
 
     const ambient = new THREE.HemisphereLight(0xffffff, 0x5a7d44, 2.1)
     this.scene.add(ambient)
@@ -191,9 +196,12 @@ export class QuizRoom3DGame implements ThreeGame {
       (this.sequencer?.getCurrentProgressIndex() ?? 1) - 1
     this.answerLocked = false
     this.currentQuestion = question
+    this.questionGeneration += 1
+    const generation = this.questionGeneration
     this._clearQuestionGroup()
     this.questionGroup = this._createQuestionGroup(this.currentQuestion)
     this.scene.add(this.questionGroup)
+    void this._attachQuestionImage(this.currentQuestion, this.questionGroup, generation)
 
     const durationMs = this.context.config.intensityTimeLimit * 1000
     if (this.context.services.timerManager.getTimer(QUESTION_TIMER_ID)) {
@@ -209,17 +217,23 @@ export class QuizRoom3DGame implements ThreeGame {
 
   private _createQuestionGroup(question: QuestionData): THREE.Group {
     const group = new THREE.Group()
+    const hasImage = resolveQuizRoomImageUrl(question.imageUrl) !== null
 
     const board = createTextPlane(
       question.question,
       1024,
-      256,
+      hasImage ? 420 : 256,
       '#ffffff',
       '#114257',
-      64
+      hasImage ? 52 : 64
     )
-    board.scale.set(7.6, 1.9, 1)
-    board.position.set(0, 4.25, -2.5)
+    if (hasImage) {
+      board.scale.set(4.5, 2.15, 1)
+      board.position.set(2.45, 3.25, -2.15)
+    } else {
+      board.scale.set(7.6, 1.9, 1)
+      board.position.set(0, 4.25, -2.5)
+    }
     group.add(board)
 
     const counter = createTextPlane(
@@ -231,8 +245,12 @@ export class QuizRoom3DGame implements ThreeGame {
       38
     )
     counter.scale.set(3.2, 0.6, 1)
-    counter.position.set(0, 5.45, -2.4)
+    counter.position.set(0, hasImage ? 5.15 : 5.45, -2.4)
     group.add(counter)
+
+    if (hasImage) {
+      group.add(createImagePlaceholder())
+    }
 
     const spacing = 2.35
     const startX = -((question.answers.length - 1) * spacing) / 2
@@ -264,6 +282,34 @@ export class QuizRoom3DGame implements ThreeGame {
     })
 
     return group
+  }
+
+  private async _attachQuestionImage(
+    question: QuestionData,
+    group: THREE.Group,
+    generation: number
+  ): Promise<void> {
+    const url = resolveQuizRoomImageUrl(question.imageUrl)
+    if (!url) return
+
+    const texture = await loadQuizRoomImageTexture(url)
+    if (
+      this.disposed ||
+      generation !== this.questionGeneration ||
+      group !== this.questionGroup
+    ) {
+      texture?.dispose()
+      return
+    }
+
+    const placeholder = group.getObjectByName('quiz-room-image-placeholder')
+    if (placeholder) {
+      group.remove(placeholder)
+      disposeObject3D(placeholder)
+    }
+    if (!texture) return
+
+    group.add(createQuestionImageFrame(texture))
   }
 
   private _selectAnswer(selectedIndex: number | null): void {
@@ -430,4 +476,97 @@ function roundedRect(
 ): void {
   context.beginPath()
   context.roundRect(x, y, width, height, radius)
+}
+
+function prefetchQuizRoomImages(urls: string[]): void {
+  urls.forEach((url) => {
+    const image = new Image()
+    image.crossOrigin = 'anonymous'
+    image.src = url
+  })
+}
+
+function loadQuizRoomImageTexture(url: string): Promise<THREE.Texture | null> {
+  return new Promise((resolve) => {
+    const image = new Image()
+    image.crossOrigin = 'anonymous'
+    image.onload = () => {
+      const texture = new THREE.Texture(image)
+      texture.colorSpace = THREE.SRGBColorSpace
+      texture.minFilter = THREE.LinearFilter
+      texture.magFilter = THREE.LinearFilter
+      texture.needsUpdate = true
+      resolve(texture)
+    }
+    image.onerror = () => {
+      console.warn(`3D Quiz Room: could not load question image ${url}`)
+      resolve(null)
+    }
+    image.src = url
+  })
+}
+
+function imageAspect(texture: THREE.Texture): number {
+  const source = texture.image as { width?: number; height?: number; naturalWidth?: number; naturalHeight?: number }
+  const width = source.naturalWidth || source.width || 4
+  const height = source.naturalHeight || source.height || 3
+  return Math.max(0.45, Math.min(2.4, width / Math.max(1, height)))
+}
+
+function imagePlaneSize(aspect: number): { width: number; height: number } {
+  const maxWidth = 3.85
+  const maxHeight = 2.35
+  let width = maxWidth
+  let height = width / aspect
+  if (height > maxHeight) {
+    height = maxHeight
+    width = height * aspect
+  }
+  return { width, height }
+}
+
+function createImagePlaceholder(): THREE.Group {
+  const { width, height } = imagePlaneSize(4 / 3)
+  const group = createFramedPlane(width, height, null)
+  group.name = 'quiz-room-image-placeholder'
+  group.position.set(-2.45, 3.05, -2.15)
+  return group
+}
+
+function createQuestionImageFrame(texture: THREE.Texture): THREE.Group {
+  const { width, height } = imagePlaneSize(imageAspect(texture))
+  const group = createFramedPlane(width, height, texture)
+  group.position.set(-2.45, 3.05, -2.15)
+  return group
+}
+
+function createFramedPlane(
+  width: number,
+  height: number,
+  texture: THREE.Texture | null
+): THREE.Group {
+  const group = new THREE.Group()
+  const frame = new THREE.Mesh(
+    new THREE.BoxGeometry(width + 0.2, height + 0.2, 0.1),
+    new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.45,
+      metalness: 0.05,
+    })
+  )
+  frame.castShadow = true
+  group.add(frame)
+
+  const photo = new THREE.Mesh(
+    new THREE.PlaneGeometry(width, height),
+    texture
+      ? new THREE.MeshBasicMaterial({ map: texture, toneMapped: false })
+      : new THREE.MeshStandardMaterial({
+          color: 0xc9edff,
+          roughness: 0.9,
+        })
+  )
+  photo.position.z = 0.06
+  group.add(photo)
+  return group
 }

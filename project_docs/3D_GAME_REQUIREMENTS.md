@@ -313,7 +313,7 @@ GPU leaks fail classroom sessions on cheap Chromebooks. On `destroy()`:
 
 ## Smoke mode: 3D Quiz Room (`quiz-room-3d`)
 
-Procedural colorful room. Two to four answer pedestals with canvas-texture labels. Click / tap a pedestal to answer.
+Procedural colorful room. Two to four answer pedestals with canvas-texture labels. Click / tap a pedestal to answer. When a question has a real `imageUrl` (not the shared placeholder), the photo loads onto a framed plane beside the prompt. Images are fetched with `crossOrigin = 'anonymous'` and skipped on failure so play can continue.
 
 Eligibility: every question is multiple choice, 2–4 non-empty answers, `correctAnswer` present in `answers`.
 
