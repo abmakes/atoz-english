@@ -16,13 +16,13 @@ import {
     ControlsConfig,
     AudioConfiguration,
 } from '@/lib/pixi-engine/config/GameConfig';
-import { PixiEngineManagers } from '@/lib/pixi-engine/core/PixiEngine';
-import type { BaseGame } from '@/lib/pixi-engine/game/BaseGame';
 import type { NavMenuItemProps } from './NavMenu';
 import { GAME_EVENTS, ENGINE_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
 import { PowerupConfig, STANDARD_SCORE_MODE_POWERUPS } from '@/lib/pixi-engine/config/PowerupConfig';
 import LoadingSpinner from '../loading_spinner';
 import { useGameStore } from '@/stores/useGameStore'; // Import the store
+import { gameModeRegistry } from '@/lib/game-engine/modes/builtinGameModes';
+import type { GameRuntimeFactory } from '@/lib/game-engine/runtime/GameRuntime';
 
 const GameplayView = dynamic(() => import('./GameplayView'), {
     ssr: false,
@@ -33,8 +33,6 @@ const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height
 
 type GameView = 'setup' | 'playing' | 'gameover';
 
-type GameConstructor = new (config: GameConfig, managers: PixiEngineManagers) => BaseGame;
-
 /**
  * Props for the GameContainer component.
  */
@@ -43,15 +41,6 @@ interface GameContainerProps {
   quizId: string;
   /** The URL slug for the game type (e.g., 'multiple-choice'). */
   gameSlug: string;
-}
-
-async function loadGameConstructor(gameSlug: string): Promise<GameConstructor> {
-  if (gameSlug === 'splash-dash') {
-    const mod = await import('@/lib/pixi-games/splash-dash/SplashDashGame');
-    return mod.SplashDashGame as unknown as GameConstructor;
-  }
-  const mod = await import('@/lib/pixi-games/multiple-choice/MultipleChoiceGame');
-  return mod.MultipleChoiceGame as unknown as GameConstructor;
 }
 
 /**
@@ -68,21 +57,18 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
   const [celebrationImage, setCelebrationImage] = useState<string | undefined>(undefined);
   // const [isPaused, setIsPaused] = useState(false);
   
-  const pixiMountPointRef = useRef<HTMLDivElement>(null);
+  const gameMountPointRef = useRef<HTMLDivElement>(null);
   const setSelectedQuiz = useGameStore((state) => state.setSelectedQuiz);
-  const gameCtorRef = useRef<GameConstructor | null>(null);
+  const runtimeFactoryRef = useRef<GameRuntimeFactory | null>(null);
   const [isStartingPlay, setIsStartingPlay] = useState(false);
 
-  const createGameInstance = useCallback(
-    (config: GameConfig, managers: PixiEngineManagers) => {
-      const Ctor = gameCtorRef.current;
-      if (!Ctor) {
-        throw new Error('Game module not loaded yet');
-      }
-      return new Ctor(config, managers);
-    },
-    []
-  );
+  const createRuntime = useCallback(async () => {
+    const factory = runtimeFactoryRef.current;
+    if (!factory) {
+      throw new Error('Game runtime has not been selected.');
+    }
+    return factory();
+  }, []);
 
   useEffect(() => {
       setSelectedQuiz(quizId);
@@ -102,13 +88,13 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
       }
 
       setIsStartingPlay(true);
-      try {
-        gameCtorRef.current = await loadGameConstructor(gameSlug);
-      } catch (err) {
-        console.error('Failed to load game module:', err);
+      const modeDefinition = gameModeRegistry.get(gameSlug);
+      if (!modeDefinition) {
+        console.error(`Unknown game mode: ${gameSlug}`);
         setIsStartingPlay(false);
         return;
       }
+      runtimeFactoryRef.current = modeDefinition.loadRuntime;
 
       // Fire-and-forget play count (once per browser session)
       void import('@/lib/record-quiz-play').then(({ recordQuizPlay }) => {
@@ -163,7 +149,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
            if (setupData.gameFeatures === 'boosted') {
                console.log("GameContainer: Applying BOOSTED scoring rules.");
                modifyScoreAction.params.mode = 'progressive';
-               modifyScoreAction.params.timerId = 'multipleChoiceQuestionTimer'; // Make sure this ID matches game timer
+               modifyScoreAction.params.timerId = modeDefinition.questionTimerId;
                modifyScoreAction.params.pointsPerSecond = 5; // Set progressive points
                delete modifyScoreAction.params.points; // Clean up fixed points param
            } else { // 'basic' or default
@@ -242,57 +228,12 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
       };
 
       // --- Define Controls Config (using ControlsConfig) ---
-      const controlConfig: ControlsConfig = gameSlug === 'splash-dash' ? {
-          // Splash Dash specific controls for two players
-          actionMap: {
-              MOVE_PLAYER1: { 
-                  keyboard: 'KeyA',
-                  touchArea: 'button-player1'  // Add touch area mapping
-              },
-              MOVE_PLAYER2: { 
-                  keyboard: 'KeyL',
-                  touchArea: 'button-player2'  // Add touch area mapping
-              },
-          },
-          playerMappings: [
-              { playerId: 'player1', deviceType: 'keyboard' },
-              { playerId: 'player2', deviceType: 'keyboard' }
-          ],
-          gamepadDeadzone: DEFAULT_GAME_CONFIG.controls.gamepadDeadzone,
-      } : {
-          // Multiple Choice controls
-          actionMap: { // Use action names consistent with DEFAULT_CONTROLS_CONFIG
-              UP: { keyboard: 'ArrowUp' },
-              DOWN: { keyboard: 'ArrowDown' },
-              LEFT: { keyboard: 'ArrowLeft' },
-              RIGHT: { keyboard: 'ArrowRight' },
-              ACTION_A: { keyboard: 'Space' }, // Map Space to ACTION_A
-              ACTION_B: { keyboard: 'Enter' }, // Map Enter to ACTION_B
-          },
-          playerMappings: [ // Need at least one player mapping usually
-                { playerId: 'player1', deviceType: 'keyboard' } 
-          ],
-          gamepadDeadzone: DEFAULT_GAME_CONFIG.controls.gamepadDeadzone,
-      };
+      const controlConfig: ControlsConfig = modeDefinition.buildControls(
+          DEFAULT_GAME_CONFIG.controls
+      );
       
       // --- Define Game-Specific Assets ---
-      const assetConfig = gameSlug === 'splash-dash' ? {
-          bundles: [
-              {
-                  name: 'splash-dash',
-                  assets: [
-                      {
-                          key: 'crate_5_4',
-                          src: '/images/splash-dash/crate_5_4.png'
-                      },
-                      {
-                          key: 'crate_square',
-                          src: '/images/splash-dash/crate_square.png'
-                      }
-                  ]
-              }
-          ]
-      } : DEFAULT_GAME_CONFIG.assets; // Use default for other games
+      const assetConfig = modeDefinition.buildAssets(DEFAULT_GAME_CONFIG.assets);
 
       // --- Define Audio Configuration ---
       const audioConfig: AudioConfiguration = {
@@ -450,8 +391,8 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
                     themeClassName={themeClassName}
                     onGameOver={handleGameOver}
                     onExit={handleExit}
-                    pixiMountPointRef={pixiMountPointRef as React.RefObject<HTMLDivElement>}
-                    gameFactory={createGameInstance}
+                    gameMountPointRef={gameMountPointRef as React.RefObject<HTMLDivElement>}
+                    runtimeFactory={createRuntime}
                 />
             </>
         );

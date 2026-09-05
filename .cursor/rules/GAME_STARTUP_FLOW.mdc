@@ -7,17 +7,19 @@ Reference this document in any changes that are made to games or files that are 
 
 # Game Startup Flow Documentation
 
-This document outlines the complete initialization sequence from user interaction to game play, including all dependencies and data flow at each step.
+This document outlines the complete initialization sequence from user interaction to game play, including all dependencies and data flow at each step. 3D integration contract: [3D_GAME_REQUIREMENTS.md](mdc:project_docs/3D_GAME_REQUIREMENTS.md)
 
 ## Overview
 
 The game startup follows this high-level flow:
 1. **GameSetupPanel** - User configuration
-2. **GameContainer** - Configuration assembly and view management
-3. **GameplayView** - React wrapper for PixiJS
-4. **PixiEngine** - Core engine initialization
-5. **BaseGame** - Abstract game foundation
-6. **MultipleChoiceGame** - Specific game implementation
+2. **GameContainer** - Configuration assembly, **mode registry** lookup, view management
+3. **GameplayView** - React wrapper for one `GameRuntime` (Pixi or Three) plus HUD
+4. **GameSession** - Renderer-neutral managers (RuleEngine last)
+5. **PixiEngine** *or* **ThreeRuntime** - Renderer + one frame loop
+6. **BaseGame** *or* **ThreeGame** - Mode-specific implementation
+
+Unknown `gameSlug` values are errors. They must not fall through to Multiple Choice.
 
 ---
 
@@ -89,9 +91,10 @@ const fullEngineConfig: GameConfig = {
 
 ### Flow
 1. Receives `GameSetupData` from GameSetupPanel
-2. Assembles complete `GameConfig` with all subsystems
-3. Sets `currentView = 'playing'`
-4. Renders `GameplayView` with assembled config
+2. Looks up `gameModeRegistry.get(gameSlug)` (timer id, controls, assets, runtime factory)
+3. Assembles complete `GameConfig` with all subsystems
+4. Sets `currentView = 'playing'`
+5. Renders `GameplayView` with `runtimeFactory` + mount ref
 
 ---
 
@@ -100,37 +103,50 @@ const fullEngineConfig: GameConfig = {
 **File:** `src/components/game_ui/GameplayView.tsx`
 
 ### Purpose
-React component that manages PixiJS engine lifecycle and UI overlay.
+React component that manages one game runtime lifecycle and the HUD overlay.
 
 ### Dependencies
-- **Input:** `GameConfig`, `pixiMountPointRef`, `gameFactory`
-- **Output:** PixiEngine instance with game running
+- **Input:** `GameConfig`, `gameMountPointRef`, `runtimeFactory`
+- **Output:** Initialized `GameRuntime` with game running
 
 ### Key Responsibilities
 ```typescript
-// Creates PixiEngine instance
-const engine = new PixiEngine({ 
-  targetElement: pixiMountPointRef.current 
-});
-
-// Initializes with config and game factory
-await engine.init(config, gameFactory);
-
-// Attaches event listeners for game events
-currentManagers.eventBus.on(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
-currentManagers.eventBus.on(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
+const runtime = await runtimeFactory();
+await runtime.init({ target: gameMountPointRef.current, config });
+const services = runtime.getServices();
+services.eventBus.on(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
+services.eventBus.on(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
+runtime.start();
 ```
 
-### Manager Dependencies
-- **EventBus:** For game event communication
-- **ScoringManager:** For score updates
-- **GameStateManager:** For game state changes
+Pixi: `PixiRuntimeAdapter` wraps `PixiEngine` (`start()` is a no-op because Pixi still starts inside `init()`).
+Three: `ThreeRuntime.start()` calls `ThreeGame.start()` and begins the RAF loop.
 
 ### Flow
-1. Creates `PixiEngine` instance with DOM mount point
-2. Calls `engine.init(config, gameFactory)`
-3. Attaches React event listeners to engine events
+1. Creates the selected runtime via `runtimeFactory`
+2. Calls `runtime.init({ target, config })`
+3. Attaches React event listeners to session events
 4. Manages UI overlay (scores, controls, fullscreen)
+5. Destroys the runtime on unmount
+
+---
+
+---
+
+## 3b. GameSession (Shared Managers)
+
+**File:** `src/lib/game-engine/core/GameSession.ts`
+
+Owns EventBus, StorageManager, GameStateManager, TimerManager, ControlsManager, ScoringManager, then (in `init`) PowerUpManager, AudioManager, and **RuleEngine last**. PixiEngine and ThreeRuntime both call `session.init(config)` / `session.destroy()`.
+
+Constructor-only managers do not need `GameConfig`. Config-dependent init order:
+
+1. `gameStateManager.init(config)` — copies teams so `setActiveTeam` can validate IDs
+2. `controlsManager.init` + `enable`
+3. `scoringManager.init(teams, gameMode)`
+4. `PowerUpManager`
+5. `AudioManager` + default sounds + settings listeners
+6. `RuleEngine` (depends on all of the above)
 
 ---
 
@@ -162,38 +178,8 @@ bundleLoadPromise = Promise.all(bundleNames.map(name =>
 ```
 
 #### Phase 2: Manager Initialization
-```typescript
-// Core managers (no config dependency)
-this.eventBus = new EventBus();
-this.storageManager = new StorageManager();
-this.gameStateManager = new GameStateManager(this.eventBus);
-this.timerManager = new TimerManager(this.eventBus, this.storageManager);
-this.controlsManager = new ControlsManager();
-this.scoringManager = new ScoringManager(this.eventBus, this.storageManager);
 
-// Config-dependent managers
-this.controlsManager.init(this.config.controls, this.eventBus);
-this.scoringManager.init(this.config.teams, this.config.gameMode);
-this.powerUpManager = new PowerUpManager(this.eventBus, this.config);
-
-// AudioManager with theme and config
-this.audioManager = new AudioManager(
-  this.eventBus, 
-  this.storageManager, 
-  themeConfig.soundsBasePath,
-  this.config.initialMusicMuted,
-  this.config.initialSfxMuted
-);
-
-// RuleEngine (depends on all other managers)
-this.ruleEngine = new RuleEngine(this.eventBus, this.config, {
-  timerManager: this.timerManager,
-  gameStateManager: this.gameStateManager,
-  scoringManager: this.scoringManager,
-  powerUpManager: this.powerUpManager,
-  audioManager: this.audioManager
-});
-```
+Delegated to `GameSession.init(config)` (RuleEngine last). PixiEngine then aliases `ruleEngine`, `powerUpManager`, and `audioManager` from `session.getServices()`.
 
 #### Phase 3: Game Creation
 ```typescript
@@ -372,9 +358,11 @@ this.setState({ phase: 'playing' });
 ### Configuration Dependencies
 1. **GameSetupPanel** → **GameContainer**: `GameSetupData`
 2. **GameContainer** → **GameplayView**: Complete `GameConfig`
-3. **GameplayView** → **PixiEngine**: `GameConfig` + `GameFactory`
-4. **PixiEngine** → **BaseGame**: `GameConfig` + `PixiEngineManagers`
-5. **BaseGame** → **MultipleChoiceGame**: All managers + config
+3. **GameplayView** → **GameRuntime**: `GameConfig` + mount node
+4. **GameSession** → managers used by both Pixi and Three
+5. **PixiEngine** → **BaseGame**: `GameConfig` + `PixiEngineManagers`
+6. **ThreeRuntime** → **ThreeGame**: `ThreeGameContext`
+7. **BaseGame** → **MultipleChoiceGame**: All managers + config
 
 ### Manager Dependencies
 - **EventBus**: Required by all components for communication
@@ -385,12 +373,10 @@ this.setState({ phase: 'playing' });
 - **AssetLoader**: Required by MultipleChoiceGame for media loading
 
 ### Initialization Order
-1. **Core Infrastructure**: PixiApplication, Assets
-2. **Basic Managers**: EventBus, StorageManager, GameStateManager, TimerManager
-3. **Config-Dependent Managers**: ControlsManager, ScoringManager, PowerUpManager, AudioManager
-4. **RuleEngine**: Requires all other managers
-5. **Game Instance**: Requires all managers
-6. **Game Initialization**: Requires assets to be loaded
+1. **Registry / config:** `GameContainer` + `GameSession` managers, RuleEngine last
+2. **Pixi:** PixiApplication, Assets, gameFactory, `game.init`, ticker
+3. **Three:** ThreeWorld, ThreeGame.init, one RAF loop
+4. **React HUD:** GAME_ENDED, SCORE_UPDATED, ACTIVE_TEAM_CHANGED
 
 ### Error Handling
 - Configuration validation at BaseGame constructor
@@ -399,3 +385,20 @@ this.setState({ phase: 'playing' });
 - Game initialization error recovery
 
 This flow ensures that all dependencies are properly initialized before they are used, and provides clear separation of concerns between configuration, engine management, and game logic.
+
+---
+
+## 7. ThreeRuntime (3D path)
+
+**Files:** `src/lib/three-engine/ThreeRuntime.ts`, `ThreeWorld.ts`, `src/lib/three-games/quiz-room/QuizRoom3DGame.ts`
+
+1. `ThreeWorld.init(mount)` — Scene, PerspectiveCamera, WebGLRenderer (pixel ratio ≤ 1.75)
+2. `GameSession.init(config)` — same managers as Pixi, RuleEngine last
+3. Emit `ENGINE_READY_FOR_GAME`
+4. Construct `ThreeGame`, `await game.init()` (QuizDataSource + procedural scene + raycast)
+5. `start()` — `game.start()` + one `requestAnimationFrame` loop
+6. HUD `GAME_PAUSED` / `GAME_RESUMED` pause timers and the game
+7. Destroy: cancel RAF → game → session → world (including `disposeObject3D` and context loss)
+
+3D games emit `GAME_EVENTS.ANSWER_SELECTED` and `GAME_STATE_EVENTS.GAME_ENDED`. They never subclass `BaseGame` or call `scoringManager.addScore`.
+

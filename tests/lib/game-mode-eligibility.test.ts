@@ -3,8 +3,10 @@ import { QuestionType } from '@/types/question_types'
 import {
   SPLASH_DASH_MAX_ANSWER_LENGTH,
   getEligibleGameModes,
+  getQuizRoom3dBlockReason,
   getSplashDashBlockReason,
   hasAnswersTooLongForSplashDash,
+  isQuizRoom3dEligible,
   isSplashDashEligible,
 } from '@/lib/game-mode-eligibility'
 
@@ -56,20 +58,52 @@ describe('isSplashDashEligible', () => {
 })
 
 describe('getEligibleGameModes', () => {
-  it('always includes Team Quiz and Splash Dash when eligible', () => {
+  it('includes Team Quiz, Splash Dash, and 3D Quiz Room when eligible', () => {
     expect(getEligibleGameModes({ questions: [shortMc] })).toEqual([
       'multiple-choice',
       'splash-dash',
+      'quiz-room-3d',
     ])
   })
 
-  it('only includes Team Quiz when ineligible', () => {
+  it('keeps 3D Quiz Room when Splash Dash answers are too long', () => {
     const long = 'x'.repeat(SPLASH_DASH_MAX_ANSWER_LENGTH + 1)
     expect(
       getEligibleGameModes({
         questions: [{ type: QuestionType.MULTIPLE_CHOICE, answers: [long, 'B'] }],
       })
-    ).toEqual(['multiple-choice'])
+    ).toEqual(['multiple-choice', 'quiz-room-3d'])
+  })
+})
+
+describe('isQuizRoom3dEligible / getQuizRoom3dBlockReason', () => {
+  it('accepts standard multiple-choice quizzes', () => {
+    expect(isQuizRoom3dEligible({ questions: [shortMc] })).toBe(true)
+    expect(getQuizRoom3dBlockReason({ questions: [shortMc] })).toBeNull()
+  })
+
+  it('rejects wrong answer counts and missing correct answers', () => {
+    expect(
+      isQuizRoom3dEligible({
+        questions: [{ type: QuestionType.MULTIPLE_CHOICE, answers: ['Only'] }],
+      })
+    ).toBe(false)
+    expect(
+      getQuizRoom3dBlockReason({
+        questions: [{ type: QuestionType.MULTIPLE_CHOICE, answers: ['Only'] }],
+      })
+    ).toContain('2–4 answers')
+    expect(
+      getQuizRoom3dBlockReason({
+        questions: [
+          {
+            type: QuestionType.MULTIPLE_CHOICE,
+            answers: ['A', 'B'],
+            correctAnswer: 'C',
+          },
+        ],
+      })
+    ).toContain('correct answer')
   })
 })
 

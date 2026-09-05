@@ -6,12 +6,12 @@ import NavMenu, { NavMenuItemProps } from './NavMenu';
 import GameControlDropdown from './GameControlDropdown';
 import { PlayerScoreData, GameOverPayload } from '@/types/gameTypes';
 import { GAME_STATE_EVENTS, SCORING_EVENTS, ScoringScoreUpdatedPayload, GameStateActiveTeamChangedPayload } from '@/lib/pixi-engine/core/EventTypes';
-import { PixiEngine, PixiEngineManagers } from '@/lib/pixi-engine/core/PixiEngine';
 import { GameConfig } from '@/lib/pixi-engine/config/GameConfig';
-import { BaseGame } from '@/lib/pixi-engine/game/BaseGame';
 import { Settings, ArrowLeft, Maximize2, Minimize2 } from 'lucide-react';
 import { SETTINGS_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
 import { useFullscreen } from '@/hooks/useFullscreen';
+import type { GameSessionServices } from '@/lib/game-engine/core/GameSession';
+import type { GameRuntime, GameRuntimeFactory } from '@/lib/game-engine/runtime/GameRuntime';
 // import type { EventBus } from '@/lib/pixi-engine/core/EventBus';
 
 // Update state structure to include teamId
@@ -31,24 +31,24 @@ interface GameplayViewProps {
   onGameOver: (payload: GameOverPayload) => void;
   /** Callback function invoked when the user requests to exit the game. */
   onExit: () => void;
-  /** React ref pointing to the DOM element where the PixiJS canvas should be mounted. */
-  pixiMountPointRef: React.RefObject<HTMLDivElement>;
-  /** Factory function to create the specific game instance. */
-  gameFactory: (config: GameConfig, managers: PixiEngineManagers) => BaseGame;
+  /** React ref pointing to the DOM element where the selected renderer mounts. */
+  gameMountPointRef: React.RefObject<HTMLDivElement>;
+  /** Lazily creates either the Pixi adapter or Three runtime. */
+  runtimeFactory: GameRuntimeFactory;
 }
 
 /**
- * Renders the main gameplay interface, including the PixiJS canvas,
+ * Renders the main gameplay interface, including the renderer canvas,
  * player scores, navigation menu, and overlay panels (settings, main menu).
- * Initializes and manages the PixiEngine lifecycle.
+ * Initializes and manages one GameRuntime lifecycle (Pixi or Three).
  */
 const GameplayView: React.FC<GameplayViewProps> = ({
   config,
   themeClassName,
   onGameOver,
   onExit,
-  pixiMountPointRef,
-  gameFactory,
+  gameMountPointRef,
+  runtimeFactory,
 }) => {
   // Initialize state with teamId
   const [playerScores, setPlayerScores] = useState<PlayerScoreState[]>(() =>
@@ -65,10 +65,11 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   const [musicMuted, setMusicMuted] = useState(false);
   const [sfxMuted, setSfxMuted] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
+  const [runtimeReady, setRuntimeReady] = useState(false);
 
   // --- Refs for internal engine/managers ---
-  const engineInstanceRef = useRef<PixiEngine | null>(null);
-  const managersRef = useRef<PixiEngineManagers | null>(null);
+  const runtimeRef = useRef<GameRuntime | null>(null);
+  const servicesRef = useRef<GameSessionServices | null>(null);
   const gameContainerRef = useRef<HTMLDivElement>(null);
 
   // --- Fullscreen functionality ---
@@ -81,9 +82,9 @@ const GameplayView: React.FC<GameplayViewProps> = ({
     [configKey]
   );
 
-  // Keep factory stable across parent re-renders so init isn't torn down mid-flight
-  const gameFactoryRef = useRef(gameFactory);
-  gameFactoryRef.current = gameFactory;
+  // Keep factory stable across parent re-renders so init isn't torn down mid-flight.
+  const runtimeFactoryRef = useRef(runtimeFactory);
+  runtimeFactoryRef.current = runtimeFactory;
 
   // --- PixiJS Event Handlers (using managersRef) ---
   /**
@@ -92,8 +93,8 @@ const GameplayView: React.FC<GameplayViewProps> = ({
    */
   const handlePixiGameOver = useCallback(() => {
       console.log("React received GAME_ENDED event");
-      const currentManagers = managersRef.current;
-      const finalScoreData = currentManagers?.scoringManager?.getAllTeamData() ?? [];
+      const services = servicesRef.current;
+      const finalScoreData = services?.scoringManager?.getAllTeamData() ?? [];
       const formattedScores: PlayerScoreData[] = finalScoreData.map(t => ({
           playerName: t.displayName ?? String(t.teamId),
           score: t.score
@@ -153,14 +154,9 @@ const GameplayView: React.FC<GameplayViewProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- Engine Initialization Effect --- 
-  /**
-   * Initializes the PixiEngine when the component mounts or config/factory changes.
-   * Attaches necessary event listeners and handles cleanup on unmount.
-   */
+  // --- Renderer-neutral runtime initialization effect ---
   useEffect(() => {
-    // Check if we should initialize. If there's already an engine, do nothing.
-    if (!stableConfig || !pixiMountPointRef.current || engineInstanceRef.current) {
+    if (!stableConfig || !gameMountPointRef.current || runtimeRef.current) {
       return;
     }
 
@@ -171,63 +167,65 @@ const GameplayView: React.FC<GameplayViewProps> = ({
     }
 
     let cancelled = false;
-    console.log("GameplayView: Initializing PixiEngine...");
-    const engine = new PixiEngine({ targetElement: pixiMountPointRef.current });
-    engineInstanceRef.current = engine;
+    let runtime: GameRuntime | null = null;
 
-    engine.init(stableConfig, (cfg, managers) => gameFactoryRef.current(cfg, managers))
-      .then(() => {
+    void runtimeFactoryRef.current()
+      .then(async (createdRuntime) => {
+        runtime = createdRuntime;
+        runtimeRef.current = createdRuntime;
+        await createdRuntime.init({
+          target: gameMountPointRef.current!,
+          config: stableConfig,
+        });
         if (cancelled) {
-          console.warn("GameplayView: Init finished after unmount; destroying engine.");
-          void engine.destroy();
+          await createdRuntime.destroy();
           return;
         }
-        console.log("GameplayView: PixiEngine initialized successfully.");
-        const currentManagers = engine.getManagers();
-        managersRef.current = currentManagers;
 
-        // Attach listeners ONLY after managers are confirmed
-        if (currentManagers) {
-          console.log("GameplayView: Attaching event listeners post-init...");
-          // Use the current handlers directly
-          currentManagers.eventBus.on(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
-          currentManagers.eventBus.on(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
-          currentManagers.eventBus.on(GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED, handlePixiActiveTeamChanged);
-        } else {
-          console.error("GameplayView: Managers are null after engine init!");
-        }
+        const services = createdRuntime.getServices();
+        servicesRef.current = services;
+        services.eventBus.on(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
+        services.eventBus.on(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
+        services.eventBus.on(
+          GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED,
+          handlePixiActiveTeamChanged
+        );
+        setRuntimeReady(true);
+        createdRuntime.start();
       })
       .catch(error => {
         if (cancelled) return;
-        console.error("GameplayView: Failed to initialize PixiEngine:", error);
-        engineInstanceRef.current = null;
-        managersRef.current = null;
+        console.error("GameplayView: Failed to initialize game runtime:", error);
+        runtimeRef.current = null;
+        servicesRef.current = null;
+        setRuntimeReady(false);
       });
 
-    // --- Cleanup function ---
-    // This cleanup function closes over the `engine` instance created in this effect.
     return () => {
       cancelled = true;
-      console.log("GameplayView: Cleanup effect running...");
-      
-      // Check managersRef.current. This ref is only set AFTER init succeeds,
-      // which safely prevents us from trying to access the event bus before it's ready.
-      const currentManagers = managersRef.current;
-      if (currentManagers) {
-        console.log("GameplayView: Detaching listeners during cleanup...");
-        // Remove all listeners of these event types (since we used arrow functions)
-        currentManagers.eventBus.off(GAME_STATE_EVENTS.GAME_ENDED);
-        currentManagers.eventBus.off(SCORING_EVENTS.SCORE_UPDATED);
-        currentManagers.eventBus.off(GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED);
+      setRuntimeReady(false);
+      const services = servicesRef.current;
+      if (services) {
+        services.eventBus.off(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
+        services.eventBus.off(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
+        services.eventBus.off(
+          GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED,
+          handlePixiActiveTeamChanged
+        );
       }
-      
-      console.log("GameplayView: Destroying PixiEngine instance.");
-      void engine.destroy();
-      
-      engineInstanceRef.current = null;
-      managersRef.current = null;
+
+      const activeRuntime = runtimeRef.current ?? runtime;
+      runtimeRef.current = null;
+      servicesRef.current = null;
+      void activeRuntime?.destroy();
     };
-  }, [stableConfig, pixiMountPointRef, handlePixiGameOver, handlePixiScoreUpdate, handlePixiActiveTeamChanged]);
+  }, [
+    stableConfig,
+    gameMountPointRef,
+    handlePixiGameOver,
+    handlePixiScoreUpdate,
+    handlePixiActiveTeamChanged,
+  ]);
   // ------------------------------------------------------
 
   // --- Settings/Audio Handlers (Connect to EventBus/AudioManager) ---
@@ -235,14 +233,14 @@ const GameplayView: React.FC<GameplayViewProps> = ({
     const newMutedState = !musicMuted;
     console.log('Music toggled to:', newMutedState ? 'Muted' : 'Unmuted');
     setMusicMuted(newMutedState);
-    managersRef.current?.eventBus.emit(SETTINGS_EVENTS.SET_MUSIC_MUTED, newMutedState);
+    servicesRef.current?.eventBus.emit(SETTINGS_EVENTS.SET_MUSIC_MUTED, newMutedState);
   }, [musicMuted]);
 
   const handleSfxToggle = useCallback(() => {
     const newMutedState = !sfxMuted;
     console.log('SFX toggled to:', newMutedState ? 'Muted' : 'Unmuted');
     setSfxMuted(newMutedState);
-    managersRef.current?.eventBus.emit(SETTINGS_EVENTS.SET_SFX_MUTED, newMutedState);
+    servicesRef.current?.eventBus.emit(SETTINGS_EVENTS.SET_SFX_MUTED, newMutedState);
   }, [sfxMuted]);
   // --- End Settings/Audio Handlers ---
 
@@ -253,14 +251,14 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   }, [onExit]);
 
   // --- Nav Menu Items definition ---
-  const navMenuItems: NavMenuItemProps[] = managersRef.current?.eventBus ? [
+  const navMenuItems: NavMenuItemProps[] = runtimeReady && servicesRef.current?.eventBus ? [
       {
         id: 'game-controls',
         label: 'Audio Settings & Menu',
         customInteraction: true,
         icon: (
           <GameControlDropdown
-            eventBus={managersRef.current.eventBus}
+            eventBus={servicesRef.current.eventBus}
             musicMuted={musicMuted}
             sfxMuted={sfxMuted}
             volume={volume}
@@ -300,12 +298,12 @@ const GameplayView: React.FC<GameplayViewProps> = ({
     const handleExternalMusicMute = (muted: boolean) => setMusicMuted(muted);
     const handleExternalSfxMute = (muted: boolean) => setSfxMuted(muted);
 
-    const bus = managersRef.current?.eventBus;
+    const bus = servicesRef.current?.eventBus;
     if (bus) {
        // Get initial values on mount AFTER bus is ready
-        const initialVol = managersRef.current?.audioManager?.getGlobalVolume() ?? 0.3;
-        const initialMusicMuted = managersRef.current?.audioManager?.getIsMusicMuted() ?? false;
-        const initialSfxMuted = managersRef.current?.audioManager?.getIsSfxMuted() ?? false;
+        const initialVol = servicesRef.current?.audioManager?.getGlobalVolume() ?? 0.3;
+        const initialMusicMuted = servicesRef.current?.audioManager?.getIsMusicMuted() ?? false;
+        const initialSfxMuted = servicesRef.current?.audioManager?.getIsSfxMuted() ?? false;
         const initialVolumePercent = Math.round(initialVol * 100);
         console.log(`GameplayView: Initializing volume state to ${initialVolumePercent}`);
         setVolume(initialVolumePercent);
@@ -325,11 +323,11 @@ const GameplayView: React.FC<GameplayViewProps> = ({
          bus.off(SETTINGS_EVENTS.SET_SFX_MUTED, handleExternalSfxMute);
        }
     }
-  }, []);
+  }, [runtimeReady]);
 
-  // Handle fullscreen changes and resize PixiJS application
+  // Handle fullscreen changes through the selected runtime.
   useEffect(() => {
-    if (engineInstanceRef.current && gameContainerRef.current) {
+    if (runtimeRef.current && gameContainerRef.current) {
       // Small delay to ensure the fullscreen transition is complete
       const timeoutId = setTimeout(() => {
         const container = gameContainerRef.current;
@@ -338,19 +336,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
           const width = rect.width || window.innerWidth;
           const height = rect.height || window.innerHeight;
           
-          console.log(`Fullscreen change detected. Resizing PixiJS to: ${width}x${height}`);
-          
-          // Trigger resize on the PixiJS application
-          try {
-            if (engineInstanceRef.current) {
-              const pixiApp = engineInstanceRef.current.getApp();
-              if (pixiApp && pixiApp.resize) {
-                pixiApp.resize(width, height);
-              }
-            }
-          } catch (error) {
-            console.warn('Could not resize PixiJS application:', error);
-          }
+          runtimeRef.current?.resize(width, height);
         }
       }, 100);
 
@@ -382,8 +368,8 @@ const GameplayView: React.FC<GameplayViewProps> = ({
              <NavMenu items={navMenuItems}/>
         </div>
 
-      {/* Render the mount point div for PixiJS canvas */}
-      <div ref={pixiMountPointRef} className={`${themeClassName} pixiCanvasContainer`}></div>
+      {/* Selected runtime mounts exactly one renderer canvas here. */}
+      <div ref={gameMountPointRef} className={`${themeClassName} pixiCanvasContainer`}></div>
 
     </div>
   );
