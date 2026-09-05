@@ -4,10 +4,12 @@ import { useEffect, useState, type ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Bookmark, Heart, Play, Users, Zap } from 'lucide-react'
+import { ArrowLeft, Bookmark, Box, Heart, Play, Users, Zap } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
+  getQuizRoom3dBlockReason,
   getSplashDashBlockReason,
+  isQuizRoom3dEligible,
   isSplashDashEligible,
 } from '@/lib/game-mode-eligibility'
 import {
@@ -184,6 +186,8 @@ export default function GameModePickerPage() {
 
   const splashEligible = quiz ? isSplashDashEligible(quiz) : false
   const splashReason = quiz ? getSplashDashBlockReason(quiz) : null
+  const room3dEligible = quiz ? isQuizRoom3dEligible(quiz) : false
+  const room3dReason = quiz ? getQuizRoom3dBlockReason(quiz) : null
   const title = quiz?.title ?? 'Loading quiz…'
   const description = quiz?.description?.trim() || null
   const coverSrc = quiz?.imageUrl || '/images/placeholder.webp'
@@ -364,6 +368,61 @@ export default function GameModePickerPage() {
                 icon={<Zap size={20} className="text-slate-400" />}
                 title="Splash Dash"
                 description={splashReason ?? 'Not available for this quiz.'}
+                cta="Unavailable"
+                muted
+              />
+            </div>
+          )}
+
+          {loading && !quiz ? (
+            <div className={`${modeCardClass} opacity-70 animate-pulse`} aria-hidden>
+              <ModeThumb src="/images/marketing/teamquiz_thumb.png" alt="" muted />
+              <ModeDetails
+                icon={<Box size={20} className="text-slate-400" />}
+                title="3D Quiz Room"
+                description="Checking eligibility…"
+                cta="Experimental"
+                muted
+              />
+            </div>
+          ) : room3dEligible ? (
+            <Link
+              href={`/games/${quizPathId}/quiz-room-3d`}
+              onClick={() => setNavigatingSlug('quiz-room-3d')}
+              className={`${modeCardClass} ${
+                navigatingSlug === 'quiz-room-3d' ? 'opacity-70 pointer-events-none' : ''
+              }`}
+            >
+              {navigatingSlug === 'quiz-room-3d' && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[22px] bg-white/60">
+                  <span className="grandstander font-bold text-lg">Opening…</span>
+                </div>
+              )}
+              <ModeThumb
+                src="/images/marketing/teamquiz_thumb.png"
+                alt="Experimental 3D quiz room"
+              />
+              <ModeDetails
+                icon={<Box size={20} />}
+                title="3D Quiz Room"
+                description="Experimental 3D room — choose the correct answer pedestal."
+                cta="Try 3D →"
+              />
+            </Link>
+          ) : (
+            <div
+              className="relative flex aspect-[3/2] overflow-hidden rounded-[24px] border-2 border-slate-300 bg-slate-50 opacity-80"
+              aria-disabled="true"
+            >
+              <ModeThumb
+                src="/images/marketing/teamquiz_thumb.png"
+                alt="3D Quiz Room preview"
+                muted
+              />
+              <ModeDetails
+                icon={<Box size={20} className="text-slate-400" />}
+                title="3D Quiz Room"
+                description={room3dReason ?? 'Not available for this quiz.'}
                 cta="Unavailable"
                 muted
               />
