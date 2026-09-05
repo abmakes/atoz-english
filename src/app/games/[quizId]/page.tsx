@@ -4,16 +4,20 @@ import { useEffect, useState, type ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Bookmark, Heart, Play, Users, Zap } from 'lucide-react'
+import { ArrowLeft, Bookmark, Heart, Mountain, Play, Users, Zap } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
+  getNinjaClimbBlockReason,
   getSplashDashBlockReason,
+  isNinjaClimbEligible,
   isSplashDashEligible,
 } from '@/lib/game-mode-eligibility'
 import {
   extractQuestionImageUrls,
   warmQuizQuestionMedia,
   warmSplashDashSceneAssets,
+  getNinjaClimbSceneAssetUrls,
+  ensurePixiAssetsInitialized,
 } from '@/lib/game-asset-warmup'
 import { normalizeQuizStatistics, type QuizStatistics } from '@/lib/schemas'
 import type { Quiz } from '@/types'
@@ -160,6 +164,20 @@ export default function GameModePickerPage() {
       if (isSplashDashEligible(quiz)) {
         await warmSplashDashSceneAssets()
       }
+      if (cancelled) return
+      if (isNinjaClimbEligible(quiz)) {
+        await ensurePixiAssetsInitialized()
+        const { Assets } = await import('pixi.js')
+        await Promise.all(
+          getNinjaClimbSceneAssetUrls().map(async (url) => {
+            try {
+              await Assets.load(url)
+            } catch {
+              /* soft fail on picker */
+            }
+          })
+        )
+      }
     }
 
     void warm().catch((err) => {
@@ -184,6 +202,8 @@ export default function GameModePickerPage() {
 
   const splashEligible = quiz ? isSplashDashEligible(quiz) : false
   const splashReason = quiz ? getSplashDashBlockReason(quiz) : null
+  const ninjaEligible = quiz ? isNinjaClimbEligible(quiz) : false
+  const ninjaReason = quiz ? getNinjaClimbBlockReason(quiz) : null
   const title = quiz?.title ?? 'Loading quiz…'
   const description = quiz?.description?.trim() || null
   const coverSrc = quiz?.imageUrl || '/images/placeholder.webp'
@@ -285,7 +305,7 @@ export default function GameModePickerPage() {
           Select game mode
         </h2>
 
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <Link
             href={`/games/${quizPathId}/multiple-choice`}
             onClick={() => setNavigatingSlug('multiple-choice')}
@@ -364,6 +384,65 @@ export default function GameModePickerPage() {
                 icon={<Zap size={20} className="text-slate-400" />}
                 title="Splash Dash"
                 description={splashReason ?? 'Not available for this quiz.'}
+                cta="Unavailable"
+                muted
+              />
+            </div>
+          )}
+
+          {loading && !quiz ? (
+            <div className={`${modeCardClass} opacity-70 animate-pulse`} aria-hidden>
+              <ModeThumb
+                src="/images/marketing/ninjaclimb_thumb.png"
+                alt=""
+                muted
+              />
+              <ModeDetails
+                icon={<Mountain size={20} className="text-slate-400" />}
+                title="Ninja Climb"
+                description="Checking eligibility…"
+                cta="…"
+                muted
+              />
+            </div>
+          ) : ninjaEligible ? (
+            <Link
+              href={`/games/${quizPathId}/ninja-climb`}
+              onClick={() => setNavigatingSlug('ninja-climb')}
+              className={`${modeCardClass} ${
+                navigatingSlug === 'ninja-climb' ? 'opacity-70 pointer-events-none' : ''
+              }`}
+            >
+              {navigatingSlug === 'ninja-climb' && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[22px] bg-white/60">
+                  <span className="grandstander font-bold text-lg">Opening…</span>
+                </div>
+              )}
+              <ModeThumb
+                src="/images/marketing/ninjaclimb_thumb.png"
+                alt="Ninja Climb mountain race with two ninjas racing uphill"
+              />
+              <ModeDetails
+                icon={<Mountain size={20} />}
+                title="Ninja Climb"
+                description="Two-team mountain race — answer to climb, use ninja powers."
+                cta="Play →"
+              />
+            </Link>
+          ) : (
+            <div
+              className="relative flex aspect-[3/2] overflow-hidden rounded-[24px] border-2 border-slate-300 bg-slate-50 opacity-80"
+              aria-disabled="true"
+            >
+              <ModeThumb
+                src="/images/marketing/ninjaclimb_thumb.png"
+                alt="Ninja Climb preview"
+                muted
+              />
+              <ModeDetails
+                icon={<Mountain size={20} className="text-slate-400" />}
+                title="Ninja Climb"
+                description={ninjaReason ?? 'Not available for this quiz.'}
                 cta="Unavailable"
                 muted
               />

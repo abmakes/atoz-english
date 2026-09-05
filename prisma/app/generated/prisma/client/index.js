@@ -210,7 +210,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/vercel/sandbox/primary/prisma/app/generated/prisma/client",
+      "value": "/workspace/prisma/app/generated/prisma/client",
       "fromEnvVar": null
     },
     "config": {
@@ -219,12 +219,12 @@ const config = {
     "binaryTargets": [
       {
         "fromEnvVar": null,
-        "value": "rhel-openssl-3.0.x",
+        "value": "debian-openssl-3.0.x",
         "native": true
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/vercel/sandbox/primary/prisma/schema.prisma",
+    "sourceFilePath": "/workspace/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -285,8 +285,8 @@ exports.PrismaClient = PrismaClient
 Object.assign(exports, Prisma)
 
 // file annotations for bundling tools to include these files
-path.join(__dirname, "libquery_engine-rhel-openssl-3.0.x.so.node");
-path.join(process.cwd(), "prisma/app/generated/prisma/client/libquery_engine-rhel-openssl-3.0.x.so.node")
+path.join(__dirname, "libquery_engine-debian-openssl-3.0.x.so.node");
+path.join(process.cwd(), "prisma/app/generated/prisma/client/libquery_engine-debian-openssl-3.0.x.so.node")
 // file annotations for bundling tools to include these files
 path.join(__dirname, "schema.prisma");
 path.join(process.cwd(), "prisma/app/generated/prisma/client/schema.prisma")
