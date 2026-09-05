@@ -105,7 +105,7 @@ export class QuizRoom3DGame implements ThreeGame {
     this.context.services.gameStateManager.setPhase(GamePhase.PLAYING)
   }
 
-  public onResize(_width: number, _height: number): void {
+  public onResize(): void {
     // Camera projection is updated by ThreeWorld.
   }
 

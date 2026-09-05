@@ -16,6 +16,8 @@ vi.mock('howler', () => ({
   Howler: {
     volume: () => 1,
     mute: () => undefined,
+    stop: () => undefined,
+    unload: () => undefined,
   },
 }))
 

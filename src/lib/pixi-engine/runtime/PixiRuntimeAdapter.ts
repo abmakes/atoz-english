@@ -22,7 +22,7 @@ export class PixiRuntimeAdapter implements GameRuntime {
     if (this.engine) {
       throw new Error('PixiRuntimeAdapter is already initialized.')
     }
-    this.engine = new PixiEngine({ targetElement: target })
+    this.engine = new PixiEngine({ targetElement: target as HTMLDivElement })
     await this.engine.init(config, this.gameFactory)
   }
 
