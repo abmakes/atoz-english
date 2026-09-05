@@ -27,6 +27,11 @@ export function getSplashDashSceneAssetUrls(): string[] {
 export function getNinjaClimbSceneAssetUrls(): string[] {
   return [
     '/images/ninja-climb/sky.webp',
+    '/images/ninja-climb/cliff_foot.webp',
+    '/images/ninja-climb/cliff_mid_brown.webp',
+    '/images/ninja-climb/cliff_mid_tone_a.webp',
+    '/images/ninja-climb/cliff_mid_tone_b.webp',
+    '/images/ninja-climb/cliff_top.webp',
     '/images/ninja-climb/cliff_a.webp',
     '/images/ninja-climb/cliff_b.webp',
     '/images/ninja-climb/cliff_c.webp',

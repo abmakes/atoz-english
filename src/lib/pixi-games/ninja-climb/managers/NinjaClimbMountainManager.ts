@@ -8,7 +8,10 @@ import type { ShortcutNodeDef } from './NinjaClimbRaceManager'
 import { buildPath, type Waypoint } from '../mountainPath'
 
 const ASSET_BASE = '/images/ninja-climb'
-const CLIFF_KEYS = ['cliff_a', 'cliff_b', 'cliff_c'] as const
+/** Always bookend the climb; mids alternate by mountain height. */
+const CLIFF_FOOT = 'cliff_foot'
+const CLIFF_TOP = 'cliff_top'
+const CLIFF_MIDS = ['cliff_mid_brown', 'cliff_mid_tone_a', 'cliff_mid_tone_b'] as const
 const PLATEAU_KEYS = ['plateau_1', 'plateau_2', 'plateau_3'] as const
 
 /**
@@ -126,41 +129,56 @@ export class NinjaClimbMountainManager {
     }
   }
 
+  /**
+   * Stack cliff tiles bottom→top: foot, alternating mids, top.
+   * Uniform width scale (no stretch / no mirror) so vertical seams stay aligned.
+   */
   private async _buildSections(): Promise<void> {
     if (this.path.length === 0) return
     const layout = this.layoutManager.getLayoutParams()
-    const sectionCount = Math.ceil(this.path.length / layout.stepsPerSection)
+    const pathBottom = this.path[0].y
+    const pathTop = this.path[this.path.length - 1].y
+    const targetSpan =
+      Math.abs(pathBottom - pathTop) + layout.stepHeight * 2.5
 
-    for (let s = 0; s < sectionCount; s++) {
-      const isSummit = s === sectionCount - 1
-      const key = isSummit
-        ? 'summit'
-        : CLIFF_KEYS[s % CLIFF_KEYS.length]
-      try {
+    try {
+      const footTex = await PIXI.Assets.load(`${ASSET_BASE}/${CLIFF_FOOT}.webp`)
+      const topTex = await PIXI.Assets.load(`${ASSET_BASE}/${CLIFF_TOP}.webp`)
+      const midTexs = await Promise.all(
+        CLIFF_MIDS.map((key) => PIXI.Assets.load(`${ASSET_BASE}/${key}.webp`))
+      )
+
+      const targetW = this.screenW * 1.02
+      const scaledH = (tex: PIXI.Texture) =>
+        (tex.height * targetW) / Math.max(1, tex.width)
+
+      const footH = scaledH(footTex)
+      const topH = scaledH(topTex)
+      const avgMidH =
+        midTexs.reduce((sum, tex) => sum + scaledH(tex), 0) / Math.max(1, midTexs.length)
+      const midCount = Math.max(1, Math.round(Math.max(avgMidH, targetSpan - footH - topH) / avgMidH))
+
+      const keys: string[] = [CLIFF_FOOT]
+      for (let i = 0; i < midCount; i++) {
+        keys.push(CLIFF_MIDS[i % CLIFF_MIDS.length])
+      }
+      keys.push(CLIFF_TOP)
+
+      // Stack upward from below the first ledge (Pixi Y grows downward).
+      let bottomY = pathBottom + layout.stepHeight * 0.6
+      for (const key of keys) {
         const tex = await PIXI.Assets.load(`${ASSET_BASE}/${key}.webp`)
         const sprite = new PIXI.Sprite(tex)
-        sprite.anchor.set(0.5, 0)
-
-        const firstIdx = s * layout.stepsPerSection
-        const lastIdx = Math.min(this.path.length - 1, firstIdx + layout.stepsPerSection - 1)
-        const midY = (this.path[firstIdx].y + this.path[lastIdx].y) / 2
-        const sectionHeight =
-          Math.abs(this.path[firstIdx].y - this.path[lastIdx].y) + layout.stepHeight * 1.4
-
-        sprite.width = this.screenW * 1.05
-        sprite.height = Math.max(sectionHeight, layout.stepHeight * 2)
+        sprite.anchor.set(0.5, 1)
+        const scale = targetW / Math.max(1, tex.width)
+        sprite.scale.set(scale)
         sprite.x = this.screenW / 2
-        sprite.y = midY - sprite.height * 0.35
-
-        // Mirror odd sections
-        if (s % 2 === 1 && !isSummit) {
-          sprite.scale.x *= -1
-        }
-
+        sprite.y = bottomY
         this.world.addChildAt(sprite, 0)
-      } catch (e) {
-        console.warn('NinjaClimbMountainManager: cliff load failed', key, e)
+        bottomY -= sprite.height
       }
+    } catch (e) {
+      console.warn('NinjaClimbMountainManager: cliff stack failed', e)
     }
   }
 

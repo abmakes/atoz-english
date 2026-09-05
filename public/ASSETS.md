@@ -26,8 +26,13 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 | `images/ninja-climb/ninja_blue_idle_b.webp` | Ninja Climb blue idle pose B |
 | `images/ninja-climb/ninja_red_idle_b.webp` | Ninja Climb red idle pose B |
 | `images/ninja-climb/sky.webp` | Ninja Climb sky |
-| `images/ninja-climb/cliff_a.webp` | Ninja Climb cliff tile A |
-| `images/ninja-climb/summit.webp` | Ninja Climb summit tile |
+| `images/ninja-climb/cliff_foot.webp` | Ninja Climb mountain foot (always bottom) |
+| `images/ninja-climb/cliff_mid_brown.webp` | Ninja Climb mid brown tile (alternates) |
+| `images/ninja-climb/cliff_mid_tone_a.webp` | Ninja Climb mid two-tone A (alternates) |
+| `images/ninja-climb/cliff_mid_tone_b.webp` | Ninja Climb mid two-tone B (alternates) |
+| `images/ninja-climb/cliff_top.webp` | Ninja Climb mountain top (always summit) |
+| `images/ninja-climb/cliff_a.webp` | Legacy alias of mid brown |
+| `images/ninja-climb/summit.webp` | Legacy alias of cliff top |
 | `images/shared/kunai_tip.png` | Shared rope projectile tip |
 | `images/shared/rope_segment.png` | Shared rope body tile |
 | `images/marketing/ninjaclimb_thumb.png` | Mode picker thumbnail |
@@ -43,7 +48,7 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 ## Ninja Climb notes
 
 - Character strips: `ninja_{blue|red}_idle.webp` / `idle_b.webp` (2 frames each), `ninja_{blue|red}_climb.png` (4 frames), `ninja_{blue|red}_rope.webp` (action).
-- Mountain tiles: `cliff_{a|b|c}.webp`, `plateau_{1|2|3}.webp`, `summit.webp` (transparent; no band_* art).
+- Mountain tiles stack vertically: `cliff_foot.webp` (always base) → alternating `cliff_mid_brown.webp` / `cliff_mid_tone_a.webp` / `cliff_mid_tone_b.webp` (count follows climb height) → `cliff_top.webp` (always summit). Uniform width scale; no mirroring. Legacy `cliff_{a|b|c}.webp` and `summit.webp` remain as aliases. Ledge props: `plateau_{1|2|3}.webp`.
 - UI: procedural `AnswerCloudShape` for sky answers; `deco_{tree|bush|hut}.webp` for sparse ledge props.
 - Shared rope VFX: `images/shared/kunai_tip.png`, `images/shared/rope_segment.png` (used by `RopeProjectile`).
 - Mode picker thumb: `public/images/marketing/ninjaclimb_thumb.png`.
