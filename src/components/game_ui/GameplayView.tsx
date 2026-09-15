@@ -12,7 +12,11 @@ import { SETTINGS_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import type { GameSessionServices } from '@/lib/game-engine/core/GameSession';
 import type { GameRuntime, GameRuntimeFactory } from '@/lib/game-engine/runtime/GameRuntime';
-// import type { EventBus } from '@/lib/pixi-engine/core/EventBus';
+import { gameModeRegistry } from '@/lib/game-engine/modes/builtinGameModes';
+import QuestionPanel from './hud/QuestionPanel';
+import TimerBadge from './hud/TimerBadge';
+import TugMeter from './hud/TugMeter';
+import RoundDots from './hud/RoundDots';
 
 // Update state structure to include teamId
 interface PlayerScoreState extends PlayerScoreData {
@@ -344,9 +348,51 @@ const GameplayView: React.FC<GameplayViewProps> = ({
     }
   }, [isFullscreen]);
 
+  const modeDefinition = gameModeRegistry.get(config.gameSlug);
+  const hud = modeDefinition?.hud;
+  const eventBus = runtimeReady ? servicesRef.current?.eventBus : null;
+  const splitScores = Boolean(hud?.splitTeamScores);
+  const leftTeam = playerScores[0];
+  const rightTeam = playerScores[1] ?? playerScores[0];
+
+  const renderScoreCard = (
+    player: PlayerScoreState | undefined,
+    side: 'blue' | 'red'
+  ) => {
+    if (!player) return null;
+    return (
+      <div className="flex flex-col items-center gap-1" key={player.teamId}>
+        <PlayerScore
+          playerName={player.playerName}
+          score={player.score}
+          isActive={player.teamId === activeTeamId}
+          isMobile={isMobileView}
+          isCompact={
+            config.gameSlug === 'splash-dash' ||
+            config.gameSlug === 'tug-of-war-3d'
+          }
+          className={`${themeClassName}`}
+        />
+        {hud?.roundDots && (
+          <RoundDots wins={player.score} max={3} side={side} />
+        )}
+      </div>
+    );
+  };
+
   return (
     <div ref={gameContainerRef} className={`${themeClassName} relative min-h-screen w-full overflow-hidden`}>
-        {/* Overlays */}
+        {splitScores ? (
+          <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex items-start justify-between gap-3 sm:inset-x-4 sm:top-4">
+            <div className="pointer-events-auto">{renderScoreCard(leftTeam, 'blue')}</div>
+            {hud?.timer && eventBus && modeDefinition && (
+              <TimerBadge eventBus={eventBus} timerId={modeDefinition.questionTimerId} />
+            )}
+            <div className="pointer-events-auto flex items-start gap-2">
+              {renderScoreCard(rightTeam, 'red')}
+            </div>
+          </div>
+        ) : (
         <div className={`absolute flex flex-col gap-2 top-4 left-4 z-10`}>
             {playerScores.map((player: PlayerScoreState) => {
                 console.log(`Rendering PlayerScore for teamId: ${player.teamId}. Current activeTeamId: ${activeTeamId}. Will set isActive to: ${player.teamId === activeTeamId}`);
@@ -357,16 +403,29 @@ const GameplayView: React.FC<GameplayViewProps> = ({
                 score={player.score}
                 isActive={player.teamId === activeTeamId}
                 isMobile={isMobileView}
-                isCompact={config.gameSlug === 'splash-dash'} // Make smaller for splash-dash
+                isCompact={config.gameSlug === 'splash-dash'}
                 className={`${themeClassName}`}
             />
                 );
             })}
         </div>
+        )}
 
-        <div className={`absolute top-6 right-6 z-10`}>
+        <div className={`absolute ${splitScores ? 'bottom-24 right-3 sm:bottom-28 sm:right-4' : 'top-6 right-6'} z-20`}>
              <NavMenu items={navMenuItems}/>
         </div>
+
+        {hud?.questionPanel && eventBus && (
+          <div className="pointer-events-none absolute inset-x-0 top-[22%] z-10 flex justify-center px-3 sm:top-[18%]">
+            <QuestionPanel eventBus={eventBus} className={themeClassName} isMobile={isMobileView} />
+          </div>
+        )}
+
+        {hud?.tugMeter && eventBus && (
+          <div className="absolute inset-x-0 bottom-6 z-10">
+            <TugMeter eventBus={eventBus} />
+          </div>
+        )}
 
       {/* Selected runtime mounts exactly one renderer canvas here. */}
       <div ref={gameMountPointRef} className={`${themeClassName} pixiCanvasContainer`}></div>

@@ -9,7 +9,7 @@ How to keep docs honest after changes: [project_docs/DOCUMENTATION_MAINTENANCE.m
 
 ## What this product is
 
-Teacher-centric quiz platform: create quizzes (form, CSV, AI), then play them as classroom games — PixiJS 2D (Team Quiz, Splash Dash) and an experimental Three.js 3D Quiz Room — with teams, timers, scoring, themes, and power-ups.
+Teacher-centric quiz platform: create quizzes (form, CSV, AI), then play them as classroom games — PixiJS 2D (Team Quiz, Splash Dash) and Three.js 3D (Quiz Room, Tug of War) — with teams, timers, scoring, themes, and power-ups.
 
 ## Stack snapshot (working)
 
@@ -48,12 +48,12 @@ lexicon/                Open lexical sources, provenance, curation, and build pi
 public/                 Static assets — see public/ASSETS.md
 scripts/                CI helpers (verify-assets)
 src/app/                Pages + REST API routes
-src/components/game_ui/ React game shell (GameContainer, GameplayView, setup)
+src/components/game_ui/ React game shell (GameContainer, GameplayView, setup, HUD overlays)
 src/lib/game-engine/    Renderer-neutral session, runtime, quiz source, mode registry
 src/lib/pixi-engine/    Shared 2D engine (PixiEngine, BaseGame, managers)
 src/lib/pixi-games/     2D game implementations (multiple-choice, splash-dash)
 src/lib/three-engine/   Three.js world + runtime + ThreeGame contract
-src/lib/three-games/    3D game implementations (quiz-room)
+src/lib/three-games/    3D game implementations (quiz-room, tug-of-war)
 src/lib/schemas.ts      Zod schemas
 src/lib/prisma.ts       Prisma client
 src/lib/ai/              GenerationBrief, teacher-first prompts, lesson-image helpers
@@ -79,6 +79,7 @@ CONTEXT.md              This hub
 | **Engine architecture** | [src/lib/pixi-engine/engineHelperDoc.md](src/lib/pixi-engine/engineHelperDoc.md) | Managers, EventBus, lifecycle |
 | **Pixi / TS lessons** | [project_docs/lessons-learned.md](project_docs/lessons-learned.md) | GIFs, Assets.unload, React↔Pixi pitfalls |
 | **Adding a 3D game** | [project_docs/3D_GAME_REQUIREMENTS.md](project_docs/3D_GAME_REQUIREMENTS.md) | ThreeGame contract, events, managers, prohibitions |
+| **Tug of War ninjas** | [project_docs/TUG_OF_WAR_NINJA_ASSET_SPEC.md](project_docs/TUG_OF_WAR_NINJA_ASSET_SPEC.md) | Pose clips and GLB delivery |
 | **Splash Dash behavior** | [src/lib/pixi-games/splash-dash/SPLASH_DASH_MECHANICS.md](src/lib/pixi-games/splash-dash/SPLASH_DASH_MECHANICS.md) | SD scoring/timer/movement |
 | **Splash Dash integration** | [src/lib/pixi-games/splash-dash/README.md](src/lib/pixi-games/splash-dash/README.md) | SD wiring checklist |
 | **Multiple-choice flow** | [src/lib/pixi-games/multiple-choice/MultipleChoiceFlow.md](src/lib/pixi-games/multiple-choice/MultipleChoiceFlow.md) | MC-specific deep dive |
@@ -122,7 +123,7 @@ Official Pixi v8 API reference: https://pixijs.download/release/docs/index.html
 
 **3D (Three):**
 1. Implement `ThreeGame` under `src/lib/three-games/<slug>/`.
-2. Register in the same mode registry (`renderer: 'three'`, `ThreeRuntime`).
+2. Register in the same mode registry (`renderer: 'three'`, `ThreeRuntime`). Optional `hud` flags mount React overlays in `GameplayView`.
 3. Follow [3D_GAME_REQUIREMENTS.md](project_docs/3D_GAME_REQUIREMENTS.md). Do not subclass `BaseGame` or call `addScore`.
 
 ---
