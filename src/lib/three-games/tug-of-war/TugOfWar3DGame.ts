@@ -33,7 +33,6 @@ import {
   shouldEmitOffset,
   sideForTeam,
   stepDisplayedOffset,
-  type TugMatchState,
   type TugSide,
 } from './tugOfWarLogic'
 
