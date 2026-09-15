@@ -5,8 +5,10 @@ import {
 import {
   getQuizRoom3dBlockReason,
   getSplashDashBlockReason,
+  getTugOfWar3dBlockReason,
   isQuizRoom3dEligible,
   isSplashDashEligible,
+  isTugOfWar3dEligible,
 } from '@/lib/game-mode-eligibility'
 
 const multipleChoice: GameModeDefinition = {
@@ -111,7 +113,42 @@ const quizRoom3d: GameModeDefinition = {
   },
 }
 
+const tugOfWar3d: GameModeDefinition = {
+  slug: 'tug-of-war-3d',
+  title: 'Tug of War',
+  description: 'Two teams take turns answering — pull the rope to win best of 3.',
+  thumbnail: '/images/marketing/teamquiz_thumb.png',
+  renderer: 'three',
+  questionTimerId: 'tugOfWarQuestionTimer',
+  hud: {
+    questionPanel: true,
+    timer: true,
+    tugMeter: true,
+    roundDots: true,
+    splitTeamScores: true,
+  },
+  isEligible: isTugOfWar3dEligible,
+  getBlockReason: getTugOfWar3dBlockReason,
+  buildControls: (defaults) => ({
+    actionMap: {
+      ACTION_A: { keyboard: 'Digit1' },
+      ACTION_B: { keyboard: 'Digit2' },
+    },
+    playerMappings: [{ playerId: 'player1', deviceType: 'auto' }],
+    gamepadDeadzone: defaults.gamepadDeadzone,
+  }),
+  buildAssets: (defaults) => defaults,
+  loadRuntime: async () => {
+    const [{ ThreeRuntime }, { TugOfWar3DGame }] = await Promise.all([
+      import('@/lib/three-engine/ThreeRuntime'),
+      import('@/lib/three-games/tug-of-war/TugOfWar3DGame'),
+    ])
+    return new ThreeRuntime((context) => new TugOfWar3DGame(context))
+  },
+}
+
 export const gameModeRegistry = new GameModeRegistry()
   .register(multipleChoice)
   .register(splashDash)
   .register(quizRoom3d)
+  .register(tugOfWar3d)

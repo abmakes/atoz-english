@@ -219,6 +219,56 @@ export const GAME_EVENTS = {
     // Add other common game actions here (e.g., ITEM_COLLECTED, LEVEL_START)
 } as const;
 
+/** React HUD overlays talking to a Three (or Pixi) game through the shared EventBus. */
+export const HUD_EVENTS = {
+  QUESTION_SHOWN: 'hud:questionShown',
+  ANSWER_SELECTED: 'hud:answerSelected',
+} as const;
+
+export interface HudQuestionShownPayload {
+  questionId: string
+  question: string
+  answers: string[]
+  imageUrl: string | null
+  questionIndex: number
+  totalQuestions: number
+  teamId: string | number
+  roundNumber: number
+}
+
+export interface HudAnswerSelectedPayload {
+  selectedIndex: number
+}
+
+export const TUG_EVENTS = {
+  OFFSET_CHANGED: 'tug:offsetChanged',
+  ROUND_WON: 'tug:roundWon',
+  MATCH_ENDED: 'tug:matchEnded',
+} as const;
+
+export interface TugOffsetChangedPayload {
+  /** Target rope offset in [-1, 1]. Negative is toward blue (left). */
+  offset: number
+  /** Smoothed offset currently shown in the scene / meter. */
+  displayedOffset: number
+}
+
+export interface TugRoundWonPayload {
+  teamId: string | number
+  winningSide: 'blue' | 'red'
+  roundNumber: number
+  blueRoundWins: number
+  redRoundWins: number
+}
+
+export interface TugMatchEndedPayload {
+  winnerTeamId: string | number | null
+  winningSide: 'blue' | 'red' | null
+  blueRoundWins: number
+  redRoundWins: number
+  reason: 'rounds' | 'questions' | 'draw'
+}
+
 // Add this definition alongside other event constants (e.g., ENGINE_EVENTS)
 export const SETTINGS_EVENTS = {
   SET_GLOBAL_VOLUME: 'settings:setGlobalVolume',
@@ -290,7 +340,11 @@ export interface EngineEvents {
 
   // Add Game Specific Events
   [GAME_EVENTS.ANSWER_SELECTED]: (payload: AnswerSelectedPayload) => void;
-  // Add other game events here...
+  [HUD_EVENTS.QUESTION_SHOWN]: (payload: HudQuestionShownPayload) => void;
+  [HUD_EVENTS.ANSWER_SELECTED]: (payload: HudAnswerSelectedPayload) => void;
+  [TUG_EVENTS.OFFSET_CHANGED]: (payload: TugOffsetChangedPayload) => void;
+  [TUG_EVENTS.ROUND_WON]: (payload: TugRoundWonPayload) => void;
+  [TUG_EVENTS.MATCH_ENDED]: (payload: TugMatchEndedPayload) => void;
 
   // Add Settings Events
   [SETTINGS_EVENTS.SET_GLOBAL_VOLUME]: (volume: number) => void;
