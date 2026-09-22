@@ -39,9 +39,9 @@ import {
 const QUESTION_TIMER_ID = TUG_QUESTION_TIMER_ID
 const ROUND_INTERSTITIAL_MS = 1600
 const POST_PULL_MS = 380
-const FLAG_TRAVEL = 3.6
-const NINJA_DRAG = 0.32
-const ROPE_Y = 1.08
+const FLAG_TRAVEL = 4.1
+const NINJA_DRAG = 0.55
+const ROPE_Y = 1.02
 
 /**
  * Turn-based, best-of-3 tug of war. Question UI lives in React; this class
@@ -401,37 +401,38 @@ export class TugOfWar3DGame implements ThreeGame {
   }
 
   private _buildArena(): void {
-    this.scene.background = new THREE.Color(0x8ecfff)
-    this.scene.fog = new THREE.Fog(0x8ecfff, 18, 42)
+    this.scene.background = new THREE.Color(0x7ec8f7)
+    this.scene.fog = new THREE.Fog(0xb7def6, 22, 48)
 
-    this.camera.position.set(0, 4.35, 11.2)
-    this.camera.lookAt(0, 1.55, 0)
+    this.camera.position.set(0, 2.45, 10.4)
+    this.camera.lookAt(0, 1.05, 0)
 
-    const hemi = new THREE.HemisphereLight(0xfff4dc, 0x6b8f4a, 1.55)
+    const hemi = new THREE.HemisphereLight(0xfff6e8, 0x6a9a48, 1.7)
     this.root.add(hemi)
-    const sun = new THREE.DirectionalLight(0xfff3c8, 2.35)
-    sun.position.set(6, 12, 8)
+    const sun = new THREE.DirectionalLight(0xfff3c8, 2.5)
+    sun.position.set(4, 11, 7)
     sun.castShadow = true
     sun.shadow.mapSize.set(1024, 1024)
     this.root.add(sun)
 
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(36, 22),
-      new THREE.MeshStandardMaterial({ color: 0xc9a36b, roughness: 0.95 })
+    const grass = new THREE.Mesh(
+      new THREE.PlaneGeometry(48, 30),
+      new THREE.MeshStandardMaterial({ color: 0x7dbe62, roughness: 1 })
     )
-    ground.rotation.x = -Math.PI / 2
-    ground.receiveShadow = true
-    this.root.add(ground)
+    grass.rotation.x = -Math.PI / 2
+    grass.receiveShadow = true
+    this.root.add(grass)
 
-    const path = new THREE.Mesh(
-      new THREE.PlaneGeometry(18, 4.2),
-      new THREE.MeshStandardMaterial({ color: 0xb58a4d, roughness: 1 })
+    const dirt = new THREE.Mesh(
+      new THREE.PlaneGeometry(22, 7.5),
+      new THREE.MeshStandardMaterial({ color: 0xc4a06a, roughness: 0.95 })
     )
-    path.rotation.x = -Math.PI / 2
-    path.position.y = 0.01
-    path.receiveShadow = true
-    this.root.add(path)
+    dirt.rotation.x = -Math.PI / 2
+    dirt.position.y = 0.012
+    dirt.receiveShadow = true
+    this.root.add(dirt)
 
+    this._addClouds()
     this._addHills()
     this._addTrees()
     this._addBanners()
@@ -439,21 +440,41 @@ export class TugOfWar3DGame implements ThreeGame {
     this._addNinjas()
   }
 
+  private _addClouds(): void {
+    const cloudMat = new THREE.MeshBasicMaterial({ color: 0xffffff })
+    ;[
+      [-8, 6.2, -6],
+      [-4.5, 6.8, -8],
+      [1.2, 6.4, -7],
+      [6.5, 6.9, -6.5],
+      [10, 6.1, -8],
+    ].forEach(([x, y, z], index) => {
+      const cloud = new THREE.Mesh(new THREE.SphereGeometry(0.7, 10, 8), cloudMat)
+      cloud.scale.set(2.2, 0.7, 1)
+      cloud.position.set(x, y + (index % 2) * 0.2, z)
+      this.root.add(cloud)
+    })
+  }
+
   private _addHills(): void {
     const hillMat = new THREE.MeshStandardMaterial({
-      color: 0x5fa85a,
+      color: 0x63b15c,
       roughness: 1,
     })
     const farMat = new THREE.MeshStandardMaterial({
-      color: 0x7eb7c9,
+      color: 0x8fbfd4,
       roughness: 1,
     })
+    const peakMat = new THREE.MeshStandardMaterial({
+      color: 0x9fd0e4,
+      roughness: 0.85,
+    })
     ;[
-      { x: -7, z: -9, s: 4.5, y: 0.2, mat: farMat },
-      { x: 8, z: -10, s: 5.2, y: 0.4, mat: farMat },
-      { x: 0, z: -11, s: 6, y: 0.6, mat: farMat },
-      { x: -4, z: -6.5, s: 2.4, y: 0, mat: hillMat },
-      { x: 5.5, z: -6.2, s: 2.1, y: 0, mat: hillMat },
+      { x: -10, z: -11, s: 5.5, y: 0.4, mat: farMat },
+      { x: 0, z: -13, s: 7.2, y: 0.8, mat: peakMat },
+      { x: 9, z: -11.5, s: 6, y: 0.5, mat: farMat },
+      { x: -5.5, z: -7.2, s: 2.8, y: 0, mat: hillMat },
+      { x: 5.2, z: -7, s: 2.5, y: 0, mat: hillMat },
     ].forEach((hill) => {
       const mesh = new THREE.Mesh(
         new THREE.SphereGeometry(1, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2),
@@ -464,15 +485,21 @@ export class TugOfWar3DGame implements ThreeGame {
       this.root.add(mesh)
     })
 
+    const cliff = new THREE.Mesh(
+      new THREE.BoxGeometry(1.6, 3.2, 1.2),
+      new THREE.MeshStandardMaterial({ color: 0x8aa4b0, roughness: 0.9 })
+    )
+    cliff.position.set(8.4, 1.5, -8.2)
+    this.root.add(cliff)
     const waterfall = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.7, 3.4),
+      new THREE.PlaneGeometry(0.9, 2.8),
       new THREE.MeshStandardMaterial({
-        color: 0xd9f4ff,
+        color: 0xe7f7ff,
         transparent: true,
-        opacity: 0.75,
+        opacity: 0.85,
       })
     )
-    waterfall.position.set(7.2, 2.1, -7.4)
+    waterfall.position.set(8.4, 1.7, -7.5)
     this.root.add(waterfall)
 
     const pagoda = new THREE.Group()
@@ -491,7 +518,8 @@ export class TugOfWar3DGame implements ThreeGame {
       body.position.y = 0.85 + i * 0.55
       pagoda.add(body)
     })
-    pagoda.position.set(6.4, 0, -7.8)
+    pagoda.position.set(6.2, 0, -6.6)
+    pagoda.scale.setScalar(1.35)
     this.root.add(pagoda)
   }
 
@@ -502,32 +530,33 @@ export class TugOfWar3DGame implements ThreeGame {
       roughness: 0.8,
     })
     ;[
-      [-8.5, 3.2],
-      [-7.4, 4.1],
-      [8.2, 3.4],
-      [7.1, 4.4],
-    ].forEach(([x, z]) => {
+      [-9.2, 1.4, 1.7],
+      [-7.6, -1.2, 1.35],
+      [9.1, 1.6, 1.65],
+      [7.5, -0.8, 1.3],
+    ].forEach(([x, z, scale]) => {
       const tree = new THREE.Group()
       const trunk = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.12, 0.18, 1.6, 6),
+        new THREE.CylinderGeometry(0.14, 0.22, 2.1, 6),
         trunkMat
       )
-      trunk.position.y = 0.8
+      trunk.position.y = 1.05
       trunk.castShadow = true
       tree.add(trunk)
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 7; i++) {
         const puff = new THREE.Mesh(
-          new THREE.SphereGeometry(0.45 + (i % 2) * 0.12, 10, 8),
+          new THREE.SphereGeometry(0.55 + (i % 3) * 0.12, 10, 8),
           blossomMat
         )
         puff.position.set(
-          (i - 2) * 0.22,
-          1.7 + (i % 3) * 0.18,
-          ((i % 2) - 0.5) * 0.2
+          (i % 3) - 1,
+          2.15 + Math.floor(i / 3) * 0.35,
+          ((i % 2) - 0.5) * 0.45
         )
         tree.add(puff)
       }
       tree.position.set(x, 0, z)
+      tree.scale.setScalar(scale)
       this.root.add(tree)
     })
   }
@@ -539,52 +568,58 @@ export class TugOfWar3DGame implements ThreeGame {
 
   private _addRope(): void {
     const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(-5.2, ROPE_Y + 0.02, 0),
-      new THREE.Vector3(-2.4, ROPE_Y - 0.12, 0),
-      new THREE.Vector3(0, ROPE_Y - 0.18, 0),
-      new THREE.Vector3(2.4, ROPE_Y - 0.12, 0),
-      new THREE.Vector3(5.2, ROPE_Y + 0.02, 0),
+      new THREE.Vector3(-5.6, ROPE_Y + 0.18, 0),
+      new THREE.Vector3(-3.2, ROPE_Y - 0.02, 0),
+      new THREE.Vector3(0, ROPE_Y - 0.16, 0),
+      new THREE.Vector3(3.2, ROPE_Y - 0.02, 0),
+      new THREE.Vector3(5.6, ROPE_Y + 0.18, 0),
     ])
     const rope = new THREE.Mesh(
-      new THREE.TubeGeometry(curve, 32, 0.055, 8, false),
-      new THREE.MeshStandardMaterial({ color: 0xc4a574, roughness: 0.85 })
+      new THREE.TubeGeometry(curve, 48, 0.09, 10, false),
+      new THREE.MeshStandardMaterial({ color: 0xb8884a, roughness: 0.78 })
     )
     rope.castShadow = true
     this.root.add(rope)
+    const strand = new THREE.Mesh(
+      new THREE.TubeGeometry(curve, 48, 0.045, 6, false),
+      new THREE.MeshStandardMaterial({ color: 0xd7b072, roughness: 0.7 })
+    )
+    strand.position.z = 0.05
+    this.root.add(strand)
 
     const marker = new THREE.Group()
     const pole = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.035, 0.035, 0.7, 8),
+      new THREE.CylinderGeometry(0.045, 0.045, 1.15, 8),
       new THREE.MeshStandardMaterial({ color: 0xf7fafc })
     )
-    pole.position.y = ROPE_Y + 0.22
+    pole.position.y = ROPE_Y + 0.35
     marker.add(pole)
     const blue = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.28, 0.22),
+      new THREE.PlaneGeometry(0.42, 0.36),
       new THREE.MeshStandardMaterial({
         color: 0x2b6cb0,
         side: THREE.DoubleSide,
       })
     )
-    blue.position.set(-0.12, ROPE_Y + 0.42, 0)
+    blue.position.set(-0.2, ROPE_Y + 0.72, 0)
     marker.add(blue)
     const red = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.28, 0.22),
+      new THREE.PlaneGeometry(0.42, 0.36),
       new THREE.MeshStandardMaterial({
         color: 0xc53030,
         side: THREE.DoubleSide,
       })
     )
-    red.position.set(0.12, ROPE_Y + 0.42, 0)
+    red.position.set(0.2, ROPE_Y + 0.72, 0)
     marker.add(red)
     this.ropeMarker = marker
     this.root.add(marker)
   }
 
   private _addNinjas(): void {
-    const blueXs = [-4.15, -3.35, -2.55]
-    const redXs = [2.55, 3.35, 4.15]
-    const zs = [-0.18, 0.05, 0.22]
+    const blueXs = [-4.85, -3.85, -2.9]
+    const redXs = [2.9, 3.85, 4.85]
+    const zs = [0.42, 0.05, -0.28]
     for (let i = 0; i < TUG_NINJAS_PER_TEAM; i++) {
       const blue = new NinjaActor({
         side: 'blue',
@@ -641,6 +676,7 @@ function makeBanner(x: number, color: number, cloth: number): THREE.Group {
   emblem.position.copy(flag.position)
   emblem.position.z = 0.02
   group.add(emblem)
-  group.position.set(x, 0, 1.6)
+  group.position.set(x, 0, 2.15)
+  group.scale.setScalar(1.25)
   return group
 }

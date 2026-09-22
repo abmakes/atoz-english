@@ -95,116 +95,121 @@ function mixPose(a: Pose, b: Pose, t: number): Pose {
   return out
 }
 
+/**
+ * Local axes: the ninja faces +X (toward the rope). +Z is toward the camera.
+ * Positive rz on a downward limb swings it toward +X. Positive hip rz leans
+ * the torso back, away from the rope.
+ */
 const IDLE: Pose = {
-  hips: { py: 0.02, rz: 0.22 },
-  torso: { rz: 0.04 },
-  head: { rz: -0.08 },
-  armR: { rz: -0.55, rx: 0.08 },
-  foreR: { rz: -0.15 },
-  armL: { rz: -0.95, rx: -0.12 },
-  foreL: { rz: -0.55 },
-  legR: { rz: 0.35, rx: 0.08 },
-  shinR: { rz: 0.55 },
-  legL: { rz: 0.55, rx: -0.1 },
-  shinL: { rz: 0.4 },
-  tailL: { rz: 0.35 },
-  tailR: { rz: -0.2 },
+  hips: { py: -0.02, rz: 0.32 },
+  torso: { rz: 0.06 },
+  head: { rz: -0.18, ry: -0.35 },
+  armR: { rz: 1.25, rx: 0.25 },
+  foreR: { rz: -0.45 },
+  armL: { rz: 1.05, rx: -0.35 },
+  foreL: { rz: -0.7 },
+  legR: { px: 0.06, rz: 0.55 },
+  shinR: { rz: 0.85 },
+  legL: { px: -0.08, rz: -0.25 },
+  shinL: { rz: 0.45 },
+  tailL: { rz: 0.4, rx: 0.2 },
+  tailR: { rz: -0.15, rx: -0.15 },
 }
 
 const HEAVE: Pose = {
-  hips: { px: -0.08, py: -0.06, rz: 0.55 },
+  hips: { px: -0.1, py: -0.08, rz: 0.62 },
   torso: { rz: 0.12 },
-  head: { rz: -0.18 },
-  armR: { rz: -0.15 },
-  foreR: { rz: -0.45 },
-  armL: { rz: -0.35 },
-  foreL: { rz: -0.7 },
-  legR: { rz: 0.5, rx: 0.12 },
-  shinR: { rz: 0.7 },
-  legL: { px: -0.08, rz: 0.72, rx: -0.14 },
+  head: { rz: -0.28, ry: -0.35 },
+  armR: { rz: 0.72, rx: 0.2 },
+  foreR: { rz: -0.85 },
+  armL: { rz: 0.55, rx: -0.25 },
+  foreL: { rz: -1.0 },
+  legR: { px: 0.02, rz: 0.7 },
+  shinR: { rz: 1.0 },
+  legL: { px: -0.16, rz: -0.15 },
   shinL: { rz: 0.35 },
-  tailL: { rz: 0.9 },
-  tailR: { rz: 0.55 },
+  tailL: { rz: 1.0 },
+  tailR: { rz: 0.6 },
 }
 
 const STRAIN: Pose = {
-  hips: { px: 0.06, py: 0.04, rz: -0.22 },
-  torso: { rz: -0.18 },
-  head: { rz: -0.28 },
-  armR: { rz: -1.05 },
-  foreR: { rz: -0.05 },
-  armL: { rz: -1.15 },
-  foreL: { rz: -0.08 },
-  legR: { rz: 0.18, rx: 0.16 },
-  shinR: { rz: 0.35 },
-  legL: { rz: 0.28, rx: -0.18 },
-  shinL: { rz: 0.22 },
-  tailL: { rz: -0.4 },
-  tailR: { rz: -0.55 },
+  hips: { px: 0.08, py: 0.02, rz: -0.18 },
+  torso: { rz: -0.12 },
+  head: { rz: 0.08, ry: -0.3 },
+  armR: { rz: 1.45, rx: 0.1 },
+  foreR: { rz: -0.08 },
+  armL: { rz: 1.4, rx: -0.15 },
+  foreL: { rz: -0.1 },
+  legR: { px: 0.1, rz: 0.2 },
+  shinR: { rz: 0.25 },
+  legL: { px: 0.02, rz: -0.05 },
+  shinL: { rz: 0.15 },
+  tailL: { rz: -0.45 },
+  tailR: { rz: -0.6 },
 }
 
 const SLIP: Pose = {
-  hips: { px: 0.1, py: -0.04, rz: -0.05, ry: 0.25 },
-  torso: { rz: -0.12, ry: 0.2 },
-  head: { rz: 0.15, ry: 0.3 },
-  armR: { rz: -0.2, rx: 0.8 },
-  foreR: { rz: -0.9 },
-  armL: { rz: -1.05 },
-  foreL: { rz: -0.1 },
-  legR: { rz: 0.15, rx: 0.35 },
+  hips: { px: 0.12, py: -0.06, rz: 0.05, ry: 0.2 },
+  torso: { rz: -0.05, ry: 0.15 },
+  head: { rz: 0.2, ry: -0.1 },
+  armR: { rz: 0.35, rx: 0.9 },
+  foreR: { rz: -1.1 },
+  armL: { rz: 1.2, rx: -0.2 },
+  foreL: { rz: -0.2 },
+  legR: { rz: 0.15, rx: 0.2 },
   shinR: { rz: 0.2 },
-  legL: { rz: 0.85, rx: -0.25 },
+  legL: { px: -0.05, rz: 0.95 },
   shinL: { rz: 0.15 },
-  tailL: { rz: 0.7 },
-  tailR: { rz: -0.7 },
-}
-
-const CHEER: Pose = {
-  hips: { py: 0.12, rz: 0 },
-  torso: { rz: 0.05 },
-  head: { rz: 0.1 },
-  armR: { rz: 2.4, rx: 0.2 },
-  foreR: { rz: 0.15 },
-  armL: { rz: 2.2, rx: -0.2 },
-  foreL: { rz: 0.2 },
-  legR: { rz: 0.08 },
-  shinR: { rz: 0.05 },
-  legL: { rz: 0.12 },
-  shinL: { rz: 0.08 },
   tailL: { rz: 0.8 },
   tailR: { rz: -0.8 },
 }
 
+const CHEER: Pose = {
+  hips: { py: 0.08, rz: 0 },
+  torso: { rz: -0.04 },
+  head: { rz: -0.15, ry: -0.4 },
+  armR: { rz: 2.7, rx: 0.35 },
+  foreR: { rz: 0.15 },
+  armL: { rz: 2.55, rx: -0.35 },
+  foreL: { rz: 0.2 },
+  legR: { rz: 0.1 },
+  shinR: { rz: 0.08 },
+  legL: { rz: -0.05 },
+  shinL: { rz: 0.08 },
+  tailL: { rz: 0.9 },
+  tailR: { rz: -0.9 },
+}
+
 const FALL: Pose = {
-  hips: { px: -0.35, py: -0.42, rz: 1.15 },
-  torso: { rz: 0.25 },
-  head: { rz: 0.35 },
-  armR: { rz: 1.4, rx: 0.4 },
-  foreR: { rz: 0.3 },
-  armL: { rz: 1.1, rx: -0.35 },
-  foreL: { rz: 0.4 },
-  legR: { rz: -0.55, rx: 0.2 },
-  shinR: { rz: 0.7 },
-  legL: { rz: -0.35, rx: -0.25 },
-  shinL: { rz: 0.85 },
+  hips: { px: -0.28, py: -0.38, rz: 1.25 },
+  torso: { rz: 0.2 },
+  head: { rz: 0.25, ry: -0.2 },
+  armR: { rz: 2.2, rx: 0.5 },
+  foreR: { rz: 0.4 },
+  armL: { rz: 1.8, rx: -0.4 },
+  foreL: { rz: 0.45 },
+  legR: { rz: -0.4 },
+  shinR: { rz: 0.9 },
+  legL: { rz: -0.2 },
+  shinL: { rz: 1.05 },
   tailL: { rz: -0.2 },
-  tailR: { rz: 0.15 },
+  tailR: { rz: 0.2 },
 }
 
 const CHARGE: Pose = {
-  hips: { py: -0.14, rz: 0.4 },
-  torso: { rz: 0.18 },
-  head: { rz: -0.05 },
-  armR: { rz: -0.7 },
-  foreR: { rz: -0.4 },
-  armL: { rz: -0.85 },
-  foreL: { rz: -0.5 },
-  legR: { rz: 0.7 },
-  shinR: { rz: 0.85 },
-  legL: { rz: 0.78 },
-  shinL: { rz: 0.7 },
-  tailL: { rz: 0.15 },
-  tailR: { rz: -0.1 },
+  hips: { py: -0.12, rz: 0.48 },
+  torso: { rz: 0.14 },
+  head: { rz: -0.1, ry: -0.3 },
+  armR: { rz: 1.15, rx: 0.2 },
+  foreR: { rz: -0.55 },
+  armL: { rz: 0.95, rx: -0.25 },
+  foreL: { rz: -0.65 },
+  legR: { rz: 0.85 },
+  shinR: { rz: 1.05 },
+  legL: { rz: 0.7 },
+  shinL: { rz: 0.9 },
+  tailL: { rz: 0.2 },
+  tailR: { rz: -0.15 },
 }
 
 function overlay(base: Pose, patch: Pose): Pose {
@@ -322,6 +327,7 @@ export class NinjaActor {
     this.restX = options.restX
     this.group.name = `ninja-${options.side}-${options.slot}`
     this.group.position.set(options.restX, 0, options.restZ ?? 0)
+    this.group.scale.setScalar(1.28)
     if (options.side === 'red') {
       this.group.rotation.y = Math.PI
     }
@@ -426,60 +432,62 @@ export class NinjaActor {
     const head = this._bone('head')
     head.position.y = 0.52
     torso.add(head)
-    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 12), mask)
-    skull.position.y = 0.16
+    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 12), mask)
+    skull.position.y = 0.18
     skull.castShadow = true
     head.add(skull)
     const hood = new THREE.Mesh(
-      new THREE.SphereGeometry(0.175, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+      new THREE.SphereGeometry(0.22, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
       gi
     )
-    hood.position.set(0, 0.24, 0)
+    hood.position.set(0, 0.28, 0)
     head.add(hood)
-    const bandMesh = box(0.46, 0.07, 0.32, band)
-    bandMesh.position.set(0, 0.2, 0.02)
+    const bandMesh = box(0.58, 0.09, 0.42, band)
+    bandMesh.position.set(0.02, 0.2, 0.04)
     head.add(bandMesh)
-    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), eye)
-    eyeL.position.set(0.12, 0.16, 0.16)
-    eyeL.scale.set(1.2, 0.45, 0.4)
-    head.add(eyeL)
-    const eyeR = eyeL.clone()
-    eyeR.position.x = -0.12
-    head.add(eyeR)
+    const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), eye)
+    eyeWhite.position.set(0.08, 0.16, 0.22)
+    eyeWhite.scale.set(1.35, 0.55, 0.45)
+    head.add(eyeWhite)
+    const pupil = new THREE.Mesh(
+      new THREE.SphereGeometry(0.018, 6, 4),
+      new THREE.MeshBasicMaterial({ color: 0x1a202c })
+    )
+    pupil.position.set(0.1, 0.16, 0.25)
+    head.add(pupil)
 
     const tailL = this._bone('tailL')
-    tailL.position.set(-0.16, 0.22, -0.12)
+    tailL.position.set(-0.08, 0.28, -0.02)
     head.add(tailL)
-    const tailMeshL = box(0.05, 0.28, 0.04, band)
-    tailMeshL.position.y = -0.12
+    const tailMeshL = box(0.06, 0.36, 0.045, band)
+    tailMeshL.position.set(-0.02, -0.16, 0)
     tailL.add(tailMeshL)
     const tailR = this._bone('tailR')
-    tailR.position.set(-0.1, 0.22, -0.14)
+    tailR.position.set(-0.02, 0.26, 0.02)
     head.add(tailR)
-    const tailMeshR = box(0.04, 0.22, 0.035, band)
-    tailMeshR.position.y = -0.1
+    const tailMeshR = box(0.05, 0.28, 0.04, band)
+    tailMeshR.position.set(-0.02, -0.12, 0)
     tailR.add(tailMeshR)
 
-    this._arm('R', 0.22, gi, wrap, rope, 1)
-    this._arm('L', -0.22, gi, wrap, rope, -1)
-    this._leg('R', 0.11, pants)
-    this._leg('L', -0.11, pants)
+    this._arm('R', -0.28, gi, wrap, rope)
+    this._arm('L', 0.28, gi, wrap, rope)
+    this._leg('R', -0.11, pants)
+    this._leg('L', 0.11, pants)
     this._captureRest()
   }
 
   private _arm(
     side: 'L' | 'R',
-    x: number,
+    lateralZ: number,
     gi: THREE.Material,
     wrap: THREE.Material,
-    rope: THREE.Material,
-    dir: number
+    rope: THREE.Material
   ): void {
     const upperName = side === 'R' ? 'armR' : 'armL'
     const foreName = side === 'R' ? 'foreR' : 'foreL'
     const torso = this.bones.get('torso')!
     const arm = this._bone(upperName)
-    arm.position.set(x, 0.38, 0)
+    arm.position.set(0.06, 0.36, lateralZ)
     torso.add(arm)
     const upper = box(0.12, 0.28, 0.12, gi)
     upper.position.y = -0.14
@@ -495,19 +503,23 @@ export class NinjaActor {
     hand.castShadow = true
     fore.add(hand)
     const grip = side === 'R' ? this.gripR : this.gripL
-    grip.position.set(dir * 0.04, 0, 0.04)
+    grip.position.set(0.04, 0, 0)
     hand.add(grip)
-    const ropeBit = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.16, 8), rope)
+    const ropeBit = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.045, 0.045, 0.22, 8),
+      rope
+    )
     ropeBit.rotation.z = Math.PI / 2
+    ropeBit.position.set(0.02, 0, 0)
     hand.add(ropeBit)
   }
 
-  private _leg(side: 'L' | 'R', x: number, pants: THREE.Material): void {
+  private _leg(side: 'L' | 'R', lateralZ: number, pants: THREE.Material): void {
     const thighName = side === 'R' ? 'legR' : 'legL'
     const shinName = side === 'R' ? 'shinR' : 'shinL'
     const hips = this.bones.get('hips')!
     const thigh = this._bone(thighName)
-    thigh.position.set(x, 0.44, 0)
+    thigh.position.set(0, 0.44, lateralZ)
     hips.add(thigh)
     const thighMesh = box(0.16, 0.32, 0.16, pants)
     thighMesh.position.y = -0.16
@@ -518,8 +530,8 @@ export class NinjaActor {
     const shinMesh = box(0.14, 0.28, 0.14, pants)
     shinMesh.position.y = -0.14
     shin.add(shinMesh)
-    const foot = box(0.16, 0.08, 0.28, mat(0x1a202c, 0.85))
-    foot.position.set(0.02, -0.3, 0.06)
+    const foot = box(0.28, 0.08, 0.16, mat(0x1a202c, 0.85))
+    foot.position.set(0.08, -0.3, 0)
     shin.add(foot)
   }
 

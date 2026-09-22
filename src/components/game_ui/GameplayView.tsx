@@ -16,7 +16,7 @@ import { gameModeRegistry } from '@/lib/game-engine/modes/builtinGameModes';
 import QuestionPanel from './hud/QuestionPanel';
 import TimerBadge from './hud/TimerBadge';
 import TugMeter from './hud/TugMeter';
-import RoundDots from './hud/RoundDots';
+import TugTeamBanner from './hud/TugTeamBanner';
 
 // Update state structure to include teamId
 interface PlayerScoreState extends PlayerScoreData {
@@ -360,6 +360,18 @@ const GameplayView: React.FC<GameplayViewProps> = ({
     side: 'blue' | 'red'
   ) => {
     if (!player) return null;
+    if (hud?.roundDots) {
+      return (
+        <TugTeamBanner
+          key={player.teamId}
+          name={player.playerName}
+          score={player.score}
+          wins={player.score}
+          side={side}
+          isActive={player.teamId === activeTeamId}
+        />
+      );
+    }
     return (
       <div className="flex flex-col items-center gap-1" key={player.teamId}>
         <PlayerScore
@@ -373,9 +385,6 @@ const GameplayView: React.FC<GameplayViewProps> = ({
           }
           className={`${themeClassName}`}
         />
-        {hud?.roundDots && (
-          <RoundDots wins={player.score} max={3} side={side} />
-        )}
       </div>
     );
   };
@@ -416,7 +425,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
         </div>
 
         {hud?.questionPanel && eventBus && (
-          <div className="pointer-events-none absolute inset-x-0 top-[22%] z-10 flex justify-center px-3 sm:top-[18%]">
+          <div className="pointer-events-none absolute inset-x-0 top-[14%] z-10 flex justify-center px-3 sm:top-[12%]">
             <QuestionPanel eventBus={eventBus} className={themeClassName} isMobile={isMobileView} />
           </div>
         )}

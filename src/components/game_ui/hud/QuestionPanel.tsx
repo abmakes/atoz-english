@@ -86,13 +86,13 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
 
   return (
     <div
-      className={`${className ?? ''} pointer-events-auto mx-auto w-[min(920px,92vw)] rounded-[28px] border-2 border-[var(--border-dark,#1E5167)] bg-[var(--panel-bg,#ffffff)]/95 p-3 shadow-[4px_4px_0_0_var(--border-dark,#1E5167)] sm:p-4`}
+      className={`${className ?? ''} pointer-events-auto mx-auto w-[min(860px,92vw)] rounded-[28px] border-[3px] border-[#163e66] bg-white/95 p-3 shadow-[4px_4px_0_0_#163e66] sm:p-4`}
       role="region"
       aria-label="Question"
     >
       <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-3 sm:gap-4`}>
         {question.imageUrl && (
-          <div className="relative h-32 w-full shrink-0 overflow-hidden rounded-2xl border-2 border-[var(--border-dark,#1E5167)] bg-white sm:h-40 sm:w-44">
+          <div className="relative h-32 w-full shrink-0 overflow-hidden rounded-2xl border-[3px] border-[#163e66] bg-white sm:h-40 sm:w-48">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={question.imageUrl}
@@ -102,7 +102,7 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="grandstander mb-3 text-lg font-bold text-[var(--heading-color,#114257)] sm:text-2xl">
+          <p className="grandstander mb-3 text-lg font-bold text-[#163e66] sm:text-2xl">
             {question.question}
           </p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -125,7 +125,7 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
                           ? 'border-emerald-500 bg-emerald-100 text-emerald-900'
                           : isPicked
                             ? 'border-[var(--primary-accent-hover)] bg-[var(--secondary-bg)]'
-                            : 'border-[var(--border-dark,#1E5167)] bg-[var(--primary-accent,#2b6cb0)] text-[var(--button-text-light,#ffffff)] hover:brightness-110'
+                            : 'border-[#163e66] bg-[#1e4d73] text-white hover:bg-[#163e66]'
                     }
                     disabled:cursor-not-allowed`}
                   aria-label={`Answer ${LETTERS[index]}: ${answer}`}
