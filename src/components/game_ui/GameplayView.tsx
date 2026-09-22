@@ -195,7 +195,6 @@ const GameplayView: React.FC<GameplayViewProps> = ({
           handlePixiActiveTeamChanged
         );
         setRuntimeReady(true);
-        createdRuntime.start();
       })
       .catch(error => {
         if (cancelled) return;
@@ -230,6 +229,13 @@ const GameplayView: React.FC<GameplayViewProps> = ({
     handlePixiScoreUpdate,
     handlePixiActiveTeamChanged,
   ]);
+
+  // Start only after this render so HUD overlays (question card, timer)
+  // can subscribe before the first QUESTION_SHOWN / TIMER_STARTED events.
+  useEffect(() => {
+    if (!runtimeReady) return;
+    runtimeRef.current?.start();
+  }, [runtimeReady]);
   // ------------------------------------------------------
 
   // --- Settings/Audio Handlers (Connect to EventBus/AudioManager) ---

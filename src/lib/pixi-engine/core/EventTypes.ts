@@ -223,6 +223,7 @@ export const GAME_EVENTS = {
 export const HUD_EVENTS = {
   QUESTION_SHOWN: 'hud:questionShown',
   ANSWER_SELECTED: 'hud:answerSelected',
+  READY: 'hud:ready',
 } as const;
 
 export interface HudQuestionShownPayload {
@@ -342,6 +343,7 @@ export interface EngineEvents {
   [GAME_EVENTS.ANSWER_SELECTED]: (payload: AnswerSelectedPayload) => void;
   [HUD_EVENTS.QUESTION_SHOWN]: (payload: HudQuestionShownPayload) => void;
   [HUD_EVENTS.ANSWER_SELECTED]: (payload: HudAnswerSelectedPayload) => void;
+  [HUD_EVENTS.READY]: () => void;
   [TUG_EVENTS.OFFSET_CHANGED]: (payload: TugOffsetChangedPayload) => void;
   [TUG_EVENTS.ROUND_WON]: (payload: TugRoundWonPayload) => void;
   [TUG_EVENTS.MATCH_ENDED]: (payload: TugMatchEndedPayload) => void;

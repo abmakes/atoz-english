@@ -51,6 +51,7 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
     eventBus.on(HUD_EVENTS.QUESTION_SHOWN, onShown)
     eventBus.on(GAME_EVENTS.ANSWER_SELECTED, onResolved)
     eventBus.on(GAME_STATE_EVENTS.GAME_ENDED, onEnded)
+    eventBus.emit(HUD_EVENTS.READY)
     return () => {
       eventBus.off(HUD_EVENTS.QUESTION_SHOWN, onShown)
       eventBus.off(GAME_EVENTS.ANSWER_SELECTED, onResolved)

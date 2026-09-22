@@ -228,6 +228,7 @@ On `TIMER_COMPLETED` for the question timer, treat as timeout (`selectedOptionId
 |----------|---------|---------|
 | `GAME_EVENTS.ANSWER_SELECTED` | `AnswerSelectedPayload` | Sounds; Quiz Room scoring |
 | `HUD_EVENTS.QUESTION_SHOWN` | `HudQuestionShownPayload` | React question card |
+| `HUD_EVENTS.READY` | none | Question card mounted; replay current `QUESTION_SHOWN` if the first emit was missed |
 | `HUD_EVENTS.ANSWER_SELECTED` | `{ selectedIndex }` | React → 3D answer pick |
 | `TUG_EVENTS.OFFSET_CHANGED` | `{ offset, displayedOffset }` | Tug meter / rope |
 | `TUG_EVENTS.ROUND_WON` | `TugRoundWonPayload` | Round dots + RuleEngine +1 |

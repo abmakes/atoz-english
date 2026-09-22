@@ -247,6 +247,30 @@ export function isTugOfWarQuestionEligible(question: QuestionData): boolean {
   )
 }
 
+/**
+ * EventBus does not replay missed events. The React question card can mount
+ * after `QUESTION_SHOWN`, so `HUD_EVENTS.READY` re-emits the current card
+ * only while that question is still waiting for an answer.
+ */
+export function canReplayHudQuestion<T>(state: {
+  ended: boolean
+  disposed: boolean
+  answerLocked: boolean
+  lastHudQuestion: T | null | undefined
+}): state is {
+  ended: false
+  disposed: false
+  answerLocked: false
+  lastHudQuestion: T
+} {
+  return (
+    !state.ended &&
+    !state.disposed &&
+    !state.answerLocked &&
+    state.lastHudQuestion != null
+  )
+}
+
 export function resolveTugQuestionImageUrl(
   imageUrl: string | null | undefined
 ): string | null {

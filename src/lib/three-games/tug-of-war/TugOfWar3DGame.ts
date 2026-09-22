@@ -7,6 +7,7 @@ import {
   TIMER_EVENTS,
   TUG_EVENTS,
   type HudAnswerSelectedPayload,
+  type HudQuestionShownPayload,
   type TimerEventPayload,
 } from '@/lib/pixi-engine/core/EventTypes'
 import { GamePhase } from '@/lib/pixi-engine/core/GameStateManager'
@@ -23,6 +24,7 @@ import {
   TUG_NINJAS_PER_TEAM,
   TUG_QUESTION_TIMER_ID,
   applyPull,
+  canReplayHudQuestion,
   computePullImpulse,
   createTugAnswerPayload,
   createTugMatchState,
@@ -63,12 +65,14 @@ export class TugOfWar3DGame implements ThreeGame {
   private paused = false
   private ended = false
   private disposed = false
+  private started = false
   private match = createTugMatchState()
   private lastEmittedOffset = 0
   private ropeMarker: THREE.Group | null = null
   private pullSettledCallback: (() => void) | null = null
   private feedbackTimeout: ReturnType<typeof setTimeout> | null = null
   private durationMs = 15000
+  private lastHudQuestion: HudQuestionShownPayload | null = null
 
   constructor(private readonly context: ThreeGameContext) {
     this.scene = context.world.getScene()
@@ -107,6 +111,10 @@ export class TugOfWar3DGame implements ThreeGame {
       this.handleHudAnswer
     )
     this.context.services.eventBus.on(
+      HUD_EVENTS.READY,
+      this.handleHudReady
+    )
+    this.context.services.eventBus.on(
       TIMER_EVENTS.TIMER_COMPLETED,
       this.handleTimerCompleted
     )
@@ -114,7 +122,8 @@ export class TugOfWar3DGame implements ThreeGame {
   }
 
   public start(): void {
-    if (this.ended) return
+    if (this.ended || this.started) return
+    this.started = true
     this.context.services.gameStateManager.setPhase(GamePhase.PLAYING)
     this.context.services.gameStateManager.setActiveTeam(
       this.context.config.teams[0].id
@@ -184,6 +193,10 @@ export class TugOfWar3DGame implements ThreeGame {
       this.handleHudAnswer
     )
     this.context.services.eventBus.off(
+      HUD_EVENTS.READY,
+      this.handleHudReady
+    )
+    this.context.services.eventBus.off(
       TIMER_EVENTS.TIMER_COMPLETED,
       this.handleTimerCompleted
     )
@@ -212,7 +225,7 @@ export class TugOfWar3DGame implements ThreeGame {
     this._playTeamClip('red', 'idle_hold')
 
     const team = this.context.config.teams[this.activeTeamIndex]
-    this.context.services.eventBus.emit(HUD_EVENTS.QUESTION_SHOWN, {
+    const payload: HudQuestionShownPayload = {
       questionId: question.id,
       question: question.question,
       answers: question.answers,
@@ -221,7 +234,9 @@ export class TugOfWar3DGame implements ThreeGame {
       totalQuestions: this.totalQuestions,
       teamId: team.id,
       roundNumber: this.match.roundNumber,
-    })
+    }
+    this.lastHudQuestion = payload
+    this.context.services.eventBus.emit(HUD_EVENTS.QUESTION_SHOWN, payload)
 
     if (this.context.services.timerManager.getTimer(QUESTION_TIMER_ID)) {
       this.context.services.timerManager.removeTimer(QUESTION_TIMER_ID)
@@ -641,6 +656,20 @@ export class TugOfWar3DGame implements ThreeGame {
   private handleHudAnswer = (payload: HudAnswerSelectedPayload): void => {
     if (typeof payload?.selectedIndex !== 'number') return
     this._selectAnswer(payload.selectedIndex)
+  }
+
+  private handleHudReady = (): void => {
+    const replay = {
+      ended: this.ended,
+      disposed: this.disposed,
+      answerLocked: this.answerLocked,
+      lastHudQuestion: this.lastHudQuestion,
+    }
+    if (!canReplayHudQuestion(replay)) return
+    this.context.services.eventBus.emit(
+      HUD_EVENTS.QUESTION_SHOWN,
+      replay.lastHudQuestion
+    )
   }
 
   private handleTimerCompleted = (payload: TimerEventPayload): void => {

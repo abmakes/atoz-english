@@ -7,6 +7,7 @@ import {
   TUG_TIMEOUT_PULL_FACTOR,
   TUG_WRONG_PULL_FACTOR,
   applyPull,
+  canReplayHudQuestion,
   clampTugOffset,
   computePullImpulse,
   createTugAnswerPayload,
@@ -193,5 +194,41 @@ describe('tugOfWarLogic payloads and eligibility', () => {
     )
     expect(resolveTugQuestionImageUrl('/images/placeholder.webp')).toBeNull()
     expect(resolveTugQuestionImageUrl('')).toBeNull()
+  })
+
+  it('replays a live question for a late HUD, but never after lock or end', () => {
+    const question = { questionId: 'q1' }
+    expect(
+      canReplayHudQuestion({
+        ended: false,
+        disposed: false,
+        answerLocked: false,
+        lastHudQuestion: question,
+      })
+    ).toBe(true)
+    expect(
+      canReplayHudQuestion({
+        ended: false,
+        disposed: false,
+        answerLocked: false,
+        lastHudQuestion: null,
+      })
+    ).toBe(false)
+    expect(
+      canReplayHudQuestion({
+        ended: false,
+        disposed: false,
+        answerLocked: true,
+        lastHudQuestion: question,
+      })
+    ).toBe(false)
+    expect(
+      canReplayHudQuestion({
+        ended: true,
+        disposed: false,
+        answerLocked: false,
+        lastHudQuestion: question,
+      })
+    ).toBe(false)
   })
 })
