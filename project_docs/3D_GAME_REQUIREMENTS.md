@@ -289,7 +289,7 @@ A 3D game that emits a complete `ANSWER_SELECTED` payload gets scoring and SFX f
 - **One loop.** Only `ThreeRuntime` calls `requestAnimationFrame`. Games must not start a second loop.
 - **Pixel ratio** capped at `1.75`.
 - **Raycast** against answer meshes on `pointerup` using NDC from the canvas bounding rect. Set `userData` on pickable objects.
-- **Resize.** `GameplayView` calls `runtime.resize` on fullscreen. `ThreeWorld` updates camera aspect + `setSize`.
+- **Resize.** `ThreeRuntime` watches the mount element with a `ResizeObserver` and resizes whenever its box changes; `GameplayView` also calls `runtime.resize` after fullscreen toggles. `ThreeWorld` updates camera aspect + `setSize`, then the game's `onResize` runs.
 - **HUD.** DOM overlay. Scores, nav, and settings stay in React for every mode. Modes may also mount a **question card, timer badge, and tug meter** (`GameModeDefinition.hud`) that talk to the game only through the EventBus (`HUD_EVENTS`, `TUG_EVENTS`). Keep in-world canvas labels for objects that must sit in 3D space (Quiz Room pedestals). Do not read CSS variables for Three materials.
 - **Pause.** Opening the settings dropdown emits `GAME_PAUSED`. Runtime pauses timers and `game.pause()`.
 
@@ -336,7 +336,14 @@ Payload helper: `createQuizRoomAnswerPayload` in `quizRoomLogic.ts`.
 
 ## Mode: Tug of War (`tug-of-war-3d`)
 
-Turn-based, **best of 3** (first to 2 round wins). Two teams required. Question card, timer, tug meter, and round dots are **React HUD overlays** (`hud` flags on the mode definition). The Three scene owns the dirt arena, sagging rope, center flag, and six procedural ninjas.
+Turn-based, **best of 3** (first to 2 round wins). Two teams required. Question card, timer, tug meter, and round dots are **React HUD overlays** (`hud` flags on the mode definition).
+
+The Three scene is a painted 2.5D stage (art in `public/images/tug-of-war/`, URLs in `tugArt.ts`):
+
+- **Plate.** `arena-backdrop.webp` sits on a 16×9 world-unit plane. `computeTugStageView` sets the camera so the plate always covers the viewport: wide screens crop top and bottom, narrow screens crop the sides and compress the ninja row (`layoutScaleX`, `spriteScale`).
+- **Actors.** Six sprite ninjas (`NinjaActor`), a textured rope ribbon with the split centre banner (`TugRope`), and dust and petal effects (`tugEffects.ts`). The rope, banner, and ninjas move together with the tug offset; a smoke puff hides the snap back to centre between rounds.
+- **Blending.** Cutouts use `createCutoutMaterial`: premultiplied textures with One / OneMinusSrcAlpha blending. Do not also set Three's `premultipliedAlpha` on premultiplied textures, or edges go dark.
+- **Pure math.** Stage and rope math lives in `tugStageLayout.ts` (unit-tested).
 
 - Eligibility: same as 3D Quiz Room (MC, 2–4 answers). Setup forces Team Blue / Team Red.
 - Timer id: `tugOfWarQuestionTimer`.

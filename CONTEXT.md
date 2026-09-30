@@ -79,7 +79,7 @@ CONTEXT.md              This hub
 | **Engine architecture** | [src/lib/pixi-engine/engineHelperDoc.md](src/lib/pixi-engine/engineHelperDoc.md) | Managers, EventBus, lifecycle |
 | **Pixi / TS lessons** | [project_docs/lessons-learned.md](project_docs/lessons-learned.md) | GIFs, Assets.unload, React↔Pixi pitfalls |
 | **Adding a 3D game** | [project_docs/3D_GAME_REQUIREMENTS.md](project_docs/3D_GAME_REQUIREMENTS.md) | ThreeGame contract, events, managers, prohibitions |
-| **Tug of War ninjas** | [project_docs/TUG_OF_WAR_NINJA_ASSET_SPEC.md](project_docs/TUG_OF_WAR_NINJA_ASSET_SPEC.md) | Pose clips and GLB delivery |
+| **Tug of War ninjas** | [project_docs/TUG_OF_WAR_NINJA_ASSET_SPEC.md](project_docs/TUG_OF_WAR_NINJA_ASSET_SPEC.md) | Pose clips, painted sprite canvas rules, GLB delivery |
 | **Splash Dash behavior** | [src/lib/pixi-games/splash-dash/SPLASH_DASH_MECHANICS.md](src/lib/pixi-games/splash-dash/SPLASH_DASH_MECHANICS.md) | SD scoring/timer/movement |
 | **Splash Dash integration** | [src/lib/pixi-games/splash-dash/README.md](src/lib/pixi-games/splash-dash/README.md) | SD wiring checklist |
 | **Multiple-choice flow** | [src/lib/pixi-games/multiple-choice/MultipleChoiceFlow.md](src/lib/pixi-games/multiple-choice/MultipleChoiceFlow.md) | MC-specific deep dive |

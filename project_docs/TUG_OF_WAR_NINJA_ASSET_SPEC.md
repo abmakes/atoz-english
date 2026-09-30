@@ -1,8 +1,22 @@
 # Tug of War — Ninja Asset Spec
 
-Placeholder procedural ninjas in `src/lib/three-games/tug-of-war/NinjaActor.ts` implement these clip names in code. Commissioned GLB characters must use the **same clip names** so `NinjaActor.play(clip)` can swap from primitives to `AnimationMixer` without game-code changes.
+`src/lib/three-games/tug-of-war/NinjaActor.ts` currently draws each ninja as a painted sprite and fakes these clips with pose swaps plus shear, hop, and squash. Commissioned GLB characters must use the **same clip names** so `NinjaActor.play(clip)` can swap to `AnimationMixer` without game-code changes.
 
 Hub: [CONTEXT.md](../CONTEXT.md). Integration: [3D_GAME_REQUIREMENTS.md](3D_GAME_REQUIREMENTS.md).
+
+---
+
+## Painted sprites (current art)
+
+| Item | Requirement |
+|------|-------------|
+| Files | `public/images/tug-of-war/ninja-{blue,red}-{pull,cheer,fallen}.webp`. Red is the blue art hue-shifted and mirrored. |
+| Canvas | 700 × 640 px, transparent. Feet anchor at (350, 627). |
+| Rope | The painted rope crosses at y = 367 and fades out by 318 px from the anchor so it blends into the scene rope. `rope-strip.webp` (186 × 38 px, six twists) tiles along the scene rope. |
+| Facing | Blue faces right (toward the flag); red faces left. |
+| Pose use | `pull` for every rope clip, `cheer` for `victory_cheer`, `fallen` after the `defeat_fall` lurch. |
+
+These numbers live in `TUG_NINJA_SPRITE` and `TUG_ROPE_STRIP` (`tugStageLayout.ts`). Replacement sprites must keep them or update those constants. Leans are horizontal shears anchored at the feet so the painted rope stays level with the scene rope.
 
 ---
 
@@ -83,4 +97,4 @@ Not triggered in v1. Deep crouch, vibrating shake, telegraphing a future power-u
 | Timeout | active `strain_lose`, opponent `pull_heave` |
 | Round / match win | winner `victory_cheer`, loser `defeat_fall` |
 
-When a GLB lands, replace the procedural body inside `NinjaActor` and drive `THREE.AnimationMixer` with these clip names. Do not change `TugOfWar3DGame`.
+When a GLB lands, replace the sprite body inside `NinjaActor` and drive `THREE.AnimationMixer` with these clip names. Do not change `TugOfWar3DGame`.

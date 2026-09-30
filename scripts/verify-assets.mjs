@@ -20,6 +20,15 @@ const REQUIRED_ASSETS = [
   'public/images/splash-dash/crate_5_4.png',
   'public/images/splash-dash/crate_square.png',
   'public/images/splash-dash/capy_spritesheet.png',
+  // Tug of War painted stage (see src/lib/three-games/tug-of-war/tugArt.ts)
+  'public/images/tug-of-war/arena-backdrop.webp',
+  'public/images/tug-of-war/rope-strip.webp',
+  'public/images/tug-of-war/ninja-blue-pull.webp',
+  'public/images/tug-of-war/ninja-blue-cheer.webp',
+  'public/images/tug-of-war/ninja-blue-fallen.webp',
+  'public/images/tug-of-war/ninja-red-pull.webp',
+  'public/images/tug-of-war/ninja-red-cheer.webp',
+  'public/images/tug-of-war/ninja-red-fallen.webp',
   // Fonts
   'public/fonts/GrandstanderVF.ttf',
   'public/fonts/InclusiveSansVF.ttf',
