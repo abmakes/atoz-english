@@ -426,7 +426,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
         </div>
         )}
 
-        <div className={`absolute ${splitScores ? 'bottom-24 right-3 sm:bottom-28 sm:right-4' : 'top-6 right-6'} z-20`}>
+        <div className={`absolute ${splitScores ? 'bottom-24 right-3 sm:bottom-28 sm:right-4 lg:bottom-4' : 'top-6 right-6'} z-20`}>
              <NavMenu items={navMenuItems}/>
         </div>
 
