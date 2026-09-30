@@ -19,7 +19,29 @@ import type {
   ThreeGameContext,
 } from '@/lib/three-engine/game/ThreeGame'
 import { disposeObject3D } from '@/lib/three-engine/ThreeWorld'
-import { NinjaActor } from './NinjaActor'
+import { NinjaActor, type TugNinjaTextures } from './NinjaActor'
+import { TugRope } from './TugRope'
+import { TugDust, TugPetals } from './tugEffects'
+import { TUG_ART } from './tugArt'
+import { createCutoutMaterial } from './tugMaterials'
+import {
+  createChalkTexture,
+  createDustTexture,
+  createFlagTexture,
+  createPetalTexture,
+  createShadowTexture,
+} from './tugCanvasTextures'
+import {
+  TUG_CAMERA_DISTANCE,
+  TUG_FEET_Y,
+  TUG_ROPE_TRAVEL,
+  TUG_STAGE_HEIGHT,
+  TUG_STAGE_WIDTH,
+  computeTugStageView,
+  tugNinjaPx,
+  tugSlotX,
+  type TugStageView,
+} from './tugStageLayout'
 import {
   TUG_NINJAS_PER_TEAM,
   TUG_QUESTION_TIMER_ID,
@@ -41,19 +63,28 @@ import {
 const QUESTION_TIMER_ID = TUG_QUESTION_TIMER_ID
 const ROUND_INTERSTITIAL_MS = 1600
 const POST_PULL_MS = 380
-const FLAG_TRAVEL = 4.1
-const NINJA_DRAG = 0.55
-const ROPE_Y = 1.02
+const SHAKE_MS = 260
+const SHAKE_AMPLITUDE = 0.035
+const SIDES: readonly TugSide[] = ['blue', 'red']
+/** Rear-foot offset from a pull-pose anchor, in sprite pixels. */
+const REAR_FOOT_PX = 190
+
+interface TugArt {
+  backdrop: THREE.Texture
+  rope: THREE.Texture
+  ninjas: Record<TugSide, TugNinjaTextures>
+}
 
 /**
  * Turn-based, best-of-3 tug of war. Question UI lives in React; this class
- * owns the 3D arena, rope, ninjas, and round/match rules.
+ * owns the painted stage, rope, ninjas, and round/match rules.
  */
 export class TugOfWar3DGame implements ThreeGame {
   private readonly scene: THREE.Scene
   private readonly camera: THREE.PerspectiveCamera
   private readonly root = new THREE.Group()
   private readonly ninjas: NinjaActor[] = []
+  private readonly winLines: THREE.Mesh[] = []
 
   private questions: QuestionData[] = []
   private sequencer: QuestionSequencer | null = null
@@ -68,11 +99,16 @@ export class TugOfWar3DGame implements ThreeGame {
   private started = false
   private match = createTugMatchState()
   private lastEmittedOffset = 0
-  private ropeMarker: THREE.Group | null = null
   private pullSettledCallback: (() => void) | null = null
   private feedbackTimeout: ReturnType<typeof setTimeout> | null = null
   private durationMs = 15000
   private lastHudQuestion: HudQuestionShownPayload | null = null
+  private view: TugStageView = computeTugStageView(TUG_STAGE_WIDTH / TUG_STAGE_HEIGHT)
+  private art: TugArt | null = null
+  private rope: TugRope | null = null
+  private dust: TugDust | null = null
+  private petals: TugPetals | null = null
+  private shakeMs = 0
 
   constructor(private readonly context: ThreeGameContext) {
     this.scene = context.world.getScene()
@@ -84,13 +120,18 @@ export class TugOfWar3DGame implements ThreeGame {
       throw new Error('Tug of War requires exactly two teams.')
     }
 
-    const quiz = await this.context.quizDataSource.loadQuiz(
-      this.context.config.quizId
-    )
-    if (this.disposed) return
+    const [quiz, art] = await Promise.all([
+      this.context.quizDataSource.loadQuiz(this.context.config.quizId),
+      loadTugArt(),
+    ])
+    if (this.disposed) {
+      disposeTugArt(art)
+      return
+    }
 
     this.questions = quiz.questions.filter(isTugOfWarQuestionEligible)
     if (this.questions.length === 0) {
+      disposeTugArt(art)
       throw new Error(
         'Tug of War requires multiple-choice questions with 2–4 answers.'
       )
@@ -104,7 +145,7 @@ export class TugOfWar3DGame implements ThreeGame {
     this.totalQuestions = this.sequencer.getTotalQuestionsToAsk()
     this.durationMs = this.context.config.intensityTimeLimit * 1000
 
-    this._buildArena()
+    this._buildStage(art)
     this.scene.add(this.root)
     this.context.services.eventBus.on(
       HUD_EVENTS.ANSWER_SELECTED,
@@ -132,7 +173,14 @@ export class TugOfWar3DGame implements ThreeGame {
   }
 
   public update(deltaMs: number): void {
-    if (this.paused || this.ended) return
+    if (this.paused || this.disposed) return
+
+    this.ninjas.forEach((ninja) => ninja.update(deltaMs))
+    this.rope?.update(deltaMs)
+    this.dust?.update(deltaMs)
+    this.petals?.update(deltaMs)
+    this._updateShake(deltaMs)
+    if (this.ended) return
 
     const displayed = stepDisplayedOffset(
       this.match.displayedOffset,
@@ -146,8 +194,6 @@ export class TugOfWar3DGame implements ThreeGame {
         this._emitOffset(false)
       }
     }
-
-    this.ninjas.forEach((ninja) => ninja.update(deltaMs))
 
     if (
       this.pullSettledCallback &&
@@ -178,7 +224,8 @@ export class TugOfWar3DGame implements ThreeGame {
   }
 
   public onResize(): void {
-    // Camera projection is updated by ThreeWorld.
+    if (this.disposed) return
+    this._applyView()
   }
 
   public destroy(): void {
@@ -205,8 +252,19 @@ export class TugOfWar3DGame implements ThreeGame {
     }
     this.ninjas.forEach((ninja) => ninja.dispose())
     this.ninjas.length = 0
+    this.rope?.dispose()
+    this.dust?.dispose()
+    this.petals?.dispose()
+    this.rope = null
+    this.dust = null
+    this.petals = null
+    this.winLines.length = 0
     this.scene.remove(this.root)
     disposeObject3D(this.root)
+    if (this.art) {
+      disposeTugArt(this.art)
+      this.art = null
+    }
   }
 
   private _showNextQuestion(): void {
@@ -221,6 +279,7 @@ export class TugOfWar3DGame implements ThreeGame {
       (this.sequencer?.getCurrentProgressIndex() ?? 1) - 1
     this.currentQuestion = question
     this.answerLocked = false
+    this.rope?.setSlack(0)
     this._playTeamClip('blue', 'idle_hold')
     this._playTeamClip('red', 'idle_hold')
 
@@ -294,6 +353,8 @@ export class TugOfWar3DGame implements ThreeGame {
       this._playTeamClip(activeSide, timedOut ? 'strain_lose' : 'stumble_slip')
       this._playTeamClip(otherSide, 'pull_heave')
     }
+    this._kickDust(payload.isCorrect ? activeSide : otherSide, 3)
+    this.shakeMs = SHAKE_MS
 
     this.pullSettledCallback = () => {
       if (this.disposed || this.ended) return
@@ -314,6 +375,8 @@ export class TugOfWar3DGame implements ThreeGame {
     const loser: TugSide = winner === 'blue' ? 'red' : 'blue'
     this._playTeamClip(winner, 'victory_cheer')
     this._playTeamClip(loser, 'defeat_fall')
+    this.rope?.setSlack(1)
+    this._kickDust(loser, 4)
 
     this.context.services.eventBus.emit(TUG_EVENTS.ROUND_WON, {
       teamId: winningTeam.id,
@@ -331,8 +394,10 @@ export class TugOfWar3DGame implements ThreeGame {
         this._endMatch(matchWinner, 'rounds')
         return
       }
+      this._smokeBomb()
       this.match = resetRound(this.match)
       this._syncRopeVisuals()
+      this._smokeBomb()
       this._emitOffset(true)
       this._advanceTurn()
       this._showNextQuestion()
@@ -357,6 +422,7 @@ export class TugOfWar3DGame implements ThreeGame {
       const loser: TugSide = winner === 'blue' ? 'red' : 'blue'
       this._playTeamClip(winner, 'victory_cheer')
       this._playTeamClip(loser, 'defeat_fall')
+      this.rope?.setSlack(1)
     }
 
     const winnerTeam =
@@ -406,251 +472,139 @@ export class TugOfWar3DGame implements ThreeGame {
   }
 
   private _syncRopeVisuals(): void {
-    const x = this.match.displayedOffset * FLAG_TRAVEL
-    if (this.ropeMarker) {
-      this.ropeMarker.position.x = x
+    const shift =
+      this.match.displayedOffset * TUG_ROPE_TRAVEL * this.view.layoutScaleX
+    if (this.rope) this.rope.group.position.x = shift
+    this.ninjas.forEach((ninja) => ninja.setWorldX(ninja.restX + shift))
+  }
+
+  private _kickDust(side: TugSide, perNinja: number): void {
+    if (!this.dust) return
+    const away = side === 'blue' ? -1 : 1
+    const rearFoot = tugNinjaPx(REAR_FOOT_PX, this.view.spriteScale) * away
+    this.ninjas
+      .filter((ninja) => ninja.side === side)
+      .forEach((ninja) => {
+        this.dust?.spawn(
+          ninja.group.position.x + rearFoot,
+          TUG_FEET_Y + 0.04,
+          away,
+          perNinja,
+          this.view.spriteScale
+        )
+      })
+  }
+
+  /** Ninja smoke puffs that hide the snap back to the start line. */
+  private _smokeBomb(): void {
+    if (!this.dust) return
+    this.ninjas.forEach((ninja, index) => {
+      this.dust?.spawn(
+        ninja.group.position.x,
+        TUG_FEET_Y + 0.35 * this.view.spriteScale,
+        index % 2 === 0 ? -0.4 : 0.4,
+        3,
+        this.view.spriteScale * 1.8
+      )
+    })
+  }
+
+  private _updateShake(deltaMs: number): void {
+    if (this.shakeMs <= 0) return
+    this.shakeMs = Math.max(0, this.shakeMs - deltaMs)
+    const strength = (this.shakeMs / SHAKE_MS) * SHAKE_AMPLITUDE
+    this.camera.position.x = (Math.random() - 0.5) * 2 * strength
+    this.camera.position.y = this.view.cameraY + (Math.random() - 0.5) * strength
+    if (this.shakeMs === 0) {
+      this.camera.position.set(0, this.view.cameraY, TUG_CAMERA_DISTANCE)
     }
+  }
+
+  private _applyView(): void {
+    this.view = computeTugStageView(this.camera.aspect)
+    this.camera.fov = this.view.fovDeg
+    this.camera.near = 1
+    this.camera.far = 60
+    this.camera.position.set(0, this.view.cameraY, TUG_CAMERA_DISTANCE)
+    this.camera.lookAt(0, this.view.cameraY, 0)
+    this.camera.updateProjectionMatrix()
+
+    const { layoutScaleX, spriteScale } = this.view
     this.ninjas.forEach((ninja) => {
-      ninja.setWorldX(ninja.restX + this.match.displayedOffset * NINJA_DRAG)
-    })
-  }
-
-  private _buildArena(): void {
-    this.scene.background = new THREE.Color(0x7ec8f7)
-    this.scene.fog = new THREE.Fog(0xb7def6, 22, 48)
-
-    this.camera.position.set(0, 2.45, 10.4)
-    this.camera.lookAt(0, 1.05, 0)
-
-    const hemi = new THREE.HemisphereLight(0xfff6e8, 0x6a9a48, 1.7)
-    this.root.add(hemi)
-    const sun = new THREE.DirectionalLight(0xfff3c8, 2.5)
-    sun.position.set(4, 11, 7)
-    sun.castShadow = true
-    sun.shadow.mapSize.set(1024, 1024)
-    this.root.add(sun)
-
-    const grass = new THREE.Mesh(
-      new THREE.PlaneGeometry(48, 30),
-      new THREE.MeshStandardMaterial({ color: 0x7dbe62, roughness: 1 })
-    )
-    grass.rotation.x = -Math.PI / 2
-    grass.receiveShadow = true
-    this.root.add(grass)
-
-    const dirt = new THREE.Mesh(
-      new THREE.PlaneGeometry(22, 7.5),
-      new THREE.MeshStandardMaterial({ color: 0xc4a06a, roughness: 0.95 })
-    )
-    dirt.rotation.x = -Math.PI / 2
-    dirt.position.y = 0.012
-    dirt.receiveShadow = true
-    this.root.add(dirt)
-
-    this._addClouds()
-    this._addHills()
-    this._addTrees()
-    this._addBanners()
-    this._addRope()
-    this._addNinjas()
-  }
-
-  private _addClouds(): void {
-    const cloudMat = new THREE.MeshBasicMaterial({ color: 0xffffff })
-    ;[
-      [-8, 6.2, -6],
-      [-4.5, 6.8, -8],
-      [1.2, 6.4, -7],
-      [6.5, 6.9, -6.5],
-      [10, 6.1, -8],
-    ].forEach(([x, y, z], index) => {
-      const cloud = new THREE.Mesh(new THREE.SphereGeometry(0.7, 10, 8), cloudMat)
-      cloud.scale.set(2.2, 0.7, 1)
-      cloud.position.set(x, y + (index % 2) * 0.2, z)
-      this.root.add(cloud)
-    })
-  }
-
-  private _addHills(): void {
-    const hillMat = new THREE.MeshStandardMaterial({
-      color: 0x63b15c,
-      roughness: 1,
-    })
-    const farMat = new THREE.MeshStandardMaterial({
-      color: 0x8fbfd4,
-      roughness: 1,
-    })
-    const peakMat = new THREE.MeshStandardMaterial({
-      color: 0x9fd0e4,
-      roughness: 0.85,
-    })
-    ;[
-      { x: -10, z: -11, s: 5.5, y: 0.4, mat: farMat },
-      { x: 0, z: -13, s: 7.2, y: 0.8, mat: peakMat },
-      { x: 9, z: -11.5, s: 6, y: 0.5, mat: farMat },
-      { x: -5.5, z: -7.2, s: 2.8, y: 0, mat: hillMat },
-      { x: 5.2, z: -7, s: 2.5, y: 0, mat: hillMat },
-    ].forEach((hill) => {
-      const mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(1, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2),
-        hill.mat
-      )
-      mesh.scale.set(hill.s, hill.s * 0.55, hill.s * 0.7)
-      mesh.position.set(hill.x, hill.y, hill.z)
-      this.root.add(mesh)
-    })
-
-    const cliff = new THREE.Mesh(
-      new THREE.BoxGeometry(1.6, 3.2, 1.2),
-      new THREE.MeshStandardMaterial({ color: 0x8aa4b0, roughness: 0.9 })
-    )
-    cliff.position.set(8.4, 1.5, -8.2)
-    this.root.add(cliff)
-    const waterfall = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.9, 2.8),
-      new THREE.MeshStandardMaterial({
-        color: 0xe7f7ff,
-        transparent: true,
-        opacity: 0.85,
+      ninja.setLayout({
+        restX: tugSlotX(ninja.side, ninja.slot, layoutScaleX),
+        spriteScale,
+        baselineY: TUG_FEET_Y,
       })
-    )
-    waterfall.position.set(8.4, 1.7, -7.5)
-    this.root.add(waterfall)
-
-    const pagoda = new THREE.Group()
-    ;[1.2, 0.9, 0.6].forEach((w, i) => {
-      const roof = new THREE.Mesh(
-        new THREE.ConeGeometry(w, 0.35, 4),
-        new THREE.MeshStandardMaterial({ color: 0xb4532a, roughness: 0.7 })
-      )
-      roof.position.y = 1.1 + i * 0.55
-      roof.rotation.y = Math.PI / 4
-      pagoda.add(roof)
-      const body = new THREE.Mesh(
-        new THREE.BoxGeometry(w * 0.7, 0.35, w * 0.7),
-        new THREE.MeshStandardMaterial({ color: 0xe8d5a3 })
-      )
-      body.position.y = 0.85 + i * 0.55
-      pagoda.add(body)
     })
-    pagoda.position.set(6.2, 0, -6.6)
-    pagoda.scale.setScalar(1.35)
-    this.root.add(pagoda)
+    this.rope?.setLayout(spriteScale, layoutScaleX)
+    this.winLines.forEach((line, index) => {
+      const sign = index === 0 ? -1 : 1
+      line.position.set(sign * TUG_ROPE_TRAVEL * layoutScaleX, TUG_FEET_Y - 0.05, 0.001)
+      line.scale.set(spriteScale, spriteScale, 1)
+    })
+    this.petals?.setBounds(
+      this.view.visibleWidth / 2,
+      this.view.cameraY - this.view.visibleHeight / 2,
+      this.view.cameraY + this.view.visibleHeight / 2
+    )
+    this._syncRopeVisuals()
   }
 
-  private _addTrees(): void {
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b4423 })
-    const blossomMat = new THREE.MeshStandardMaterial({
-      color: 0xf4b6c8,
-      roughness: 0.8,
-    })
-    ;[
-      [-9.2, 1.4, 1.7],
-      [-7.6, -1.2, 1.35],
-      [9.1, 1.6, 1.65],
-      [7.5, -0.8, 1.3],
-    ].forEach(([x, z, scale]) => {
-      const tree = new THREE.Group()
-      const trunk = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.14, 0.22, 2.1, 6),
-        trunkMat
-      )
-      trunk.position.y = 1.05
-      trunk.castShadow = true
-      tree.add(trunk)
-      for (let i = 0; i < 7; i++) {
-        const puff = new THREE.Mesh(
-          new THREE.SphereGeometry(0.55 + (i % 3) * 0.12, 10, 8),
-          blossomMat
+  private _buildStage(art: TugArt): void {
+    this.art = art
+    this.scene.background = new THREE.Color(0x9fd3f5)
+    this.scene.fog = null
+
+    const backdrop = new THREE.Mesh(
+      new THREE.PlaneGeometry(TUG_STAGE_WIDTH, TUG_STAGE_HEIGHT),
+      new THREE.MeshBasicMaterial({ map: art.backdrop, depthWrite: false })
+    )
+    backdrop.name = 'tug-arena-backdrop'
+    backdrop.position.set(0, TUG_STAGE_HEIGHT / 2, -0.05)
+    backdrop.renderOrder = 0
+    this.root.add(backdrop)
+
+    SIDES.forEach((side) => {
+      const line = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.16, 1.05).translate(0, 0.08, 0),
+        createCutoutMaterial(
+          createChalkTexture(side === 'blue' ? '#dbeafe' : '#fee2e2'),
+          0.85
         )
-        puff.position.set(
-          (i % 3) - 1,
-          2.15 + Math.floor(i / 3) * 0.35,
-          ((i % 2) - 0.5) * 0.45
-        )
-        tree.add(puff)
-      }
-      tree.position.set(x, 0, z)
-      tree.scale.setScalar(scale)
-      this.root.add(tree)
+      )
+      line.name = `tug-win-line-${side}`
+      line.rotation.z = side === 'blue' ? -0.12 : 0.12
+      line.renderOrder = 1
+      this.winLines.push(line)
+      this.root.add(line)
     })
-  }
 
-  private _addBanners(): void {
-    this.root.add(makeBanner(-6.6, 0x2b6cb0, 0xebf8ff))
-    this.root.add(makeBanner(6.6, 0xc53030, 0xfff5f5))
-  }
+    this.rope = new TugRope(art.rope, createFlagTexture())
+    this.root.add(this.rope.group)
 
-  private _addRope(): void {
-    const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(-5.6, ROPE_Y + 0.18, 0),
-      new THREE.Vector3(-3.2, ROPE_Y - 0.02, 0),
-      new THREE.Vector3(0, ROPE_Y - 0.16, 0),
-      new THREE.Vector3(3.2, ROPE_Y - 0.02, 0),
-      new THREE.Vector3(5.6, ROPE_Y + 0.18, 0),
-    ])
-    const rope = new THREE.Mesh(
-      new THREE.TubeGeometry(curve, 48, 0.09, 10, false),
-      new THREE.MeshStandardMaterial({ color: 0xb8884a, roughness: 0.78 })
-    )
-    rope.castShadow = true
-    this.root.add(rope)
-    const strand = new THREE.Mesh(
-      new THREE.TubeGeometry(curve, 48, 0.045, 6, false),
-      new THREE.MeshStandardMaterial({ color: 0xd7b072, roughness: 0.7 })
-    )
-    strand.position.z = 0.05
-    this.root.add(strand)
-
-    const marker = new THREE.Group()
-    const pole = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.045, 0.045, 1.15, 8),
-      new THREE.MeshStandardMaterial({ color: 0xf7fafc })
-    )
-    pole.position.y = ROPE_Y + 0.35
-    marker.add(pole)
-    const blue = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.42, 0.36),
-      new THREE.MeshStandardMaterial({
-        color: 0x2b6cb0,
-        side: THREE.DoubleSide,
+    const shadowTexture = createShadowTexture()
+    for (let slot = 0; slot < TUG_NINJAS_PER_TEAM; slot++) {
+      SIDES.forEach((side) => {
+        const ninja = new NinjaActor({
+          side,
+          slot,
+          textures: art.ninjas[side],
+          restX: tugSlotX(side, slot, 1),
+          baselineY: TUG_FEET_Y,
+          shadowTexture,
+          renderOrder: 10 + (TUG_NINJAS_PER_TEAM - slot),
+        })
+        this.ninjas.push(ninja)
+        this.root.add(ninja.group)
       })
-    )
-    blue.position.set(-0.2, ROPE_Y + 0.72, 0)
-    marker.add(blue)
-    const red = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.42, 0.36),
-      new THREE.MeshStandardMaterial({
-        color: 0xc53030,
-        side: THREE.DoubleSide,
-      })
-    )
-    red.position.set(0.2, ROPE_Y + 0.72, 0)
-    marker.add(red)
-    this.ropeMarker = marker
-    this.root.add(marker)
-  }
-
-  private _addNinjas(): void {
-    const blueXs = [-4.85, -3.85, -2.9]
-    const redXs = [2.9, 3.85, 4.85]
-    const zs = [0.42, 0.05, -0.28]
-    for (let i = 0; i < TUG_NINJAS_PER_TEAM; i++) {
-      const blue = new NinjaActor({
-        side: 'blue',
-        slot: i,
-        restX: blueXs[i],
-        restZ: zs[i],
-      })
-      const red = new NinjaActor({
-        side: 'red',
-        slot: i,
-        restX: redXs[i],
-        restZ: zs[i],
-      })
-      this.ninjas.push(blue, red)
-      this.root.add(blue.group, red.group)
     }
+
+    this.dust = new TugDust(createDustTexture())
+    this.root.add(this.dust.group)
+    this.petals = new TugPetals(createPetalTexture())
+    this.root.add(this.petals.group)
+    this._applyView()
   }
 
   private handleHudAnswer = (payload: HudAnswerSelectedPayload): void => {
@@ -679,33 +633,35 @@ export class TugOfWar3DGame implements ThreeGame {
   }
 }
 
-function makeBanner(x: number, color: number, cloth: number): THREE.Group {
-  const group = new THREE.Group()
-  const pole = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.06, 0.08, 2.4, 8),
-    new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.85 })
-  )
-  pole.position.y = 1.2
-  pole.castShadow = true
-  group.add(pole)
-  const flag = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.85, 1.15),
-    new THREE.MeshStandardMaterial({
-      color,
-      side: THREE.DoubleSide,
-      roughness: 0.7,
-    })
-  )
-  flag.position.set(x < 0 ? 0.45 : -0.45, 1.55, 0)
-  group.add(flag)
-  const emblem = new THREE.Mesh(
-    new THREE.CircleGeometry(0.16, 12),
-    new THREE.MeshStandardMaterial({ color: cloth, side: THREE.DoubleSide })
-  )
-  emblem.position.copy(flag.position)
-  emblem.position.z = 0.02
-  group.add(emblem)
-  group.position.set(x, 0, 2.15)
-  group.scale.setScalar(1.25)
-  return group
+async function loadTugArt(): Promise<TugArt> {
+  const loader = new THREE.TextureLoader()
+  const load = async (url: string, premultiply: boolean) => {
+    const texture = await loader.loadAsync(url)
+    texture.colorSpace = THREE.SRGBColorSpace
+    texture.premultiplyAlpha = premultiply
+    texture.needsUpdate = true
+    return texture
+  }
+  const poses = (side: TugSide) =>
+    Promise.all([
+      load(TUG_ART.ninjas[side].pull, true),
+      load(TUG_ART.ninjas[side].cheer, true),
+      load(TUG_ART.ninjas[side].fallen, true),
+    ]).then(([pull, cheer, fallen]) => ({ pull, cheer, fallen }))
+
+  const [backdrop, rope, blue, red] = await Promise.all([
+    load(TUG_ART.backdrop, false),
+    load(TUG_ART.ropeStrip, true),
+    poses('blue'),
+    poses('red'),
+  ])
+  return { backdrop, rope, ninjas: { blue, red } }
+}
+
+function disposeTugArt(art: TugArt): void {
+  art.backdrop.dispose()
+  art.rope.dispose()
+  SIDES.forEach((side) => {
+    Object.values(art.ninjas[side]).forEach((texture) => texture.dispose())
+  })
 }

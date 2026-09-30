@@ -1,572 +1,319 @@
 import * as THREE from 'three'
 import type { TugNinjaClip, TugSide } from './tugOfWarLogic'
 import { TUG_NINJA_CLIPS } from './tugOfWarLogic'
+import { createCutoutMaterial } from './tugMaterials'
+import { TUG_NINJA_SPRITE, tugNinjaPx } from './tugStageLayout'
 
 export type { TugNinjaClip }
 
-interface BonePose {
-  px?: number
-  py?: number
-  pz?: number
-  rx?: number
-  ry?: number
-  rz?: number
-}
+export type TugNinjaPose = 'pull' | 'cheer' | 'fallen'
 
-type BoneName =
-  | 'hips'
-  | 'torso'
-  | 'head'
-  | 'armL'
-  | 'armR'
-  | 'foreL'
-  | 'foreR'
-  | 'legL'
-  | 'legR'
-  | 'shinL'
-  | 'shinR'
-  | 'tailL'
-  | 'tailR'
+export type TugNinjaTextures = Record<TugNinjaPose, THREE.Texture>
 
-type Pose = Partial<Record<BoneName, BonePose>>
-
-interface ClipKeyframe {
-  t: number
-  pose: Pose
-  rootY?: number
+/**
+ * One sampled moment of a clip. Distances are in world units at sprite scale
+ * 1 and signed toward the rope centre (the ninja's facing direction).
+ */
+interface ClipState {
+  pose: TugNinjaPose
+  /** Horizontal shear of the sprite top; negative leans away from the rope. */
+  lean: number
+  shift: number
+  lift: number
+  squash: number
+  wobble: number
 }
 
 interface ClipDefinition {
   durationMs: number
   loop: boolean
   holdAfter?: boolean
-  frames: ClipKeyframe[]
+  sample(t: number, phase: number): ClipState
 }
 
-interface PlayingClip {
-  name: TugNinjaClip
-  elapsed: number
-  definition: ClipDefinition
+const TAU = Math.PI * 2
+const IDLE_LEAN = -0.1
+
+function ease(t: number): number {
+  const c = Math.max(0, Math.min(1, t))
+  return c * c * (3 - 2 * c)
 }
 
-const TEAM_COLORS: Record<
-  TugSide,
-  { gi: number; wrap: number; pants: number; band: number; trim: number }
-> = {
-  blue: {
-    gi: 0x1e4e8c,
-    wrap: 0x163b6b,
-    pants: 0x0f2746,
-    band: 0x2b6cb0,
-    trim: 0x90cdf4,
-  },
-  red: {
-    gi: 0x9b1c1c,
-    wrap: 0x7b1414,
-    pants: 0x4a0d0d,
-    band: 0xc53030,
-    trim: 0xfbd38d,
-  },
+function pulse(t: number, peak: number): number {
+  return t < peak ? ease(t / peak) : 1 - ease((t - peak) / (1 - peak))
 }
 
-const MASK = 0x1a202c
-const EYE = 0xf7fafc
-const ROPE_TAN = 0xc4a574
-
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t
-}
-
-function mixPose(a: Pose, b: Pose, t: number): Pose {
-  const keys = new Set([...Object.keys(a), ...Object.keys(b)]) as Set<BoneName>
-  const out: Pose = {}
-  keys.forEach((key) => {
-    const from = a[key] ?? {}
-    const to = b[key] ?? {}
-    out[key] = {
-      px: lerp(from.px ?? 0, to.px ?? 0, t),
-      py: lerp(from.py ?? 0, to.py ?? 0, t),
-      pz: lerp(from.pz ?? 0, to.pz ?? 0, t),
-      rx: lerp(from.rx ?? 0, to.rx ?? 0, t),
-      ry: lerp(from.ry ?? 0, to.ry ?? 0, t),
-      rz: lerp(from.rz ?? 0, to.rz ?? 0, t),
-    }
-  })
-  return out
-}
-
-/**
- * Local axes: the ninja faces +X (toward the rope). +Z is toward the camera.
- * Positive rz on a downward limb swings it toward +X. Positive hip rz leans
- * the torso back, away from the rope.
- */
-const IDLE: Pose = {
-  hips: { py: -0.02, rz: 0.32 },
-  torso: { rz: 0.06 },
-  head: { rz: -0.18, ry: -0.35 },
-  armR: { rz: 1.25, rx: 0.25 },
-  foreR: { rz: -0.45 },
-  armL: { rz: 1.05, rx: -0.35 },
-  foreL: { rz: -0.7 },
-  legR: { px: 0.06, rz: 0.55 },
-  shinR: { rz: 0.85 },
-  legL: { px: -0.08, rz: -0.25 },
-  shinL: { rz: 0.45 },
-  tailL: { rz: 0.4, rx: 0.2 },
-  tailR: { rz: -0.15, rx: -0.15 },
-}
-
-const HEAVE: Pose = {
-  hips: { px: -0.1, py: -0.08, rz: 0.62 },
-  torso: { rz: 0.12 },
-  head: { rz: -0.28, ry: -0.35 },
-  armR: { rz: 0.72, rx: 0.2 },
-  foreR: { rz: -0.85 },
-  armL: { rz: 0.55, rx: -0.25 },
-  foreL: { rz: -1.0 },
-  legR: { px: 0.02, rz: 0.7 },
-  shinR: { rz: 1.0 },
-  legL: { px: -0.16, rz: -0.15 },
-  shinL: { rz: 0.35 },
-  tailL: { rz: 1.0 },
-  tailR: { rz: 0.6 },
-}
-
-const STRAIN: Pose = {
-  hips: { px: 0.08, py: 0.02, rz: -0.18 },
-  torso: { rz: -0.12 },
-  head: { rz: 0.08, ry: -0.3 },
-  armR: { rz: 1.45, rx: 0.1 },
-  foreR: { rz: -0.08 },
-  armL: { rz: 1.4, rx: -0.15 },
-  foreL: { rz: -0.1 },
-  legR: { px: 0.1, rz: 0.2 },
-  shinR: { rz: 0.25 },
-  legL: { px: 0.02, rz: -0.05 },
-  shinL: { rz: 0.15 },
-  tailL: { rz: -0.45 },
-  tailR: { rz: -0.6 },
-}
-
-const SLIP: Pose = {
-  hips: { px: 0.12, py: -0.06, rz: 0.05, ry: 0.2 },
-  torso: { rz: -0.05, ry: 0.15 },
-  head: { rz: 0.2, ry: -0.1 },
-  armR: { rz: 0.35, rx: 0.9 },
-  foreR: { rz: -1.1 },
-  armL: { rz: 1.2, rx: -0.2 },
-  foreL: { rz: -0.2 },
-  legR: { rz: 0.15, rx: 0.2 },
-  shinR: { rz: 0.2 },
-  legL: { px: -0.05, rz: 0.95 },
-  shinL: { rz: 0.15 },
-  tailL: { rz: 0.8 },
-  tailR: { rz: -0.8 },
-}
-
-const CHEER: Pose = {
-  hips: { py: 0.08, rz: 0 },
-  torso: { rz: -0.04 },
-  head: { rz: -0.15, ry: -0.4 },
-  armR: { rz: 2.7, rx: 0.35 },
-  foreR: { rz: 0.15 },
-  armL: { rz: 2.55, rx: -0.35 },
-  foreL: { rz: 0.2 },
-  legR: { rz: 0.1 },
-  shinR: { rz: 0.08 },
-  legL: { rz: -0.05 },
-  shinL: { rz: 0.08 },
-  tailL: { rz: 0.9 },
-  tailR: { rz: -0.9 },
-}
-
-const FALL: Pose = {
-  hips: { px: -0.28, py: -0.38, rz: 1.25 },
-  torso: { rz: 0.2 },
-  head: { rz: 0.25, ry: -0.2 },
-  armR: { rz: 2.2, rx: 0.5 },
-  foreR: { rz: 0.4 },
-  armL: { rz: 1.8, rx: -0.4 },
-  foreL: { rz: 0.45 },
-  legR: { rz: -0.4 },
-  shinR: { rz: 0.9 },
-  legL: { rz: -0.2 },
-  shinL: { rz: 1.05 },
-  tailL: { rz: -0.2 },
-  tailR: { rz: 0.2 },
-}
-
-const CHARGE: Pose = {
-  hips: { py: -0.12, rz: 0.48 },
-  torso: { rz: 0.14 },
-  head: { rz: -0.1, ry: -0.3 },
-  armR: { rz: 1.15, rx: 0.2 },
-  foreR: { rz: -0.55 },
-  armL: { rz: 0.95, rx: -0.25 },
-  foreL: { rz: -0.65 },
-  legR: { rz: 0.85 },
-  shinR: { rz: 1.05 },
-  legL: { rz: 0.7 },
-  shinL: { rz: 0.9 },
-  tailL: { rz: 0.2 },
-  tailR: { rz: -0.15 },
-}
-
-function overlay(base: Pose, patch: Pose): Pose {
-  return { ...base, ...patch }
+function state(partial: Partial<ClipState>): ClipState {
+  return {
+    pose: 'pull',
+    lean: IDLE_LEAN,
+    shift: 0,
+    lift: 0,
+    squash: 0,
+    wobble: 0,
+    ...partial,
+  }
 }
 
 const CLIPS: Record<TugNinjaClip, ClipDefinition> = {
   idle_hold: {
-    durationMs: 2000,
+    durationMs: 1800,
     loop: true,
-    frames: [
-      { t: 0, pose: IDLE },
-      { t: 0.5, pose: overlay(IDLE, { hips: { py: 0.045, rz: 0.24 } }) },
-      { t: 1, pose: IDLE },
-    ],
+    sample: (t, phase) =>
+      state({ lean: IDLE_LEAN + 0.035 * Math.sin(TAU * t + phase) }),
   },
   pull_heave: {
-    durationMs: 700,
+    durationMs: 720,
     loop: false,
-    frames: [
-      { t: 0, pose: IDLE },
-      { t: 0.45, pose: HEAVE },
-      { t: 1, pose: IDLE },
-    ],
+    sample: (t) => {
+      const p = pulse(t, 0.35)
+      return state({ lean: IDLE_LEAN - 0.26 * p, shift: -0.14 * p })
+    },
   },
   strain_lose: {
-    durationMs: 1000,
+    durationMs: 900,
     loop: true,
-    frames: [
-      { t: 0, pose: STRAIN },
-      {
-        t: 0.5,
-        pose: overlay(STRAIN, { hips: { px: 0.1, py: 0.01, rz: -0.22 }, shinR: { rz: 0.5 } }),
-      },
-      { t: 1, pose: STRAIN },
-    ],
+    sample: (t, phase) =>
+      state({
+        lean: 0.12 + 0.05 * Math.sin(TAU * t + phase),
+        shift: 0.012 * Math.sin(TAU * 11 * t),
+      }),
   },
   stumble_slip: {
     durationMs: 900,
     loop: false,
-    frames: [
-      { t: 0, pose: IDLE },
-      { t: 0.4, pose: SLIP },
-      { t: 1, pose: IDLE },
-    ],
+    sample: (t) => {
+      const p = pulse(t, 0.3)
+      return state({
+        lean: IDLE_LEAN + 0.4 * p,
+        shift: 0.2 * p,
+        lift: -0.03 * p,
+      })
+    },
   },
   victory_cheer: {
-    durationMs: 1600,
+    durationMs: 1100,
     loop: true,
-    frames: [
-      { t: 0, pose: CHEER, rootY: 0 },
-      { t: 0.25, pose: CHEER, rootY: 0.22 },
-      { t: 0.5, pose: overlay(CHEER, { armL: { rz: 2.0, rx: -0.2 } }), rootY: 0 },
-      { t: 0.75, pose: CHEER, rootY: 0.2 },
-      { t: 1, pose: CHEER, rootY: 0 },
-    ],
+    sample: (t, phase) => {
+      const hop = t < 0.7 ? 4 * (t / 0.7) * (1 - t / 0.7) : 0
+      const land = t >= 0.7 ? Math.sin(((t - 0.7) / 0.3) * Math.PI) : 0
+      return state({
+        pose: 'cheer',
+        lean: 0,
+        lift: 0.42 * hop,
+        squash: -0.07 * land,
+        wobble: 0.06 * Math.sin(TAU * t + phase),
+      })
+    },
   },
   defeat_fall: {
-    durationMs: 1200,
+    durationMs: 1100,
     loop: false,
     holdAfter: true,
-    frames: [
-      { t: 0, pose: IDLE },
-      { t: 0.55, pose: FALL },
-      {
-        t: 1,
-        pose: overlay(FALL, { hips: { px: -0.35, py: -0.4, rz: 1.12 } }),
-      },
-    ],
+    sample: (t) => {
+      if (t < 0.25) {
+        const p = ease(t / 0.25)
+        return state({ lean: IDLE_LEAN + 0.5 * p, shift: 0.26 * p })
+      }
+      const f = (t - 0.25) / 0.75
+      const bounce = f < 0.45 ? Math.sin((f / 0.45) * Math.PI) : 0
+      const land = f >= 0.45 && f < 0.7 ? Math.sin(((f - 0.45) / 0.25) * Math.PI) : 0
+      return state({
+        pose: 'fallen',
+        lean: 0,
+        shift: 0.26 + 0.12 * ease(f),
+        lift: 0.14 * bounce,
+        squash: -0.06 * land,
+      })
+    },
   },
   charge_up: {
-    durationMs: 800,
+    durationMs: 700,
     loop: true,
-    frames: [
-      { t: 0, pose: CHARGE },
-      {
-        t: 0.5,
-        pose: overlay(CHARGE, { hips: { px: 0.02, py: -0.12, rz: 0.4 } }),
-      },
-      { t: 1, pose: CHARGE },
-    ],
+    sample: (t, phase) =>
+      state({
+        lean: -0.2 + 0.05 * Math.sin(TAU * t + phase),
+        shift: -0.03 * Math.sin(TAU * t + phase),
+      }),
   },
+}
+
+const SHADOW_BY_POSE: Record<TugNinjaPose, { x: number; width: number }> = {
+  pull: { x: 0.12, width: 1.8 },
+  cheer: { x: 0.02, width: 1.05 },
+  fallen: { x: 0.18, width: 1.95 },
 }
 
 export interface NinjaActorOptions {
   side: TugSide
   slot: number
+  textures: TugNinjaTextures
   /** World X of the ninja's rest position. */
   restX: number
-  restZ?: number
+  baselineY?: number
+  spriteScale?: number
+  shadowTexture?: THREE.Texture
+  renderOrder?: number
 }
 
 /**
- * Procedural placeholder ninja. Pose clips are named to match the GLB
- * animation contract in TUG_OF_WAR_NINJA_ASSET_SPEC.md so a later art swap
- * can reuse the same `play()` calls.
+ * Illustrated ninja sprite. Pose clips keep the names from the GLB animation
+ * contract in TUG_OF_WAR_NINJA_ASSET_SPEC.md so a later rigged-model swap can
+ * reuse the same `play()` calls. Leans are horizontal shears anchored at the
+ * feet, which keeps the painted rope in the hands level with the scene rope.
  */
 export class NinjaActor {
   public readonly group = new THREE.Group()
-  public readonly gripL = new THREE.Object3D()
-  public readonly gripR = new THREE.Object3D()
   public readonly side: TugSide
   public readonly slot: number
-  public readonly restX: number
+  public restX: number
 
-  private readonly bones = new Map<BoneName, THREE.Object3D>()
-  private readonly rest = new Map<BoneName, THREE.Vector3>()
-  private playing: PlayingClip | null = null
+  private readonly facing: 1 | -1
+  private readonly textures: TugNinjaTextures
+  private readonly geometry: THREE.PlaneGeometry
+  private readonly material: THREE.MeshBasicMaterial
+  private readonly body: THREE.Mesh
+  private readonly shadow: THREE.Mesh | null
+  private readonly phase: number
+  private playing: { name: TugNinjaClip; elapsed: number } | null = null
   private queuedIdle = false
-  private restY = 0
+  private spriteScale: number
+  private baselineY: number
+  private worldX: number
+  private pose: TugNinjaPose = 'pull'
 
   constructor(options: NinjaActorOptions) {
     this.side = options.side
     this.slot = options.slot
     this.restX = options.restX
+    this.worldX = options.restX
+    this.textures = options.textures
+    this.facing = options.side === 'blue' ? 1 : -1
+    this.spriteScale = options.spriteScale ?? 1
+    this.baselineY = options.baselineY ?? 0
+    this.phase = options.slot * 1.1 + (options.side === 'red' ? 0.6 : 0)
     this.group.name = `ninja-${options.side}-${options.slot}`
-    this.group.position.set(options.restX, 0, options.restZ ?? 0)
-    this.group.scale.setScalar(1.28)
-    if (options.side === 'red') {
-      this.group.rotation.y = Math.PI
+
+    this.geometry = new THREE.PlaneGeometry(1, 1)
+    this.material = createCutoutMaterial(options.textures.pull)
+    this.body = new THREE.Mesh(this.geometry, this.material)
+    this.body.name = 'ninja-sprite'
+    this.body.renderOrder = options.renderOrder ?? 10
+    this.group.add(this.body)
+
+    if (options.shadowTexture) {
+      this.shadow = new THREE.Mesh(
+        new THREE.PlaneGeometry(1, 1),
+        createCutoutMaterial(options.shadowTexture)
+      )
+      this.shadow.name = 'ninja-shadow'
+      this.shadow.renderOrder = 2
+      this.group.add(this.shadow)
+    } else {
+      this.shadow = null
     }
-    this._buildBody()
+
     this.play('idle_hold')
   }
 
   public play(clip: TugNinjaClip): void {
     const definition = CLIPS[clip]
-    this.playing = { name: clip, elapsed: 0, definition }
+    this.playing = { name: clip, elapsed: 0 }
     this.queuedIdle = !definition.loop && !definition.holdAfter
-    this._applyClip(0)
+    this._apply(definition.sample(0, this.phase))
   }
 
   public get currentClip(): TugNinjaClip | null {
     return this.playing?.name ?? null
   }
 
+  public get currentPose(): TugNinjaPose {
+    return this.pose
+  }
+
   public update(deltaMs: number): void {
     if (!this.playing) return
-    const { definition } = this.playing
+    const definition = CLIPS[this.playing.name]
     this.playing.elapsed += deltaMs
     let t = this.playing.elapsed / definition.durationMs
     if (definition.loop) {
-      t = t % 1
+      t %= 1
       this.playing.elapsed = t * definition.durationMs
     } else if (t >= 1) {
-      t = 1
-      this._applyClip(1)
-      if (this.queuedIdle) {
-        this.play('idle_hold')
-      }
+      this._apply(definition.sample(1, this.phase))
+      if (this.queuedIdle) this.play('idle_hold')
       return
     }
-    this._applyClip(t)
+    this._apply(definition.sample(t, this.phase))
   }
 
   public setWorldX(x: number): void {
+    this.worldX = x
     this.group.position.x = x
+  }
+
+  public setLayout(layout: {
+    restX: number
+    spriteScale: number
+    baselineY: number
+  }): void {
+    this.restX = layout.restX
+    this.spriteScale = layout.spriteScale
+    this.baselineY = layout.baselineY
+    if (this.playing) {
+      const definition = CLIPS[this.playing.name]
+      const t = Math.min(1, this.playing.elapsed / definition.durationMs)
+      this._apply(definition.sample(t, this.phase))
+    }
   }
 
   public dispose(): void {
     this.playing = null
-    this.bones.clear()
   }
 
-  private _applyClip(t: number): void {
-    if (!this.playing) return
-    const frames = this.playing.definition.frames
-    let i = 0
-    while (i < frames.length - 2 && frames[i + 1].t < t) i += 1
-    const a = frames[i]
-    const b = frames[Math.min(i + 1, frames.length - 1)]
-    const span = Math.max(0.0001, b.t - a.t)
-    const local = Math.max(0, Math.min(1, (t - a.t) / span))
-    const pose = mixPose(a.pose, b.pose, local)
-    this._applyPose(pose)
-    const rootY = lerp(a.rootY ?? 0, b.rootY ?? 0, local)
-    this.group.position.y = this.restY + rootY
-  }
+  private _apply(clip: ClipState): void {
+    if (clip.pose !== this.pose) {
+      this.pose = clip.pose
+      this.material.map = this.textures[clip.pose]
+      this.material.needsUpdate = true
+    }
 
-  private _applyPose(pose: Pose): void {
-    this.bones.forEach((bone, name) => {
-      const rest = this.rest.get(name)
-      const p = pose[name]
-      bone.position.set(
-        (rest?.x ?? 0) + (p?.px ?? 0),
-        (rest?.y ?? 0) + (p?.py ?? 0),
-        (rest?.z ?? 0) + (p?.pz ?? 0)
+    const s = this.spriteScale
+    const width = tugNinjaPx(TUG_NINJA_SPRITE.canvasWidthPx, s)
+    const height = tugNinjaPx(TUG_NINJA_SPRITE.canvasHeightPx, s)
+    const left = -tugNinjaPx(TUG_NINJA_SPRITE.anchorXPx, s)
+    const bottom = -tugNinjaPx(
+      TUG_NINJA_SPRITE.canvasHeightPx - TUG_NINJA_SPRITE.baselineYPx,
+      s
+    )
+    const top = bottom + height
+    const shear = clip.lean * this.facing * s
+    const position = this.geometry.attributes.position as THREE.BufferAttribute
+    // PlaneGeometry vertex order: top-left, top-right, bottom-left, bottom-right.
+    position.setXYZ(0, left + shear, top, 0)
+    position.setXYZ(1, left + width + shear, top, 0)
+    position.setXYZ(2, left, bottom, 0)
+    position.setXYZ(3, left + width, bottom, 0)
+    position.needsUpdate = true
+    this.geometry.computeBoundingSphere()
+
+    this.body.position.set(clip.shift * this.facing * s, clip.lift * s, 0)
+    this.body.scale.set(1 - clip.squash * 0.5, 1 + clip.squash, 1)
+    this.body.rotation.z = -clip.wobble * this.facing
+
+    if (this.shadow) {
+      const spec = SHADOW_BY_POSE[clip.pose]
+      const airborne = Math.max(0.55, 1 - clip.lift * 0.9)
+      this.shadow.position.set(
+        (spec.x + clip.shift) * this.facing * s,
+        -0.02 * s,
+        -0.001
       )
-      bone.rotation.set(p?.rx ?? 0, p?.ry ?? 0, p?.rz ?? 0)
-    })
+      this.shadow.scale.set(spec.width * s * airborne, 0.32 * s * airborne, 1)
+    }
+
+    this.group.position.set(this.worldX, this.baselineY, this.group.position.z)
   }
-
-  private _buildBody(): void {
-    const colors = TEAM_COLORS[this.side]
-    const gi = mat(colors.gi, 0.72)
-    const wrap = mat(colors.wrap, 0.8)
-    const pants = mat(colors.pants, 0.78)
-    const band = mat(colors.band, 0.55)
-    const mask = mat(MASK, 0.45)
-    const eye = new THREE.MeshBasicMaterial({ color: EYE })
-    const rope = mat(ROPE_TAN, 0.9)
-
-    const hips = this._bone('hips')
-    this.group.add(hips)
-
-    const pelvis = box(0.38, 0.22, 0.24, wrap)
-    pelvis.position.y = 0.55
-    hips.add(pelvis)
-
-    const torso = this._bone('torso')
-    torso.position.y = 0.68
-    hips.add(torso)
-    const chest = box(0.42, 0.42, 0.28, gi)
-    chest.position.y = 0.22
-    torso.add(chest)
-    const sash = box(0.44, 0.08, 0.3, band)
-    sash.position.y = 0.02
-    torso.add(sash)
-
-    const head = this._bone('head')
-    head.position.y = 0.52
-    torso.add(head)
-    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 12), mask)
-    skull.position.y = 0.18
-    skull.castShadow = true
-    head.add(skull)
-    const hood = new THREE.Mesh(
-      new THREE.SphereGeometry(0.22, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
-      gi
-    )
-    hood.position.set(0, 0.28, 0)
-    head.add(hood)
-    const bandMesh = box(0.58, 0.09, 0.42, band)
-    bandMesh.position.set(0.02, 0.2, 0.04)
-    head.add(bandMesh)
-    const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), eye)
-    eyeWhite.position.set(0.08, 0.16, 0.22)
-    eyeWhite.scale.set(1.35, 0.55, 0.45)
-    head.add(eyeWhite)
-    const pupil = new THREE.Mesh(
-      new THREE.SphereGeometry(0.018, 6, 4),
-      new THREE.MeshBasicMaterial({ color: 0x1a202c })
-    )
-    pupil.position.set(0.1, 0.16, 0.25)
-    head.add(pupil)
-
-    const tailL = this._bone('tailL')
-    tailL.position.set(-0.08, 0.28, -0.02)
-    head.add(tailL)
-    const tailMeshL = box(0.06, 0.36, 0.045, band)
-    tailMeshL.position.set(-0.02, -0.16, 0)
-    tailL.add(tailMeshL)
-    const tailR = this._bone('tailR')
-    tailR.position.set(-0.02, 0.26, 0.02)
-    head.add(tailR)
-    const tailMeshR = box(0.05, 0.28, 0.04, band)
-    tailMeshR.position.set(-0.02, -0.12, 0)
-    tailR.add(tailMeshR)
-
-    this._arm('R', -0.28, gi, wrap, rope)
-    this._arm('L', 0.28, gi, wrap, rope)
-    this._leg('R', -0.11, pants)
-    this._leg('L', 0.11, pants)
-    this._captureRest()
-  }
-
-  private _arm(
-    side: 'L' | 'R',
-    lateralZ: number,
-    gi: THREE.Material,
-    wrap: THREE.Material,
-    rope: THREE.Material
-  ): void {
-    const upperName = side === 'R' ? 'armR' : 'armL'
-    const foreName = side === 'R' ? 'foreR' : 'foreL'
-    const torso = this.bones.get('torso')!
-    const arm = this._bone(upperName)
-    arm.position.set(0.06, 0.36, lateralZ)
-    torso.add(arm)
-    const upper = box(0.12, 0.28, 0.12, gi)
-    upper.position.y = -0.14
-    arm.add(upper)
-    const fore = this._bone(foreName)
-    fore.position.set(0, -0.28, 0)
-    arm.add(fore)
-    const lower = box(0.11, 0.26, 0.11, wrap)
-    lower.position.y = -0.12
-    fore.add(lower)
-    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), wrap)
-    hand.position.y = -0.26
-    hand.castShadow = true
-    fore.add(hand)
-    const grip = side === 'R' ? this.gripR : this.gripL
-    grip.position.set(0.04, 0, 0)
-    hand.add(grip)
-    const ropeBit = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.045, 0.045, 0.22, 8),
-      rope
-    )
-    ropeBit.rotation.z = Math.PI / 2
-    ropeBit.position.set(0.02, 0, 0)
-    hand.add(ropeBit)
-  }
-
-  private _leg(side: 'L' | 'R', lateralZ: number, pants: THREE.Material): void {
-    const thighName = side === 'R' ? 'legR' : 'legL'
-    const shinName = side === 'R' ? 'shinR' : 'shinL'
-    const hips = this.bones.get('hips')!
-    const thigh = this._bone(thighName)
-    thigh.position.set(0, 0.44, lateralZ)
-    hips.add(thigh)
-    const thighMesh = box(0.16, 0.32, 0.16, pants)
-    thighMesh.position.y = -0.16
-    thigh.add(thighMesh)
-    const shin = this._bone(shinName)
-    shin.position.set(0, -0.32, 0)
-    thigh.add(shin)
-    const shinMesh = box(0.14, 0.28, 0.14, pants)
-    shinMesh.position.y = -0.14
-    shin.add(shinMesh)
-    const foot = box(0.28, 0.08, 0.16, mat(0x1a202c, 0.85))
-    foot.position.set(0.08, -0.3, 0)
-    shin.add(foot)
-  }
-
-  private _bone(name: BoneName): THREE.Group {
-    const bone = new THREE.Group()
-    bone.name = name
-    this.bones.set(name, bone)
-    return bone
-  }
-
-  private _captureRest(): void {
-    this.bones.forEach((bone, name) => {
-      this.rest.set(name, bone.position.clone())
-    })
-  }
-}
-
-function mat(color: number, roughness: number): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({
-    color,
-    roughness,
-    metalness: 0.05,
-  })
-}
-
-function box(
-  w: number,
-  h: number,
-  d: number,
-  material: THREE.Material
-): THREE.Mesh {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material)
-  mesh.castShadow = true
-  mesh.receiveShadow = true
-  return mesh
 }
 
 export function isTugNinjaClip(value: string): value is TugNinjaClip {
