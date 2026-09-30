@@ -5,9 +5,11 @@ import {
   getEligibleGameModes,
   getQuizRoom3dBlockReason,
   getSplashDashBlockReason,
+  getTugOfWar3dBlockReason,
   hasAnswersTooLongForSplashDash,
   isQuizRoom3dEligible,
   isSplashDashEligible,
+  isTugOfWar3dEligible,
 } from '@/lib/game-mode-eligibility'
 
 const shortMc = {
@@ -63,6 +65,7 @@ describe('getEligibleGameModes', () => {
       'multiple-choice',
       'splash-dash',
       'quiz-room-3d',
+      'tug-of-war-3d',
     ])
   })
 
@@ -72,7 +75,7 @@ describe('getEligibleGameModes', () => {
       getEligibleGameModes({
         questions: [{ type: QuestionType.MULTIPLE_CHOICE, answers: [long, 'B'] }],
       })
-    ).toEqual(['multiple-choice', 'quiz-room-3d'])
+    ).toEqual(['multiple-choice', 'quiz-room-3d', 'tug-of-war-3d'])
   })
 })
 
@@ -120,5 +123,17 @@ describe('getSplashDashBlockReason / hasAnswersTooLongForSplashDash', () => {
   it('hides length warning for short answers', () => {
     expect(hasAnswersTooLongForSplashDash([shortMc])).toBe(false)
     expect(getSplashDashBlockReason({ questions: [shortMc] })).toBeNull()
+  })
+})
+
+describe('isTugOfWar3dEligible / getTugOfWar3dBlockReason', () => {
+  it('matches 3D Quiz Room eligibility', () => {
+    expect(isTugOfWar3dEligible({ questions: [shortMc] })).toBe(true)
+    expect(getTugOfWar3dBlockReason({ questions: [shortMc] })).toBeNull()
+    expect(
+      getTugOfWar3dBlockReason({
+        questions: [{ type: QuestionType.MULTIPLE_CHOICE, answers: ['Only'] }],
+      })
+    ).toContain('2–4 answers')
   })
 })

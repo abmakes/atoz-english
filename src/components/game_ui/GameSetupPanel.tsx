@@ -131,14 +131,16 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
   // Remove Zustand usage
   const selectedQuiz = useGameStore((state) => state.selectedQuiz);
   const isSplashDash = initialGameSlug === 'splash-dash';
+  const isTugOfWar = initialGameSlug === 'tug-of-war-3d';
+  const isFixedTwoTeams = isSplashDash || isTugOfWar;
 
   const [assetsReady, setAssetsReady] = useState(false);
   const [assetsProgress, setAssetsProgress] = useState(0);
 
   // --- State ---
   const [teams, setTeams] = useState<LocalTeam[]>([
-    { id: 't1', name: 'Team 1' },
-    { id: 't2', name: 'Team 2' },
+    { id: 't1', name: initialGameSlug === 'tug-of-war-3d' ? 'Team Blue' : 'Team 1' },
+    { id: 't2', name: initialGameSlug === 'tug-of-war-3d' ? 'Team Red' : 'Team 2' },
   ]);
   const [newTeamName, setNewTeamName] = useState(''); // For adding new teams
   const [settings, setSettings] = useState<LocalGameSettings>({
@@ -158,17 +160,24 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
   // State to hold the theme class name
   const [themeClassName, setThemeClassName] = useState<string>('');
 
-  // Splash Dash: exactly two players
+  // Splash Dash / Tug of War: exactly two teams
   useEffect(() => {
-    if (!isSplashDash) return;
+    if (!isFixedTwoTeams) return;
     setTeams((prev) => {
       const next = prev.slice(0, 2);
+      const defaults =
+        isTugOfWar
+          ? ['Team Blue', 'Team Red']
+          : ['Team 1', 'Team 2'];
       while (next.length < 2) {
-        next.push({ id: `t${next.length + 1}`, name: `Team ${next.length + 1}` });
+        next.push({
+          id: `t${next.length + 1}`,
+          name: defaults[next.length],
+        });
       }
       return next;
     });
-  }, [isSplashDash]);
+  }, [isFixedTwoTeams, isTugOfWar]);
 
 
   // Effect to update the theme class name when selectedTheme changes
@@ -330,7 +339,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
 
   // --- Handlers (Placeholders) ---
   const handleAddTeam = () => {
-    if (isSplashDash) return;
+    if (isFixedTwoTeams) return;
     if (newTeamName.trim()) {
       setTeams([
         ...teams,
@@ -345,7 +354,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
   };
 
   const handleRemoveTeam = (id: string) => {
-    if (isSplashDash) return;
+    if (isFixedTwoTeams) return;
     setTeams(teams.filter(team => team.id !== id));
   };
 
@@ -450,7 +459,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
         }
       : undefined;
     const config: LocalConfig = {
-      teams: isSplashDash ? teams.slice(0, 2) : teams,
+      teams: isFixedTwoTeams ? teams.slice(0, 2) : teams,
       settings,
       theme: selectedTheme,
       gameFeatures: selectedGameFeatures,
@@ -501,6 +510,11 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
             Splash Dash · 2-player race
           </p>
         )}
+        {isTugOfWar && (
+          <p className="text-center text-sm text-[var(--text-color)] mb-4 opacity-80">
+            Tug of War · 2 teams · best of 3
+          </p>
+        )}
 
         {/* Play Button / loading fill bar */}
         <div className={`text-center mb-4 flex flex-col justify-center items-center`}>
@@ -545,13 +559,13 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
                   className={`py-2 px-6 ml-3 mr-1 rounded-[12px] text-lg border-2 border-[var(--input-border)] inputfield text-[var(--heading-color)]`}
                   aria-label={`Team ${index + 1} name`}
                 />
-                 {!isSplashDash && (
+                 {!isFixedTwoTeams && (
                    <button onClick={() => handleRemoveTeam(team.id)} className={`buttonRemoveTeam`} aria-label={`Remove team ${team.name}`}>&times;</button>
                  )}
               </li>
             ))}
           </ul>
-          {!isSplashDash && (
+          {!isFixedTwoTeams && (
           <div className={`flex items-center`}>
             <input
               type="text"
@@ -610,7 +624,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
             </div>
 
             {/* Game Features Selection — Team Quiz only */}
-            {!isSplashDash && (
+            {!isFixedTwoTeams && (
             <div className={`flex flex-row gap-4 items-center mb-4 justify-center`}>
               <label htmlFor="features-select" className={`text-[var(--text-color)]`}>Game Mode:</label>
               <select
@@ -644,7 +658,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
               </span>
             </div>
             <h3 className={`font-semibold mb-2 text-md text-[var(--text-color)]`}>
-              {isSplashDash ? 'Time per question' : 'Increase intensity with a time limit'}
+              {isFixedTwoTeams ? 'Time per question' : 'Increase intensity with a time limit'}
             </h3>
             <div className={`buttonGroup`}>
               {[10, 15, 20].map(time => (

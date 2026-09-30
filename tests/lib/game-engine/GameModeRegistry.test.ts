@@ -26,6 +26,8 @@ describe('GameModeRegistry', () => {
     expect(gameModeRegistry.require('multiple-choice').renderer).toBe('pixi')
     expect(gameModeRegistry.require('splash-dash').renderer).toBe('pixi')
     expect(gameModeRegistry.require('quiz-room-3d').renderer).toBe('three')
+    expect(gameModeRegistry.require('tug-of-war-3d').renderer).toBe('three')
+    expect(gameModeRegistry.require('tug-of-war-3d').hud?.tugMeter).toBe(true)
     expect(gameModeRegistry.require('multiple-choice').loadRuntime).toEqual(
       expect.any(Function)
     )

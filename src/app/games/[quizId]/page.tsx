@@ -4,13 +4,15 @@ import { useEffect, useState, type ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Bookmark, Box, Heart, Play, Users, Zap } from 'lucide-react'
+import { ArrowLeft, Bookmark, Box, Heart, Play, Swords, Users, Zap } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
   getQuizRoom3dBlockReason,
   getSplashDashBlockReason,
+  getTugOfWar3dBlockReason,
   isQuizRoom3dEligible,
   isSplashDashEligible,
+  isTugOfWar3dEligible,
 } from '@/lib/game-mode-eligibility'
 import {
   extractQuestionImageUrls,
@@ -188,6 +190,8 @@ export default function GameModePickerPage() {
   const splashReason = quiz ? getSplashDashBlockReason(quiz) : null
   const room3dEligible = quiz ? isQuizRoom3dEligible(quiz) : false
   const room3dReason = quiz ? getQuizRoom3dBlockReason(quiz) : null
+  const tugEligible = quiz ? isTugOfWar3dEligible(quiz) : false
+  const tugReason = quiz ? getTugOfWar3dBlockReason(quiz) : null
   const title = quiz?.title ?? 'Loading quiz…'
   const description = quiz?.description?.trim() || null
   const coverSrc = quiz?.imageUrl || '/images/placeholder.webp'
@@ -423,6 +427,61 @@ export default function GameModePickerPage() {
                 icon={<Box size={20} className="text-slate-400" />}
                 title="3D Quiz Room"
                 description={room3dReason ?? 'Not available for this quiz.'}
+                cta="Unavailable"
+                muted
+              />
+            </div>
+          )}
+
+          {loading && !quiz ? (
+            <div className={`${modeCardClass} opacity-70 animate-pulse`} aria-hidden>
+              <ModeThumb src="/images/marketing/teamquiz_thumb.png" alt="" muted />
+              <ModeDetails
+                icon={<Swords size={20} className="text-slate-400" />}
+                title="Tug of War"
+                description="Checking eligibility…"
+                cta="3D"
+                muted
+              />
+            </div>
+          ) : tugEligible ? (
+            <Link
+              href={`/games/${quizPathId}/tug-of-war-3d`}
+              onClick={() => setNavigatingSlug('tug-of-war-3d')}
+              className={`${modeCardClass} ${
+                navigatingSlug === 'tug-of-war-3d' ? 'opacity-70 pointer-events-none' : ''
+              }`}
+            >
+              {navigatingSlug === 'tug-of-war-3d' && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[22px] bg-white/60">
+                  <span className="grandstander font-bold text-lg">Opening…</span>
+                </div>
+              )}
+              <ModeThumb
+                src="/images/marketing/teamquiz_thumb.png"
+                alt="Tug of War 3D preview"
+              />
+              <ModeDetails
+                icon={<Swords size={20} />}
+                title="Tug of War"
+                description="Two teams take turns answering — pull the rope to win best of 3."
+                cta="Play 3D →"
+              />
+            </Link>
+          ) : (
+            <div
+              className="relative flex aspect-[3/2] overflow-hidden rounded-[24px] border-2 border-slate-300 bg-slate-50 opacity-80"
+              aria-disabled="true"
+            >
+              <ModeThumb
+                src="/images/marketing/teamquiz_thumb.png"
+                alt="Tug of War preview"
+                muted
+              />
+              <ModeDetails
+                icon={<Swords size={20} className="text-slate-400" />}
+                title="Tug of War"
+                description={tugReason ?? 'Not available for this quiz.'}
                 cta="Unavailable"
                 muted
               />

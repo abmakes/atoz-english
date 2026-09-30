@@ -17,7 +17,7 @@ import {
     AudioConfiguration,
 } from '@/lib/pixi-engine/config/GameConfig';
 import type { NavMenuItemProps } from './NavMenu';
-import { GAME_EVENTS, ENGINE_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
+import { GAME_EVENTS, ENGINE_EVENTS, TUG_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
 import { PowerupConfig, STANDARD_SCORE_MODE_POWERUPS } from '@/lib/pixi-engine/config/PowerupConfig';
 import LoadingSpinner from '../loading_spinner';
 import { useGameStore } from '@/stores/useGameStore'; // Import the store
@@ -121,29 +121,47 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
       console.log("GameContainer: Enabled powerups:", powerupConfig.availablePowerups.map(p => p.id));
 
       // --- Define Scoring Rule (using RuleDefinition) ---
-      const scoringRule: RuleDefinition = {
-          id: 'score-correct-answer',
-          description: 'Award points for correct multiple choice answer',
-          triggerEvent: GAME_EVENTS.ANSWER_SELECTED, // Use imported constant
-          conditions: [
-              {
-                  type: 'compareState', // Correct type
-                  property: 'isCorrect', // Correct property from payload
-                  operator: 'eq', // Correct operator
-                  value: true // Correct value to compare against
-              }
-          ],
-          actions: [
-              {
-                  type: 'modifyScore', // Correct action type
+      const scoringRule: RuleDefinition =
+        gameSlug === 'tug-of-war-3d'
+          ? {
+              id: 'score-round-win',
+              description: 'Award one point when a team wins a tug-of-war round',
+              triggerEvent: TUG_EVENTS.ROUND_WON,
+              conditions: [],
+              actions: [
+                {
+                  type: 'modifyScore',
                   params: {
-                      target: 'payload.teamId' // Target team from event payload
-                  }
-              }
-          ]
-      };
-      
-      // --- Dynamically Set Scoring Params ---
+                    target: 'payload.teamId',
+                    mode: 'fixed',
+                    points: 1,
+                  },
+                },
+              ],
+            }
+          : {
+              id: 'score-correct-answer',
+              description: 'Award points for correct multiple choice answer',
+              triggerEvent: GAME_EVENTS.ANSWER_SELECTED,
+              conditions: [
+                {
+                  type: 'compareState',
+                  property: 'isCorrect',
+                  operator: 'eq',
+                  value: true,
+                },
+              ],
+              actions: [
+                {
+                  type: 'modifyScore',
+                  params: {
+                    target: 'payload.teamId',
+                  },
+                },
+              ],
+            };
+
+      if (gameSlug !== 'tug-of-war-3d') {
       const modifyScoreAction = scoringRule.actions.find(action => action.type === 'modifyScore');
       if (modifyScoreAction && modifyScoreAction.params) {
            if (setupData.gameFeatures === 'boosted') {
@@ -161,6 +179,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
            }
       } else {
           console.error("GameContainer: Could not find 'modifyScore' action in scoringRule to set parameters.");
+      }
       }
       // --- End Dynamic Scoring Params ---
       
