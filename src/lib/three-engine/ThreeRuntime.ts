@@ -26,6 +26,7 @@ export class ThreeRuntime implements GameRuntime {
   private running = false
   private paused = false
   private destroyRequested = false
+  private resizeObserver: ResizeObserver | null = null
 
   constructor(private readonly gameFactory: ThreeGameFactory) {}
 
@@ -60,6 +61,7 @@ export class ThreeRuntime implements GameRuntime {
       this.game = game
       await game.init()
       if (this.destroyRequested) return
+      this.observeTarget(target)
 
       // After the 3D game is ready so a failed quiz fetch does not start music
       // and immediately tear the session down.
@@ -97,6 +99,19 @@ export class ThreeRuntime implements GameRuntime {
   public resize(width: number, height: number): void {
     this.world?.resize(width, height)
     this.game?.onResize(width, height)
+    if (this.paused) this.world?.render()
+  }
+
+  /** The canvas is CSS-sized to its mount, so keep the drawing buffer in step. */
+  private observeTarget(target: HTMLElement): void {
+    if (typeof ResizeObserver === 'undefined') return
+    this.resizeObserver = new ResizeObserver((entries) => {
+      const box = entries[entries.length - 1]?.contentRect
+      if (box && box.width > 0 && box.height > 0) {
+        this.resize(box.width, box.height)
+      }
+    })
+    this.resizeObserver.observe(target)
   }
 
   public getServices(): GameSessionServices {
@@ -110,6 +125,8 @@ export class ThreeRuntime implements GameRuntime {
     this.destroyRequested = true
     this.running = false
     this.paused = false
+    this.resizeObserver?.disconnect()
+    this.resizeObserver = null
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId)
       this.animationFrameId = null
