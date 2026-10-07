@@ -21,6 +21,7 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 | `images/placeholder.webp` | Quiz/question fallbacks |
 | `images/splash-dash/crate_5_4.png` | Splash Dash crates |
 | `images/splash-dash/capy_spritesheet.png` | Splash Dash players |
+| `images/sentence-builder/*.jpg` | Sentence Builder scene pictures (20) |
 | `fonts/GrandstanderVF.ttf` | Game UI font |
 | `fonts/InclusiveSansVF.ttf` | Game UI font |
 | `quiz_template.csv` | CSV quiz upload template |
