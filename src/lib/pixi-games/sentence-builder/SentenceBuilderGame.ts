@@ -42,6 +42,10 @@ const GOOD_BG = 0xdcfce7
 const BAD = 0xdc2626
 const BAD_BG = 0xfee2e2
 const OFF_BG = 0xe5e7eb
+const SLOT_FILL = 0xfff6e4
+const SLOT_BLANK = 0xffe7a8
+const SLOT_LINE = 0xc4842a
+const SENTENCE_FRAME = 0xd4ebff
 
 type ButtonState = 'idle' | 'good' | 'bad' | 'off'
 type Phase = 'loading' | 'choose' | 'locked' | 'ended'
@@ -178,9 +182,10 @@ export class SentenceBuilderGame {
     text: '',
     style: {
       fontFamily: 'Grandstander',
-      fontSize: 28,
+      fontSize: 44,
       fontWeight: '800',
       fill: INK,
+      align: 'center',
       wordWrap: true,
       wordWrapWidth: 480,
     },
@@ -189,13 +194,15 @@ export class SentenceBuilderGame {
     text: '',
     style: {
       fontFamily: 'Grandstander',
-      fontSize: 22,
+      fontSize: 30,
       fontWeight: '700',
       fill: INK_SOFT,
+      align: 'center',
       wordWrap: true,
       wordWrapWidth: 480,
     },
   })
+  private readonly sentenceFrame = new Graphics()
   private readonly sentenceRow = new Container()
   private readonly feedbackText = new Text({
     text: '',
@@ -248,6 +255,7 @@ export class SentenceBuilderGame {
     this.labelText.visible = false
     this.instructionText.anchor.set(0.5, 0)
     this.teacherText.anchor.set(0.5, 0)
+    this.sentenceFrame.eventMode = 'none'
     this.pictureSprite.mask = this.pictureMask
     this.pictureFrame.addChild(
       this.pictureFill,
@@ -268,6 +276,7 @@ export class SentenceBuilderGame {
       this.labelText,
       this.instructionText,
       this.teacherText,
+      this.sentenceFrame,
       this.sentenceRow,
       this.feedbackText,
       this.loadingText
@@ -569,28 +578,28 @@ export class SentenceBuilderGame {
         text: word,
         style: {
           fontFamily: 'Grandstander',
-          fontSize: 32,
+          fontSize: 36,
           fontWeight: '800',
           fill: INK,
         },
       })
       return { word, chip, textWidth: chip.width }
     })
-    const slotWidth = Math.max(168, ...measured.map((item) => item.textWidth + 36))
-    const height = 64
+    const slotWidth = Math.max(132, ...measured.map((item) => item.textWidth + 40))
+    const height = 72
     let x = 0
     measured.forEach((item, index) => {
       const blank = item.word === '___'
       const bg = new Graphics()
-      bg.roundRect(0, 0, slotWidth, height, 16).fill({ color: blank ? 0xf8fbff : WHITE }).stroke({
-        width: 3,
-        color: blank ? INK_SOFT : INK,
+      bg.roundRect(0, 0, slotWidth, height, 14).fill({ color: blank ? SLOT_BLANK : SLOT_FILL }).stroke({
+        width: 2,
+        color: SLOT_LINE,
       })
       const holder = new Container()
       holder.addChild(bg)
       if (blank) {
         const dash = new Graphics()
-        dash.roundRect(28, height / 2 - 2, slotWidth - 56, 4, 2).fill({ color: INK_SOFT })
+        dash.roundRect(28, height / 2 - 3, slotWidth - 56, 6, 3).fill({ color: SLOT_LINE })
         holder.addChild(dash)
       } else if (item.chip) {
         item.chip.anchor.set(0.5)
@@ -630,9 +639,9 @@ export class SentenceBuilderGame {
 
   private drawTimer(): void {
     const ratio = Math.max(0, Math.min(1, this.remainingMs / QUESTION_TIME_MS))
-    const barWidth = Math.min(168, Math.max(96, this.app.screen.width * 0.16))
+    const barWidth = Math.min(148, Math.max(88, this.app.screen.width * 0.14))
     const x = this.scoreText.x
-    const y = 44
+    const y = this.scoreText.y + this.scoreText.height + 6
     this.timerTrack.clear()
     this.timerTrack.roundRect(x, y, barWidth, 6, 3).fill({ color: WHITE, alpha: 0.85 })
     this.timerFill.clear()
@@ -649,27 +658,48 @@ export class SentenceBuilderGame {
     this.sky.width = width
     this.sky.height = height
 
-    const pad = Math.max(20, Math.round(Math.min(width, height) * 0.03))
-    const wide = width >= 860
-    this.scoreText.position.set(pad, 8)
-    this.progressText.anchor.set(1, 0)
-    this.progressText.position.set(width - pad, 12)
-    this.drawTimer()
-
-    const top = 62
-    const choiceHeight = wide ? 118 : 104
-    const choiceRows = wide ? 1 : 2
-    const choiceGap = 16
-    const bottomInset = wide ? 52 : 32
-    const choiceBlock = choiceRows * choiceHeight + (choiceRows - 1) * choiceGap
+    const pad = Math.max(16, Math.round(Math.min(width, height) * 0.025))
+    const choiceGap = 14
+    const choiceHeight = height < 720 ? 92 : 108
+    const choiceBlock = choiceHeight * 2 + choiceGap
+    const bottomInset = 20
     const choiceTop = height - bottomInset - choiceBlock
 
-    let pictureSize = wide
-      ? Math.min(height - top - pad * 2, width * 0.34, choiceTop - top - pad)
-      : Math.min(width - pad * 2, (choiceTop - top) * 0.42)
-    pictureSize = Math.max(140, pictureSize)
-    const pictureX = wide ? pad : (width - pictureSize) / 2
-    const pictureY = wide ? top + Math.max(0, (choiceTop - top - pictureSize) / 2) : top
+    this.instructionText.style.fontSize = width >= 720 ? 44 : 34
+    this.teacherText.style.fontSize = width >= 720 ? 30 : 24
+    this.instructionText.style.wordWrapWidth = width - pad * 2
+    this.teacherText.style.wordWrapWidth = width - pad * 2
+
+    const teacherBlock = this.teacherText.text ? this.teacherText.height + 8 : 0
+    const framePadY = 16
+    const slotHeight = 72
+    const feedbackBlock = this.feedbackText.text ? this.feedbackText.height + 8 : 0
+    const clueBlock =
+      this.instructionText.height + 10 + teacherBlock + framePadY * 2 + slotHeight + 12 + feedbackBlock
+
+    const sideReserve = pad + 168
+    const between = width - sideReserve * 2
+    const beside = between >= 200
+    const verticalRoom = Math.max(100, choiceTop - clueBlock - (beside ? pad : 68))
+    let pictureSize = beside
+      ? Math.min(between, verticalRoom, 400)
+      : Math.min(width - pad * 2, verticalRoom, 320)
+    pictureSize = Math.max(120, Math.min(pictureSize, verticalRoom))
+
+    const pictureX = (width - pictureSize) / 2
+    const pictureY = beside ? pad : 68
+
+    if (beside) {
+      const stackHeight = this.scoreText.height + 12
+      this.scoreText.position.set(pad, pictureY + (pictureSize - stackHeight) / 2)
+      this.progressText.anchor.set(1, 0.5)
+      this.progressText.position.set(width - pad, pictureY + pictureSize / 2)
+    } else {
+      this.scoreText.position.set(pad, 8)
+      this.progressText.anchor.set(1, 0)
+      this.progressText.position.set(width - pad, 12)
+    }
+    this.drawTimer()
 
     this.pictureFrame.position.set(pictureX, pictureY)
     this.pictureFill.clear()
@@ -684,39 +714,54 @@ export class SentenceBuilderGame {
     this.pictureFallback.position.set(pictureSize / 2, pictureSize / 2)
     this.pictureFallback.style.wordWrapWidth = pictureSize - 32
 
-    const textX = wide ? pictureX + pictureSize + pad : pad
-    const textW = wide ? width - textX - pad : width - pad * 2
-    const textCenter = textX + textW / 2
-    this.instructionText.style.wordWrapWidth = textW
-    this.teacherText.style.wordWrapWidth = textW
-    const teacherGap = this.teacherText.text ? this.teacherText.height + 8 : 0
-    const blockHeight = this.instructionText.height + 8 + teacherGap + 74
-    const textY = wide
-      ? pictureY + Math.max(0, (pictureSize - blockHeight) / 2)
-      : pictureY + pictureSize + 16
+    const textCenter = width / 2
+    let cursor = pictureY + pictureSize + 16
+    this.instructionText.position.set(textCenter, cursor)
+    cursor += this.instructionText.height + 8
+    this.teacherText.position.set(textCenter, cursor)
+    if (this.teacherText.text) cursor += this.teacherText.height + 10
 
-    this.instructionText.position.set(textCenter, textY)
-    this.teacherText.position.set(textCenter, textY + this.instructionText.height + 8)
-    const sentenceY = this.teacherText.position.y + (this.teacherText.text ? this.teacherText.height + 12 : 10)
+    const maxRow = Math.min(width - pad * 2 - 56, 880)
     this.sentenceRow.scale.set(1)
-    const rowWidth = this.sentenceRow.getLocalBounds().width
-    const sentenceScale = rowWidth > textW && rowWidth > 0 ? textW / rowWidth : 1
+    const rowBounds = this.sentenceRow.getLocalBounds()
+    const rowWidth = rowBounds.width
+    const rowHeight = Math.max(slotHeight, rowBounds.height)
+    const sentenceScale = rowWidth > maxRow && rowWidth > 0 ? maxRow / rowWidth : 1
     this.sentenceRow.scale.set(sentenceScale)
-    this.sentenceRow.position.set(textCenter - (rowWidth * sentenceScale) / 2, sentenceY)
-    this.feedbackText.anchor.set(0.5, 0)
-    this.feedbackText.position.set(textCenter, sentenceY + 72 * sentenceScale)
+    const drawnW = rowWidth * sentenceScale
+    const drawnH = rowHeight * sentenceScale
+    const framePadX = 24
+    const minInner = Math.min(maxRow, beside ? 560 : width - pad * 2 - framePadX * 2)
+    const frameInnerW = rowWidth > 2 ? Math.max(drawnW, minInner) : 0
+    const frameLeft = textCenter - frameInnerW / 2
+    this.sentenceRow.position.set(
+      textCenter - drawnW / 2 - rowBounds.x * sentenceScale,
+      cursor + framePadY - rowBounds.y * sentenceScale,
+    )
+    this.sentenceFrame.clear()
+    if (frameInnerW > 2) {
+      this.sentenceFrame
+        .roundRect(frameLeft - framePadX, cursor, frameInnerW + framePadX * 2, drawnH + framePadY * 2, 24)
+        .fill({ color: SENTENCE_FRAME })
+        .stroke({ width: 4, color: ACCENT, alignment: 1 })
+    }
 
-    const cols = wide ? 4 : 2
-    const buttonWidth = (width - pad * 2 - choiceGap * (cols - 1)) / cols
+    const frameBottom = cursor + (rowWidth > 2 ? drawnH + framePadY * 2 : 0)
+    this.feedbackText.anchor.set(0.5, 0)
+    this.feedbackText.position.set(textCenter, frameBottom + 8)
+
+    const gridWidth = Math.min(width - pad * 2, 720)
+    const buttonWidth = (gridWidth - choiceGap) / 2
+    const gridLeft = (width - gridWidth) / 2
     this.buttons.forEach((button, index) => {
-      const col = index % cols
-      const row = Math.floor(index / cols)
+      const col = index % 2
+      const row = Math.floor(index / 2)
       const prompt = this.queue[this.queueIndex]
       const slot = prompt?.slots[this.slotIndex]
       const optionIndex = this.optionOrder[index] ?? 0
       const word = slot?.options[optionIndex] ?? ''
       button.draw(word, index, this.buttonStates[index] ?? 'idle', buttonWidth, choiceHeight)
-      button.view.position.set(pad + col * (buttonWidth + choiceGap), choiceTop + row * (choiceHeight + choiceGap))
+      button.view.position.set(gridLeft + col * (buttonWidth + choiceGap), choiceTop + row * (choiceHeight + choiceGap))
       button.view.visible = this.phase !== 'loading'
     })
 

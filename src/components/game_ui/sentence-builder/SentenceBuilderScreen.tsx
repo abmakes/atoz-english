@@ -219,7 +219,6 @@ export default function SentenceBuilderScreen() {
             <button type="button" onClick={leaveToSetup} className="grandstander font-bold underline">
               Back
             </button>
-            <p className="grandstander font-black">{GRAMMAR_LABELS[focus]}</p>
             <button
               type="button"
               onClick={() => setSounds((value) => !value)}
