@@ -278,9 +278,9 @@ function GamesPageContent({ isSignedIn }: { isSignedIn: boolean }) {
             </p>
             <h2 className="mt-1 text-2xl font-black grandstander">Sentence Builder</h2>
             <p className="mt-2 text-sm text-[--text-light] inclusive-sans">
-              See a picture, then choose the sentence one word at a time. Practice
-              present simple, present continuous, WH questions, was/were, has/have,
-              and past simple. Race the clock in a 20-question run or survival.
+              Pick one grammar structure, then build the sentence one word at a time.
+              Score Run is 20 questions of that structure only. Survival stays on it
+              until a mistake.
             </p>
           </div>
         </Link>

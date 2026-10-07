@@ -9,7 +9,7 @@ How to keep docs honest after changes: [project_docs/DOCUMENTATION_MAINTENANCE.m
 
 ## What this product is
 
-Teacher-centric quiz platform: create quizzes (form, CSV, AI), then play them as classroom PixiJS games (multiple-choice and Splash Dash) with teams, timers, scoring, themes, and power-ups. Sentence Builder is a built-in grammar practice game at `/games/sentence-builder` (picture prompts, not a teacher quiz).
+Teacher-centric quiz platform: create quizzes (form, CSV, AI), then play them as classroom PixiJS games (multiple-choice and Splash Dash) with teams, timers, scoring, themes, and power-ups. Sentence Builder is a built-in grammar practice game at `/games/sentence-builder`. Students pick one structure, then build picture sentences for that structure only.
 
 ## Stack snapshot (working)
 

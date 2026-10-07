@@ -1,4 +1,4 @@
-import type { SentencePrompt } from './content'
+import type { GrammarFocus, SentencePrompt } from './content'
 
 export type PlayMode = 'score-run' | 'survival'
 
@@ -10,6 +10,7 @@ export const SCORE_RUN_LENGTH = 20
 
 export interface SentenceBuilderResult {
   mode: PlayMode
+  focus: GrammarFocus
   score: number
   sentencesBuilt: number
   questionsSeen: number
@@ -56,15 +57,12 @@ export function shuffle<T>(items: readonly T[], random: () => number = Math.rand
   return copy
 }
 
-/** One prompt per picture, covering the grammar set, in random order. */
+/** Shuffle one grammar's 20 prompts. The caller passes a single structure. */
 export function buildScoreRun(
   prompts: readonly SentencePrompt[],
   random: () => number = Math.random
 ): SentencePrompt[] {
-  return shuffle(
-    prompts.filter((item) => item.scoreRun),
-    random
-  )
+  return shuffle(prompts, random)
 }
 
 /** Full bank, shuffled. The game reshuffles when the queue runs out. */

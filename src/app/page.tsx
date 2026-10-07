@@ -303,9 +303,9 @@ export default function HomePage() {
               </p>
               <h3 className="mt-2 text-3xl font-black grandstander">Sentence Builder</h3>
               <p className="mt-2 max-w-2xl text-[--text-light] inclusive-sans">
-                Build a sentence from a picture, one word at a time. The same scenes
-                come back as present simple, present continuous, WH questions, was
-                and were, has and have, and past simple.
+                Pick one grammar structure, then build 20 picture sentences for that
+                structure only. Present simple stays present simple until you choose
+                another card.
               </p>
             </div>
             <span className="inline-flex items-center gap-2 font-black grandstander">

@@ -4,21 +4,22 @@ Built-in ESL practice game. It does not load a teacher quiz. Pictures, grammar t
 
 ## Play
 
-1. The student sees one activity picture and a grammar instruction (`Present simple`, `Use wasn't`, `Ask a question with What`, and so on).
-2. Four choices appear for the **next word only**. Keys `1`–`4` match the buttons.
-3. A correct word locks into the sentence. The next set of choices appears.
-4. Each sentence has a 20-second timer. Finishing scores **100 points**, plus up to **100** more for time remaining.
-5. A wrong word in **Score Run** costs 2.5 seconds and that choice is removed. In **Survival**, one wrong word or a timeout ends the run.
+1. The student picks **one** grammar structure, then Score Run or Survival.
+2. The student sees one activity picture and that structure's instruction (`Present simple`, `Use wasn't`, `Ask with What`).
+3. Four choices appear for the **next word only**. Keys `1`–`4` match the buttons. The other three choices are forms of the same word (`kicked`, `kick`, `kicks`, `kicking`). Articles stay on the noun (`an apple`, not a separate `a` / `an` / `the` slot).
+4. A correct word locks into the sentence. The next set of choices appears.
+5. Each sentence has a 20-second timer. Finishing scores **100 points**, plus up to **100** more for time remaining.
+6. A wrong word in **Score Run** costs 2.5 seconds and that choice is removed. In **Survival**, one wrong word or a timeout ends the run.
 
-Score Run asks 20 questions, one per picture, shuffled. Survival walks the full prompt bank and reshuffles without repeating the sentence that just finished.
+Score Run asks 20 questions from the chosen structure, one per picture, shuffled. The results screen shows how many of those 20 were finished. Survival stays inside that same structure and reshuffles without repeating the sentence that just finished.
 
-The same 20 pictures are reused for present simple, present continuous, WH questions, `am` / `is` / `isn't`, `was` / `were` / `wasn't` / `weren't`, `has` / `have`, and past simple with regular and irregular verbs.
+The 20 pictures are shared, but a run never mixes structures. The structures are present simple, present continuous, WH questions, `am` / `is` / `are` / `isn't`, `was` / `were` / `wasn't` / `weren't`, `has` / `have`, and past simple with regular and irregular verbs.
 
 ## Code
 
 | File | Role |
 |------|------|
-| `content.ts` | 20 scenes and the prompt bank |
+| `content.ts` | 20 scenes and eight 20-prompt grammar banks |
 | `round.ts` | Scoring, penalties, score-run and survival queues |
 | `SentenceBuilderGame.ts` | PixiJS v8 view. One `Application` is created in `SentenceBuilderScreen` and destroyed on unmount |
 | `src/app/games/sentence-builder/page.tsx` | Route |

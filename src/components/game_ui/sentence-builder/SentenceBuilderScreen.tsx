@@ -5,46 +5,58 @@ import Link from 'next/link'
 import { Application } from 'pixi.js'
 import { SentenceBuilderGame } from '@/lib/pixi-games/sentence-builder/SentenceBuilderGame'
 import {
+  GRAMMAR_BLURBS,
+  GRAMMAR_FOCUSES,
+  GRAMMAR_LABELS,
+  type GrammarFocus,
+} from '@/lib/pixi-games/sentence-builder/content'
+import {
   formatSeconds,
   QUESTION_TIME_MS,
+  SCORE_RUN_LENGTH,
   type PlayMode,
   type SentenceBuilderResult,
 } from '@/lib/pixi-games/sentence-builder/round'
 
-const BEST_KEY = 'playtoz-sentence-builder-bests'
+const BEST_KEY = 'playtoz-sentence-builder-bests-v2'
 
-interface Bests {
-  scoreRun: number
+interface FocusBest {
+  scoreRunScore: number
+  scoreRunBuilt: number
   survivalScore: number
   survivalSentences: number
 }
 
-const EMPTY_BESTS: Bests = { scoreRun: 0, survivalScore: 0, survivalSentences: 0 }
+type Bests = Record<GrammarFocus, FocusBest>
 
-const GRAMMAR_CHIPS = [
-  'Present simple',
-  'Present continuous',
-  'WH questions',
-  'am / is / isn\'t',
-  'was / were / wasn\'t / weren\'t',
-  'has / have',
-  'Past simple, regular',
-  'Past simple, irregular',
-]
+function emptyFocusBest(): FocusBest {
+  return { scoreRunScore: 0, scoreRunBuilt: 0, survivalScore: 0, survivalSentences: 0 }
+}
+
+function emptyBests(): Bests {
+  return Object.fromEntries(GRAMMAR_FOCUSES.map((focus) => [focus, emptyFocusBest()])) as Bests
+}
 
 function readBests(): Bests {
-  if (typeof window === 'undefined') return EMPTY_BESTS
+  const bests = emptyBests()
+  if (typeof window === 'undefined') return bests
   try {
     const raw = window.localStorage.getItem(BEST_KEY)
-    if (!raw) return EMPTY_BESTS
-    const parsed = JSON.parse(raw) as Partial<Bests>
-    return {
-      scoreRun: Number(parsed.scoreRun) || 0,
-      survivalScore: Number(parsed.survivalScore) || 0,
-      survivalSentences: Number(parsed.survivalSentences) || 0,
+    if (!raw) return bests
+    const parsed = JSON.parse(raw) as Partial<Record<GrammarFocus, Partial<FocusBest>>>
+    for (const focus of GRAMMAR_FOCUSES) {
+      const item = parsed[focus]
+      if (!item) continue
+      bests[focus] = {
+        scoreRunScore: Number(item.scoreRunScore) || 0,
+        scoreRunBuilt: Number(item.scoreRunBuilt) || 0,
+        survivalScore: Number(item.survivalScore) || 0,
+        survivalSentences: Number(item.survivalSentences) || 0,
+      }
     }
+    return bests
   } catch {
-    return EMPTY_BESTS
+    return bests
   }
 }
 
@@ -53,22 +65,29 @@ function writeBests(next: Bests) {
 }
 
 function rememberBest(previous: Bests, next: SentenceBuilderResult): Bests {
-  const updated: Bests = { ...previous }
+  const current = previous[next.focus] ?? emptyFocusBest()
+  const updatedFocus: FocusBest = { ...current }
   if (next.mode === 'score-run' && next.endedBy === 'finished') {
-    updated.scoreRun = Math.max(previous.scoreRun, next.score)
+    const betterAccuracy = next.sentencesBuilt > current.scoreRunBuilt
+    const betterScore = next.sentencesBuilt === current.scoreRunBuilt && next.score > current.scoreRunScore
+    if (betterAccuracy || betterScore) {
+      updatedFocus.scoreRunBuilt = next.sentencesBuilt
+      updatedFocus.scoreRunScore = next.score
+    }
   }
   if (next.mode === 'survival') {
-    updated.survivalScore = Math.max(previous.survivalScore, next.score)
-    updated.survivalSentences = Math.max(previous.survivalSentences, next.sentencesBuilt)
+    updatedFocus.survivalScore = Math.max(current.survivalScore, next.score)
+    updatedFocus.survivalSentences = Math.max(current.survivalSentences, next.sentencesBuilt)
   }
-  return updated
+  return { ...previous, [next.focus]: updatedFocus }
 }
 
 export default function SentenceBuilderScreen() {
   const [phase, setPhase] = useState<'setup' | 'play' | 'results'>('setup')
   const [mode, setMode] = useState<PlayMode>('score-run')
+  const [focus, setFocus] = useState<GrammarFocus>('present-simple')
   const [sounds, setSounds] = useState(true)
-  const [bests, setBests] = useState<Bests>(EMPTY_BESTS)
+  const [bests, setBests] = useState<Bests>(emptyBests)
   const [result, setResult] = useState<SentenceBuilderResult | null>(null)
   const [status, setStatus] = useState('')
   const mountRef = useRef<HTMLDivElement>(null)
@@ -116,7 +135,7 @@ export default function SentenceBuilderScreen() {
       mount.appendChild(app.canvas)
       game = new SentenceBuilderGame(
         app,
-        { mode, sounds: soundsRef.current },
+        { mode, focus, sounds: soundsRef.current },
         {
           onStatus: setStatus,
           onComplete: (next) => {
@@ -147,7 +166,7 @@ export default function SentenceBuilderScreen() {
       gameRef.current = null
       destroyApp()
     }
-  }, [phase, mode])
+  }, [phase, mode, focus])
 
   useEffect(() => {
     if (gameRef.current) gameRef.current.sounds = sounds
@@ -161,9 +180,11 @@ export default function SentenceBuilderScreen() {
       {phase === 'setup' && (
         <Setup
           mode={mode}
+          focus={focus}
           sounds={sounds}
           bests={bests}
           onMode={setMode}
+          onFocus={setFocus}
           onSounds={setSounds}
           onPlay={() => {
             setResult(null)
@@ -177,7 +198,7 @@ export default function SentenceBuilderScreen() {
             <button type="button" onClick={leaveToSetup} className="grandstander font-bold underline">
               Back
             </button>
-            <p className="grandstander font-black">Sentence Builder</p>
+            <p className="grandstander font-black">{GRAMMAR_LABELS[focus]}</p>
             <button
               type="button"
               onClick={() => setSounds((value) => !value)}
@@ -206,19 +227,24 @@ export default function SentenceBuilderScreen() {
 
 function Setup({
   mode,
+  focus,
   sounds,
   bests,
   onMode,
+  onFocus,
   onSounds,
   onPlay,
 }: {
   mode: PlayMode
+  focus: GrammarFocus
   sounds: boolean
   bests: Bests
   onMode: (mode: PlayMode) => void
+  onFocus: (focus: GrammarFocus) => void
   onSounds: (sounds: boolean) => void
   onPlay: () => void
 }) {
+  const selectedBest = bests[focus]
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 md:py-12">
       <div className="flex items-center justify-between">
@@ -235,43 +261,52 @@ function Setup({
         </p>
         <h1 className="mt-2 text-4xl font-black grandstander md:text-6xl">Sentence Builder</h1>
         <p className="mt-3 max-w-2xl text-lg text-[--text-light] inclusive-sans">
-          Look at the picture, then pick the sentence one word at a time. Faster
-          sentences score more. Each picture comes back in a different tense.
+          Pick one grammar structure, then build sentences for that structure only.
+          Look at the picture and choose the next word. Faster sentences score more.
         </p>
       </div>
-      <ul className="flex flex-wrap gap-2">
-        {GRAMMAR_CHIPS.map((chip) => (
-          <li
-            key={chip}
-            className="rounded-full border-2 border-[#1E5167] bg-white px-3 py-1 text-sm font-bold grandstander"
-          >
-            {chip}
-          </li>
-        ))}
-      </ul>
       <div className="grid gap-4 md:grid-cols-2">
         <ModeCard
           selected={mode === 'score-run'}
           title="Score Run"
-          body="20 pictures. Build every sentence before the 20-second timer runs out. A wrong word costs 2.5 seconds."
-          detail={bests.scoreRun > 0 ? `Best score ${bests.scoreRun}` : 'Best score will show here'}
+          body="20 questions from the structure you pick. A wrong word costs 2.5 seconds. Finish all 20 to see your percent."
+          detail={
+            selectedBest.scoreRunBuilt > 0
+              ? `Best ${selectedBest.scoreRunBuilt}/${SCORE_RUN_LENGTH} on this structure`
+              : 'Your best for this structure shows here'
+          }
           onSelect={() => onMode('score-run')}
         />
         <ModeCard
           selected={mode === 'survival'}
           title="Survival"
-          body="Keep going through the grammar bank. One wrong word, or a timeout, ends the run."
+          body="Stay on the structure you pick. One wrong word, or a timeout, ends the run."
           detail={
-            bests.survivalSentences > 0
-              ? `Best ${bests.survivalSentences} sentences · ${bests.survivalScore} points`
+            selectedBest.survivalSentences > 0
+              ? `Best ${selectedBest.survivalSentences} sentences · ${selectedBest.survivalScore} points`
               : 'See how far you can get'
           }
           onSelect={() => onMode('survival')}
         />
       </div>
+      <div>
+        <h2 className="text-xl font-black grandstander">Choose a structure</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {GRAMMAR_FOCUSES.map((item) => (
+            <GrammarCard
+              key={item}
+              selected={focus === item}
+              title={GRAMMAR_LABELS[item]}
+              example={GRAMMAR_BLURBS[item]}
+              detail={grammarBestLabel(mode, bests[item])}
+              onSelect={() => onFocus(item)}
+            />
+          ))}
+        </div>
+      </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <button type="button" onClick={onPlay} className="neo-button bg-[--primary-accent] px-8 text-white">
-          Play
+          Play {GRAMMAR_LABELS[focus]}
         </button>
         <p className="text-sm text-[--text-light] inclusive-sans">
           Keys 1–4 pick the next word. A perfect sentence is {100 + 100} points. You have{' '}
@@ -280,6 +315,13 @@ function Setup({
       </div>
     </div>
   )
+}
+
+function grammarBestLabel(mode: PlayMode, best: FocusBest): string {
+  if (mode === 'score-run') {
+    return best.scoreRunBuilt > 0 ? `Best ${best.scoreRunBuilt}/${SCORE_RUN_LENGTH}` : 'Not played yet'
+  }
+  return best.survivalSentences > 0 ? `Best ${best.survivalSentences} sentences` : 'Not played yet'
 }
 
 function ModeCard({
@@ -309,6 +351,33 @@ function ModeCard({
   )
 }
 
+function GrammarCard({
+  selected,
+  title,
+  example,
+  detail,
+  onSelect,
+}: {
+  selected: boolean
+  title: string
+  example: string
+  detail: string
+  onSelect: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={`neo-card p-4 text-left ${selected ? 'bg-[#e8f8ff]' : 'bg-white'}`}
+    >
+      <h3 className="text-lg font-black grandstander">{title}</h3>
+      <p className="mt-2 text-sm text-[--text-light] inclusive-sans">{example}</p>
+      <p className="mt-3 text-sm font-bold grandstander">{detail}</p>
+    </button>
+  )
+}
+
 function Results({
   result,
   bests,
@@ -328,22 +397,32 @@ function Results({
       : result.endedBy === 'timeout'
         ? 'Time ran out'
         : 'Survival ended'
+  const focusBest = bests[result.focus]
+  const percent =
+    result.mode === 'score-run' ? Math.round((result.sentencesBuilt / SCORE_RUN_LENGTH) * 100) : null
   const best =
     result.mode === 'score-run'
-      ? `Best score ${bests.scoreRun}`
-      : `Best ${bests.survivalSentences} sentences`
+      ? `Best ${focusBest.scoreRunBuilt}/${SCORE_RUN_LENGTH}`
+      : `Best ${focusBest.survivalSentences} sentences`
 
   return (
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col justify-center gap-5 px-4 py-10">
       <p className="text-sm font-black uppercase tracking-[0.16em] text-[#168CB9] grandstander">
-        {result.mode === 'score-run' ? '20 questions' : 'Survival'}
+        {GRAMMAR_LABELS[result.focus]}
       </p>
       <h1 className="text-4xl font-black grandstander md:text-5xl">{title}</h1>
-      <p className="text-6xl font-black grandstander text-[#168CB9]">{result.score}</p>
+      {percent !== null ? (
+        <p className="text-6xl font-black grandstander text-[#168CB9]">{percent}%</p>
+      ) : (
+        <p className="text-6xl font-black grandstander text-[#168CB9]">{result.sentencesBuilt}</p>
+      )}
       <ul className="space-y-2 text-lg inclusive-sans">
         <li>
           Sentences built: <strong className="grandstander">{result.sentencesBuilt}</strong>
-          {result.mode === 'score-run' ? ` of ${result.questionsSeen}` : ''}
+          {result.mode === 'score-run' ? ` of ${SCORE_RUN_LENGTH}` : ''}
+        </li>
+        <li>
+          Score: <strong className="grandstander">{result.score}</strong>
         </li>
         {average && (
           <li>
@@ -355,7 +434,9 @@ function Results({
             Fastest sentence: <strong className="grandstander">{formatSeconds(result.fastestMs)}</strong>
           </li>
         )}
-        {(result.mode === 'score-run' ? bests.scoreRun : bests.survivalSentences) > 0 && <li>{best}</li>}
+        {(result.mode === 'score-run' ? focusBest.scoreRunBuilt : focusBest.survivalSentences) > 0 && (
+          <li>{best}</li>
+        )}
       </ul>
       {result.missedAnswer && (
         <p className="rounded-2xl border-2 border-[#1E5167] bg-white p-4 inclusive-sans">
@@ -372,7 +453,7 @@ function Results({
           Play again
         </button>
         <button type="button" onClick={onSetup} className="neo-button bg-white">
-          Change mode
+          Change structure
         </button>
       </div>
     </div>

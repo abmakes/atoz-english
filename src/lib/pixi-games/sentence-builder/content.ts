@@ -1,6 +1,8 @@
 /**
  * Built-in Sentence Builder scenes and prompts.
- * Each picture is reused across tenses. Score Run flags exactly one prompt per scene.
+ * Each practice run uses one grammar structure and all 20 pictures.
+ * A choice is another form of the same word. Articles stay attached to the
+ * noun so "a guitar" and "the guitar" are never rival answers.
  */
 
 export type GrammarFocus =
@@ -12,6 +14,17 @@ export type GrammarFocus =
   | 'has-have'
   | 'past-simple-regular'
   | 'past-simple-irregular'
+
+export const GRAMMAR_FOCUSES: readonly GrammarFocus[] = [
+  'present-simple',
+  'present-continuous',
+  'wh-question',
+  'be-present',
+  'be-past',
+  'has-have',
+  'past-simple-regular',
+  'past-simple-irregular',
+]
 
 export interface WordSlot {
   correct: string
@@ -28,7 +41,6 @@ export interface SentencePrompt {
   punctuation: '.' | '?'
   slots: WordSlot[]
   answer: string
-  scoreRun: boolean
 }
 
 export interface Scene {
@@ -40,1374 +52,790 @@ export interface Scene {
 export const GRAMMAR_LABELS: Record<GrammarFocus, string> = {
   'present-simple': 'Present simple',
   'present-continuous': 'Present continuous',
-  'wh-question': 'WH question',
-  'be-present': 'am / is / isn\'t',
+  'wh-question': 'WH questions',
+  'be-present': 'am / is / are / isn\'t',
   'be-past': 'was / were / wasn\'t / weren\'t',
   'has-have': 'has / have',
-  'past-simple-regular': 'Past simple · regular',
-  'past-simple-irregular': 'Past simple · irregular',
+  'past-simple-regular': 'Past simple, regular',
+  'past-simple-irregular': 'Past simple, irregular',
 }
 
-const scene = (id: string, alt: string): Scene => ({
-  id,
-  image: `/images/sentence-builder/${id}.jpg`,
-  alt,
-})
-
-export const SCENES: Scene[] = [
-  scene('maya-apple', 'A girl holding a red apple in a kitchen'),
-  scene('leo-bike', 'A boy riding a blue bicycle'),
-  scene('sara-book', 'A woman reading a book in a chair'),
-  scene('omar-cook', 'A man stirring a pot of soup'),
-  scene('kids-soccer', 'Two children playing soccer'),
-  scene('nina-water', 'A girl drinking a glass of water'),
-  scene('ben-letter', 'A boy writing a letter at a desk'),
-  scene('ms-lee-class', 'A teacher teaching three students'),
-  scene('ami-sleep', 'A girl sleeping in bed'),
-  scene('kai-run', 'A boy running on a park path'),
-  scene('lena-car', 'A woman driving a red car'),
-  scene('paulo-dishes', 'A man washing dishes'),
-  scene('twins-draw', 'Two children drawing with crayons'),
-  scene('noah-guitar', 'A boy playing a guitar'),
-  scene('hana-teeth', 'A girl brushing her teeth'),
-  scene('family-breakfast', 'A family eating breakfast together'),
-  scene('sam-dog', 'A man walking a dog'),
-  scene('lina-swim', 'A girl swimming in a pool'),
-  scene('jo-dance', 'A girl dancing and smiling'),
-  scene('eli-door', 'A boy standing in an open yellow door'),
-]
-
-function slot(correct: string, a: string, b: string, c: string): WordSlot {
-  return { correct, options: [correct, a, b, c] }
+export const GRAMMAR_BLURBS: Record<GrammarFocus, string> = {
+  'present-simple': 'She eats an apple.',
+  'present-continuous': 'She is eating an apple.',
+  'wh-question': 'What is she eating?',
+  'be-present': 'I am tired. She isn\'t sad.',
+  'be-past': 'He wasn\'t scared. They weren\'t sad.',
+  'has-have': 'She has an apple.',
+  'past-simple-regular': 'He washed the dishes.',
+  'past-simple-irregular': 'She ate an apple.',
 }
 
-function prompt(def: {
-  id: string
-  sceneId: string
-  focus: GrammarFocus
-  label: string
+type Person = 'She' | 'He' | 'They'
+type BeAux = 'is' | 'are' | 'am' | "isn't" | 'was' | 'were' | "wasn't" | "weren't"
+type WhWord = 'What' | 'Where' | 'Who'
+
+interface BeLine {
+  who?: Person | 'I'
+  aux: BeAux
+  adjective: readonly [string, string, string, string]
   instruction: string
   teacherPrompt?: string
-  punctuation?: '.' | '?'
-  scoreRun?: boolean
-  slots: WordSlot[]
-}): SentencePrompt {
-  const punctuation = def.punctuation ?? '.'
+}
+
+interface VerbLine {
+  verb: readonly [string, string, string, string]
+  object: WordSlot
+}
+
+interface SceneLine {
+  id: string
+  alt: string
+  who: Person
+  object: WordSlot
+  simple: readonly [string, string, string, string]
+  continuous: readonly [string, string, string, string]
+  wh: {
+    word: WhWord
+    verb: readonly [string, string, string, string]
+  }
+  bePresent: BeLine
+  bePast: BeLine
+  possession: WordSlot
+  regular: VerbLine
+  irregular: VerbLine
+}
+
+function choice(correct: string, a: string, b: string, c: string): WordSlot {
+  const options = [correct, a, b, c] as const
+  if (new Set(options).size !== 4) {
+    throw new Error(`Sentence Builder choices must be four different forms: ${options.join(' | ')}`)
+  }
+  return { correct, options }
+}
+
+function subjectSlot(who: Person | 'I'): WordSlot {
+  if (who === 'She') return choice('She', 'Her', 'Hers', 'Shes')
+  if (who === 'He') return choice('He', 'Him', 'His', 'Hes')
+  if (who === 'They') return choice('They', 'Them', 'Their', 'Theyre')
+  return choice('I', 'Me', 'My', 'Im')
+}
+
+function questionSubject(who: Person): WordSlot {
+  if (who === 'She') return choice('she', 'her', 'hers', 'shes')
+  if (who === 'He') return choice('he', 'him', 'his', 'hes')
+  return choice('they', 'them', 'their', 'theyre')
+}
+
+function whWord(word: WhWord): WordSlot {
+  if (word === 'What') return choice('What', 'Whats', 'Whating', 'Whatd')
+  if (word === 'Where') return choice('Where', 'Wheres', 'Whering', 'Whered')
+  return choice('Who', 'Whos', 'Whoing', 'Whod')
+}
+
+function auxiliary(correct: 'is' | 'are'): WordSlot {
+  return correct === 'is' ? choice('is', 'are', 'am', 'be') : choice('are', 'is', 'am', 'be')
+}
+
+function beSlot(correct: BeAux): WordSlot {
+  const table: Record<BeAux, readonly [string, string, string, string]> = {
+    is: ['is', 'are', 'am', 'be'],
+    are: ['are', 'is', 'am', 'be'],
+    am: ['am', 'is', 'are', 'be'],
+    "isn't": ["isn't", "aren't", 'am', 'be'],
+    was: ['was', 'were', 'be', 'been'],
+    were: ['were', 'was', 'be', 'been'],
+    "wasn't": ["wasn't", "weren't", 'was', 'were'],
+    "weren't": ["weren't", "wasn't", 'were', 'was'],
+  }
+  const [right, a, b, c] = table[correct]
+  return choice(right, a, b, c)
+}
+
+function haveSlot(who: Person): WordSlot {
+  return who === 'They'
+    ? choice('have', 'has', 'having', 'haves')
+    : choice('has', 'have', 'having', 'haves')
+}
+
+function verbSlot(forms: readonly [string, string, string, string]): WordSlot {
+  return choice(forms[0], forms[1], forms[2], forms[3])
+}
+
+const LINES: SceneLine[] = [
+  {
+    id: 'maya-apple',
+    alt: 'A girl holding a red apple in a kitchen',
+    who: 'She',
+    object: choice('an apple', 'a apple', 'apple', 'an apples'),
+    simple: ['eats', 'eat', 'eating', 'ate'],
+    continuous: ['eating', 'eats', 'eat', 'ate'],
+    wh: { word: 'What', verb: ['eating', 'eats', 'eat', 'ate'] },
+    bePresent: {
+      aux: 'is',
+      adjective: ['hungry', 'hungrily', 'hungrys', 'hungries'],
+      instruction: 'Present. Use is.',
+    },
+    bePast: {
+      aux: "wasn't",
+      adjective: ['sad', 'sadly', 'sads', 'saddly'],
+      instruction: "Answer no. Use wasn't.",
+      teacherPrompt: 'Was she sad?',
+    },
+    possession: choice('an apple', 'a apple', 'apple', 'an apples'),
+    regular: {
+      verb: ['picked', 'pick', 'picks', 'picking'],
+      object: choice('an apple', 'a apple', 'apple', 'an apples'),
+    },
+    irregular: {
+      verb: ['ate', 'eat', 'eats', 'eaten'],
+      object: choice('an apple', 'a apple', 'apple', 'an apples'),
+    },
+  },
+  {
+    id: 'leo-bike',
+    alt: 'A boy riding a blue bicycle',
+    who: 'He',
+    object: choice('a bike', 'an bike', 'bike', 'a bikes'),
+    simple: ['rides', 'ride', 'riding', 'rode'],
+    continuous: ['riding', 'rides', 'ride', 'rode'],
+    wh: { word: 'What', verb: ['riding', 'rides', 'ride', 'rode'] },
+    bePresent: {
+      aux: 'is',
+      adjective: ['happy', 'happily', 'happys', 'happyly'],
+      instruction: 'Present. Use is.',
+    },
+    bePast: {
+      aux: "wasn't",
+      adjective: ['tired', 'tiredly', 'tire', 'tireds'],
+      instruction: "Answer no. Use wasn't.",
+      teacherPrompt: 'Was he tired?',
+    },
+    possession: choice('a bike', 'an bike', 'bike', 'a bikes'),
+    regular: {
+      verb: ['pedaled', 'pedal', 'pedals', 'pedaling'],
+      object: choice('a bike', 'an bike', 'bike', 'a bikes'),
+    },
+    irregular: {
+      verb: ['rode', 'ride', 'rides', 'ridden'],
+      object: choice('a bike', 'an bike', 'bike', 'a bikes'),
+    },
+  },
+  {
+    id: 'sara-book',
+    alt: 'A woman reading a book in a chair',
+    who: 'She',
+    object: choice('a book', 'an book', 'book', 'a books'),
+    simple: ['reads', 'read', 'reading', 'readed'],
+    continuous: ['reading', 'reads', 'read', 'readed'],
+    wh: { word: 'What', verb: ['reading', 'reads', 'read', 'readed'] },
+    bePresent: {
+      aux: 'is',
+      adjective: ['quiet', 'quietly', 'quiets', 'quietes'],
+      instruction: 'Present. Use is.',
+    },
+    bePast: {
+      aux: 'was',
+      adjective: ['quiet', 'quietly', 'quiets', 'quietes'],
+      instruction: 'Past. Use was.',
+    },
+    possession: choice('a book', 'an book', 'book', 'a books'),
+    regular: {
+      verb: ['opened', 'open', 'opens', 'opening'],
+      object: choice('a book', 'an book', 'book', 'a books'),
+    },
+    irregular: {
+      verb: ['held', 'hold', 'holds', 'holding'],
+      object: choice('a book', 'an book', 'book', 'a books'),
+    },
+  },
+  {
+    id: 'omar-cook',
+    alt: 'A man stirring a pot of soup',
+    who: 'He',
+    object: choice('some soup', 'an soup', 'a soups', 'soups'),
+    simple: ['cooks', 'cook', 'cooking', 'cooked'],
+    continuous: ['cooking', 'cooks', 'cook', 'cooked'],
+    wh: { word: 'What', verb: ['cooking', 'cooks', 'cook', 'cooked'] },
+    bePresent: {
+      aux: 'is',
+      adjective: ['busy', 'busily', 'busys', 'busyed'],
+      instruction: 'Present. Use is.',
+    },
+    bePast: {
+      aux: 'was',
+      adjective: ['busy', 'busily', 'busys', 'busyed'],
+      instruction: 'Past. Use was.',
+    },
+    possession: choice('some soup', 'an soup', 'a soups', 'soups'),
+    regular: {
+      verb: ['cooked', 'cook', 'cooks', 'cooking'],
+      object: choice('some soup', 'an soup', 'a soups', 'soups'),
+    },
+    irregular: {
+      verb: ['made', 'make', 'makes', 'making'],
+      object: choice('some soup', 'an soup', 'a soups', 'soups'),
+    },
+  },
+  {
+    id: 'kids-soccer',
+    alt: 'Two children playing soccer',
+    who: 'They',
+    object: choice('soccer', 'soccers', 'an soccer', 'soccered'),
+    simple: ['play', 'plays', 'playing', 'played'],
+    continuous: ['playing', 'play', 'plays', 'played'],
+    wh: { word: 'What', verb: ['playing', 'play', 'plays', 'played'] },
+    bePresent: {
+      aux: 'are',
+      adjective: ['happy', 'happily', 'happys', 'happyly'],
+      instruction: 'Present. Use are.',
+    },
+    bePast: {
+      aux: "weren't",
+      adjective: ['sad', 'sadly', 'sads', 'saddly'],
+      instruction: "Answer no. Use weren't.",
+      teacherPrompt: 'Were they sad?',
+    },
+    possession: choice('a ball', 'an ball', 'ball', 'a balls'),
+    regular: {
+      verb: ['kicked', 'kick', 'kicks', 'kicking'],
+      object: choice('a ball', 'an ball', 'ball', 'a balls'),
+    },
+    irregular: {
+      verb: ['ran', 'run', 'runs', 'running'],
+      object: choice('after a ball', 'after an ball', 'after ball', 'after a balls'),
+    },
+  },
+  {
+    id: 'nina-water',
+    alt: 'A girl drinking a glass of water',
+    who: 'She',
+    object: choice('some water', 'an water', 'a waters', 'waters'),
+    simple: ['drinks', 'drink', 'drinking', 'drank'],
+    continuous: ['drinking', 'drinks', 'drink', 'drank'],
+    wh: { word: 'What', verb: ['drinking', 'drinks', 'drink', 'drank'] },
+    bePresent: {
+      aux: 'is',
+      adjective: ['thirsty', 'thirstily', 'thirsts', 'thirsted'],
+      instruction: 'Present. Use is.',
+    },
+    bePast: {
+      aux: 'was',
+      adjective: ['thirsty', 'thirstily', 'thirsts', 'thirsted'],
+      instruction: 'Past. Use was.',
+    },
+    possession: choice('some water', 'an water', 'a waters', 'waters'),
+    regular: {
+      verb: ['sipped', 'sip', 'sips', 'sipping'],
+      object: choice('some water', 'an water', 'a waters', 'waters'),
+    },
+    irregular: {
+      verb: ['drank', 'drink', 'drinks', 'drinking'],
+      object: choice('some water', 'an water', 'a waters', 'waters'),
+    },
+  },
+  {
+    id: 'ben-letter',
+    alt: 'A boy writing a letter at a desk',
+    who: 'He',
+    object: choice('a letter', 'an letter', 'letter', 'a letters'),
+    simple: ['writes', 'write', 'writing', 'wrote'],
+    continuous: ['writing', 'writes', 'write', 'wrote'],
+    wh: { word: 'What', verb: ['writing', 'writes', 'write', 'wrote'] },
+    bePresent: {
+      aux: 'is',
+      adjective: ['quiet', 'quietly', 'quiets', 'quietes'],
+      instruction: 'Present. Use is.',
+    },
+    bePast: {
+      aux: 'was',
+      adjective: ['quiet', 'quietly', 'quiets', 'quietes'],
+      instruction: 'Past. Use was.',
+    },
+    possession: choice('a letter', 'an letter', 'letter', 'a letters'),
+    regular: {
+      verb: ['started', 'start', 'starts', 'starting'],
+      object: choice('a letter', 'an letter', 'letter', 'a letters'),
+    },
+    irregular: {
+      verb: ['wrote', 'write', 'writes', 'writing'],
+      object: choice('a letter', 'an letter', 'letter', 'a letters'),
+    },
+  },
+  {
+    id: 'ms-lee-class',
+    alt: 'A teacher teaching three students',
+    who: 'She',
+    object: choice('the class', 'an class', 'a classes', 'classed'),
+    simple: ['teaches', 'teach', 'teaching', 'taught'],
+    continuous: ['teaching', 'teaches', 'teach', 'taught'],
+    wh: { word: 'Who', verb: ['teaching', 'teaches', 'teach', 'taught'] },
+    bePresent: {
+      aux: 'is',
+      adjective: ['helpful', 'helpfully', 'helpfuls', 'helpfull'],
+      instruction: 'Present. Use is.',
+    },
+    bePast: {
+      aux: 'was',
+      adjective: ['helpful', 'helpfully', 'helpfuls', 'helpfull'],
+      instruction: 'Past. Use was.',
+    },
+    possession: choice('a class', 'an class', 'classed', 'a classes'),
+    regular: {
+      verb: ['helped', 'help', 'helps', 'helping'],
+      object: choice('the class', 'an class', 'a classes', 'classed'),
+    },
+    irregular: {
+      verb: ['taught', 'teach', 'teaches', 'teaching'],
+      object: choice('the class', 'an class', 'a classes', 'classed'),
+    },
+  },
+  {
+    id: 'ami-sleep',
+    alt: 'A girl sleeping in bed',
+    who: 'She',
+    object: choice('in bed', 'in beds', 'in an bed', 'in a beds'),
+    simple: ['sleeps', 'sleep', 'sleeping', 'slept'],
+    continuous: ['sleeping', 'sleeps', 'sleep', 'slept'],
+    wh: { word: 'What', verb: ['doing', 'does', 'do', 'did'] },
+    bePresent: {
+      who: 'I',
+      aux: 'am',
+      adjective: ['tired', 'tiredly', 'tire', 'tireds'],
+      instruction: 'Present. Use am.',
+      teacherPrompt: 'What would she say?',
+    },
+    bePast: {
+      aux: 'was',
+      adjective: ['tired', 'tiredly', 'tire', 'tireds'],
+      instruction: 'Past. Use was.',
+    },
+    possession: choice('a bed', 'an bed', 'bed', 'a beds'),
+    regular: {
+      verb: ['stayed', 'stay', 'stays', 'staying'],
+      object: choice('in bed', 'in beds', 'in an bed', 'in a beds'),
+    },
+    irregular: {
+      verb: ['slept', 'sleep', 'sleeps', 'sleeping'],
+      object: choice('in bed', 'in beds', 'in an bed', 'in a beds'),
+    },
+  },
+  {
+    id: 'kai-run',
+    alt: 'A boy running on a park path',
+    who: 'He',
+    object: choice('in the park', 'in park', 'in an park', 'in a parks'),
+    simple: ['runs', 'run', 'running', 'ran'],
+    continuous: ['running', 'runs', 'run', 'ran'],
+    wh: { word: 'Where', verb: ['running', 'runs', 'run', 'ran'] },
+    bePresent: {
+      aux: 'is',
+      adjective: ['fast', 'fastly', 'fasts', 'fastes'],
+      instruction: 'Present. Use is.',
+    },
+    bePast: {
+      aux: 'was',
+      adjective: ['fast', 'fastly', 'fasts', 'fastes'],
+      instruction: 'Past. Use was.',
+    },
+    possession: choice('energy', 'energys', 'a energy', 'energies'),
+    regular: {
+      verb: ['jogged', 'jog', 'jogs', 'jogging'],
+      object: choice('in the park', 'in park', 'in an park', 'in a parks'),
+    },
+    irregular: {
+      verb: ['ran', 'run', 'runs', 'running'],
+      object: choice('in the park', 'in park', 'in an park', 'in a parks'),
+    },
+  },
+  {
+    id: 'lena-car',
+    alt: 'A woman driving a red car',
+    who: 'She',
+    object: choice('a car', 'an car', 'car', 'a cars'),
+    simple: ['drives', 'drive', 'driving', 'drove'],
+    continuous: ['driving', 'drives', 'drive', 'drove'],
+    wh: { word: 'What', verb: ['driving', 'drives', 'drive', 'drove'] },
+    bePresent: {
+      aux: 'is',
+      adjective: ['careful', 'carefully', 'carefuls', 'carefull'],
+      instruction: 'Present. Use is.',
+    },
+    bePast: {
+      aux: 'was',
+      adjective: ['careful', 'carefully', 'carefuls', 'carefull'],
+      instruction: 'Past. Use was.',
+    },
+    possession: choice('a car', 'an car', 'car', 'a cars'),
+    regular: {
+      verb: ['traveled', 'travel', 'travels', 'traveling'],
+      object: choice('in a car', 'in an car', 'in car', 'in a cars'),
+    },
+    irregular: {
+      verb: ['drove', 'drive', 'drives', 'driving'],
+      object: choice('a car', 'an car', 'car', 'a cars'),
+    },
+  },
+  {
+    id: 'paulo-dishes',
+    alt: 'A man washing dishes',
+    who: 'He',
+    object: choice('the dishes', 'a dishes', 'an dishes', 'dishs'),
+    simple: ['washes', 'wash', 'washing', 'washed'],
+    continuous: ['washing', 'washes', 'wash', 'washed'],
+    wh: { word: 'What', verb: ['washing', 'washes', 'wash', 'washed'] },
+    bePresent: {
+      aux: 'is',
+      adjective: ['busy', 'busily', 'busys', 'busyed'],
+      instruction: 'Present. Use is.',
+    },
+    bePast: {
+      aux: 'was',
+      adjective: ['busy', 'busily', 'busys', 'busyed'],
+      instruction: 'Past. Use was.',
+    },
+    possession: choice('the dishes', 'a dishes', 'an dishes', 'dishs'),
+    regular: {
+      verb: ['washed', 'wash', 'washes', 'washing'],
+      object: choice('the dishes', 'a dishes', 'an dishes', 'dishs'),
+    },
+    irregular: {
+      verb: ['did', 'do', 'does', 'doing'],
+      object: choice('the dishes', 'a dishes', 'an dishes', 'dishs'),
+    },
+  },
+  {
+    id: 'twins-draw',
+    alt: 'Two children drawing with crayons',
+    who: 'They',
+    object: choice('pictures', 'a pictures', 'an pictures', 'picture'),
+    simple: ['draw', 'draws', 'drawing', 'drew'],
+    continuous: ['drawing', 'draw', 'draws', 'drew'],
+    wh: { word: 'What', verb: ['drawing', 'draw', 'draws', 'drew'] },
+    bePresent: {
+      aux: 'are',
+      adjective: ['happy', 'happily', 'happys', 'happyly'],
+      instruction: 'Present. Use are.',
+    },
+    bePast: {
+      aux: 'were',
+      adjective: ['happy', 'happily', 'happys', 'happyly'],
+      instruction: 'Past. Use were.',
+    },
+    possession: choice('some crayons', 'a crayons', 'an crayons', 'crayon'),
+    regular: {
+      verb: ['colored', 'color', 'colors', 'coloring'],
+      object: choice('pictures', 'a pictures', 'an pictures', 'picture'),
+    },
+    irregular: {
+      verb: ['drew', 'draw', 'draws', 'drawing'],
+      object: choice('pictures', 'a pictures', 'an pictures', 'picture'),
+    },
+  },
+  {
+    id: 'noah-guitar',
+    alt: 'A boy playing a guitar',
+    who: 'He',
+    object: choice('a guitar', 'an guitar', 'guitar', 'a guitars'),
+    simple: ['plays', 'play', 'playing', 'played'],
+    continuous: ['playing', 'plays', 'play', 'played'],
+    wh: { word: 'What', verb: ['playing', 'plays', 'play', 'played'] },
+    bePresent: {
+      aux: 'is',
+      adjective: ['happy', 'happily', 'happys', 'happyly'],
+      instruction: 'Present. Use is.',
+    },
+    bePast: {
+      aux: 'was',
+      adjective: ['happy', 'happily', 'happys', 'happyly'],
+      instruction: 'Past. Use was.',
+    },
+    possession: choice('a guitar', 'an guitar', 'guitar', 'a guitars'),
+    regular: {
+      verb: ['played', 'play', 'plays', 'playing'],
+      object: choice('a guitar', 'an guitar', 'guitar', 'a guitars'),
+    },
+    irregular: {
+      verb: ['held', 'hold', 'holds', 'holding'],
+      object: choice('a guitar', 'an guitar', 'guitar', 'a guitars'),
+    },
+  },
+  {
+    id: 'hana-teeth',
+    alt: 'A girl brushing her teeth',
+    who: 'She',
+    object: choice('her teeth', 'she teeth', 'hers teeth', 'her tooths'),
+    simple: ['brushes', 'brush', 'brushing', 'brushed'],
+    continuous: ['brushing', 'brushes', 'brush', 'brushed'],
+    wh: { word: 'What', verb: ['brushing', 'brushes', 'brush', 'brushed'] },
+    bePresent: {
+      aux: "isn't",
+      adjective: ['sad', 'sadly', 'sads', 'saddly'],
+      instruction: "Answer no. Use isn't.",
+      teacherPrompt: 'Is she sad?',
+    },
+    bePast: {
+      aux: 'was',
+      adjective: ['careful', 'carefully', 'carefuls', 'carefull'],
+      instruction: 'Past. Use was.',
+    },
+    possession: choice('a toothbrush', 'an toothbrush', 'toothbrush', 'a toothbrushes'),
+    regular: {
+      verb: ['brushed', 'brush', 'brushes', 'brushing'],
+      object: choice('her teeth', 'she teeth', 'hers teeth', 'her tooths'),
+    },
+    irregular: {
+      verb: ['held', 'hold', 'holds', 'holding'],
+      object: choice('the brush', 'an brush', 'brush', 'a brushes'),
+    },
+  },
+  {
+    id: 'family-breakfast',
+    alt: 'A family eating breakfast together',
+    who: 'They',
+    object: choice('breakfast', 'breakfasts', 'a breakfasts', 'an breakfast'),
+    simple: ['eat', 'eats', 'eating', 'ate'],
+    continuous: ['eating', 'eat', 'eats', 'ate'],
+    wh: { word: 'What', verb: ['eating', 'eat', 'eats', 'ate'] },
+    bePresent: {
+      aux: 'are',
+      adjective: ['hungry', 'hungrily', 'hungrys', 'hungries'],
+      instruction: 'Present. Use are.',
+    },
+    bePast: {
+      aux: "weren't",
+      adjective: ['sad', 'sadly', 'sads', 'saddly'],
+      instruction: "Answer no. Use weren't.",
+      teacherPrompt: 'Were they sad?',
+    },
+    possession: choice('breakfast', 'breakfasts', 'a breakfasts', 'an breakfast'),
+    regular: {
+      verb: ['shared', 'share', 'shares', 'sharing'],
+      object: choice('breakfast', 'breakfasts', 'a breakfasts', 'an breakfast'),
+    },
+    irregular: {
+      verb: ['ate', 'eat', 'eats', 'eaten'],
+      object: choice('breakfast', 'breakfasts', 'a breakfasts', 'an breakfast'),
+    },
+  },
+  {
+    id: 'sam-dog',
+    alt: 'A man walking a dog',
+    who: 'He',
+    object: choice('a dog', 'an dog', 'dog', 'a dogs'),
+    simple: ['walks', 'walk', 'walking', 'walked'],
+    continuous: ['walking', 'walks', 'walk', 'walked'],
+    wh: { word: 'What', verb: ['walking', 'walks', 'walk', 'walked'] },
+    bePresent: {
+      aux: 'is',
+      adjective: ['kind', 'kinds', 'kindes', 'kinded'],
+      instruction: 'Present. Use is.',
+    },
+    bePast: {
+      aux: 'was',
+      adjective: ['kind', 'kinds', 'kindes', 'kinded'],
+      instruction: 'Past. Use was.',
+    },
+    possession: choice('a dog', 'an dog', 'dog', 'a dogs'),
+    regular: {
+      verb: ['walked', 'walk', 'walks', 'walking'],
+      object: choice('a dog', 'an dog', 'dog', 'a dogs'),
+    },
+    irregular: {
+      verb: ['led', 'lead', 'leads', 'leading'],
+      object: choice('a dog', 'an dog', 'dog', 'a dogs'),
+    },
+  },
+  {
+    id: 'lina-swim',
+    alt: 'A girl swimming in a pool',
+    who: 'She',
+    object: choice('in the pool', 'in pool', 'in an pool', 'in a pools'),
+    simple: ['swims', 'swim', 'swimming', 'swam'],
+    continuous: ['swimming', 'swims', 'swim', 'swam'],
+    wh: { word: 'Where', verb: ['swimming', 'swims', 'swim', 'swam'] },
+    bePresent: {
+      who: 'I',
+      aux: 'am',
+      adjective: ['wet', 'wetly', 'wets', 'wett'],
+      instruction: 'Present. Use am.',
+      teacherPrompt: 'What does she say?',
+    },
+    bePast: {
+      aux: 'was',
+      adjective: ['wet', 'wetly', 'wets', 'wett'],
+      instruction: 'Past. Use was.',
+    },
+    possession: choice('fun', 'funs', 'an fun', 'funning'),
+    regular: {
+      verb: ['splashed', 'splash', 'splashes', 'splashing'],
+      object: choice('in the pool', 'in pool', 'in an pool', 'in a pools'),
+    },
+    irregular: {
+      verb: ['swam', 'swim', 'swims', 'swimming'],
+      object: choice('in the pool', 'in pool', 'in an pool', 'in a pools'),
+    },
+  },
+  {
+    id: 'jo-dance',
+    alt: 'A girl dancing and smiling',
+    who: 'She',
+    object: choice('fun', 'funs', 'an fun', 'funning'),
+    simple: ['dances', 'dance', 'dancing', 'danced'],
+    continuous: ['dancing', 'dances', 'dance', 'danced'],
+    wh: { word: 'What', verb: ['doing', 'does', 'do', 'did'] },
+    bePresent: {
+      who: 'I',
+      aux: 'am',
+      adjective: ['happy', 'happily', 'happys', 'happyly'],
+      instruction: 'Present. Use am.',
+      teacherPrompt: 'What does she say?',
+    },
+    bePast: {
+      aux: "wasn't",
+      adjective: ['sad', 'sadly', 'sads', 'saddly'],
+      instruction: "Answer no. Use wasn't.",
+      teacherPrompt: 'Was she sad?',
+    },
+    possession: choice('fun', 'funs', 'an fun', 'funning'),
+    regular: {
+      verb: ['danced', 'dance', 'dances', 'dancing'],
+      object: choice('fun', 'funs', 'an fun', 'funning'),
+    },
+    irregular: {
+      verb: ['felt', 'feel', 'feels', 'feeling'],
+      object: choice('happy', 'happily', 'happys', 'happyly'),
+    },
+  },
+  {
+    id: 'eli-door',
+    alt: 'A boy standing in an open yellow door',
+    who: 'He',
+    object: choice('the door', 'an door', 'door', 'a doors'),
+    simple: ['opens', 'open', 'opening', 'opened'],
+    continuous: ['opening', 'opens', 'open', 'opened'],
+    wh: { word: 'What', verb: ['opening', 'opens', 'open', 'opened'] },
+    bePresent: {
+      aux: "isn't",
+      adjective: ['scared', 'scaredly', 'scare', 'scares'],
+      instruction: "Answer no. Use isn't.",
+      teacherPrompt: 'Is he scared?',
+    },
+    bePast: {
+      aux: "wasn't",
+      adjective: ['scared', 'scaredly', 'scare', 'scares'],
+      instruction: "Answer no. Use wasn't.",
+      teacherPrompt: 'Was he scared?',
+    },
+    possession: choice('a door', 'an door', 'door', 'a doors'),
+    regular: {
+      verb: ['opened', 'open', 'opens', 'opening'],
+      object: choice('the door', 'an door', 'door', 'a doors'),
+    },
+    irregular: {
+      verb: ['stood', 'stand', 'stands', 'standing'],
+      object: choice('in the door', 'in an door', 'in door', 'in a doors'),
+    },
+  },
+]
+
+function scene(id: string, alt: string): Scene {
   return {
-    id: def.id,
-    sceneId: def.sceneId,
-    focus: def.focus,
-    label: def.label,
-    instruction: def.instruction,
-    teacherPrompt: def.teacherPrompt,
-    punctuation,
-    slots: def.slots,
-    answer: `${def.slots.map((item) => item.correct).join(' ')}${punctuation}`,
-    scoreRun: def.scoreRun ?? false,
+    id,
+    image: `/images/sentence-builder/${id}.jpg`,
+    alt,
   }
 }
 
-export const PROMPTS: SentencePrompt[] = [
-  prompt({
-    id: 'maya-ate',
-    sceneId: 'maya-apple',
-    focus: 'past-simple-irregular',
-    label: GRAMMAR_LABELS['past-simple-irregular'],
-    instruction: 'Past simple. The verb is irregular.',
-    scoreRun: true,
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('ate', 'eated', 'eaten', 'eat'),
-      slot('an', 'a', 'the', 'some'),
-      slot('apple', 'book', 'bike', 'ball'),
-    ],
-  }),
-  prompt({
-    id: 'maya-eats',
-    sceneId: 'maya-apple',
-    focus: 'present-simple',
-    label: GRAMMAR_LABELS['present-simple'],
-    instruction: 'Present simple. What does she do?',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('eats', 'eat', 'eating', 'ate'),
-      slot('an', 'a', 'the', 'some'),
-      slot('apple', 'book', 'bike', 'ball'),
-    ],
-  }),
-  prompt({
-    id: 'maya-eating',
-    sceneId: 'maya-apple',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('is', 'are', 'am', 'was'),
-      slot('eating', 'eats', 'ate', 'eat'),
-      slot('an', 'a', 'the', 'some'),
-      slot('apple', 'book', 'bike', 'ball'),
-    ],
-  }),
-  prompt({
-    id: 'maya-what',
-    sceneId: 'maya-apple',
-    focus: 'wh-question',
-    label: GRAMMAR_LABELS['wh-question'],
-    instruction: 'Ask a question with What.',
-    punctuation: '?',
-    slots: [
-      slot('What', 'Where', 'Who', 'When'),
-      slot('is', 'are', 'did', 'was'),
-      slot('she', 'he', 'they', 'I'),
-      slot('eating', 'eat', 'eats', 'ate'),
-    ],
-  }),
-  prompt({
-    id: 'maya-has',
-    sceneId: 'maya-apple',
-    focus: 'has-have',
-    label: GRAMMAR_LABELS['has-have'],
-    instruction: 'Use has or have.',
-    slots: [
-      slot('She', 'They', 'I', 'We'),
-      slot('has', 'have', 'is', 'had'),
-      slot('an', 'a', 'the', 'some'),
-      slot('apple', 'bike', 'book', 'dog'),
-    ],
-  }),
-  prompt({
-    id: 'maya-hungry',
-    sceneId: 'maya-apple',
-    focus: 'be-present',
-    label: GRAMMAR_LABELS['be-present'],
-    instruction: 'Use is.',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('is', 'am', 'are', "isn't"),
-      slot('hungry', 'thirsty', 'tired', 'scared'),
-    ],
-  }),
+export const SCENES: Scene[] = LINES.map((line) => scene(line.id, line.alt))
 
-  prompt({
-    id: 'leo-riding',
-    sceneId: 'leo-bike',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    scoreRun: true,
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('is', 'are', 'am', 'was'),
-      slot('riding', 'rides', 'rode', 'ride'),
-      slot('a', 'an', 'the', 'some'),
-      slot('bike', 'car', 'book', 'ball'),
-    ],
-  }),
-  prompt({
-    id: 'leo-rides',
-    sceneId: 'leo-bike',
-    focus: 'present-simple',
-    label: GRAMMAR_LABELS['present-simple'],
-    instruction: 'Present simple. What does he do?',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('rides', 'ride', 'riding', 'rode'),
-      slot('a', 'an', 'the', 'some'),
-      slot('bike', 'car', 'book', 'ball'),
-    ],
-  }),
-  prompt({
-    id: 'leo-rode',
-    sceneId: 'leo-bike',
-    focus: 'past-simple-irregular',
-    label: GRAMMAR_LABELS['past-simple-irregular'],
-    instruction: 'Past simple. The verb is irregular.',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('rode', 'rided', 'ridden', 'ride'),
-      slot('a', 'an', 'the', 'some'),
-      slot('bike', 'car', 'book', 'ball'),
-    ],
-  }),
-  prompt({
-    id: 'leo-what',
-    sceneId: 'leo-bike',
-    focus: 'wh-question',
-    label: GRAMMAR_LABELS['wh-question'],
-    instruction: 'Ask a question with What.',
-    punctuation: '?',
-    slots: [
-      slot('What', 'Where', 'Who', 'When'),
-      slot('is', 'are', 'did', 'was'),
-      slot('he', 'she', 'they', 'I'),
-      slot('riding', 'ride', 'rides', 'rode'),
-    ],
-  }),
-  prompt({
-    id: 'leo-has',
-    sceneId: 'leo-bike',
-    focus: 'has-have',
-    label: GRAMMAR_LABELS['has-have'],
-    instruction: 'Use has or have.',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('has', 'have', 'is', 'had'),
-      slot('a', 'an', 'the', 'some'),
-      slot('bike', 'apple', 'book', 'dog'),
-    ],
-  }),
+function sentence(
+  line: SceneLine,
+  focus: GrammarFocus,
+  instruction: string,
+  slots: WordSlot[],
+  punctuation: '.' | '?' = '.',
+  teacherPrompt?: string
+): SentencePrompt {
+  return {
+    id: `${line.id}-${focus}`,
+    sceneId: line.id,
+    focus,
+    label: GRAMMAR_LABELS[focus],
+    instruction,
+    teacherPrompt,
+    punctuation,
+    slots,
+    answer: `${slots.map((item) => item.correct).join(' ')}${punctuation}`,
+  }
+}
 
-  prompt({
-    id: 'sara-reading',
-    sceneId: 'sara-book',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    scoreRun: true,
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('is', 'are', 'am', 'was'),
-      slot('reading', 'reads', 'read', 'ate'),
-      slot('a', 'an', 'the', 'some'),
-      slot('book', 'apple', 'bike', 'letter'),
-    ],
-  }),
-  prompt({
-    id: 'sara-reads',
-    sceneId: 'sara-book',
-    focus: 'present-simple',
-    label: GRAMMAR_LABELS['present-simple'],
-    instruction: 'Present simple. What does she do?',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('reads', 'read', 'reading', 'ate'),
-      slot('a', 'an', 'the', 'some'),
-      slot('book', 'apple', 'bike', 'letter'),
-    ],
-  }),
-  prompt({
-    id: 'sara-what',
-    sceneId: 'sara-book',
-    focus: 'wh-question',
-    label: GRAMMAR_LABELS['wh-question'],
-    instruction: 'Ask a question with What.',
-    punctuation: '?',
-    slots: [
-      slot('What', 'Where', 'Who', 'When'),
-      slot('is', 'are', 'did', 'was'),
-      slot('she', 'he', 'they', 'I'),
-      slot('reading', 'reads', 'read', 'ate'),
-    ],
-  }),
-  prompt({
-    id: 'sara-has',
-    sceneId: 'sara-book',
-    focus: 'has-have',
-    label: GRAMMAR_LABELS['has-have'],
-    instruction: 'Use has or have.',
-    slots: [
-      slot('She', 'They', 'He', 'I'),
-      slot('has', 'have', 'is', 'had'),
-      slot('a', 'an', 'the', 'some'),
-      slot('book', 'apple', 'bike', 'guitar'),
-    ],
-  }),
+function bePrompt(line: SceneLine, focus: 'be-present' | 'be-past', spec: BeLine): SentencePrompt {
+  const who = spec.who ?? line.who
+  return sentence(
+    line,
+    focus,
+    spec.instruction,
+    [subjectSlot(who), beSlot(spec.aux), verbSlot(spec.adjective)],
+    '.',
+    spec.teacherPrompt
+  )
+}
 
-  prompt({
-    id: 'omar-cooked',
-    sceneId: 'omar-cook',
-    focus: 'past-simple-regular',
-    label: GRAMMAR_LABELS['past-simple-regular'],
-    instruction: 'Past simple. The verb is regular.',
-    scoreRun: true,
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('cooked', 'cookd', 'cooking', 'cooks'),
-      slot('some', 'a', 'an', 'the'),
-      slot('soup', 'salad', 'pizza', 'rice'),
-    ],
-  }),
-  prompt({
-    id: 'omar-cooking',
-    sceneId: 'omar-cook',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('is', 'are', 'am', 'was'),
-      slot('cooking', 'cooks', 'cooked', 'cook'),
-      slot('soup', 'salad', 'pizza', 'rice'),
-    ],
-  }),
-  prompt({
-    id: 'omar-cooks',
-    sceneId: 'omar-cook',
-    focus: 'present-simple',
-    label: GRAMMAR_LABELS['present-simple'],
-    instruction: 'Present simple. What does he do?',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('cooks', 'cook', 'cooking', 'cooked'),
-      slot('soup', 'salad', 'pizza', 'rice'),
-    ],
-  }),
-  prompt({
-    id: 'omar-what',
-    sceneId: 'omar-cook',
-    focus: 'wh-question',
-    label: GRAMMAR_LABELS['wh-question'],
-    instruction: 'Ask a question with What.',
-    punctuation: '?',
-    slots: [
-      slot('What', 'Where', 'Who', 'When'),
-      slot('is', 'are', 'did', 'was'),
-      slot('he', 'she', 'they', 'I'),
-      slot('cooking', 'cook', 'cooks', 'cooked'),
-    ],
-  }),
+function actionPrompt(
+  line: SceneLine,
+  focus: GrammarFocus,
+  instruction: string,
+  verb: readonly [string, string, string, string],
+  object: WordSlot,
+  includeObject: boolean
+): SentencePrompt {
+  const slots = [subjectSlot(line.who), verbSlot(verb)]
+  if (includeObject) slots.push(object)
+  return sentence(line, focus, instruction, slots)
+}
 
-  prompt({
-    id: 'kids-were',
-    sceneId: 'kids-soccer',
-    focus: 'be-past',
-    label: GRAMMAR_LABELS['be-past'],
-    instruction: 'Use were.',
-    teacherPrompt: 'Were they happy?',
-    scoreRun: true,
-    slots: [
-      slot('They', 'She', 'He', 'I'),
-      slot('were', 'was', 'are', "weren't"),
-      slot('happy', 'sad', 'angry', 'scared'),
-    ],
-  }),
-  prompt({
-    id: 'kids-playing',
-    sceneId: 'kids-soccer',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    slots: [
-      slot('They', 'She', 'He', 'I'),
-      slot('are', 'is', 'am', 'were'),
-      slot('playing', 'play', 'played', 'plays'),
-      slot('soccer', 'tennis', 'basketball', 'piano'),
-    ],
-  }),
-  prompt({
-    id: 'kids-play',
-    sceneId: 'kids-soccer',
-    focus: 'present-simple',
-    label: GRAMMAR_LABELS['present-simple'],
-    instruction: 'Present simple. What do they do?',
-    slots: [
-      slot('They', 'She', 'He', 'I'),
-      slot('play', 'plays', 'playing', 'played'),
-      slot('soccer', 'tennis', 'basketball', 'piano'),
-    ],
-  }),
-  prompt({
-    id: 'kids-played',
-    sceneId: 'kids-soccer',
-    focus: 'past-simple-regular',
-    label: GRAMMAR_LABELS['past-simple-regular'],
-    instruction: 'Past simple. The verb is regular.',
-    slots: [
-      slot('They', 'She', 'He', 'I'),
-      slot('played', 'playd', 'playing', 'plays'),
-      slot('soccer', 'tennis', 'basketball', 'piano'),
-    ],
-  }),
-  prompt({
-    id: 'kids-what',
-    sceneId: 'kids-soccer',
-    focus: 'wh-question',
-    label: GRAMMAR_LABELS['wh-question'],
-    instruction: 'Ask a question with What.',
-    punctuation: '?',
-    slots: [
-      slot('What', 'Where', 'Who', 'When'),
-      slot('are', 'is', 'were', 'do'),
-      slot('they', 'she', 'he', 'I'),
-      slot('playing', 'play', 'played', 'plays'),
-    ],
-  }),
-  prompt({
-    id: 'kids-have',
-    sceneId: 'kids-soccer',
-    focus: 'has-have',
-    label: GRAMMAR_LABELS['has-have'],
-    instruction: 'Use has or have.',
-    slots: [
-      slot('They', 'She', 'He', 'I'),
-      slot('have', 'has', 'are', 'had'),
-      slot('a', 'an', 'the', 'some'),
-      slot('ball', 'bike', 'book', 'dog'),
-    ],
-  }),
-  prompt({
-    id: 'kids-are-happy',
-    sceneId: 'kids-soccer',
-    focus: 'be-present',
-    label: GRAMMAR_LABELS['be-present'],
-    instruction: 'Use are.',
-    slots: [
-      slot('They', 'She', 'He', 'I'),
-      slot('are', 'is', 'am', 'were'),
-      slot('happy', 'sad', 'angry', 'scared'),
-    ],
-  }),
-
-  prompt({
-    id: 'nina-what',
-    sceneId: 'nina-water',
-    focus: 'wh-question',
-    label: GRAMMAR_LABELS['wh-question'],
-    instruction: 'Ask a question with What.',
-    punctuation: '?',
-    scoreRun: true,
-    slots: [
-      slot('What', 'Where', 'Who', 'When'),
-      slot('is', 'are', 'did', 'was'),
-      slot('she', 'he', 'they', 'I'),
-      slot('drinking', 'drink', 'drinks', 'drank'),
-    ],
-  }),
-  prompt({
-    id: 'nina-drinking',
-    sceneId: 'nina-water',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('is', 'are', 'am', 'was'),
-      slot('drinking', 'drinks', 'drank', 'drink'),
-      slot('water', 'juice', 'milk', 'soda'),
-    ],
-  }),
-  prompt({
-    id: 'nina-drank',
-    sceneId: 'nina-water',
-    focus: 'past-simple-irregular',
-    label: GRAMMAR_LABELS['past-simple-irregular'],
-    instruction: 'Past simple. The verb is irregular.',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('drank', 'drinked', 'drunk', 'drink'),
-      slot('some', 'a', 'an', 'the'),
-      slot('water', 'juice', 'milk', 'soda'),
-    ],
-  }),
-  prompt({
-    id: 'nina-thirsty',
-    sceneId: 'nina-water',
-    focus: 'be-present',
-    label: GRAMMAR_LABELS['be-present'],
-    instruction: 'Use is.',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('is', 'am', 'are', "isn't"),
-      slot('thirsty', 'hungry', 'tired', 'scared'),
-    ],
-  }),
-  prompt({
-    id: 'nina-has',
-    sceneId: 'nina-water',
-    focus: 'has-have',
-    label: GRAMMAR_LABELS['has-have'],
-    instruction: 'Use has or have.',
-    slots: [
-      slot('She', 'They', 'He', 'I'),
-      slot('has', 'have', 'is', 'had'),
-      slot('a', 'an', 'the', 'some'),
-      slot('glass', 'apple', 'bike', 'book'),
-    ],
-  }),
-
-  prompt({
-    id: 'ben-wrote',
-    sceneId: 'ben-letter',
-    focus: 'past-simple-irregular',
-    label: GRAMMAR_LABELS['past-simple-irregular'],
-    instruction: 'Past simple. The verb is irregular.',
-    scoreRun: true,
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('wrote', 'writed', 'written', 'write'),
-      slot('a', 'an', 'the', 'some'),
-      slot('letter', 'book', 'song', 'email'),
-    ],
-  }),
-  prompt({
-    id: 'ben-writing',
-    sceneId: 'ben-letter',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('is', 'are', 'am', 'was'),
-      slot('writing', 'writes', 'wrote', 'write'),
-      slot('a', 'an', 'the', 'some'),
-      slot('letter', 'book', 'song', 'email'),
-    ],
-  }),
-  prompt({
-    id: 'ben-writes',
-    sceneId: 'ben-letter',
-    focus: 'present-simple',
-    label: GRAMMAR_LABELS['present-simple'],
-    instruction: 'Present simple. What does he do?',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('writes', 'write', 'writing', 'wrote'),
-      slot('a', 'an', 'the', 'some'),
-      slot('letter', 'book', 'song', 'email'),
-    ],
-  }),
-  prompt({
-    id: 'ben-what',
-    sceneId: 'ben-letter',
-    focus: 'wh-question',
-    label: GRAMMAR_LABELS['wh-question'],
-    instruction: 'Ask a question with What.',
-    punctuation: '?',
-    slots: [
-      slot('What', 'Where', 'Who', 'When'),
-      slot('is', 'are', 'did', 'was'),
-      slot('he', 'she', 'they', 'I'),
-      slot('writing', 'write', 'writes', 'wrote'),
-    ],
-  }),
-
-  prompt({
-    id: 'mslee-teaches',
-    sceneId: 'ms-lee-class',
-    focus: 'present-simple',
-    label: GRAMMAR_LABELS['present-simple'],
-    instruction: 'Present simple. What does she do?',
-    scoreRun: true,
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('teaches', 'teach', 'teaching', 'taught'),
-      slot('a', 'an', 'the', 'some'),
-      slot('class', 'song', 'car', 'meal'),
-    ],
-  }),
-  prompt({
-    id: 'mslee-teaching',
-    sceneId: 'ms-lee-class',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('is', 'are', 'am', 'was'),
-      slot('teaching', 'teaches', 'taught', 'teach'),
-      slot('a', 'an', 'the', 'some'),
-      slot('class', 'song', 'car', 'meal'),
-    ],
-  }),
-  prompt({
-    id: 'mslee-taught',
-    sceneId: 'ms-lee-class',
-    focus: 'past-simple-irregular',
-    label: GRAMMAR_LABELS['past-simple-irregular'],
-    instruction: 'Past simple. The verb is irregular.',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('taught', 'teached', 'teaching', 'teach'),
-      slot('a', 'an', 'the', 'some'),
-      slot('class', 'song', 'car', 'meal'),
-    ],
-  }),
-  prompt({
-    id: 'mslee-who',
-    sceneId: 'ms-lee-class',
-    focus: 'wh-question',
-    label: GRAMMAR_LABELS['wh-question'],
-    instruction: 'Ask a question with Who.',
-    punctuation: '?',
-    slots: [
-      slot('Who', 'What', 'Where', 'When'),
-      slot('is', 'are', 'did', 'was'),
-      slot('teaching', 'teach', 'teaches', 'taught'),
-    ],
-  }),
-
-  prompt({
-    id: 'ami-am',
-    sceneId: 'ami-sleep',
-    focus: 'be-present',
-    label: GRAMMAR_LABELS['be-present'],
-    instruction: 'What would she say? Use am.',
-    scoreRun: true,
-    slots: [
-      slot('I', 'She', 'He', 'They'),
-      slot('am', 'is', 'are', 'was'),
-      slot('tired', 'hungry', 'thirsty', 'scared'),
-    ],
-  }),
-  prompt({
-    id: 'ami-is-tired',
-    sceneId: 'ami-sleep',
-    focus: 'be-present',
-    label: GRAMMAR_LABELS['be-present'],
-    instruction: 'Use is.',
-    slots: [
-      slot('She', 'I', 'He', 'They'),
-      slot('is', 'am', 'are', "isn't"),
-      slot('tired', 'hungry', 'thirsty', 'scared'),
-    ],
-  }),
-  prompt({
-    id: 'ami-was',
-    sceneId: 'ami-sleep',
-    focus: 'be-past',
-    label: GRAMMAR_LABELS['be-past'],
-    instruction: 'Use was.',
-    slots: [
-      slot('She', 'They', 'He', 'I'),
-      slot('was', 'were', 'is', "wasn't"),
-      slot('tired', 'hungry', 'thirsty', 'awake'),
-    ],
-  }),
-  prompt({
-    id: 'ami-wasnt',
-    sceneId: 'ami-sleep',
-    focus: 'be-past',
-    label: GRAMMAR_LABELS['be-past'],
-    instruction: 'Use wasn\'t.',
-    teacherPrompt: 'Was she awake?',
-    slots: [
-      slot('She', 'They', 'He', 'I'),
-      slot("wasn't", "weren't", "isn't", 'was'),
-      slot('awake', 'asleep', 'tired', 'happy'),
-    ],
-  }),
-  prompt({
-    id: 'ami-sleeping',
-    sceneId: 'ami-sleep',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('is', 'are', 'am', 'was'),
-      slot('sleeping', 'sleeps', 'slept', 'sleep'),
-      slot('now', 'yesterday', 'tomorrow', 'later'),
-    ],
-  }),
-  prompt({
-    id: 'ami-slept',
-    sceneId: 'ami-sleep',
-    focus: 'past-simple-irregular',
-    label: GRAMMAR_LABELS['past-simple-irregular'],
-    instruction: 'Past simple. The verb is irregular.',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('slept', 'sleeped', 'sleeping', 'sleep'),
-      slot('in', 'on', 'at', 'under'),
-      slot('bed', 'school', 'park', 'class'),
-    ],
-  }),
-
-  prompt({
-    id: 'kai-was',
-    sceneId: 'kai-run',
-    focus: 'be-past',
-    label: GRAMMAR_LABELS['be-past'],
-    instruction: 'Use was.',
-    teacherPrompt: 'Was he fast?',
-    scoreRun: true,
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('was', 'were', 'is', "wasn't"),
-      slot('fast', 'slow', 'sad', 'late'),
-    ],
-  }),
-  prompt({
-    id: 'kai-running',
-    sceneId: 'kai-run',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('is', 'are', 'am', 'was'),
-      slot('running', 'runs', 'ran', 'run'),
-      slot('now', 'yesterday', 'tomorrow', 'later'),
-    ],
-  }),
-  prompt({
-    id: 'kai-ran',
-    sceneId: 'kai-run',
-    focus: 'past-simple-irregular',
-    label: GRAMMAR_LABELS['past-simple-irregular'],
-    instruction: 'Past simple. The verb is irregular.',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('ran', 'runned', 'running', 'run'),
-      slot('in', 'on', 'at', 'under'),
-      slot('the', 'a', 'an', 'some'),
-      slot('park', 'pool', 'kitchen', 'class'),
-    ],
-  }),
-  prompt({
-    id: 'kai-runs',
-    sceneId: 'kai-run',
-    focus: 'present-simple',
-    label: GRAMMAR_LABELS['present-simple'],
-    instruction: 'Present simple. What does he do?',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('runs', 'run', 'running', 'ran'),
-      slot('every', 'yesterday', 'now', 'tomorrow'),
-      slot('day', 'week', 'night', 'year'),
-    ],
-  }),
-  prompt({
-    id: 'kai-where',
-    sceneId: 'kai-run',
-    focus: 'wh-question',
-    label: GRAMMAR_LABELS['wh-question'],
-    instruction: 'Ask a question with Where.',
-    punctuation: '?',
-    slots: [
-      slot('Where', 'What', 'Who', 'When'),
-      slot('is', 'are', 'did', 'was'),
-      slot('he', 'she', 'they', 'I'),
-      slot('running', 'run', 'runs', 'ran'),
-    ],
-  }),
-
-  prompt({
-    id: 'lena-drives',
-    sceneId: 'lena-car',
-    focus: 'present-simple',
-    label: GRAMMAR_LABELS['present-simple'],
-    instruction: 'Present simple. What does she do?',
-    scoreRun: true,
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('drives', 'drive', 'driving', 'drove'),
-      slot('a', 'an', 'the', 'some'),
-      slot('car', 'bike', 'bus', 'train'),
-    ],
-  }),
-  prompt({
-    id: 'lena-driving',
-    sceneId: 'lena-car',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('is', 'are', 'am', 'was'),
-      slot('driving', 'drives', 'drove', 'drive'),
-      slot('a', 'an', 'the', 'some'),
-      slot('car', 'bike', 'bus', 'train'),
-    ],
-  }),
-  prompt({
-    id: 'lena-drove',
-    sceneId: 'lena-car',
-    focus: 'past-simple-irregular',
-    label: GRAMMAR_LABELS['past-simple-irregular'],
-    instruction: 'Past simple. The verb is irregular.',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('drove', 'drived', 'driven', 'drive'),
-      slot('a', 'an', 'the', 'some'),
-      slot('car', 'bike', 'bus', 'train'),
-    ],
-  }),
-  prompt({
-    id: 'lena-what',
-    sceneId: 'lena-car',
-    focus: 'wh-question',
-    label: GRAMMAR_LABELS['wh-question'],
-    instruction: 'Ask a question with What.',
-    punctuation: '?',
-    slots: [
-      slot('What', 'Where', 'Who', 'When'),
-      slot('is', 'are', 'did', 'was'),
-      slot('she', 'he', 'they', 'I'),
-      slot('driving', 'drive', 'drives', 'drove'),
-    ],
-  }),
-  prompt({
-    id: 'lena-has',
-    sceneId: 'lena-car',
-    focus: 'has-have',
-    label: GRAMMAR_LABELS['has-have'],
-    instruction: 'Use has or have.',
-    slots: [
-      slot('She', 'They', 'He', 'I'),
-      slot('has', 'have', 'is', 'had'),
-      slot('a', 'an', 'the', 'some'),
-      slot('car', 'bike', 'book', 'dog'),
-    ],
-  }),
-
-  prompt({
-    id: 'paulo-washed',
-    sceneId: 'paulo-dishes',
-    focus: 'past-simple-regular',
-    label: GRAMMAR_LABELS['past-simple-regular'],
-    instruction: 'Past simple. The verb is regular.',
-    scoreRun: true,
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('washed', 'washt', 'washing', 'washes'),
-      slot('the', 'a', 'an', 'some'),
-      slot('dishes', 'clothes', 'windows', 'car'),
-    ],
-  }),
-  prompt({
-    id: 'paulo-washing',
-    sceneId: 'paulo-dishes',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('is', 'are', 'am', 'was'),
-      slot('washing', 'washes', 'washed', 'wash'),
-      slot('dishes', 'clothes', 'windows', 'car'),
-    ],
-  }),
-  prompt({
-    id: 'paulo-washes',
-    sceneId: 'paulo-dishes',
-    focus: 'present-simple',
-    label: GRAMMAR_LABELS['present-simple'],
-    instruction: 'Present simple. What does he do?',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('washes', 'wash', 'washing', 'washed'),
-      slot('dishes', 'clothes', 'windows', 'car'),
-    ],
-  }),
-  prompt({
-    id: 'paulo-what',
-    sceneId: 'paulo-dishes',
-    focus: 'wh-question',
-    label: GRAMMAR_LABELS['wh-question'],
-    instruction: 'Ask a question with What.',
-    punctuation: '?',
-    slots: [
-      slot('What', 'Where', 'Who', 'When'),
-      slot('is', 'are', 'did', 'was'),
-      slot('he', 'she', 'they', 'I'),
-      slot('washing', 'wash', 'washes', 'washed'),
-    ],
-  }),
-
-  prompt({
-    id: 'twins-have',
-    sceneId: 'twins-draw',
-    focus: 'has-have',
-    label: GRAMMAR_LABELS['has-have'],
-    instruction: 'Use has or have.',
-    scoreRun: true,
-    slots: [
-      slot('They', 'She', 'He', 'I'),
-      slot('have', 'has', 'are', 'had'),
-      slot('some', 'a', 'an', 'the'),
-      slot('crayons', 'pencils', 'books', 'apples'),
-    ],
-  }),
-  prompt({
-    id: 'twins-drawing',
-    sceneId: 'twins-draw',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    slots: [
-      slot('They', 'She', 'He', 'I'),
-      slot('are', 'is', 'am', 'were'),
-      slot('drawing', 'draw', 'drew', 'draws'),
-      slot('pictures', 'letters', 'music', 'soup'),
-    ],
-  }),
-  prompt({
-    id: 'twins-drew',
-    sceneId: 'twins-draw',
-    focus: 'past-simple-irregular',
-    label: GRAMMAR_LABELS['past-simple-irregular'],
-    instruction: 'Past simple. The verb is irregular.',
-    slots: [
-      slot('They', 'She', 'He', 'I'),
-      slot('drew', 'drawed', 'drawn', 'draw'),
-      slot('a', 'an', 'the', 'some'),
-      slot('picture', 'letter', 'song', 'car'),
-    ],
-  }),
-  prompt({
-    id: 'twins-what',
-    sceneId: 'twins-draw',
-    focus: 'wh-question',
-    label: GRAMMAR_LABELS['wh-question'],
-    instruction: 'Ask a question with What.',
-    punctuation: '?',
-    slots: [
-      slot('What', 'Where', 'Who', 'When'),
-      slot('are', 'is', 'were', 'do'),
-      slot('they', 'she', 'he', 'I'),
-      slot('drawing', 'draw', 'drew', 'draws'),
-    ],
-  }),
-
-  prompt({
-    id: 'noah-playing',
-    sceneId: 'noah-guitar',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    scoreRun: true,
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('is', 'are', 'am', 'was'),
-      slot('playing', 'plays', 'played', 'play'),
-      slot('a', 'an', 'the', 'some'),
-      slot('guitar', 'piano', 'drum', 'violin'),
-    ],
-  }),
-  prompt({
-    id: 'noah-plays',
-    sceneId: 'noah-guitar',
-    focus: 'present-simple',
-    label: GRAMMAR_LABELS['present-simple'],
-    instruction: 'Present simple. What does he do?',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('plays', 'play', 'playing', 'played'),
-      slot('a', 'an', 'the', 'some'),
-      slot('guitar', 'piano', 'drum', 'violin'),
-    ],
-  }),
-  prompt({
-    id: 'noah-played',
-    sceneId: 'noah-guitar',
-    focus: 'past-simple-regular',
-    label: GRAMMAR_LABELS['past-simple-regular'],
-    instruction: 'Past simple. The verb is regular.',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('played', 'playd', 'playing', 'plays'),
-      slot('a', 'an', 'the', 'some'),
-      slot('guitar', 'piano', 'drum', 'violin'),
-    ],
-  }),
-  prompt({
-    id: 'noah-has',
-    sceneId: 'noah-guitar',
-    focus: 'has-have',
-    label: GRAMMAR_LABELS['has-have'],
-    instruction: 'Use has or have.',
-    slots: [
-      slot('He', 'They', 'She', 'I'),
-      slot('has', 'have', 'is', 'had'),
-      slot('a', 'an', 'the', 'some'),
-      slot('guitar', 'piano', 'drum', 'violin'),
-    ],
-  }),
-  prompt({
-    id: 'noah-what',
-    sceneId: 'noah-guitar',
-    focus: 'wh-question',
-    label: GRAMMAR_LABELS['wh-question'],
-    instruction: 'Ask a question with What.',
-    punctuation: '?',
-    slots: [
-      slot('What', 'Where', 'Who', 'When'),
-      slot('is', 'are', 'did', 'was'),
-      slot('he', 'she', 'they', 'I'),
-      slot('playing', 'play', 'plays', 'played'),
-    ],
-  }),
-
-  prompt({
-    id: 'hana-what',
-    sceneId: 'hana-teeth',
-    focus: 'wh-question',
-    label: GRAMMAR_LABELS['wh-question'],
-    instruction: 'Ask a question with What.',
-    punctuation: '?',
-    scoreRun: true,
-    slots: [
-      slot('What', 'Where', 'Who', 'When'),
-      slot('is', 'are', 'did', 'was'),
-      slot('she', 'he', 'they', 'I'),
-      slot('brushing', 'brush', 'brushes', 'brushed'),
-    ],
-  }),
-  prompt({
-    id: 'hana-brushing',
-    sceneId: 'hana-teeth',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('is', 'are', 'am', 'was'),
-      slot('brushing', 'brushes', 'brushed', 'brush'),
-      slot('her', 'his', 'their', 'my'),
-      slot('teeth', 'hair', 'shoes', 'hands'),
-    ],
-  }),
-  prompt({
-    id: 'hana-brushed',
-    sceneId: 'hana-teeth',
-    focus: 'past-simple-regular',
-    label: GRAMMAR_LABELS['past-simple-regular'],
-    instruction: 'Past simple. The verb is regular.',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('brushed', 'brushd', 'brushing', 'brushes'),
-      slot('her', 'his', 'their', 'my'),
-      slot('teeth', 'hair', 'shoes', 'hands'),
-    ],
-  }),
-  prompt({
-    id: 'hana-brushes',
-    sceneId: 'hana-teeth',
-    focus: 'present-simple',
-    label: GRAMMAR_LABELS['present-simple'],
-    instruction: 'Present simple. What does she do?',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('brushes', 'brush', 'brushing', 'brushed'),
-      slot('her', 'his', 'their', 'my'),
-      slot('teeth', 'hair', 'shoes', 'hands'),
-    ],
-  }),
-
-  prompt({
-    id: 'family-werent',
-    sceneId: 'family-breakfast',
-    focus: 'be-past',
-    label: GRAMMAR_LABELS['be-past'],
-    instruction: 'Use weren\'t.',
-    teacherPrompt: 'Were they late?',
-    scoreRun: true,
-    slots: [
-      slot('They', 'She', 'He', 'I'),
-      slot("weren't", "wasn't", "aren't", 'were'),
-      slot('late', 'early', 'hungry', 'sad'),
-    ],
-  }),
-  prompt({
-    id: 'family-eating',
-    sceneId: 'family-breakfast',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    slots: [
-      slot('They', 'She', 'He', 'I'),
-      slot('are', 'is', 'am', 'were'),
-      slot('eating', 'eat', 'ate', 'eats'),
-      slot('breakfast', 'lunch', 'dinner', 'cake'),
-    ],
-  }),
-  prompt({
-    id: 'family-ate',
-    sceneId: 'family-breakfast',
-    focus: 'past-simple-irregular',
-    label: GRAMMAR_LABELS['past-simple-irregular'],
-    instruction: 'Past simple. The verb is irregular.',
-    slots: [
-      slot('They', 'She', 'He', 'I'),
-      slot('ate', 'eated', 'eaten', 'eat'),
-      slot('breakfast', 'lunch', 'dinner', 'cake'),
-    ],
-  }),
-  prompt({
-    id: 'family-hungry',
-    sceneId: 'family-breakfast',
-    focus: 'be-present',
-    label: GRAMMAR_LABELS['be-present'],
-    instruction: 'Use are.',
-    slots: [
-      slot('They', 'She', 'He', 'I'),
-      slot('are', 'is', 'am', 'were'),
-      slot('hungry', 'thirsty', 'tired', 'scared'),
-    ],
-  }),
-  prompt({
-    id: 'family-have',
-    sceneId: 'family-breakfast',
-    focus: 'has-have',
-    label: GRAMMAR_LABELS['has-have'],
-    instruction: 'Use has or have.',
-    slots: [
-      slot('They', 'She', 'He', 'I'),
-      slot('have', 'has', 'are', 'had'),
-      slot('breakfast', 'lunch', 'dinner', 'cake'),
-    ],
-  }),
-
-  prompt({
-    id: 'sam-has',
-    sceneId: 'sam-dog',
-    focus: 'has-have',
-    label: GRAMMAR_LABELS['has-have'],
-    instruction: 'Use has or have.',
-    scoreRun: true,
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('has', 'have', 'is', 'had'),
-      slot('a', 'an', 'the', 'some'),
-      slot('dog', 'cat', 'bike', 'ball'),
-    ],
-  }),
-  prompt({
-    id: 'sam-walking',
-    sceneId: 'sam-dog',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('is', 'are', 'am', 'was'),
-      slot('walking', 'walks', 'walked', 'walk'),
-      slot('a', 'an', 'the', 'some'),
-      slot('dog', 'cat', 'bike', 'ball'),
-    ],
-  }),
-  prompt({
-    id: 'sam-walked',
-    sceneId: 'sam-dog',
-    focus: 'past-simple-regular',
-    label: GRAMMAR_LABELS['past-simple-regular'],
-    instruction: 'Past simple. The verb is regular.',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('walked', 'walkd', 'walking', 'walks'),
-      slot('a', 'an', 'the', 'some'),
-      slot('dog', 'cat', 'bike', 'ball'),
-    ],
-  }),
-  prompt({
-    id: 'sam-what',
-    sceneId: 'sam-dog',
-    focus: 'wh-question',
-    label: GRAMMAR_LABELS['wh-question'],
-    instruction: 'Ask a question with What.',
-    punctuation: '?',
-    slots: [
-      slot('What', 'Where', 'Who', 'When'),
-      slot('is', 'are', 'did', 'was'),
-      slot('he', 'she', 'they', 'I'),
-      slot('walking', 'walk', 'walks', 'walked'),
-    ],
-  }),
-
-  prompt({
-    id: 'lina-is',
-    sceneId: 'lina-swim',
-    focus: 'be-present',
-    label: GRAMMAR_LABELS['be-present'],
-    instruction: 'Use is.',
-    scoreRun: true,
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('is', 'am', 'are', "isn't"),
-      slot('happy', 'sad', 'scared', 'angry'),
-    ],
-  }),
-  prompt({
-    id: 'lina-swimming',
-    sceneId: 'lina-swim',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('is', 'are', 'am', 'was'),
-      slot('swimming', 'swims', 'swam', 'swim'),
-      slot('now', 'yesterday', 'tomorrow', 'later'),
-    ],
-  }),
-  prompt({
-    id: 'lina-swam',
-    sceneId: 'lina-swim',
-    focus: 'past-simple-irregular',
-    label: GRAMMAR_LABELS['past-simple-irregular'],
-    instruction: 'Past simple. The verb is irregular.',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('swam', 'swimmed', 'swimming', 'swim'),
-      slot('in', 'on', 'at', 'under'),
-      slot('a', 'an', 'the', 'some'),
-      slot('pool', 'park', 'kitchen', 'class'),
-    ],
-  }),
-  prompt({
-    id: 'lina-where',
-    sceneId: 'lina-swim',
-    focus: 'wh-question',
-    label: GRAMMAR_LABELS['wh-question'],
-    instruction: 'Ask a question with Where.',
-    punctuation: '?',
-    slots: [
-      slot('Where', 'What', 'Who', 'When'),
-      slot('is', 'are', 'did', 'was'),
-      slot('she', 'he', 'they', 'I'),
-      slot('swimming', 'swim', 'swam', 'swims'),
-    ],
-  }),
-  prompt({
-    id: 'lina-swims',
-    sceneId: 'lina-swim',
-    focus: 'present-simple',
-    label: GRAMMAR_LABELS['present-simple'],
-    instruction: 'Present simple. What does she do?',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('swims', 'swim', 'swimming', 'swam'),
-      slot('every', 'yesterday', 'now', 'tomorrow'),
-      slot('day', 'week', 'night', 'year'),
-    ],
-  }),
-
-  prompt({
-    id: 'jo-isnt',
-    sceneId: 'jo-dance',
-    focus: 'be-present',
-    label: GRAMMAR_LABELS['be-present'],
-    instruction: 'Use isn\'t.',
-    teacherPrompt: 'Is she sad?',
-    scoreRun: true,
-    slots: [
-      slot('She', 'They', 'He', 'I'),
-      slot("isn't", "aren't", "wasn't", 'is'),
-      slot('sad', 'happy', 'hungry', 'tired'),
-    ],
-  }),
-  prompt({
-    id: 'jo-dancing',
-    sceneId: 'jo-dance',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('is', 'are', 'am', 'was'),
-      slot('dancing', 'dances', 'danced', 'dance'),
-      slot('now', 'yesterday', 'tomorrow', 'later'),
-    ],
-  }),
-  prompt({
-    id: 'jo-danced',
-    sceneId: 'jo-dance',
-    focus: 'past-simple-regular',
-    label: GRAMMAR_LABELS['past-simple-regular'],
-    instruction: 'Past simple. The verb is regular.',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('danced', 'danceed', 'dancing', 'dances'),
-      slot('yesterday', 'today', 'now', 'tomorrow'),
-    ],
-  }),
-  prompt({
-    id: 'jo-am',
-    sceneId: 'jo-dance',
-    focus: 'be-present',
-    label: GRAMMAR_LABELS['be-present'],
-    instruction: 'What would she say? Use am.',
-    slots: [
-      slot('I', 'She', 'He', 'They'),
-      slot('am', 'is', 'are', 'was'),
-      slot('happy', 'sad', 'tired', 'scared'),
-    ],
-  }),
-  prompt({
-    id: 'jo-dances',
-    sceneId: 'jo-dance',
-    focus: 'present-simple',
-    label: GRAMMAR_LABELS['present-simple'],
-    instruction: 'Present simple. What does she do?',
-    slots: [
-      slot('She', 'He', 'They', 'I'),
-      slot('dances', 'dance', 'dancing', 'danced'),
-      slot('every', 'yesterday', 'now', 'tomorrow'),
-      slot('day', 'week', 'night', 'year'),
-    ],
-  }),
-
-  prompt({
-    id: 'eli-wasnt',
-    sceneId: 'eli-door',
-    focus: 'be-past',
-    label: GRAMMAR_LABELS['be-past'],
-    instruction: 'Use wasn\'t.',
-    teacherPrompt: 'Was he scared?',
-    scoreRun: true,
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot("wasn't", "weren't", "isn't", 'was'),
-      slot('scared', 'happy', 'hungry', 'tired'),
-    ],
-  }),
-  prompt({
-    id: 'eli-opened',
-    sceneId: 'eli-door',
-    focus: 'past-simple-regular',
-    label: GRAMMAR_LABELS['past-simple-regular'],
-    instruction: 'Past simple. The verb is regular.',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('opened', 'openned', 'opening', 'opens'),
-      slot('the', 'a', 'an', 'some'),
-      slot('door', 'window', 'book', 'box'),
-    ],
-  }),
-  prompt({
-    id: 'eli-opens',
-    sceneId: 'eli-door',
-    focus: 'present-simple',
-    label: GRAMMAR_LABELS['present-simple'],
-    instruction: 'Present simple. What does he do?',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('opens', 'open', 'opening', 'opened'),
-      slot('the', 'a', 'an', 'some'),
-      slot('door', 'window', 'book', 'box'),
-    ],
-  }),
-  prompt({
-    id: 'eli-what',
-    sceneId: 'eli-door',
-    focus: 'wh-question',
-    label: GRAMMAR_LABELS['wh-question'],
-    instruction: 'Ask a question with What.',
-    punctuation: '?',
-    slots: [
-      slot('What', 'Where', 'Who', 'When'),
-      slot('did', 'does', 'is', 'was'),
-      slot('he', 'she', 'they', 'I'),
-      slot('open', 'opened', 'opening', 'opens'),
-    ],
-  }),
-  prompt({
-    id: 'eli-opening',
-    sceneId: 'eli-door',
-    focus: 'present-continuous',
-    label: GRAMMAR_LABELS['present-continuous'],
-    instruction: 'Present continuous. What is happening now?',
-    slots: [
-      slot('He', 'She', 'They', 'I'),
-      slot('is', 'are', 'am', 'was'),
-      slot('opening', 'opens', 'opened', 'open'),
-      slot('the', 'a', 'an', 'some'),
-      slot('door', 'window', 'book', 'box'),
-    ],
-  }),
-]
+export const PROMPTS: SentencePrompt[] = LINES.flatMap((line) => {
+  const continuousAux = line.who === 'They' ? 'are' : 'is'
+  const whAux = line.wh.word === 'What' && line.who === 'They' ? 'are' : line.wh.word === 'Who' ? 'is' : continuousAux
+  const joSkipsObject = line.id === 'jo-dance'
+  const continuousSlots = [subjectSlot(line.who), auxiliary(continuousAux), verbSlot(line.continuous)]
+  if (!joSkipsObject) continuousSlots.push(line.object)
+  return [
+    actionPrompt(
+      line,
+      'present-simple',
+      'Present simple.',
+      line.simple,
+      line.object,
+      !joSkipsObject
+    ),
+    sentence(line, 'present-continuous', 'Present continuous. What is happening now?', continuousSlots),
+    sentence(
+      line,
+      'wh-question',
+      `Ask with ${line.wh.word}.`,
+      [whWord(line.wh.word), auxiliary(whAux), questionSubject(line.who), verbSlot(line.wh.verb)],
+      '?'
+    ),
+    bePrompt(line, 'be-present', line.bePresent),
+    bePrompt(line, 'be-past', line.bePast),
+    sentence(line, 'has-have', line.who === 'They' ? 'Use have.' : 'Use has.', [
+      subjectSlot(line.who),
+      haveSlot(line.who),
+      line.possession,
+    ]),
+    actionPrompt(line, 'past-simple-regular', 'Past simple. Regular verb.', line.regular.verb, line.regular.object, line.id !== 'jo-dance'),
+    actionPrompt(
+      line,
+      'past-simple-irregular',
+      'Past simple. Irregular verb.',
+      line.irregular.verb,
+      line.irregular.object,
+      true
+    ),
+  ]
+})
 
 const sceneMap = new Map(SCENES.map((item) => [item.id, item]))
 
@@ -1417,4 +845,8 @@ export function getScene(sceneId: string): Scene {
     throw new Error(`Unknown sentence-builder scene: ${sceneId}`)
   }
   return found
+}
+
+export function promptsForFocus(focus: GrammarFocus): SentencePrompt[] {
+  return PROMPTS.filter((item) => item.focus === focus)
 }

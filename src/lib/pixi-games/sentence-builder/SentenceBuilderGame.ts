@@ -11,7 +11,7 @@ import {
 } from 'pixi.js'
 import { ensureFontIsLoaded } from '@/lib/pixi-engine/utils/ensureFontIsLoaded'
 import { getPixiThemeConfig } from '@/lib/themes'
-import { getScene, PROMPTS, SCENES, type Scene, type SentencePrompt } from './content'
+import { getScene, promptsForFocus, SCENES, type GrammarFocus, type Scene, type SentencePrompt } from './content'
 import {
   applyTimePenalty,
   buildScoreRun,
@@ -47,6 +47,7 @@ export interface SentenceBuilderHooks {
 
 interface LaunchOptions {
   mode: PlayMode
+  focus: GrammarFocus
   sounds: boolean
   random?: () => number
 }
@@ -129,6 +130,7 @@ export class SentenceBuilderGame {
   sounds: boolean
   private readonly app: Application
   private readonly mode: PlayMode
+  private readonly focus: GrammarFocus
   private readonly random: () => number
   private readonly hooks: SentenceBuilderHooks
   private readonly root = new Container()
@@ -200,6 +202,7 @@ export class SentenceBuilderGame {
 
   private destroyed = false
   private phase: Phase = 'loading'
+  private bank: SentencePrompt[] = []
   private queue: SentencePrompt[] = []
   private queueIndex = 0
   private slotIndex = 0
@@ -223,6 +226,7 @@ export class SentenceBuilderGame {
   constructor(app: Application, options: LaunchOptions, hooks: SentenceBuilderHooks) {
     this.app = app
     this.mode = options.mode
+    this.focus = options.focus
     this.sounds = options.sounds
     this.random = options.random ?? Math.random
     this.hooks = hooks
@@ -290,8 +294,9 @@ export class SentenceBuilderGame {
     )
     if (this.destroyed) return
 
+    this.bank = promptsForFocus(this.focus)
     this.queue =
-      this.mode === 'score-run' ? buildScoreRun(PROMPTS, this.random) : buildSurvivalQueue(PROMPTS, this.random)
+      this.mode === 'score-run' ? buildScoreRun(this.bank, this.random) : buildSurvivalQueue(this.bank, this.random)
     this.loadingText.visible = false
     this.beginQuestion()
   }
@@ -358,7 +363,7 @@ export class SentenceBuilderGame {
     if (this.queueIndex >= this.queue.length) {
       if (this.mode === 'score-run') return null
       const previousId = this.queue[this.queue.length - 1]?.id
-      this.queue = reshuffleSurvival(PROMPTS, previousId, this.random)
+      this.queue = reshuffleSurvival(this.bank, previousId, this.random)
       this.queueIndex = 0
     }
     return this.queue[this.queueIndex] ?? null
@@ -490,6 +495,7 @@ export class SentenceBuilderGame {
     this.phase = 'ended'
     this.hooks.onComplete({
       mode: this.mode,
+      focus: this.focus,
       score: this.score,
       sentencesBuilt: this.sentencesBuilt,
       questionsSeen: this.questionsSeen,
