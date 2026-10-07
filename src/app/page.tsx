@@ -292,6 +292,27 @@ export default function HomePage() {
               </div>
             </article>
           </div>
+
+          <Link
+            href="/games/sentence-builder"
+            className="neo-card mt-8 flex flex-col items-start gap-3 bg-white p-7 md:flex-row md:items-center md:justify-between"
+          >
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#168CB9] grandstander">
+                Practice on your own
+              </p>
+              <h3 className="mt-2 text-3xl font-black grandstander">Sentence Builder</h3>
+              <p className="mt-2 max-w-2xl text-[--text-light] inclusive-sans">
+                Build a sentence from a picture, one word at a time. The same scenes
+                come back as present simple, present continuous, WH questions, was
+                and were, has and have, and past simple.
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-2 font-black grandstander">
+              Start practicing
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </span>
+          </Link>
         </div>
       </section>
 

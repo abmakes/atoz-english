@@ -253,24 +253,45 @@ function GamesPageContent({ isSignedIn }: { isSignedIn: boolean }) {
     });
   }, [allQuizzes, searchTerm, selectedTags]);
 
-  if (!isLoading && (!allQuizzes || allQuizzes.length === 0)) {
-    return (
-      <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
-        <div className="container mx-auto text-center">
-          <h1 className="text-2xl font-bold mb-4 grandstander text-[--secondary]">
-            No quizzes available.
-          </h1>
-          <p className="text-muted-foreground">Please try again later or create a new quiz.</p>
-        </div>
-      </div>
-    );
-  }
-
+  const catalogEmpty = !isLoading && (!allQuizzes || allQuizzes.length === 0);
   const showSkeleton = isLoading && allQuizzes.length === 0;
 
   return (
     <div className="min-h-screen max-w-[1500px] mx-auto text-[#114257] px-4 sm:px-6 lg:px-8 flex flex-col items-center">
       <div className="x-auto flex flex-col items-center w-full">
+        <Link
+          href="/games/sentence-builder"
+          className="neo-card mt-6 flex w-full max-w-[1100px] flex-col overflow-hidden bg-white sm:flex-row"
+        >
+          <div className="relative h-40 w-full sm:h-auto sm:w-52">
+            <Image
+              src="/images/sentence-builder/maya-apple.jpg"
+              alt="A girl holding a red apple"
+              fill
+              className="object-cover"
+              sizes="208px"
+            />
+          </div>
+          <div className="flex flex-1 flex-col justify-center p-5 text-left">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#168CB9] grandstander">
+              Practice game
+            </p>
+            <h2 className="mt-1 text-2xl font-black grandstander">Sentence Builder</h2>
+            <p className="mt-2 text-sm text-[--text-light] inclusive-sans">
+              See a picture, then choose the sentence one word at a time. Practice
+              present simple, present continuous, WH questions, was/were, has/have,
+              and past simple. Race the clock in a 20-question run or survival.
+            </p>
+          </div>
+        </Link>
+        {catalogEmpty && (
+          <div className="w-full max-w-[1100px] py-8 text-center">
+            <h1 className="mb-2 text-2xl font-bold grandstander text-[--secondary]">
+              No quizzes available.
+            </h1>
+            <p className="text-muted-foreground">Sentence Builder is ready to play, or create a quiz to add more games.</p>
+          </div>
+        )}
         <div className="sticky top-14 z-20 flex w-full max-w-[900px] p-2 border-2 shadow-solid bg-white border-[#1E5167] rounded-full mt-4 mb-4 items-center gap-2">
           {selectedTags.length > 0 && (
             <div className="flex flex-shrink-0 flex-wrap gap-1 p-2 pl-1 max-w-[250px] overflow-x-auto scrollbar-thin">

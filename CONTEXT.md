@@ -9,7 +9,7 @@ How to keep docs honest after changes: [project_docs/DOCUMENTATION_MAINTENANCE.m
 
 ## What this product is
 
-Teacher-centric quiz platform: create quizzes (form, CSV, AI), then play them as classroom PixiJS games (multiple-choice and Splash Dash) with teams, timers, scoring, themes, and power-ups.
+Teacher-centric quiz platform: create quizzes (form, CSV, AI), then play them as classroom PixiJS games (multiple-choice and Splash Dash) with teams, timers, scoring, themes, and power-ups. Sentence Builder is a built-in grammar practice game at `/games/sentence-builder` (picture prompts, not a teacher quiz).
 
 ## Stack snapshot (working)
 
@@ -50,7 +50,7 @@ scripts/                CI helpers (verify-assets)
 src/app/                Pages + REST API routes
 src/components/game_ui/ React game shell (GameContainer, GameplayView, setup)
 src/lib/pixi-engine/    Shared engine (PixiEngine, BaseGame, managers)
-src/lib/pixi-games/     Game implementations (multiple-choice, splash-dash)
+src/lib/pixi-games/     Game implementations (multiple-choice, splash-dash, sentence-builder)
 src/lib/schemas.ts      Zod schemas
 src/lib/prisma.ts       Prisma client
 src/lib/ai/              GenerationBrief, teacher-first prompts, lesson-image helpers
@@ -79,6 +79,7 @@ CONTEXT.md              This hub
 | **Splash Dash behavior** | [src/lib/pixi-games/splash-dash/SPLASH_DASH_MECHANICS.md](src/lib/pixi-games/splash-dash/SPLASH_DASH_MECHANICS.md) | SD scoring/timer/movement |
 | **Splash Dash integration** | [src/lib/pixi-games/splash-dash/README.md](src/lib/pixi-games/splash-dash/README.md) | SD wiring checklist |
 | **Multiple-choice flow** | [src/lib/pixi-games/multiple-choice/MultipleChoiceFlow.md](src/lib/pixi-games/multiple-choice/MultipleChoiceFlow.md) | MC-specific deep dive |
+| **Sentence Builder** | [src/lib/pixi-games/sentence-builder/README.md](src/lib/pixi-games/sentence-builder/README.md) | Built-in picture sentence practice |
 | **API / Zod conventions** | [src/lib/README.md](src/lib/README.md) | API routes, schemas, responses |
 | **Assets contract** | [public/ASSETS.md](public/ASSETS.md) | public/ files, CI verify |
 | **AI quiz + lexicon setup** | [AI_QUIZ_GENERATOR_SETUP.md](AI_QUIZ_GENERATOR_SETUP.md) | Teacher brief, screenshot analysis, soft lexicon audit, review step |
@@ -112,10 +113,11 @@ Official Pixi v8 API reference: https://pixijs.download/release/docs/index.html
 
 ## Adding a game (short)
 
-1. Extend `BaseGame` under `src/lib/pixi-games/<slug>/`.
-2. Register in `gameFactory` inside `src/components/game_ui/GameContainer.tsx`.
+1. Extend `BaseGame` under `src/lib/pixi-games/<slug>/` when the game plays a teacher quiz.
+2. Register quiz games in `gameFactory` inside `src/components/game_ui/GameContainer.tsx`.
 3. Follow GAME_STARTUP_FLOW + [game-development-guide.md](project_docs/game-development-guide.md).
-4. Update this hub’s directory/game list if you add a new slug.
+4. A fixed practice set (Sentence Builder) can own one `PIXI.Application` in its screen component, created on play and destroyed on unmount, instead of going through quiz `GameConfig`.
+5. Update this hub’s directory/game list if you add a new slug.
 
 ---
 
