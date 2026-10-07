@@ -5,7 +5,7 @@ Built-in ESL practice game. It does not load a teacher quiz. Pictures, grammar t
 ## Play
 
 1. The student picks **one** grammar structure, then Score Run or Survival.
-2. The student sees one activity picture and that structure's instruction (`Present simple`, `Use wasn't`, `Ask with What`).
+2. The student sees one activity picture. The structure name stays on screen for the whole run. A short question appears only when the sentence needs one (`Was she sad?`).
 3. Four choices appear for the **next word only**. Keys `1`–`4` match the buttons. The other three choices are forms of the same word (`kicked`, `kick`, `kicks`, `kicking`). Articles stay on the noun (`an apple`, not a separate `a` / `an` / `the` slot).
 4. A correct word locks into the sentence. The next set of choices appears.
 5. Each sentence has a 20-second timer. Finishing scores **100 points**, plus up to **100** more for time remaining.

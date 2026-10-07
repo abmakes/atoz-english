@@ -11,7 +11,15 @@ import {
 } from 'pixi.js'
 import { ensureFontIsLoaded } from '@/lib/pixi-engine/utils/ensureFontIsLoaded'
 import { getPixiThemeConfig } from '@/lib/themes'
-import { getScene, promptsForFocus, SCENES, type GrammarFocus, type Scene, type SentencePrompt } from './content'
+import {
+  getScene,
+  GRAMMAR_LABELS,
+  promptsForFocus,
+  SCENES,
+  type GrammarFocus,
+  type Scene,
+  type SentencePrompt,
+} from './content'
 import {
   applyTimePenalty,
   buildScoreRun,
@@ -28,9 +36,7 @@ const theme = getPixiThemeConfig('default')
 const INK = hexColor(theme.textColor)
 const INK_SOFT = hexColor(theme.textLight)
 const ACCENT = hexColor(theme.primaryAccent)
-const PANEL = hexColor(theme.panelBg)
 const WHITE = hexColor(theme.buttonFillColor)
-const PAGE = hexColor(theme.secondaryBg)
 const GOOD = 0x15803d
 const GOOD_BG = 0xdcfce7
 const BAD = 0xdc2626
@@ -112,7 +118,7 @@ class ChoiceButton {
 
     this.label.style.fill = text
     this.label.text = word
-    let fontSize = word.length > 12 ? 22 : 30
+    let fontSize = word.length > 12 ? 24 : 34
     this.label.style.fontSize = fontSize
     while (this.label.width > width - 64 && fontSize > 16) {
       fontSize -= 2
@@ -237,6 +243,9 @@ export class SentenceBuilderGame {
     if (this.destroyed) return
 
     this.pictureFallback.anchor.set(0.5)
+    this.labelText.visible = false
+    this.instructionText.anchor.set(0.5, 0)
+    this.teacherText.anchor.set(0.5, 0)
     this.pictureSprite.mask = this.pictureMask
     this.pictureFrame.addChild(
       this.pictureFill,
@@ -510,8 +519,7 @@ export class SentenceBuilderGame {
   private renderPrompt(prompt: SentencePrompt): void {
     const scene = getScene(prompt.sceneId)
     this.showPicture(scene)
-    this.labelText.text = prompt.label.toUpperCase()
-    this.instructionText.text = prompt.instruction
+    this.instructionText.text = GRAMMAR_LABELS[this.focus]
     this.teacherText.text = prompt.teacherPrompt ? `“${prompt.teacherPrompt}”` : ''
     this.feedbackText.text = ''
     this.scoreText.text = String(this.score)
@@ -552,38 +560,49 @@ export class SentenceBuilderGame {
     }
     const words = reveal ? prompt.slots.map((item) => item.correct) : [...this.built]
     if (!completed && !reveal) words.push('___')
-    let x = 0
-    words.forEach((word, index) => {
+    const measured = words.map((word) => {
+      if (word === '___') return { word, chip: null, textWidth: 0 }
       const chip = new Text({
         text: word,
         style: {
           fontFamily: 'Grandstander',
           fontSize: 32,
           fontWeight: '800',
-          fill: word === '___' ? INK_SOFT : INK,
+          fill: INK,
         },
       })
-      const padX = 14
-      const width = Math.max(word === '___' ? 120 : 64, chip.width + padX * 2)
-      const height = 56
+      return { word, chip, textWidth: chip.width }
+    })
+    const slotWidth = Math.max(168, ...measured.map((item) => item.textWidth + 36))
+    const height = 64
+    let x = 0
+    measured.forEach((item, index) => {
+      const blank = item.word === '___'
       const bg = new Graphics()
-      bg.roundRect(0, 0, width, height, 14).fill({ color: word === '___' ? PANEL : WHITE }).stroke({
+      bg.roundRect(0, 0, slotWidth, height, 16).fill({ color: blank ? 0xf8fbff : WHITE }).stroke({
         width: 3,
-        color: word === '___' ? INK_SOFT : INK,
+        color: blank ? INK_SOFT : INK,
       })
       const holder = new Container()
-      chip.anchor.set(0.5)
-      chip.position.set(width / 2, height / 2)
-      holder.addChild(bg, chip)
+      holder.addChild(bg)
+      if (blank) {
+        const dash = new Graphics()
+        dash.roundRect(28, height / 2 - 2, slotWidth - 56, 4, 2).fill({ color: INK_SOFT })
+        holder.addChild(dash)
+      } else if (item.chip) {
+        item.chip.anchor.set(0.5)
+        item.chip.position.set(slotWidth / 2, height / 2)
+        holder.addChild(item.chip)
+      }
       holder.position.set(x, 0)
       this.sentenceRow.addChild(holder)
-      x += width + 8
-      if (index === words.length - 1 && (completed || reveal)) {
+      x += slotWidth + 10
+      if (index === measured.length - 1 && (completed || reveal)) {
         const mark = new Text({
           text: prompt.punctuation,
           style: { fontFamily: 'Grandstander', fontSize: 28, fontWeight: '800', fill: INK },
         })
-        mark.position.set(x, 8)
+        mark.position.set(x, 14)
         this.sentenceRow.addChild(mark)
       }
     })
@@ -603,19 +622,19 @@ export class SentenceBuilderGame {
   private announce(prompt: SentencePrompt): void {
     const slot = prompt.slots[this.slotIndex]
     const options = this.optionOrder.map((index) => slot?.options[index]).filter(Boolean)
-    this.hooks.onStatus?.(`${prompt.instruction} Choices: ${options.join(', ')}`)
+    this.hooks.onStatus?.(`${GRAMMAR_LABELS[this.focus]} Choices: ${options.join(', ')}`)
   }
 
   private drawTimer(): void {
-    const width = this.app.screen.width
     const ratio = Math.max(0, Math.min(1, this.remainingMs / QUESTION_TIME_MS))
-    const barWidth = Math.max(0, width - 32)
-    const y = 52
+    const barWidth = Math.min(168, Math.max(96, this.app.screen.width * 0.16))
+    const x = this.scoreText.x
+    const y = 44
     this.timerTrack.clear()
-    this.timerTrack.roundRect(16, y, barWidth, 12, 6).fill({ color: WHITE })
+    this.timerTrack.roundRect(x, y, barWidth, 6, 3).fill({ color: WHITE, alpha: 0.85 })
     this.timerFill.clear()
     const fillColor = ratio < 0.25 ? BAD : ACCENT
-    this.timerFill.roundRect(16, y, Math.max(12, barWidth * ratio), 12, 6).fill({ color: fillColor })
+    this.timerFill.roundRect(x, y, Math.max(8, barWidth * ratio), 6, 3).fill({ color: fillColor })
   }
 
   private layout(): void {
@@ -624,21 +643,21 @@ export class SentenceBuilderGame {
     if (width < 10 || height < 10) return
 
     this.background.clear()
-    this.background.rect(0, 0, width, height).fill({ color: PAGE })
 
-    const pad = Math.max(16, Math.round(Math.min(width, height) * 0.025))
+    const pad = Math.max(20, Math.round(Math.min(width, height) * 0.03))
     const wide = width >= 860
-    this.scoreText.position.set(pad, 12)
+    this.scoreText.position.set(pad, 8)
     this.progressText.anchor.set(1, 0)
-    this.progressText.position.set(width - pad, 16)
+    this.progressText.position.set(width - pad, 12)
     this.drawTimer()
 
-    const top = 76
-    const choiceHeight = wide ? 92 : 78
+    const top = 62
+    const choiceHeight = wide ? 118 : 104
     const choiceRows = wide ? 1 : 2
-    const choiceGap = 12
+    const choiceGap = 16
+    const bottomInset = wide ? 52 : 32
     const choiceBlock = choiceRows * choiceHeight + (choiceRows - 1) * choiceGap
-    const choiceTop = height - pad - choiceBlock
+    const choiceTop = height - bottomInset - choiceBlock
 
     let pictureSize = wide
       ? Math.min(height - top - pad * 2, width * 0.34, choiceTop - top - pad)
@@ -662,24 +681,25 @@ export class SentenceBuilderGame {
 
     const textX = wide ? pictureX + pictureSize + pad : pad
     const textW = wide ? width - textX - pad : width - pad * 2
+    const textCenter = textX + textW / 2
     this.instructionText.style.wordWrapWidth = textW
     this.teacherText.style.wordWrapWidth = textW
-    const teacherGap = this.teacherText.text ? this.teacherText.height + 12 : 8
-    const blockHeight = 26 + this.instructionText.height + 6 + teacherGap + 70
+    const teacherGap = this.teacherText.text ? this.teacherText.height + 8 : 0
+    const blockHeight = this.instructionText.height + 8 + teacherGap + 74
     const textY = wide
       ? pictureY + Math.max(0, (pictureSize - blockHeight) / 2)
-      : pictureY + pictureSize + 12
+      : pictureY + pictureSize + 16
 
-    this.labelText.position.set(textX, textY)
-    this.instructionText.position.set(textX, textY + 26)
-    this.teacherText.position.set(textX, textY + 26 + this.instructionText.height + 6)
-    const sentenceY = this.teacherText.position.y + teacherGap
+    this.instructionText.position.set(textCenter, textY)
+    this.teacherText.position.set(textCenter, textY + this.instructionText.height + 8)
+    const sentenceY = this.teacherText.position.y + (this.teacherText.text ? this.teacherText.height + 12 : 10)
     this.sentenceRow.scale.set(1)
     const rowWidth = this.sentenceRow.getLocalBounds().width
     const sentenceScale = rowWidth > textW && rowWidth > 0 ? textW / rowWidth : 1
     this.sentenceRow.scale.set(sentenceScale)
-    this.sentenceRow.position.set(textX, sentenceY)
-    this.feedbackText.position.set(textX, sentenceY + 58 * sentenceScale)
+    this.sentenceRow.position.set(textCenter - (rowWidth * sentenceScale) / 2, sentenceY)
+    this.feedbackText.anchor.set(0.5, 0)
+    this.feedbackText.position.set(textCenter, sentenceY + 72 * sentenceScale)
 
     const cols = wide ? 4 : 2
     const buttonWidth = (width - pad * 2 - choiceGap * (cols - 1)) / cols

@@ -20,6 +20,16 @@ import {
 
 const BEST_KEY = 'playtoz-sentence-builder-bests-v2'
 
+const SKY_BACKGROUND = {
+  backgroundColor: '#f7fbff',
+  backgroundImage: [
+    'radial-gradient(ellipse 72% 58% at -4% -8%, rgba(186, 230, 253, 0.95) 0%, rgba(186, 230, 253, 0) 68%)',
+    'radial-gradient(ellipse 58% 48% at 108% -6%, rgba(221, 204, 255, 0.9) 0%, rgba(221, 204, 255, 0) 64%)',
+    'radial-gradient(ellipse 46% 42% at 92% 108%, rgba(191, 219, 254, 0.72) 0%, rgba(191, 219, 254, 0) 70%)',
+    'radial-gradient(ellipse 38% 36% at 4% 96%, rgba(237, 224, 255, 0.78) 0%, rgba(237, 224, 255, 0) 72%)',
+  ].join(', '),
+} as const
+
 interface FocusBest {
   scoreRunScore: number
   scoreRunBuilt: number
@@ -123,7 +133,7 @@ export default function SentenceBuilderScreen() {
     void (async () => {
       await app.init({
         resizeTo: mount,
-        background: '#bfdbfe',
+        backgroundAlpha: 0,
         antialias: true,
         autoDensity: true,
         resolution: Math.min(window.devicePixelRatio || 1, 2),
@@ -173,7 +183,7 @@ export default function SentenceBuilderScreen() {
   }, [sounds])
 
   return (
-    <div className="min-h-[100dvh] bg-[--secondary-bg] text-[--text-color]">
+    <div className="min-h-[100dvh] text-[--text-color]" style={SKY_BACKGROUND}>
       <p className="sr-only" aria-live="polite">
         {status}
       </p>
