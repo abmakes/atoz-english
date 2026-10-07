@@ -140,7 +140,8 @@ export class SentenceBuilderGame {
   private readonly random: () => number
   private readonly hooks: SentenceBuilderHooks
   private readonly root = new Container()
-  private readonly background = new Graphics()
+  private readonly skyTexture = createSkyTexture()
+  private readonly sky = new Sprite(this.skyTexture)
   private readonly scoreText = new Text({
     text: '0',
     style: { fontFamily: 'Grandstander', fontSize: 28, fontWeight: '800', fill: INK },
@@ -242,6 +243,7 @@ export class SentenceBuilderGame {
     await ensureFontIsLoaded('Grandstander', '32px')
     if (this.destroyed) return
 
+    this.sky.eventMode = 'none'
     this.pictureFallback.anchor.set(0.5)
     this.labelText.visible = false
     this.instructionText.anchor.set(0.5, 0)
@@ -257,7 +259,7 @@ export class SentenceBuilderGame {
     this.loadingText.anchor.set(0.5)
 
     this.root.addChild(
-      this.background,
+      this.sky,
       this.scoreText,
       this.progressText,
       this.timerTrack,
@@ -318,6 +320,7 @@ export class SentenceBuilderGame {
     this.app.renderer.off('resize', this.onResize)
     window.removeEventListener('keydown', this.onKey)
     this.root.destroy({ children: true })
+    this.skyTexture.destroy(true)
     for (const url of this.loadedUrls) {
       void Assets.unload(url).catch(() => undefined)
     }
@@ -642,7 +645,9 @@ export class SentenceBuilderGame {
     const height = this.app.screen.height
     if (width < 10 || height < 10) return
 
-    this.background.clear()
+    this.sky.position.set(0, 0)
+    this.sky.width = width
+    this.sky.height = height
 
     const pad = Math.max(20, Math.round(Math.min(width, height) * 0.03))
     const wide = width >= 860
@@ -743,4 +748,32 @@ export class SentenceBuilderGame {
     audio.volume = 0.4
     void audio.play().catch(() => undefined)
   }
+}
+
+function createSkyTexture(): Texture {
+  const canvas = document.createElement('canvas')
+  canvas.width = 1024
+  canvas.height = 768
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return Texture.from(canvas)
+
+  ctx.fillStyle = '#f7fbff'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  const washes: Array<[string, number, number, number]> = [
+    ['rgba(186, 230, 253, 0.95)', -0.04, -0.08, 0.72],
+    ['rgba(221, 204, 255, 0.9)', 1.08, -0.06, 0.62],
+    ['rgba(191, 219, 254, 0.72)', 0.92, 1.08, 0.5],
+    ['rgba(237, 224, 255, 0.78)', 0.04, 0.96, 0.42],
+  ]
+  for (const [color, x, y, radius] of washes) {
+    const cx = x * canvas.width
+    const cy = y * canvas.height
+    const r = radius * canvas.width
+    const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, r)
+    gradient.addColorStop(0, color)
+    gradient.addColorStop(1, 'rgba(247, 251, 255, 0)')
+    ctx.fillStyle = gradient
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+  }
+  return Texture.from(canvas)
 }

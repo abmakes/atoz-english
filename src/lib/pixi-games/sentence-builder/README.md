@@ -15,6 +15,8 @@ Score Run asks 20 questions from the chosen structure, one per picture, shuffled
 
 The 20 pictures are shared, but a run never mixes structures. The structures are present simple, present continuous, WH questions, `am` / `is` / `are` / `isn't`, `was` / `were` / `wasn't` / `weren't`, `has` / `have`, and past simple with regular and irregular verbs.
 
+The play canvas stays opaque, with `#f7fbff` as its base color, and the pale wash is drawn on that canvas. Startup uses the same `background` option as the version that already ran.
+
 ## Code
 
 | File | Role |

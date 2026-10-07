@@ -30,6 +30,8 @@ const SKY_BACKGROUND = {
   ].join(', '),
 } as const
 
+const PLAY_BACKGROUND = { backgroundColor: '#f7fbff' } as const
+
 interface FocusBest {
   scoreRunScore: number
   scoreRunBuilt: number
@@ -100,6 +102,7 @@ export default function SentenceBuilderScreen() {
   const [bests, setBests] = useState<Bests>(emptyBests)
   const [result, setResult] = useState<SentenceBuilderResult | null>(null)
   const [status, setStatus] = useState('')
+  const [startError, setStartError] = useState('')
   const mountRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<SentenceBuilderGame | null>(null)
   const soundsRef = useRef(sounds)
@@ -125,7 +128,7 @@ export default function SentenceBuilderScreen() {
     let game: SentenceBuilderGame | null = null
 
     const destroyApp = () => {
-      if (appDestroyed) return
+      if (appDestroyed || !app.renderer) return
       appDestroyed = true
       app.destroy(true)
     }
@@ -133,7 +136,7 @@ export default function SentenceBuilderScreen() {
     void (async () => {
       await app.init({
         resizeTo: mount,
-        backgroundAlpha: 0,
+        background: '#f7fbff',
         antialias: true,
         autoDensity: true,
         resolution: Math.min(window.devicePixelRatio || 1, 2),
@@ -167,7 +170,10 @@ export default function SentenceBuilderScreen() {
       }
     })().catch((error) => {
       console.error('[SentenceBuilder] Failed to start', error)
-      if (!cancelled) setPhase('setup')
+      if (!cancelled) {
+        setStartError(startFailureMessage(error))
+        setPhase('setup')
+      }
     })
 
     return () => {
@@ -183,7 +189,10 @@ export default function SentenceBuilderScreen() {
   }, [sounds])
 
   return (
-    <div className="min-h-[100dvh] text-[--text-color]" style={SKY_BACKGROUND}>
+    <div
+      className="min-h-[100dvh] text-[--text-color]"
+      style={phase === 'play' ? PLAY_BACKGROUND : SKY_BACKGROUND}
+    >
       <p className="sr-only" aria-live="polite">
         {status}
       </p>
@@ -196,8 +205,10 @@ export default function SentenceBuilderScreen() {
           onMode={setMode}
           onFocus={setFocus}
           onSounds={setSounds}
+          startError={startError}
           onPlay={() => {
             setResult(null)
+            setStartError('')
             setPhase('play')
           }}
         />
@@ -235,11 +246,20 @@ export default function SentenceBuilderScreen() {
   )
 }
 
+function startFailureMessage(error: unknown): string {
+  const text = error instanceof Error ? error.message : ''
+  if (/webgl|canvasrenderer|renderer/i.test(text)) {
+    return 'The picture canvas could not start in this browser. Turn on hardware acceleration, then try again.'
+  }
+  return 'Sentence Builder could not start. Try again.'
+}
+
 function Setup({
   mode,
   focus,
   sounds,
   bests,
+  startError,
   onMode,
   onFocus,
   onSounds,
@@ -249,6 +269,7 @@ function Setup({
   focus: GrammarFocus
   sounds: boolean
   bests: Bests
+  startError: string
   onMode: (mode: PlayMode) => void
   onFocus: (focus: GrammarFocus) => void
   onSounds: (sounds: boolean) => void
@@ -274,6 +295,11 @@ function Setup({
           Pick one grammar structure, then build sentences for that structure only.
           Look at the picture and choose the next word. Faster sentences score more.
         </p>
+        {startError ? (
+          <p role="alert" className="mt-4 rounded-2xl border-2 border-[#1E5167] bg-white p-4 inclusive-sans">
+            {startError}
+          </p>
+        ) : null}
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <ModeCard
