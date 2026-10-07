@@ -390,7 +390,7 @@ export class SentenceBuilderGame {
       this.renderSentence(prompt, this.slotIndex >= prompt.slots.length - 1)
       this.renderChoices(prompt, index, 'good')
       if (this.slotIndex >= prompt.slots.length - 1) {
-        this.finishSentence(prompt)
+        this.finishSentence()
       } else {
         this.schedule(280, () => {
           this.slotIndex += 1
@@ -433,7 +433,7 @@ export class SentenceBuilderGame {
     })
   }
 
-  private finishSentence(prompt: SentencePrompt): void {
+  private finishSentence(): void {
     const gained = pointsForSentence(this.remainingMs)
     this.score += gained
     this.sentencesBuilt += 1
