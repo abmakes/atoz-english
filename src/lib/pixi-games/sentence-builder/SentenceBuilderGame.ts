@@ -770,19 +770,17 @@ export class SentenceBuilderGame {
     const noticeBlock = this.feedbackText.text ? this.feedbackText.height + 6 : 0
     const sentenceBlock = TILE_H + 28
     const buttonBlock = () => choiceHeight * 2 + choiceGap
-    let pictureSize = column - barW - 28
-    const stackHeight = () =>
-      statusH + 10 + pictureSize + 8 + noticeBlock + teacherBlock + sentenceBlock + 10 + buttonBlock()
-
-    let spare = height - pad * 2 - stackHeight()
-    if (spare < 0) {
-      pictureSize = Math.max(160, pictureSize + spare)
-      spare = height - pad * 2 - stackHeight()
+    const chrome = pad * 2 + statusH + 10 + 8 + noticeBlock + teacherBlock + sentenceBlock + 10
+    const pictureCap = column - barW - 28
+    const roomForPicture = () => height - chrome - buttonBlock()
+    let pictureSize = Math.min(pictureCap, roomForPicture())
+    const pictureFloor = Math.min(pictureCap, Math.round(height * 0.46))
+    while (pictureSize < pictureFloor && choiceHeight > choiceMin) {
+      choiceHeight -= 2
+      pictureSize = Math.min(pictureCap, roomForPicture())
     }
-    if (spare < 0) {
-      choiceHeight = Math.max(choiceMin, choiceHeight + Math.floor(spare / 2))
-      spare = height - pad * 2 - stackHeight()
-    }
+    pictureSize = Math.max(120, pictureSize)
+    const spare = height - chrome - pictureSize - buttonBlock()
     const startY = pad + Math.max(0, spare / 2)
 
     const chipW = Math.min(chipRoom, this.instructionText.width + 28)
