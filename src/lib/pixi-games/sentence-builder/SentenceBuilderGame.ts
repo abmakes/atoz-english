@@ -521,7 +521,7 @@ export class SentenceBuilderGame {
       return
     }
     this.phase = 'locked'
-    this.schedule(420, () => {
+    this.schedule(1100, () => {
       this.phase = 'choose'
       this.feedbackText.text = ''
       this.renderChoices(prompt)
