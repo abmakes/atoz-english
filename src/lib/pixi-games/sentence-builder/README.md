@@ -5,8 +5,8 @@ Built-in ESL practice game. It does not load a teacher quiz. Pictures, grammar t
 ## Play
 
 1. The student picks **one** grammar structure, then Score Run or Survival.
-2. The picture sits at the top, between the timer and the question count. The structure name stays under the picture for the whole run, with a short question only when the sentence needs one (`Was she sad?`). The words already chosen sit in a blue frame, in warm blocks that are separate from the choice buttons.
-3. Four choices appear in a two-by-two grid for the **next word only**. Keys `1`–`4` match the buttons. The other three choices are forms of the same word (`kicked`, `kick`, `kicks`, `kicking`). Articles stay on the noun (`an apple`, not a separate `a` / `an` / `the` slot).
+2. The picture sits in a centered column. A vertical bar beside it is the time left, emptying from the top. The score and question count sit above the picture. The structure name is a small chip under the picture, with a short question only when the sentence needs one (`Was she sad?`). Every word of the sentence is visible: filled words are warm tiles, the current blank is dashed, and later blanks stay empty.
+3. Four choices appear in a two-by-two grid for the **next word only**. Keys `1`–`4` match the buttons. A correct word shows a check and slides into its tile. A wrong word shows a cross. The other three choices are forms of the same word (`kicked`, `kick`, `kicks`, `kicking`). Articles stay on the noun (`an apple`, not a separate `a` / `an` / `the` slot).
 4. A correct word locks into the sentence. The next set of choices appears.
 5. Each sentence has a 20-second timer. Finishing scores **100 points**, plus up to **100** more for time remaining.
 6. A wrong word in **Score Run** costs 2.5 seconds and that choice is removed. In **Survival**, one wrong word or a timeout ends the run.

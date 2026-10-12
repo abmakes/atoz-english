@@ -103,6 +103,7 @@ export default function SentenceBuilderScreen() {
   const [result, setResult] = useState<SentenceBuilderResult | null>(null)
   const [status, setStatus] = useState('')
   const [startError, setStartError] = useState('')
+  const [confirmLeave, setConfirmLeave] = useState(false)
   const mountRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<SentenceBuilderGame | null>(null)
   const soundsRef = useRef(sounds)
@@ -115,6 +116,7 @@ export default function SentenceBuilderScreen() {
   const leaveToSetup = useCallback(() => {
     gameRef.current?.destroy()
     gameRef.current = null
+    setConfirmLeave(false)
     setPhase('setup')
     setStatus('')
   }, [])
@@ -188,6 +190,14 @@ export default function SentenceBuilderScreen() {
     if (gameRef.current) gameRef.current.sounds = sounds
   }, [sounds])
 
+  useEffect(() => {
+    gameRef.current?.setPaused(confirmLeave)
+  }, [confirmLeave])
+
+  useEffect(() => {
+    if (phase !== 'play') setConfirmLeave(false)
+  }, [phase])
+
   return (
     <div
       className="min-h-[100dvh] text-[--text-color]"
@@ -214,20 +224,36 @@ export default function SentenceBuilderScreen() {
         />
       )}
       {phase === 'play' && (
-        <div className="flex h-[100dvh] flex-col">
+        <div className="relative flex h-[100dvh] flex-col">
           <div className="flex h-14 items-center justify-between px-4">
-            <button type="button" onClick={leaveToSetup} className="grandstander font-bold underline">
+            <button type="button" onClick={() => setConfirmLeave(true)} className="grandstander font-bold underline">
               Back
             </button>
-            <button
-              type="button"
-              onClick={() => setSounds((value) => !value)}
-              className="grandstander font-bold"
-            >
-              {sounds ? 'Sound on' : 'Sound off'}
-            </button>
+            <SoundButton sounds={sounds} onClick={() => setSounds((value) => !value)} />
           </div>
           <div ref={mountRef} className="relative min-h-0 flex-1" />
+          {confirmLeave ? (
+            <div className="absolute inset-0 z-10 grid place-items-center bg-[#114257]/35 px-4">
+              <div className="neo-card w-full max-w-sm bg-white p-5" role="dialog" aria-labelledby="leave-title">
+                <h2 id="leave-title" className="text-2xl font-black grandstander">
+                  Leave this round?
+                </h2>
+                <p className="mt-2 text-[--text-light] inclusive-sans">This score will not be saved.</p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button type="button" onClick={() => setConfirmLeave(false)} className="neo-button bg-white">
+                    Keep playing
+                  </button>
+                  <button
+                    type="button"
+                    onClick={leaveToSetup}
+                    className="neo-button bg-[--primary-accent] text-white"
+                  >
+                    Leave
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
       {phase === 'results' && result && (
@@ -242,6 +268,27 @@ export default function SentenceBuilderScreen() {
         />
       )}
     </div>
+  )
+}
+
+function SoundButton({ sounds, onClick }: { sounds: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={sounds}
+      aria-label={sounds ? 'Sound on' : 'Sound off'}
+      className="grid h-10 w-10 place-items-center rounded-full border-2 border-[#1E5167] bg-white"
+    >
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 9h4l5-4v14l-5-4H4V9z" fill="#114257" />
+        {sounds ? (
+          <path d="M16 8.5a5 5 0 0 1 0 7" fill="none" stroke="#114257" strokeWidth="2" strokeLinecap="round" />
+        ) : (
+          <path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="#114257" strokeWidth="2" strokeLinecap="round" />
+        )}
+      </svg>
+    </button>
   )
 }
 
@@ -281,9 +328,7 @@ function Setup({
         <Link href="/games" className="grandstander font-bold underline">
           All games
         </Link>
-        <button type="button" onClick={() => onSounds(!sounds)} className="grandstander font-bold">
-          {sounds ? 'Sound on' : 'Sound off'}
-        </button>
+        <SoundButton sounds={sounds} onClick={() => onSounds(!sounds)} />
       </div>
       <div>
         <p className="text-sm font-black uppercase tracking-[0.16em] text-[#168CB9] grandstander">

@@ -43,7 +43,6 @@ const BAD = 0xdc2626
 const BAD_BG = 0xfee2e2
 const OFF_BG = 0xe5e7eb
 const SLOT_FILL = 0xfff6e4
-const SLOT_BLANK = 0xffe7a8
 const SLOT_LINE = 0xc4842a
 const SENTENCE_FRAME = 0xd4ebff
 
@@ -70,11 +69,12 @@ class ChoiceButton {
     text: '1',
     style: {
       fontFamily: 'Grandstander',
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: 22,
+      fontWeight: '800',
       fill: INK,
     },
   })
+  private readonly mark = new Graphics()
   private readonly label = new Text({
     text: '',
     style: {
@@ -89,11 +89,12 @@ class ChoiceButton {
   word = ''
   width = 160
   height = 84
+  homeX = 0
 
   constructor() {
     this.key.anchor.set(0.5)
     this.label.anchor.set(0.5)
-    this.view.addChild(this.shadow, this.bg, this.key, this.label)
+    this.view.addChild(this.shadow, this.bg, this.key, this.label, this.mark)
     this.view.eventMode = 'static'
     this.view.cursor = 'pointer'
   }
@@ -118,7 +119,24 @@ class ChoiceButton {
 
     this.key.text = String(index + 1)
     this.key.style.fill = text
-    this.key.position.set(28, height / 2)
+    this.key.position.set(32, height / 2)
+
+    this.mark.clear()
+    if (state === 'good') {
+      this.mark
+        .moveTo(width - 40, height / 2)
+        .lineTo(width - 30, height / 2 + 10)
+        .lineTo(width - 16, height / 2 - 10)
+        .stroke({ width: 5, color: GOOD, cap: 'round', join: 'round' })
+    } else if (state === 'bad' || state === 'off') {
+      const cross = state === 'bad' ? BAD : INK_SOFT
+      this.mark
+        .moveTo(width - 36, height / 2 - 9)
+        .lineTo(width - 18, height / 2 + 9)
+        .moveTo(width - 18, height / 2 - 9)
+        .lineTo(width - 36, height / 2 + 9)
+        .stroke({ width: 5, color: cross, cap: 'round' })
+    }
 
     this.label.style.fill = text
     this.label.text = word
@@ -156,6 +174,19 @@ export class SentenceBuilderGame {
   })
   private readonly timerTrack = new Graphics()
   private readonly timerFill = new Graphics()
+  private readonly timerLabel = new Text({
+    text: '20',
+    style: { fontFamily: 'Grandstander', fontSize: 16, fontWeight: '800', fill: INK },
+  })
+  private readonly scoreStar = new Graphics()
+  private readonly structureChip = new Graphics()
+  private timerBox = { x: 0, y: 0, h: 0 }
+  private shakeIndex = -1
+  private shakeStart = 0
+  private shouldPop = false
+  private popHolder: Container | null = null
+  private popStart = 0
+  private paused = false
   private readonly pictureFrame = new Container()
   private readonly pictureFill = new Graphics()
   private readonly pictureMask = new Graphics()
@@ -182,7 +213,7 @@ export class SentenceBuilderGame {
     text: '',
     style: {
       fontFamily: 'Grandstander',
-      fontSize: 44,
+      fontSize: 18,
       fontWeight: '800',
       fill: INK,
       align: 'center',
@@ -256,6 +287,9 @@ export class SentenceBuilderGame {
     this.instructionText.anchor.set(0.5, 0)
     this.teacherText.anchor.set(0.5, 0)
     this.sentenceFrame.eventMode = 'none'
+    this.structureChip.eventMode = 'none'
+    this.timerLabel.anchor.set(0.5, 0)
+    drawStar(this.scoreStar)
     this.pictureSprite.mask = this.pictureMask
     this.pictureFrame.addChild(
       this.pictureFill,
@@ -268,12 +302,15 @@ export class SentenceBuilderGame {
 
     this.root.addChild(
       this.sky,
+      this.scoreStar,
       this.scoreText,
       this.progressText,
       this.timerTrack,
       this.timerFill,
+      this.timerLabel,
       this.pictureFrame,
       this.labelText,
+      this.structureChip,
       this.instructionText,
       this.teacherText,
       this.sentenceFrame,
@@ -339,8 +376,14 @@ export class SentenceBuilderGame {
     if (!this.destroyed) this.layout()
   }
 
+  setPaused(paused: boolean): void {
+    this.paused = paused
+  }
+
   private onTick = (ticker: Ticker) => {
-    if (this.phase !== 'choose') return
+    this.animatePop()
+    this.animateShake()
+    if (this.paused || this.phase !== 'choose') return
     const delta = ticker.deltaMS
     this.remainingMs -= delta
     this.questionElapsedMs += delta
@@ -350,6 +393,27 @@ export class SentenceBuilderGame {
       return
     }
     this.drawTimer()
+  }
+
+  private animatePop(): void {
+    if (!this.popHolder) return
+    const t = Math.min(1, (performance.now() - this.popStart) / 180)
+    const scale = 0.72 + 0.28 * (1 - (1 - t) ** 3)
+    this.popHolder.scale.set(scale)
+    if (t >= 1) this.popHolder = null
+  }
+
+  private animateShake(): void {
+    if (this.shakeIndex < 0) return
+    const button = this.buttons[this.shakeIndex]
+    const elapsed = performance.now() - this.shakeStart
+    if (!button || elapsed > 320) {
+      if (button) button.view.x = button.homeX
+      this.shakeIndex = -1
+      return
+    }
+    const damp = 1 - elapsed / 320
+    button.view.x = button.homeX + Math.sin(elapsed / 28) * 7 * damp
   }
 
   private onKey = (event: KeyboardEvent) => {
@@ -399,7 +463,7 @@ export class SentenceBuilderGame {
   }
 
   private chooseVisualIndex(index: number): void {
-    if (this.phase !== 'choose') return
+    if (this.paused || this.phase !== 'choose') return
     if (this.eliminated.has(index)) return
     const prompt = this.queue[this.queueIndex]
     const slot = prompt?.slots[this.slotIndex]
@@ -413,6 +477,7 @@ export class SentenceBuilderGame {
       this.built.push(word)
       this.phase = 'locked'
       this.feedbackText.text = ''
+      this.shouldPop = true
       this.renderSentence(prompt, this.slotIndex >= prompt.slots.length - 1)
       this.renderChoices(prompt, index, 'good')
       if (this.slotIndex >= prompt.slots.length - 1) {
@@ -432,6 +497,8 @@ export class SentenceBuilderGame {
 
     this.playSound('incorrect')
     this.renderChoices(prompt, index, 'bad')
+    this.shakeIndex = index
+    this.shakeStart = performance.now()
     if (this.mode === 'survival') {
       this.phase = 'locked'
       this.feedbackText.style.fill = BAD
@@ -567,57 +634,57 @@ export class SentenceBuilderGame {
   }
 
   private renderSentence(prompt: SentencePrompt, completed: boolean, reveal = false): void {
+    this.popHolder = null
     for (const child of this.sentenceRow.removeChildren()) {
       child.destroy({ children: true })
     }
-    const words = reveal ? prompt.slots.map((item) => item.correct) : [...this.built]
-    if (!completed && !reveal) words.push('___')
-    const measured = words.map((word) => {
-      if (word === '___') return { word, chip: null, textWidth: 0 }
-      const chip = new Text({
-        text: word,
-        style: {
-          fontFamily: 'Grandstander',
-          fontSize: 36,
-          fontWeight: '800',
-          fill: INK,
-        },
-      })
-      return { word, chip, textWidth: chip.width }
-    })
-    const slotWidth = Math.max(132, ...measured.map((item) => item.textWidth + 40))
-    const height = 72
+    const height = 76
     let x = 0
-    measured.forEach((item, index) => {
-      const blank = item.word === '___'
-      const bg = new Graphics()
-      bg.roundRect(0, 0, slotWidth, height, 14).fill({ color: blank ? SLOT_BLANK : SLOT_FILL }).stroke({
-        width: 2,
-        color: SLOT_LINE,
+    prompt.slots.forEach((slot, index) => {
+      const filled = reveal || completed || index < this.built.length
+      const current = !filled && index === this.built.length
+      const word = filled ? (index < this.built.length && !reveal ? this.built[index]! : slot.correct) : slot.correct
+      const measure = new Text({
+        text: word,
+        style: { fontFamily: 'Grandstander', fontSize: 40, fontWeight: '800', fill: INK },
       })
+      const slotWidth = Math.max(88, measure.width + 36)
+      const bg = new Graphics()
+      if (filled) {
+        bg.roundRect(0, 0, slotWidth, height, 16).fill({ color: SLOT_FILL }).stroke({ width: 2, color: SLOT_LINE })
+      } else {
+        bg.roundRect(0, 0, slotWidth, height, 16).fill({ color: SLOT_FILL, alpha: current ? 0.55 : 0.28 })
+        dashedRect(bg, slotWidth, height, current ? SLOT_LINE : 0xd4b483)
+      }
       const holder = new Container()
       holder.addChild(bg)
-      if (blank) {
-        const dash = new Graphics()
-        dash.roundRect(28, height / 2 - 3, slotWidth - 56, 6, 3).fill({ color: SLOT_LINE })
-        holder.addChild(dash)
-      } else if (item.chip) {
-        item.chip.anchor.set(0.5)
-        item.chip.position.set(slotWidth / 2, height / 2)
-        holder.addChild(item.chip)
+      if (filled) {
+        measure.anchor.set(0.5)
+        measure.position.set(slotWidth / 2, height / 2)
+        holder.addChild(measure)
+      } else {
+        measure.destroy()
       }
-      holder.position.set(x, 0)
+      const pop = this.shouldPop && filled && index === this.built.length - 1
+      if (pop) {
+        holder.pivot.set(slotWidth / 2, height / 2)
+        holder.position.set(x + slotWidth / 2, height / 2)
+        holder.scale.set(0.72)
+        this.popHolder = holder
+        this.popStart = performance.now()
+      } else {
+        holder.position.set(x, 0)
+      }
       this.sentenceRow.addChild(holder)
-      x += slotWidth + 10
-      if (index === measured.length - 1 && (completed || reveal)) {
-        const mark = new Text({
-          text: prompt.punctuation,
-          style: { fontFamily: 'Grandstander', fontSize: 28, fontWeight: '800', fill: INK },
-        })
-        mark.position.set(x, 14)
-        this.sentenceRow.addChild(mark)
-      }
+      x += slotWidth + 8
     })
+    this.shouldPop = false
+    const mark = new Text({
+      text: prompt.punctuation,
+      style: { fontFamily: 'Grandstander', fontSize: 36, fontWeight: '800', fill: INK },
+    })
+    mark.position.set(x, 16)
+    this.sentenceRow.addChild(mark)
   }
 
   private renderChoices(prompt: SentencePrompt, markedIndex = -1, marked: ButtonState = 'idle'): void {
@@ -638,15 +705,24 @@ export class SentenceBuilderGame {
   }
 
   private drawTimer(): void {
+    const { x, y, h } = this.timerBox
+    if (h < 8) return
     const ratio = Math.max(0, Math.min(1, this.remainingMs / QUESTION_TIME_MS))
-    const barWidth = Math.min(148, Math.max(88, this.app.screen.width * 0.14))
-    const x = this.scoreText.x
-    const y = this.scoreText.y + this.scoreText.height + 6
+    const barW = 20
+    const radius = 10
     this.timerTrack.clear()
-    this.timerTrack.roundRect(x, y, barWidth, 6, 3).fill({ color: WHITE, alpha: 0.85 })
+    this.timerTrack
+      .roundRect(x, y, barW, h, radius)
+      .fill({ color: WHITE, alpha: 0.92 })
+      .stroke({ width: 2, color: INK, alpha: 0.2 })
+    const inner = h - 8
+    const fillH = Math.max(8, inner * ratio)
     this.timerFill.clear()
-    const fillColor = ratio < 0.25 ? BAD : ACCENT
-    this.timerFill.roundRect(x, y, Math.max(8, barWidth * ratio), 6, 3).fill({ color: fillColor })
+    this.timerFill
+      .roundRect(x + 4, y + 4 + (inner - fillH), barW - 8, fillH, 7)
+      .fill({ color: ratio < 0.25 ? BAD : ACCENT })
+    this.timerLabel.text = String(Math.max(0, Math.ceil(this.remainingMs / 1000)))
+    this.timerLabel.position.set(x + barW / 2, y + h + 4)
   }
 
   private layout(): void {
@@ -658,47 +734,60 @@ export class SentenceBuilderGame {
     this.sky.width = width
     this.sky.height = height
 
-    const pad = Math.max(16, Math.round(Math.min(width, height) * 0.025))
-    const choiceGap = 14
-    const choiceHeight = height < 720 ? 92 : 108
-    const choiceBlock = choiceHeight * 2 + choiceGap
-    const bottomInset = 20
-    const choiceTop = height - bottomInset - choiceBlock
+    const pad = Math.max(12, Math.round(Math.min(width, height) * 0.02))
+    const column = Math.min(width - pad * 2, 760)
+    const columnLeft = (width - column) / 2
+    const textCenter = width / 2
+    const choiceGap = 12
+    let choiceHeight = height < 760 ? 86 : 102
+    const barW = 20
+    const labelSpace = 24
 
-    this.instructionText.style.fontSize = width >= 720 ? 44 : 34
-    this.teacherText.style.fontSize = width >= 720 ? 30 : 24
-    this.instructionText.style.wordWrapWidth = width - pad * 2
-    this.teacherText.style.wordWrapWidth = width - pad * 2
+    this.instructionText.style.fontSize = 18
+    this.teacherText.style.fontSize = width >= 720 ? 24 : 20
+    this.instructionText.style.wordWrapWidth = column
+    this.teacherText.style.wordWrapWidth = column
 
+    const statusH = 36
     const teacherBlock = this.teacherText.text ? this.teacherText.height + 8 : 0
-    const framePadY = 16
-    const slotHeight = 72
+    const chipBlock = this.instructionText.height + 16
     const feedbackBlock = this.feedbackText.text ? this.feedbackText.height + 8 : 0
-    const clueBlock =
-      this.instructionText.height + 10 + teacherBlock + framePadY * 2 + slotHeight + 12 + feedbackBlock
+    const sentenceBlock = 76 + 36
+    const buttonBlock = () => choiceHeight * 2 + choiceGap
+    let pictureSize = Math.min(300, column - barW - 28)
+    const stackHeight = () =>
+      statusH +
+      10 +
+      pictureSize +
+      14 +
+      chipBlock +
+      teacherBlock +
+      sentenceBlock +
+      feedbackBlock +
+      12 +
+      buttonBlock()
 
-    const sideReserve = pad + 168
-    const between = width - sideReserve * 2
-    const beside = between >= 200
-    const verticalRoom = Math.max(100, choiceTop - clueBlock - (beside ? pad : 68))
-    let pictureSize = beside
-      ? Math.min(between, verticalRoom, 400)
-      : Math.min(width - pad * 2, verticalRoom, 320)
-    pictureSize = Math.max(120, Math.min(pictureSize, verticalRoom))
-
-    const pictureX = (width - pictureSize) / 2
-    const pictureY = beside ? pad : 68
-
-    if (beside) {
-      const stackHeight = this.scoreText.height + 12
-      this.scoreText.position.set(pad, pictureY + (pictureSize - stackHeight) / 2)
-      this.progressText.anchor.set(1, 0.5)
-      this.progressText.position.set(width - pad, pictureY + pictureSize / 2)
-    } else {
-      this.scoreText.position.set(pad, 8)
-      this.progressText.anchor.set(1, 0)
-      this.progressText.position.set(width - pad, 12)
+    let spare = height - pad * 2 - stackHeight()
+    if (spare < 0) {
+      pictureSize = Math.max(112, pictureSize + spare)
+      spare = height - pad * 2 - stackHeight()
     }
+    if (spare < 0) {
+      choiceHeight = Math.max(72, choiceHeight + Math.floor(spare / 2))
+      spare = height - pad * 2 - stackHeight()
+    }
+    const startY = pad + Math.max(0, spare / 2)
+
+    this.scoreStar.position.set(columnLeft, startY + 4)
+    this.scoreText.position.set(columnLeft + 26, startY + 2)
+    this.progressText.anchor.set(1, 0)
+    this.progressText.position.set(columnLeft + column, startY + 6)
+
+    const pairW = barW + 14 + pictureSize
+    const pairX = columnLeft + (column - pairW) / 2
+    const pictureX = pairX + barW + 14
+    const pictureY = startY + statusH + 10
+    this.timerBox = { x: pairX, y: pictureY, h: Math.max(48, pictureSize - labelSpace) }
     this.drawTimer()
 
     this.pictureFrame.position.set(pictureX, pictureY)
@@ -714,45 +803,52 @@ export class SentenceBuilderGame {
     this.pictureFallback.position.set(pictureSize / 2, pictureSize / 2)
     this.pictureFallback.style.wordWrapWidth = pictureSize - 32
 
-    const textCenter = width / 2
-    let cursor = pictureY + pictureSize + 16
-    this.instructionText.position.set(textCenter, cursor)
-    cursor += this.instructionText.height + 8
+    let cursor = pictureY + pictureSize + 14
+    const chipW = this.instructionText.width + 28
+    const chipH = this.instructionText.height + 10
+    this.structureChip.clear()
+    if (this.instructionText.text) {
+      this.structureChip
+        .roundRect(textCenter - chipW / 2, cursor, chipW, chipH, chipH / 2)
+        .fill({ color: WHITE, alpha: 0.94 })
+        .stroke({ width: 2, color: ACCENT })
+    }
+    this.instructionText.position.set(textCenter, cursor + 5)
+    cursor += chipBlock
     this.teacherText.position.set(textCenter, cursor)
-    if (this.teacherText.text) cursor += this.teacherText.height + 10
+    if (this.teacherText.text) cursor += this.teacherText.height + 8
 
-    const maxRow = Math.min(width - pad * 2 - 56, 880)
+    const maxRow = column - 8
     this.sentenceRow.scale.set(1)
     const rowBounds = this.sentenceRow.getLocalBounds()
     const rowWidth = rowBounds.width
-    const rowHeight = Math.max(slotHeight, rowBounds.height)
+    const rowHeight = Math.max(1, rowBounds.height)
     const sentenceScale = rowWidth > maxRow && rowWidth > 0 ? maxRow / rowWidth : 1
     this.sentenceRow.scale.set(sentenceScale)
     const drawnW = rowWidth * sentenceScale
     const drawnH = rowHeight * sentenceScale
-    const framePadX = 24
-    const minInner = Math.min(maxRow, beside ? 560 : width - pad * 2 - framePadX * 2)
-    const frameInnerW = rowWidth > 2 ? Math.max(drawnW, minInner) : 0
-    const frameLeft = textCenter - frameInnerW / 2
+    const framePadX = 18
+    const framePadY = 12
+    const sentenceX = textCenter - drawnW / 2
     this.sentenceRow.position.set(
-      textCenter - drawnW / 2 - rowBounds.x * sentenceScale,
+      sentenceX - rowBounds.x * sentenceScale,
       cursor + framePadY - rowBounds.y * sentenceScale,
     )
     this.sentenceFrame.clear()
-    if (frameInnerW > 2) {
+    if (rowWidth > 2) {
       this.sentenceFrame
-        .roundRect(frameLeft - framePadX, cursor, frameInnerW + framePadX * 2, drawnH + framePadY * 2, 24)
+        .roundRect(sentenceX - framePadX, cursor, drawnW + framePadX * 2, drawnH + framePadY * 2, 22)
         .fill({ color: SENTENCE_FRAME })
         .stroke({ width: 4, color: ACCENT, alignment: 1 })
     }
-
     const frameBottom = cursor + (rowWidth > 2 ? drawnH + framePadY * 2 : 0)
     this.feedbackText.anchor.set(0.5, 0)
-    this.feedbackText.position.set(textCenter, frameBottom + 8)
+    this.feedbackText.position.set(textCenter, frameBottom + 6)
 
-    const gridWidth = Math.min(width - pad * 2, 720)
+    const choiceTop = frameBottom + (this.feedbackText.text ? this.feedbackText.height + 10 : 14)
+    const gridWidth = Math.min(column, 640)
     const buttonWidth = (gridWidth - choiceGap) / 2
-    const gridLeft = (width - gridWidth) / 2
+    const gridLeft = textCenter - gridWidth / 2
     this.buttons.forEach((button, index) => {
       const col = index % 2
       const row = Math.floor(index / 2)
@@ -761,7 +857,8 @@ export class SentenceBuilderGame {
       const optionIndex = this.optionOrder[index] ?? 0
       const word = slot?.options[optionIndex] ?? ''
       button.draw(word, index, this.buttonStates[index] ?? 'idle', buttonWidth, choiceHeight)
-      button.view.position.set(gridLeft + col * (buttonWidth + choiceGap), choiceTop + row * (choiceHeight + choiceGap))
+      button.homeX = gridLeft + col * (buttonWidth + choiceGap)
+      button.view.position.set(button.homeX, choiceTop + row * (choiceHeight + choiceGap))
       button.view.visible = this.phase !== 'loading'
     })
 
@@ -793,6 +890,42 @@ export class SentenceBuilderGame {
     audio.volume = 0.4
     void audio.play().catch(() => undefined)
   }
+}
+
+function drawStar(g: Graphics) {
+  const points: number[] = []
+  for (let i = 0; i < 10; i++) {
+    const angle = -Math.PI / 2 + (i * Math.PI) / 5
+    const radius = i % 2 === 0 ? 10 : 4.4
+    points.push(10 + Math.cos(angle) * radius, 11 + Math.sin(angle) * radius)
+  }
+  g.poly(points).fill({ color: 0xf5b942 })
+}
+
+function dashedRect(g: Graphics, width: number, height: number, color: number) {
+  const dash = 7
+  const gap = 5
+  const inset = 3
+  const edges: Array<[number, number, number, number]> = [
+    [inset, inset, width - inset, inset],
+    [width - inset, inset, width - inset, height - inset],
+    [width - inset, height - inset, inset, height - inset],
+    [inset, height - inset, inset, inset],
+  ]
+  for (const [ax, ay, bx, by] of edges) {
+    const length = Math.hypot(bx - ax, by - ay)
+    if (length < 1) continue
+    const dx = (bx - ax) / length
+    const dy = (by - ay) / length
+    let traveled = 0
+    while (traveled < length) {
+      const end = Math.min(traveled + dash, length)
+      g.moveTo(ax + dx * traveled, ay + dy * traveled)
+      g.lineTo(ax + dx * end, ay + dy * end)
+      traveled += dash + gap
+    }
+  }
+  g.stroke({ width: 3, color, cap: 'round' })
 }
 
 function createSkyTexture(): Texture {
