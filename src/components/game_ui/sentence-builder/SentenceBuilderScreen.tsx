@@ -104,10 +104,17 @@ export default function SentenceBuilderScreen() {
   const [status, setStatus] = useState('')
   const [startError, setStartError] = useState('')
   const [confirmLeave, setConfirmLeave] = useState(false)
+  const [notice, setNotice] = useState<PlayNotice | null>(null)
   const mountRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<SentenceBuilderGame | null>(null)
+  const noticeId = useRef(0)
   const soundsRef = useRef(sounds)
   soundsRef.current = sounds
+
+  const showNotice = useCallback((text: string, tone: 'good' | 'bad') => {
+    noticeId.current += 1
+    setNotice({ id: noticeId.current, text, tone })
+  }, [])
 
   useEffect(() => {
     setBests(readBests())
@@ -117,6 +124,7 @@ export default function SentenceBuilderScreen() {
     gameRef.current?.destroy()
     gameRef.current = null
     setConfirmLeave(false)
+    setNotice(null)
     setPhase('setup')
     setStatus('')
   }, [])
@@ -153,6 +161,7 @@ export default function SentenceBuilderScreen() {
         { mode, focus, sounds: soundsRef.current },
         {
           onStatus: setStatus,
+          onNotice: showNotice,
           onComplete: (next) => {
             setResult(next)
             setBests((previous) => {
@@ -184,7 +193,7 @@ export default function SentenceBuilderScreen() {
       gameRef.current = null
       destroyApp()
     }
-  }, [phase, mode, focus])
+  }, [phase, mode, focus, showNotice])
 
   useEffect(() => {
     if (gameRef.current) gameRef.current.sounds = sounds
@@ -195,8 +204,20 @@ export default function SentenceBuilderScreen() {
   }, [confirmLeave])
 
   useEffect(() => {
-    if (phase !== 'play') setConfirmLeave(false)
+    if (phase !== 'play') {
+      setConfirmLeave(false)
+      setNotice(null)
+    }
   }, [phase])
+
+  useEffect(() => {
+    if (!notice) return
+    const id = notice.id
+    const timer = window.setTimeout(() => {
+      setNotice((current) => (current?.id === id ? null : current))
+    }, 1400)
+    return () => window.clearTimeout(timer)
+  }, [notice])
 
   return (
     <div
@@ -225,15 +246,31 @@ export default function SentenceBuilderScreen() {
       )}
       {phase === 'play' && (
         <div className="relative flex h-[100dvh] flex-col">
-          <div className="flex h-14 items-center justify-between px-4">
+          <div className="relative flex h-14 shrink-0 items-center justify-between px-4">
             <button type="button" onClick={() => setConfirmLeave(true)} className="grandstander font-bold underline">
               Back
             </button>
+            {notice ? (
+              <p
+                key={notice.id}
+                role="status"
+                onAnimationEnd={() => {
+                  setNotice((current) => (current?.id === notice.id ? null : current))
+                }}
+                className={`sentence-builder-toast pointer-events-none absolute left-1/2 top-1/2 z-20 max-w-[calc(100%-9rem)] rounded-full border-2 bg-white px-4 py-1 text-center text-sm font-black leading-tight grandstander ${
+                  notice.tone === 'good'
+                    ? 'border-[#15803d] text-[#15803d]'
+                    : 'border-[#dc2626] text-[#dc2626]'
+                }`}
+              >
+                {notice.text}
+              </p>
+            ) : null}
             <SoundButton sounds={sounds} onClick={() => setSounds((value) => !value)} />
           </div>
           <div ref={mountRef} className="relative min-h-0 flex-1" />
           {confirmLeave ? (
-            <div className="absolute inset-0 z-10 grid place-items-center bg-[#114257]/35 px-4">
+            <div className="absolute inset-0 z-30 grid place-items-center bg-[#114257]/35 px-4">
               <div className="neo-card w-full max-w-sm bg-white p-5" role="dialog" aria-labelledby="leave-title">
                 <h2 id="leave-title" className="text-2xl font-black grandstander">
                   Leave this round?
@@ -290,6 +327,12 @@ function SoundButton({ sounds, onClick }: { sounds: boolean; onClick: () => void
       </svg>
     </button>
   )
+}
+
+interface PlayNotice {
+  id: number
+  text: string
+  tone: 'good' | 'bad'
 }
 
 function startFailureMessage(error: unknown): string {

@@ -54,6 +54,7 @@ type Phase = 'loading' | 'choose' | 'locked' | 'ended'
 export interface SentenceBuilderHooks {
   onComplete: (result: SentenceBuilderResult) => void
   onStatus?: (text: string) => void
+  onNotice?: (message: string, tone: 'good' | 'bad') => void
 }
 
 interface LaunchOptions {
@@ -223,18 +224,6 @@ export class SentenceBuilderGame {
   })
   private readonly sentenceFrame = new Graphics()
   private readonly sentenceRow = new Container()
-  private readonly feedbackText = new Text({
-    text: '',
-    style: {
-      fontFamily: 'Grandstander',
-      fontSize: 22,
-      fontWeight: '800',
-      fill: BAD,
-      align: 'center',
-      wordWrap: true,
-      wordWrapWidth: 640,
-    },
-  })
   private readonly loadingText = new Text({
     text: 'Loading pictures...',
     style: { fontFamily: 'Grandstander', fontSize: 32, fontWeight: '800', fill: INK },
@@ -282,8 +271,6 @@ export class SentenceBuilderGame {
     this.labelText.visible = false
     this.instructionText.anchor.set(0.5, 0)
     this.teacherText.anchor.set(0.5, 0)
-    this.feedbackText.anchor.set(0.5, 0)
-    this.feedbackText.eventMode = 'none'
     this.sentenceFrame.eventMode = 'none'
     this.structureChip.eventMode = 'none'
     this.timerLabel.anchor.set(0.5, 0)
@@ -323,7 +310,6 @@ export class SentenceBuilderGame {
       this.root.addChild(button.view)
       button.view.visible = false
     }
-    this.root.addChild(this.feedbackText)
     this.app.stage.addChild(this.root)
     this.app.ticker.add(this.onTick)
     window.addEventListener('keydown', this.onKey)
@@ -474,7 +460,6 @@ export class SentenceBuilderGame {
       this.playSound('correct')
       this.built.push(word)
       this.phase = 'locked'
-      this.feedbackText.text = ''
       this.shouldPop = true
       this.renderSentence(prompt, this.slotIndex >= prompt.slots.length - 1)
       this.renderChoices(prompt, index, 'good')
@@ -499,9 +484,7 @@ export class SentenceBuilderGame {
     this.shakeStart = performance.now()
     if (this.mode === 'survival') {
       this.phase = 'locked'
-      this.feedbackText.style.fill = BAD
-      this.feedbackText.text = `The sentence is: ${prompt.answer}`
-      this.layout()
+      this.hooks.onNotice?.(`The sentence is: ${prompt.answer}`, 'bad')
       this.schedule(1300, () => {
         this.complete('wrong', prompt.answer, word)
       })
@@ -510,18 +493,15 @@ export class SentenceBuilderGame {
 
     this.eliminated.add(index)
     this.remainingMs = applyTimePenalty(this.remainingMs)
-    this.feedbackText.style.fill = BAD
-    this.feedbackText.text = 'Not this word'
-    this.layout()
+    this.hooks.onNotice?.('Not this word', 'bad')
     this.drawTimer()
     if (this.remainingMs <= 0) {
       this.handleTimeout()
       return
     }
     this.phase = 'locked'
-    this.schedule(5000, () => {
+    this.schedule(420, () => {
       this.phase = 'choose'
-      this.feedbackText.text = ''
       this.renderChoices(prompt)
     })
   }
@@ -534,8 +514,7 @@ export class SentenceBuilderGame {
     this.fastestMs =
       this.fastestMs === null ? this.questionElapsedMs : Math.min(this.fastestMs, this.questionElapsedMs)
     this.scoreText.text = String(this.score)
-    this.feedbackText.style.fill = GOOD
-    this.feedbackText.text = `+${gained}`
+    this.hooks.onNotice?.(`+${gained}`, 'good')
     this.layout()
     this.queueIndex += 1
     const finishedRun = this.mode === 'score-run' && this.queueIndex >= this.queue.length
@@ -556,8 +535,7 @@ export class SentenceBuilderGame {
     this.remainingMs = 0
     this.drawTimer()
     this.playSound('incorrect')
-    this.feedbackText.style.fill = BAD
-    this.feedbackText.text = `Time's up. ${prompt.answer}`
+    this.hooks.onNotice?.(`Time's up. ${prompt.answer}`, 'bad')
     this.renderSentence(prompt, true, true)
     const correctIndex = prompt.slots[this.slotIndex]
     if (correctIndex) {
@@ -601,7 +579,6 @@ export class SentenceBuilderGame {
     this.showPicture(scene)
     this.instructionText.text = GRAMMAR_LABELS[this.focus]
     this.teacherText.text = prompt.teacherPrompt ? `“${prompt.teacherPrompt}”` : ''
-    this.feedbackText.text = ''
     this.scoreText.text = String(this.score)
     this.progressText.text =
       this.mode === 'score-run'
@@ -705,15 +682,6 @@ export class SentenceBuilderGame {
     this.hooks.onStatus?.(`${GRAMMAR_LABELS[this.focus]} Choices: ${options.join(', ')}`)
   }
 
-  private placeNotice(centerX: number, top: number, column: number): number {
-    const message = this.feedbackText.text
-    this.feedbackText.visible = Boolean(message)
-    if (!message) return top
-    this.feedbackText.style.wordWrapWidth = column
-    this.feedbackText.position.set(centerX, top)
-    return top + this.feedbackText.height + 6
-  }
-
   private drawTimer(): void {
     const { x, y, h } = this.timerBox
     if (h < 8) return
@@ -764,13 +732,10 @@ export class SentenceBuilderGame {
     this.instructionText.style.fontSize = 16
     this.instructionText.style.wordWrapWidth = Math.max(72, chipRoom - 28)
     const statusH = Math.max(36, this.instructionText.height + 14)
-    this.feedbackText.style.fontSize = 22
-    this.feedbackText.style.wordWrapWidth = column
     const teacherBlock = this.teacherText.text ? this.teacherText.height + 8 : 0
-    const noticeBlock = this.feedbackText.text ? this.feedbackText.height + 6 : 0
     const sentenceBlock = TILE_H + 28
     const buttonBlock = () => choiceHeight * 2 + choiceGap
-    const chrome = pad * 2 + statusH + 10 + 8 + noticeBlock + teacherBlock + sentenceBlock + 10
+    const chrome = pad * 2 + statusH + 10 + 14 + teacherBlock + sentenceBlock + 10
     const pictureCap = column - barW - 28
     const roomForPicture = () => height - chrome - buttonBlock()
     let pictureSize = Math.min(pictureCap, roomForPicture())
@@ -823,7 +788,7 @@ export class SentenceBuilderGame {
     this.pictureFallback.position.set(pictureSize / 2, pictureSize / 2)
     this.pictureFallback.style.wordWrapWidth = pictureSize - 32
 
-    let cursor = this.placeNotice(textCenter, pictureY + pictureSize + 8, column)
+    let cursor = pictureY + pictureSize + 14
     this.teacherText.position.set(textCenter, cursor)
     if (this.teacherText.text) cursor += this.teacherText.height + 8
 
