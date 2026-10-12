@@ -42,9 +42,11 @@ const GOOD_BG = 0xdcfce7
 const BAD = 0xdc2626
 const BAD_BG = 0xfee2e2
 const OFF_BG = 0xe5e7eb
-const SLOT_FILL = 0xfff6e4
-const SLOT_LINE = 0xc4842a
+const SLOT_FILL = WHITE
+const SLOT_LINE = hexColor(theme.primaryAccentHover)
+const SLOT_DASH = 0x7ec8ea
 const SENTENCE_FRAME = 0xd4ebff
+const TILE_H = 68
 
 type ButtonState = 'idle' | 'good' | 'bad' | 'off'
 type Phase = 'loading' | 'choose' | 'locked' | 'ended'
@@ -126,7 +128,7 @@ class ChoiceButton {
 
     this.label.style.fill = text
     this.label.text = word
-    let fontSize = word.length > 12 ? 24 : 34
+    let fontSize = word.length > 12 ? 22 : 30
     this.label.style.fontSize = fontSize
     while (this.label.width > width - 48 && fontSize > 16) {
       fontSize -= 2
@@ -221,20 +223,18 @@ export class SentenceBuilderGame {
   })
   private readonly sentenceFrame = new Graphics()
   private readonly sentenceRow = new Container()
-  private readonly feedbackPlate = new Graphics()
   private readonly feedbackText = new Text({
     text: '',
     style: {
       fontFamily: 'Grandstander',
-      fontSize: 26,
+      fontSize: 22,
       fontWeight: '800',
-      fill: GOOD,
+      fill: BAD,
       align: 'center',
       wordWrap: true,
-      wordWrapWidth: 240,
+      wordWrapWidth: 640,
     },
   })
-  private feedbackTone: 'good' | 'bad' = 'good'
   private readonly loadingText = new Text({
     text: 'Loading pictures...',
     style: { fontFamily: 'Grandstander', fontSize: 32, fontWeight: '800', fill: INK },
@@ -282,8 +282,8 @@ export class SentenceBuilderGame {
     this.labelText.visible = false
     this.instructionText.anchor.set(0.5, 0)
     this.teacherText.anchor.set(0.5, 0)
-    this.feedbackText.anchor.set(0.5, 0.5)
-    this.feedbackPlate.eventMode = 'none'
+    this.feedbackText.anchor.set(0.5, 0)
+    this.feedbackText.eventMode = 'none'
     this.sentenceFrame.eventMode = 'none'
     this.structureChip.eventMode = 'none'
     this.timerLabel.anchor.set(0.5, 0)
@@ -323,7 +323,7 @@ export class SentenceBuilderGame {
       this.root.addChild(button.view)
       button.view.visible = false
     }
-    this.root.addChild(this.feedbackPlate, this.feedbackText)
+    this.root.addChild(this.feedbackText)
     this.app.stage.addChild(this.root)
     this.app.ticker.add(this.onTick)
     window.addEventListener('keydown', this.onKey)
@@ -499,7 +499,6 @@ export class SentenceBuilderGame {
     this.shakeStart = performance.now()
     if (this.mode === 'survival') {
       this.phase = 'locked'
-      this.feedbackTone = 'bad'
       this.feedbackText.style.fill = BAD
       this.feedbackText.text = `The sentence is: ${prompt.answer}`
       this.layout()
@@ -511,7 +510,6 @@ export class SentenceBuilderGame {
 
     this.eliminated.add(index)
     this.remainingMs = applyTimePenalty(this.remainingMs)
-    this.feedbackTone = 'bad'
     this.feedbackText.style.fill = BAD
     this.feedbackText.text = 'Not this word'
     this.layout()
@@ -521,7 +519,7 @@ export class SentenceBuilderGame {
       return
     }
     this.phase = 'locked'
-    this.schedule(1100, () => {
+    this.schedule(5000, () => {
       this.phase = 'choose'
       this.feedbackText.text = ''
       this.renderChoices(prompt)
@@ -536,7 +534,6 @@ export class SentenceBuilderGame {
     this.fastestMs =
       this.fastestMs === null ? this.questionElapsedMs : Math.min(this.fastestMs, this.questionElapsedMs)
     this.scoreText.text = String(this.score)
-    this.feedbackTone = 'good'
     this.feedbackText.style.fill = GOOD
     this.feedbackText.text = `+${gained}`
     this.layout()
@@ -559,7 +556,6 @@ export class SentenceBuilderGame {
     this.remainingMs = 0
     this.drawTimer()
     this.playSound('incorrect')
-    this.feedbackTone = 'bad'
     this.feedbackText.style.fill = BAD
     this.feedbackText.text = `Time's up. ${prompt.answer}`
     this.renderSentence(prompt, true, true)
@@ -643,7 +639,7 @@ export class SentenceBuilderGame {
     for (const child of this.sentenceRow.removeChildren()) {
       child.destroy({ children: true })
     }
-    const height = 76
+    const height = TILE_H
     let x = 0
     prompt.slots.forEach((slot, index) => {
       const filled = reveal || completed || index < this.built.length
@@ -651,15 +647,15 @@ export class SentenceBuilderGame {
       const word = filled ? (index < this.built.length && !reveal ? this.built[index]! : slot.correct) : slot.correct
       const measure = new Text({
         text: word,
-        style: { fontFamily: 'Grandstander', fontSize: 40, fontWeight: '800', fill: INK },
+        style: { fontFamily: 'Grandstander', fontSize: 36, fontWeight: '800', fill: INK },
       })
-      const slotWidth = Math.max(88, measure.width + 36)
+      const slotWidth = Math.max(80, measure.width + 32)
       const bg = new Graphics()
       if (filled) {
-        bg.roundRect(0, 0, slotWidth, height, 16).fill({ color: SLOT_FILL }).stroke({ width: 2, color: SLOT_LINE })
+        bg.roundRect(0, 0, slotWidth, height, 14).fill({ color: SLOT_FILL }).stroke({ width: 2, color: SLOT_LINE })
       } else {
-        bg.roundRect(0, 0, slotWidth, height, 16).fill({ color: SLOT_FILL, alpha: current ? 0.55 : 0.28 })
-        dashedRect(bg, slotWidth, height, current ? SLOT_LINE : 0xd4b483)
+        bg.roundRect(0, 0, slotWidth, height, 14).fill({ color: WHITE, alpha: current ? 0.72 : 0.35 })
+        dashedRect(bg, slotWidth, height, current ? SLOT_LINE : SLOT_DASH)
       }
       const holder = new Container()
       holder.addChild(bg)
@@ -686,9 +682,9 @@ export class SentenceBuilderGame {
     this.shouldPop = false
     const mark = new Text({
       text: prompt.punctuation,
-      style: { fontFamily: 'Grandstander', fontSize: 36, fontWeight: '800', fill: INK },
+      style: { fontFamily: 'Grandstander', fontSize: 32, fontWeight: '800', fill: INK },
     })
-    mark.position.set(x, 16)
+    mark.position.set(x, 14)
     this.sentenceRow.addChild(mark)
   }
 
@@ -709,23 +705,13 @@ export class SentenceBuilderGame {
     this.hooks.onStatus?.(`${GRAMMAR_LABELS[this.focus]} Choices: ${options.join(', ')}`)
   }
 
-  private placeFeedback(pictureX: number, pictureY: number, pictureSize: number): void {
+  private placeNotice(centerX: number, top: number, column: number): number {
     const message = this.feedbackText.text
-    this.feedbackPlate.clear()
     this.feedbackText.visible = Boolean(message)
-    if (!message || pictureSize < 8) return
-    const maxWidth = Math.max(80, pictureSize - 36)
-    this.feedbackText.style.wordWrapWidth = maxWidth
-    const plateW = Math.min(pictureSize - 16, this.feedbackText.width + 36)
-    const plateH = this.feedbackText.height + 24
-    const plateX = pictureX + (pictureSize - plateW) / 2
-    const plateY = pictureY + (pictureSize - plateH) / 2
-    const tone = this.feedbackTone === 'good' ? GOOD : BAD
-    this.feedbackPlate
-      .roundRect(plateX, plateY, plateW, plateH, 18)
-      .fill({ color: WHITE, alpha: 0.96 })
-      .stroke({ width: 4, color: tone })
-    this.feedbackText.position.set(pictureX + pictureSize / 2, pictureY + pictureSize / 2)
+    if (!message) return top
+    this.feedbackText.style.wordWrapWidth = column
+    this.feedbackText.position.set(centerX, top)
+    return top + this.feedbackText.height + 6
   }
 
   private drawTimer(): void {
@@ -763,7 +749,8 @@ export class SentenceBuilderGame {
     const columnLeft = (width - column) / 2
     const textCenter = width / 2
     const choiceGap = 12
-    let choiceHeight = height < 760 ? 86 : 102
+    let choiceHeight = Math.round((height < 760 ? 86 : 102) * 0.9)
+    const choiceMin = Math.round(72 * 0.9)
     const barW = 20
     const labelSpace = 24
 
@@ -777,19 +764,23 @@ export class SentenceBuilderGame {
     this.instructionText.style.fontSize = 16
     this.instructionText.style.wordWrapWidth = Math.max(72, chipRoom - 28)
     const statusH = Math.max(36, this.instructionText.height + 14)
+    this.feedbackText.style.fontSize = 22
+    this.feedbackText.style.wordWrapWidth = column
     const teacherBlock = this.teacherText.text ? this.teacherText.height + 8 : 0
-    const sentenceBlock = 76 + 36
+    const noticeBlock = this.feedbackText.text ? this.feedbackText.height + 6 : 0
+    const sentenceBlock = TILE_H + 28
     const buttonBlock = () => choiceHeight * 2 + choiceGap
-    let pictureSize = Math.min(380, column - barW - 28)
-    const stackHeight = () => statusH + 10 + pictureSize + 14 + teacherBlock + sentenceBlock + 12 + buttonBlock()
+    let pictureSize = column - barW - 28
+    const stackHeight = () =>
+      statusH + 10 + pictureSize + 8 + noticeBlock + teacherBlock + sentenceBlock + 10 + buttonBlock()
 
     let spare = height - pad * 2 - stackHeight()
     if (spare < 0) {
-      pictureSize = Math.max(112, pictureSize + spare)
+      pictureSize = Math.max(160, pictureSize + spare)
       spare = height - pad * 2 - stackHeight()
     }
     if (spare < 0) {
-      choiceHeight = Math.max(72, choiceHeight + Math.floor(spare / 2))
+      choiceHeight = Math.max(choiceMin, choiceHeight + Math.floor(spare / 2))
       spare = height - pad * 2 - stackHeight()
     }
     const startY = pad + Math.max(0, spare / 2)
@@ -834,7 +825,7 @@ export class SentenceBuilderGame {
     this.pictureFallback.position.set(pictureSize / 2, pictureSize / 2)
     this.pictureFallback.style.wordWrapWidth = pictureSize - 32
 
-    let cursor = pictureY + pictureSize + 14
+    let cursor = this.placeNotice(textCenter, pictureY + pictureSize + 8, column)
     this.teacherText.position.set(textCenter, cursor)
     if (this.teacherText.text) cursor += this.teacherText.height + 8
 
@@ -862,10 +853,9 @@ export class SentenceBuilderGame {
         .stroke({ width: 4, color: ACCENT, alignment: 1 })
     }
     const frameBottom = cursor + (rowWidth > 2 ? drawnH + framePadY * 2 : 0)
-    this.placeFeedback(pictureX, pictureY, pictureSize)
 
-    const choiceTop = frameBottom + 14
-    const gridWidth = Math.min(column, 640)
+    const choiceTop = frameBottom + 10
+    const gridWidth = Math.min(column, Math.round(640 * 0.9))
     const buttonWidth = (gridWidth - choiceGap) / 2
     const gridLeft = textCenter - gridWidth / 2
     this.buttons.forEach((button, index) => {
