@@ -389,8 +389,7 @@ function Setup({
           Play {GRAMMAR_LABELS[focus]}
         </button>
         <p className="text-sm text-[--text-light] inclusive-sans">
-          Keys 1–4 pick the next word. A perfect sentence is {100 + 100} points. You have{' '}
-          {QUESTION_TIME_MS / 1000} seconds.
+          A perfect sentence is {100 + 100} points. You have {QUESTION_TIME_MS / 1000} seconds.
         </p>
       </div>
     </div>
