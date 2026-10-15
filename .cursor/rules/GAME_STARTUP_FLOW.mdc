@@ -116,18 +116,20 @@ await runtime.init({ target: gameMountPointRef.current, config });
 const services = runtime.getServices();
 services.eventBus.on(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
 services.eventBus.on(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
-runtime.start();
+setRuntimeReady(true); // next render mounts HUD overlays
+// After that commit: child HUD effects subscribe, then runtime.start()
 ```
 
 Pixi: `PixiRuntimeAdapter` wraps `PixiEngine` (`start()` is a no-op because Pixi still starts inside `init()`).
-Three: `ThreeRuntime.start()` calls `ThreeGame.start()` and begins the RAF loop.
+Three: `ThreeRuntime.start()` calls `ThreeGame.start()` and begins the RAF loop. Do not call `start()` in the same tick as `setRuntimeReady(true)` — React HUD overlays (`QuestionPanel`) are not mounted yet, so the first `HUD_EVENTS.QUESTION_SHOWN` would be dropped. `QuestionPanel` also emits `HUD_EVENTS.READY` after it subscribes so Tug of War can replay the current question.
 
 ### Flow
 1. Creates the selected runtime via `runtimeFactory`
 2. Calls `runtime.init({ target, config })`
 3. Attaches React event listeners to session events
-4. Manages UI overlay (scores, controls, fullscreen)
-5. Destroys the runtime on unmount
+4. Sets `runtimeReady` so HUD overlays mount and subscribe
+5. Calls `runtime.start()` on the following effect (after child HUD listeners)
+6. Destroys the runtime on unmount
 
 ---
 
@@ -390,15 +392,17 @@ This flow ensures that all dependencies are properly initialized before they are
 
 ## 7. ThreeRuntime (3D path)
 
-**Files:** `src/lib/three-engine/ThreeRuntime.ts`, `ThreeWorld.ts`, `src/lib/three-games/quiz-room/QuizRoom3DGame.ts`
+**Files:** `src/lib/three-engine/ThreeRuntime.ts`, `ThreeWorld.ts`, `src/lib/three-games/quiz-room/QuizRoom3DGame.ts`, `src/lib/three-games/tug-of-war/TugOfWar3DGame.ts`
 
 1. `ThreeWorld.init(mount)` — Scene, PerspectiveCamera, WebGLRenderer (pixel ratio ≤ 1.75)
 2. `GameSession.init(config)` — same managers as Pixi, RuleEngine last
-3. `await game.init()` (QuizDataSource + procedural scene + raycast)
+3. `await game.init()` (QuizDataSource + procedural scene; Quiz Room raycasts pedestals, Tug of War listens for `HUD_EVENTS.ANSWER_SELECTED` and `HUD_EVENTS.READY`)
 4. Emit `ENGINE_READY_FOR_GAME` (after the 3D game is ready so a failed quiz fetch does not start music)
-5. `start()` — `game.start()` + one `requestAnimationFrame` loop
+5. After React HUD overlays mount, `start()` — `game.start()` + one `requestAnimationFrame` loop. Tug of War caches the current `HUD_EVENTS.QUESTION_SHOWN` payload and re-emits it on `HUD_EVENTS.READY`.
 6. HUD `GAME_PAUSED` / `GAME_RESUMED` pause timers and the game
 7. Destroy: cancel RAF → game → session → world (including `disposeObject3D` and context loss)
 
-3D games emit `GAME_EVENTS.ANSWER_SELECTED` and `GAME_STATE_EVENTS.GAME_ENDED`. They never subclass `BaseGame` or call `scoringManager.addScore`.
+3D games emit `GAME_EVENTS.ANSWER_SELECTED` and `GAME_STATE_EVENTS.GAME_ENDED`. Tug of War also emits `TUG_EVENTS` and `HUD_EVENTS.QUESTION_SHOWN`. They never subclass `BaseGame` or call `scoringManager.addScore`.
+
+`GameModeDefinition.hud` tells `GameplayView` which React overlays to mount.
 

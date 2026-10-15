@@ -34,6 +34,7 @@ Required pieces:
 3. **Registry entry** — `slug`, `renderer: 'three'`, `questionTimerId`, eligibility, `buildControls`, `buildAssets`, `loadRuntime`.
 4. **Picker card** — `src/app/games/[quizId]/page.tsx` plus `GameModeId` in `src/lib/game-mode-eligibility.ts`.
 5. **Route** — `/games/[quizId]/[gameSlug]`. Unknown slugs render “Invalid game link”.
+6. **Optional `hud` flags** — `GameModeDefinition.hud` tells `GameplayView` which React overlays to mount (question panel, timer, tug meter, split scores).
 
 ```typescript
 loadRuntime: async () => {
@@ -223,6 +224,16 @@ On `TIMER_COMPLETED` for the question timer, treat as timeout (`selectedOptionId
 
 ### Gameplay
 
+| Constant | Payload | 3D note |
+|----------|---------|---------|
+| `GAME_EVENTS.ANSWER_SELECTED` | `AnswerSelectedPayload` | Sounds; Quiz Room scoring |
+| `HUD_EVENTS.QUESTION_SHOWN` | `HudQuestionShownPayload` | React question card |
+| `HUD_EVENTS.READY` | none | Question card mounted; replay current `QUESTION_SHOWN` if the first emit was missed |
+| `HUD_EVENTS.ANSWER_SELECTED` | `{ selectedIndex }` | React → 3D answer pick |
+| `TUG_EVENTS.OFFSET_CHANGED` | `{ offset, displayedOffset }` | Tug meter / rope |
+| `TUG_EVENTS.ROUND_WON` | `TugRoundWonPayload` | Round dots + RuleEngine +1 |
+| `TUG_EVENTS.MATCH_ENDED` | `TugMatchEndedPayload` | Then emit `GAME_ENDED` |
+
 `GAME_EVENTS.ANSWER_SELECTED` payload (`AnswerSelectedPayload`):
 
 | Field | Required |
@@ -242,7 +253,7 @@ On `TIMER_COMPLETED` for the question timer, treat as timeout (`selectedOptionId
 
 ## RuleEngine conditions and actions
 
-Defined on `GameConfig.rules` by `GameContainer` (same rules for Pixi Team Quiz and 3D Quiz Room).
+Defined on `GameConfig.rules` by `GameContainer`. Pixi Team Quiz and 3D Quiz Room share answer scoring. Tug of War keeps the answer sound rules but scores **round wins** (`TUG_EVENTS.ROUND_WON` → `modifyScore` +1).
 
 ### Conditions (`ConditionDefinition.type`)
 
@@ -278,8 +289,8 @@ A 3D game that emits a complete `ANSWER_SELECTED` payload gets scoring and SFX f
 - **One loop.** Only `ThreeRuntime` calls `requestAnimationFrame`. Games must not start a second loop.
 - **Pixel ratio** capped at `1.75`.
 - **Raycast** against answer meshes on `pointerup` using NDC from the canvas bounding rect. Set `userData` on pickable objects.
-- **Resize.** `GameplayView` calls `runtime.resize` on fullscreen. `ThreeWorld` updates camera aspect + `setSize`.
-- **HUD.** DOM overlay. Keep 3D labels in-world (canvas textures) so they stay on the pedestals; scores stay in React.
+- **Resize.** `ThreeRuntime` watches the mount element with a `ResizeObserver` and resizes whenever its box changes; `GameplayView` also calls `runtime.resize` after fullscreen toggles. `ThreeWorld` updates camera aspect + `setSize`, then the game's `onResize` runs.
+- **HUD.** DOM overlay. Scores, nav, and settings stay in React for every mode. Modes may also mount a **question card, timer badge, and tug meter** (`GameModeDefinition.hud`) that talk to the game only through the EventBus (`HUD_EVENTS`, `TUG_EVENTS`). Keep in-world canvas labels for objects that must sit in 3D space (Quiz Room pedestals). Do not read CSS variables for Three materials.
 - **Pause.** Opening the settings dropdown emits `GAME_PAUSED`. Runtime pauses timers and `game.pause()`.
 
 ---
@@ -320,3 +331,23 @@ Eligibility: every question is multiple choice, 2–4 non-empty answers, `correc
 Timer id: `quizRoom3dQuestionTimer`.
 
 Payload helper: `createQuizRoomAnswerPayload` in `quizRoomLogic.ts`.
+
+---
+
+## Mode: Tug of War (`tug-of-war-3d`)
+
+Turn-based, **best of 3** (first to 2 round wins). Two teams required. Question card, timer, tug meter, and round dots are **React HUD overlays** (`hud` flags on the mode definition).
+
+The Three scene is a painted 2.5D stage (art in `public/images/tug-of-war/`, URLs in `tugArt.ts`):
+
+- **Plate.** `arena-backdrop.webp` sits on a 16×9 world-unit plane. `computeTugStageView` sets the camera so the plate always covers the viewport: wide screens crop top and bottom, narrow screens crop the sides and compress the ninja row (`layoutScaleX`, `spriteScale`).
+- **Actors.** Six sprite ninjas (`NinjaActor`), a textured rope ribbon with the split centre banner (`TugRope`), and dust and petal effects (`tugEffects.ts`). The rope, banner, and ninjas move together with the tug offset; a smoke puff hides the snap back to centre between rounds.
+- **Blending.** Cutouts use `createCutoutMaterial`: premultiplied textures with One / OneMinusSrcAlpha blending. Do not also set Three's `premultipliedAlpha` on premultiplied textures, or edges go dark.
+- **Pure math.** Stage and rope math lives in `tugStageLayout.ts` (unit-tested).
+
+- Eligibility: same as 3D Quiz Room (MC, 2–4 answers). Setup forces Team Blue / Team Red.
+- Timer id: `tugOfWarQuestionTimer`.
+- Correct answer pulls toward the active team (base 0.18 + up to 0.12 speed bonus from remaining time). Wrong: opponent gets 50% of base. Timeout: 25% of base. `|offset| >= 1` wins the round; rope resets.
+- Questions exhausted: more round wins, then current rope advantage, then a draw.
+- Ninja clip names and GLB delivery: [TUG_OF_WAR_NINJA_ASSET_SPEC.md](TUG_OF_WAR_NINJA_ASSET_SPEC.md).
+- Pure logic: `tugOfWarLogic.ts` (unit-tested without WebGL).

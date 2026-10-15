@@ -11,6 +11,14 @@ import type {
   RendererKind,
 } from '@/lib/game-engine/runtime/GameRuntime'
 
+export interface GameHudFlags {
+  questionPanel?: boolean
+  timer?: boolean
+  tugMeter?: boolean
+  roundDots?: boolean
+  splitTeamScores?: boolean
+}
+
 export interface GameModeDefinition {
   slug: GameModeId
   title: string
@@ -18,6 +26,8 @@ export interface GameModeDefinition {
   thumbnail: string
   renderer: RendererKind
   questionTimerId: string
+  /** Optional React overlays mounted by GameplayView. */
+  hud?: GameHudFlags
   isEligible(quiz: EligibilityQuiz): boolean
   getBlockReason(quiz: EligibilityQuiz): string | null
   buildControls(defaults: ControlsConfig): ControlsConfig
