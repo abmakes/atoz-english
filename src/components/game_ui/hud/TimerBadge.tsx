@@ -43,12 +43,12 @@ const TimerBadge: React.FC<TimerBadgeProps> = ({ eventBus, timerId }) => {
 
   return (
     <div
-      className="pointer-events-none flex items-center gap-2 rounded-full border-[3px] border-[#163e66] bg-[#1e4d73] px-4 py-1.5 shadow-[3px_3px_0_0_#163e66]"
+      className="pointer-events-none flex shrink-0 items-center gap-1 rounded-full border-2 border-[#163e66] bg-[#1e4d73] px-2 py-0.5 shadow-[2px_2px_0_0_#163e66] lg:gap-2 lg:border-[3px] lg:px-4 lg:py-1.5 lg:shadow-[3px_3px_0_0_#163e66]"
       aria-live="polite"
       aria-label={`Time remaining ${seconds} seconds`}
     >
-      <Timer className="h-6 w-6 text-white" />
-      <span className="grandstander text-3xl font-bold tabular-nums text-white">
+      <Timer className="h-4 w-4 text-white lg:h-6 lg:w-6" />
+      <span className="grandstander text-lg font-bold tabular-nums text-white lg:text-3xl">
         {seconds}
       </span>
     </div>

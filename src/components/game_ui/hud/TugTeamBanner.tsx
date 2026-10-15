@@ -39,25 +39,28 @@ const TugTeamBanner: React.FC<TugTeamBannerProps> = ({
   const colors = PALETTE[side]
   return (
     <div
-      className={`flex items-center gap-2 rounded-full border-[3px] border-[#163e66] py-1 pl-1 pr-1 shadow-[3px_3px_0_0_#163e66] ${
-        isActive ? 'bg-white ring-4 ring-[#f6e05e]' : colors.soft
+      className={`flex max-w-full min-w-0 items-center gap-1 rounded-full border-2 border-[#163e66] py-0.5 pl-0.5 pr-0.5 shadow-[2px_2px_0_0_#163e66] lg:gap-2 lg:border-[3px] lg:py-1 lg:pl-1 lg:pr-1 lg:shadow-[3px_3px_0_0_#163e66] ${
+        isActive ? 'bg-white ring-2 ring-[#f6e05e] lg:ring-4' : colors.soft
       }`}
       aria-label={`${name}, score ${score}, ${wins} round wins${isActive ? ', answering' : ''}`}
     >
       <span
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-[#163e66] text-lg font-bold text-white ${colors.fill}`}
+        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#163e66] text-xs font-bold text-white lg:h-11 lg:w-11 lg:text-lg ${colors.fill}`}
         aria-hidden
       >
         {side === 'blue' ? 'B' : 'R'}
       </span>
-      <div className="flex min-w-0 flex-col items-start pr-1">
-        <span className={`grandstander max-w-[7.5rem] truncate text-sm font-bold sm:text-base ${colors.text}`}>
+      <div className="hidden min-w-0 flex-col items-start pr-0.5 min-[480px]:flex lg:pr-1">
+        <span className={`grandstander max-w-[4.5rem] truncate text-xs font-bold lg:max-w-[7.5rem] lg:text-base ${colors.text}`}>
           {name}
         </span>
         <RoundDots wins={wins} max={3} side={side} />
       </div>
+      <div className="min-[480px]:hidden">
+        <RoundDots wins={wins} max={3} side={side} />
+      </div>
       <span
-        className={`grandstander flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-[#163e66] text-xl font-bold text-white ${colors.fill}`}
+        className={`grandstander flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#163e66] text-sm font-bold text-white lg:h-12 lg:w-12 lg:text-xl ${colors.fill}`}
       >
         {score}
       </span>

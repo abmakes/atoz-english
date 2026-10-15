@@ -437,6 +437,14 @@
   background-color: var(--primary-accent-600);
   transform: scale(1.05);
 }
+@media (max-width: 640px) {
+  .buttonXLarge {
+    border-width: 4px;
+    padding: 0.6rem 1.25rem;
+    font-size: 1.75rem;
+    box-shadow: 3px 4px 0px 0px var(--primary-accent-hover);
+  }
+}
 .buttonAddTeam {
   composes: button;
   background-color: var(--input-bg);

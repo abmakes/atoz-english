@@ -398,12 +398,12 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   return (
     <div ref={gameContainerRef} className={`${themeClassName} relative min-h-screen w-full overflow-hidden`}>
         {splitScores ? (
-          <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex items-start justify-between gap-3 sm:inset-x-4 sm:top-4">
-            <div className="pointer-events-auto">{renderScoreCard(leftTeam, 'blue')}</div>
+          <div className="pointer-events-none absolute inset-x-1 top-1 z-30 flex items-start justify-between gap-1 sm:inset-x-3 sm:top-2 sm:gap-2 lg:inset-x-4 lg:top-4 lg:gap-3">
+            <div className="pointer-events-auto min-w-0 max-w-[46%]">{renderScoreCard(leftTeam, 'blue')}</div>
             {hud?.timer && eventBus && modeDefinition && (
               <TimerBadge eventBus={eventBus} timerId={modeDefinition.questionTimerId} />
             )}
-            <div className="pointer-events-auto flex items-start gap-2">
+            <div className="pointer-events-auto flex min-w-0 max-w-[46%] items-start justify-end">
               {renderScoreCard(rightTeam, 'red')}
             </div>
           </div>
@@ -426,18 +426,18 @@ const GameplayView: React.FC<GameplayViewProps> = ({
         </div>
         )}
 
-        <div className={`absolute ${splitScores ? 'bottom-24 right-3 sm:bottom-28 sm:right-4 lg:bottom-4' : 'top-6 right-6'} z-20`}>
+        <div className={`absolute z-30 ${splitScores ? 'bottom-[4.25rem] right-1 origin-bottom-right scale-75 sm:scale-90 [@media(max-height:520px)_and_(max-width:1023px)]:bottom-auto [@media(max-height:520px)_and_(max-width:1023px)]:top-14 [@media(max-height:520px)_and_(max-width:1023px)]:scale-90 lg:bottom-4 lg:top-auto lg:right-4 lg:scale-100' : 'top-6 right-6'}`}>
              <NavMenu items={navMenuItems}/>
         </div>
 
         {hud?.questionPanel && eventBus && (
-          <div className="pointer-events-none absolute inset-x-0 top-[14%] z-10 flex justify-center px-3 sm:top-[12%]">
-            <QuestionPanel eventBus={eventBus} className={themeClassName} isMobile={isMobileView} />
+          <div className="pointer-events-none absolute inset-x-0 top-11 z-10 flex justify-center px-1.5 sm:top-14 [@media(max-height:520px)_and_(max-width:1023px)]:right-24 [@media(max-height:520px)_and_(max-width:1023px)]:justify-end lg:inset-x-0 lg:top-[12%] lg:justify-center lg:px-3">
+            <QuestionPanel eventBus={eventBus} className={themeClassName} />
           </div>
         )}
 
         {hud?.tugMeter && eventBus && (
-          <div className="absolute inset-x-0 bottom-6 z-10">
+          <div className="absolute inset-x-0 bottom-1 z-20 lg:bottom-6">
             <TugMeter eventBus={eventBus} />
           </div>
         )}

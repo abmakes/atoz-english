@@ -15,7 +15,6 @@ const LETTERS = ['A', 'B', 'C', 'D'] as const
 interface QuestionPanelProps {
   eventBus: EventBus
   className?: string
-  isMobile?: boolean
 }
 
 /**
@@ -25,7 +24,6 @@ interface QuestionPanelProps {
 const QuestionPanel: React.FC<QuestionPanelProps> = ({
   eventBus,
   className,
-  isMobile = false,
 }) => {
   const [question, setQuestion] = useState<HudQuestionShownPayload | null>(null)
   const [pickedIndex, setPickedIndex] = useState<number | null>(null)
@@ -87,13 +85,13 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
 
   return (
     <div
-      className={`${className ?? ''} pointer-events-auto mx-auto w-[min(860px,92vw)] rounded-[28px] border-[3px] border-[#163e66] bg-white/95 p-3 shadow-[4px_4px_0_0_#163e66] sm:p-4`}
+      className={`${className ?? ''} pointer-events-auto mx-auto w-[min(640px,96vw)] max-h-[calc(50dvh-3.25rem)] overflow-y-auto overscroll-contain rounded-2xl border-[3px] border-[#163e66] bg-white/95 p-2 shadow-[3px_3px_0_0_#163e66] sm:p-3 [@media(max-height:520px)]:p-1.5 lg:w-[min(720px,92vw)] lg:rounded-[28px] lg:p-4`}
       role="region"
       aria-label="Question"
     >
-      <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-3 sm:gap-4`}>
+      <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
         {question.imageUrl && (
-          <div className="relative h-32 w-full shrink-0 overflow-hidden rounded-2xl border-[3px] border-[#163e66] bg-white sm:h-40 sm:w-48">
+          <div className="relative h-16 w-full shrink-0 overflow-hidden rounded-xl border-2 border-[#163e66] bg-white sm:h-28 sm:w-36 [@media(max-height:520px)]:h-14 [@media(max-height:520px)]:w-28 lg:h-36 lg:w-44 lg:rounded-2xl lg:border-[3px]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={question.imageUrl}
@@ -103,10 +101,10 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="grandstander mb-3 text-lg font-bold text-[#163e66] sm:text-2xl">
+          <p className="grandstander mb-2 text-sm font-bold leading-snug text-[#163e66] sm:text-lg [@media(max-height:520px)]:mb-1 [@media(max-height:520px)]:text-sm lg:mb-3 lg:text-2xl">
             {question.question}
           </p>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-1.5 sm:gap-2">
             {question.answers.map((answer, index) => {
               const optionId = `${question.questionId}-answer-${index}`
               const isPicked = pickedIndex === index
@@ -118,7 +116,7 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
                   type="button"
                   disabled={locked}
                   onClick={() => pick(index)}
-                  className={`grandstander flex items-center gap-2 rounded-2xl border-2 px-3 py-2 text-left text-base font-semibold transition sm:text-lg
+                  className={`grandstander flex items-center gap-2 rounded-xl border-2 px-2.5 py-1.5 text-left text-sm font-semibold transition sm:px-3 sm:py-2 sm:text-base [@media(max-height:520px)]:py-1 [@media(max-height:520px)]:text-sm lg:text-lg
                     ${
                       showWrong
                         ? 'border-red-500 bg-red-100 text-red-900'
@@ -131,7 +129,7 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
                     disabled:cursor-not-allowed`}
                   aria-label={`Answer ${LETTERS[index]}: ${answer}`}
                 >
-                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/90 text-sm font-bold text-[var(--heading-color,#114257)]">
+                  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/90 text-xs font-bold text-[var(--heading-color,#114257)] sm:h-7 sm:w-7 sm:text-sm">
                     {LETTERS[index]}
                   </span>
                   <span className="min-w-0 break-words">{answer}</span>
