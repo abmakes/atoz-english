@@ -668,3 +668,26 @@
     background-position: -100% 0;
   }
 }
+
+@keyframes sentence-builder-toast {
+  0% {
+    transform: translate(-50%, calc(-50% - 18px));
+    opacity: 0;
+  }
+  14% {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+  }
+  78% {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, calc(-50% - 10px));
+    opacity: 0;
+  }
+}
+
+.sentence-builder-toast {
+  animation: sentence-builder-toast 1.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
