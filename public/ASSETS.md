@@ -38,6 +38,7 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 | `images/shared/kunai_tip.png` | Shared rope projectile tip |
 | `images/shared/rope_segment.png` | Shared rope body tile |
 | `images/marketing/ninjaclimb_thumb.png` | Mode picker thumbnail |
+| `images/tug-of-war/arena-backdrop.webp`, `rope-strip.webp`, `ninja-{blue,red}-{pull,cheer,fallen}.webp` | Tug of War painted stage (`tugArt.ts`) |
 | `fonts/GrandstanderVF.ttf` | Game UI font |
 | `fonts/InclusiveSansVF.ttf` | Game UI font |
 | `quiz_template.csv` | CSV quiz upload template |
@@ -54,6 +55,12 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 - UI: procedural `AnswerCloudShape` for sky answers; `deco_{tree|bush|hut}.webp` for sparse ledge props.
 - Shared rope VFX: `images/shared/kunai_tip.png`, `images/shared/rope_segment.png` (used by `RopeProjectile`).
 - Mode picker thumb: `public/images/marketing/ninjaclimb_thumb.png`.
+
+## Tug of War notes
+
+- The arena plate is 1920×1080 and maps to the 16×9 world-unit stage; the feet line (`TUG_FEET_Y`) is measured on this painting, so repainting the ground means re-measuring it.
+- Red ninjas are the blue art hue-shifted and mirrored. Every pose shares one 700×640 canvas and feet anchor — see [TUG_OF_WAR_NINJA_ASSET_SPEC.md](../project_docs/TUG_OF_WAR_NINJA_ASSET_SPEC.md).
+- `avatar-{blue,red}.webp` are reserved for the team banners and are not CI-checked yet.
 
 ## Verify locally
 

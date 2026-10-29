@@ -137,15 +137,16 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
   const selectedQuiz = useGameStore((state) => state.selectedQuiz);
   const isSplashDash = initialGameSlug === 'splash-dash';
   const isNinjaClimb = initialGameSlug === 'ninja-climb';
-  const isTwoTeamRace = isSplashDash || isNinjaClimb;
+  const isTugOfWar = initialGameSlug === 'tug-of-war-3d';
+  const isFixedTwoTeams = isSplashDash || isNinjaClimb || isTugOfWar;
 
   const [assetsReady, setAssetsReady] = useState(false);
   const [assetsProgress, setAssetsProgress] = useState(0);
 
   // --- State ---
   const [teams, setTeams] = useState<LocalTeam[]>([
-    { id: 't1', name: 'Team 1' },
-    { id: 't2', name: 'Team 2' },
+    { id: 't1', name: initialGameSlug === 'tug-of-war-3d' ? 'Team Blue' : 'Team 1' },
+    { id: 't2', name: initialGameSlug === 'tug-of-war-3d' ? 'Team Red' : 'Team 2' },
   ]);
   const [newTeamName, setNewTeamName] = useState(''); // For adding new teams
   const [settings, setSettings] = useState<LocalGameSettings>({
@@ -168,17 +169,24 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
   // State to hold the theme class name
   const [themeClassName, setThemeClassName] = useState<string>('');
 
-  // Splash Dash / Ninja Climb: exactly two players
+  // Splash Dash / Ninja Climb / Tug of War: exactly two teams
   useEffect(() => {
-    if (!isTwoTeamRace) return;
+    if (!isFixedTwoTeams) return;
     setTeams((prev) => {
       const next = prev.slice(0, 2);
+      const defaults =
+        isTugOfWar
+          ? ['Team Blue', 'Team Red']
+          : ['Team 1', 'Team 2'];
       while (next.length < 2) {
-        next.push({ id: `t${next.length + 1}`, name: `Team ${next.length + 1}` });
+        next.push({
+          id: `t${next.length + 1}`,
+          name: defaults[next.length],
+        });
       }
       return next;
     });
-  }, [isTwoTeamRace]);
+  }, [isFixedTwoTeams, isTugOfWar]);
 
 
   // Effect to update the theme class name when selectedTheme changes
@@ -340,7 +348,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
 
   // --- Handlers (Placeholders) ---
   const handleAddTeam = () => {
-    if (isTwoTeamRace) return;
+    if (isFixedTwoTeams) return;
     if (newTeamName.trim()) {
       setTeams([
         ...teams,
@@ -355,7 +363,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
   };
 
   const handleRemoveTeam = (id: string) => {
-    if (isTwoTeamRace) return;
+    if (isFixedTwoTeams) return;
     setTeams(teams.filter(team => team.id !== id));
   };
 
@@ -469,7 +477,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
         }
       : undefined;
     const config: LocalConfig = {
-      teams: isTwoTeamRace ? teams.slice(0, 2) : teams,
+      teams: isFixedTwoTeams ? teams.slice(0, 2) : teams,
       settings,
       theme: selectedTheme,
       gameFeatures: selectedGameFeatures,
@@ -495,24 +503,24 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
   // --- Render ---
   return (
     // Apply themeWrapper and the *local* dynamic theme class for preview
-    <div className={`${themeClassName} flex flex-col items-center justify-center min-h-screen p-4 grandstander` }>
+    <div className={`${themeClassName} relative flex w-full min-h-screen flex-col items-center justify-start overflow-x-hidden px-3 pb-8 pt-16 grandstander sm:px-4 sm:pt-20` }>
       {/* Background Elements (like clouds - placeholder) */}
 
 
       {/* Back Button */}
        <button
         onClick={handleBackClick}
-        className={`buttonIcon`}
+        className="buttonIcon z-30 border-2 border-[var(--input-border)] !left-3 !right-auto !top-3 sm:!left-auto sm:!right-6 sm:!top-6"
         aria-label="Back to game mode selection"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
       </button>
 
-      <div className={`max-w-4xl mx-auto bg-[var(--panel-bg)] filter-blur-sm rounded-[32px] p-8 border-2 border-[var(--border-dark)] shadow-solid z-20`}>
+      <div className="z-20 mx-auto w-full max-w-4xl rounded-[24px] border-2 border-[var(--border-dark)] bg-[var(--panel-bg)] p-4 shadow-solid filter-blur-sm sm:rounded-[32px] sm:p-8">
 
         {/* Quiz Title */}
         {selectedQuiz && (
-            <h2 className={`grandstander flex justify-center text-2xl font-semibold text-[var(--text-color)] mb-4`}>
+            <h2 className="grandstander mb-3 break-words px-1 text-center text-xl font-semibold text-[var(--text-color)] sm:mb-4 sm:text-2xl">
               {selectedQuiz.title}
             </h2>
         )}
@@ -523,7 +531,12 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
         )}
         {isNinjaClimb && (
           <p className="text-center text-sm text-[var(--text-color)] mb-4 opacity-80">
-            Ninja Climb · 2-team mountain race
+            Ninja Climb · 2-team mountain race · BETA
+          </p>
+        )}
+        {isTugOfWar && (
+          <p className="text-center text-sm text-[var(--text-color)] mb-4 opacity-80">
+            Tug of War · 2 teams · best of 3 · BETA
           </p>
         )}
 
@@ -533,13 +546,13 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
             <button
               onClick={handlePlayGame}
               disabled={isStartingPlay}
-              className="grandstander buttonXLarge w-72 disabled:opacity-70"
+              className="grandstander buttonXLarge w-full max-w-xs disabled:opacity-70 sm:max-w-72"
             >
               {isStartingPlay ? 'Starting…' : 'Play'}
             </button>
           ) : (
             <div
-              className="relative w-72 h-[4.25rem] rounded-full border-[6px] border-[var(--primary-accent-600)] bg-white overflow-hidden shadow-[4px_6px_0px_0px_var(--primary-accent-hover)]"
+              className="relative h-14 w-full max-w-xs overflow-hidden rounded-full border-4 border-[var(--primary-accent-600)] bg-white shadow-[4px_6px_0px_0px_var(--primary-accent-hover)] sm:h-[4.25rem] sm:max-w-72 sm:border-[6px]"
               role="progressbar"
               aria-valuenow={Math.round(assetsProgress * 100)}
               aria-valuemin={0}
@@ -559,31 +572,31 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
 
         {/* Teams Section */}
         <div className={"mb-4 flex flex-col justify-center items-center"}>
-          <ul className={`flex flex-row flex-wrap gap-2 justify-center items-center mb-3 text-3xl`}>
+          <ul className="mb-3 flex w-full flex-col items-center gap-2 text-xl sm:flex-row sm:flex-wrap sm:justify-center sm:text-3xl">
             {teams.map((team, index) => (
-              <li key={team.id} className={`flex flex-row justify-center items-center`}>
-                <span className={`relative text-center -right-6 text-[var(--text-light)] p-2 w-10 bg-[var(--input-label-grey)] border-2 border-[var(--input-border)] rounded-[12px] font-bold`}>{index + 1}</span>                
+              <li key={team.id} className="flex w-full max-w-sm items-center gap-2">
+                <span className="w-10 shrink-0 rounded-[12px] border-2 border-[var(--input-border)] bg-[var(--input-label-grey)] p-2 text-center font-bold text-[var(--text-light)]">{index + 1}</span>
                 <input
                   type="text"
                   value={team.name}
                   onChange={(e) => handleTeamNameChange(team.id, e.target.value)}
-                  className={`py-2 px-6 ml-3 mr-1 rounded-[12px] text-lg border-2 border-[var(--input-border)] inputfield text-[var(--heading-color)]`}
+                  className="inputfield min-w-0 flex-1 rounded-[12px] border-2 border-[var(--input-border)] px-3 py-2 text-base text-[var(--heading-color)] sm:px-4 sm:text-lg"
                   aria-label={`Team ${index + 1} name`}
                 />
-                 {!isTwoTeamRace && (
+                 {!isFixedTwoTeams && (
                    <button onClick={() => handleRemoveTeam(team.id)} className={`buttonRemoveTeam`} aria-label={`Remove team ${team.name}`}>&times;</button>
                  )}
               </li>
             ))}
           </ul>
-          {!isTwoTeamRace && (
-          <div className={`flex items-center`}>
+          {!isFixedTwoTeams && (
+          <div className="flex w-full max-w-sm items-center">
             <input
               type="text"
               value={newTeamName}
               onChange={(e) => setNewTeamName(e.target.value)}
               placeholder="New team name"
-              className={`inputField grandstander`}
+              className="inputField grandstander min-w-0"
             />
             <Button
               variant="solidAccent"
@@ -599,7 +612,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
         {/* Settings Section */}
         <div className={`mb-4 flex flex-col justify-center items-center`}>
           <h2 className={`grandstander text-2xl font-semibold text-[var(--text-color)] mb-2 pt-2`}>Settings:</h2>
-          <div className={`flex flex-row gap-4 items-center`}>
+          <div className="flex flex-row flex-wrap items-center justify-center gap-x-4 gap-y-2">
             {(Object.keys(settings) as Array<keyof LocalGameSettings>)
               .filter(key => key === 'music' || key === 'sounds') // Only show music/sounds
               .map((key) => (
@@ -617,7 +630,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
             ))}
           </div>
 
-          <div className={"flex flex-row gap-4 items-center"}>
+          <div className="flex flex-row flex-wrap items-center justify-center gap-x-4 gap-y-2">
           {/* Theme Selection */}
             <div className={`flex flex-row gap-4 items-center mb-4 justify-center`}>
               <label htmlFor="theme-select" className={'text-[var(--text-color)]'}>Theme:</label>
@@ -635,7 +648,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
             </div>
 
             {/* Game Features Selection — Team Quiz + Ninja Climb */}
-            {!isSplashDash && (
+            {!isSplashDash && !isTugOfWar && (
             <div className={`flex flex-row gap-4 items-center mb-4 justify-center`}>
               <label htmlFor="features-select" className={`text-[var(--text-color)]`}>Game Mode:</label>
               <select
@@ -669,7 +682,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
               </span>
             </div>
             <h3 className={`font-semibold mb-2 text-md text-[var(--text-color)]`}>
-              {isTwoTeamRace ? 'Time per question' : 'Increase intensity with a time limit'}
+              {isFixedTwoTeams ? 'Time per question' : 'Increase intensity with a time limit'}
             </h3>
             <div className={`buttonGroup`}>
               {[10, 15, 20].map(time => (

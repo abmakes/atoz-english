@@ -2,12 +2,13 @@
 
 > Hub: [CONTEXT.md](../../../CONTEXT.md) · Startup flow: [GAME_STARTUP_FLOW.mdc](../../../.cursor/rules/GAME_STARTUP_FLOW.mdc)
 
-This document provides a high-level overview of the PixiJS game engine architecture used in this project. Its purpose is to help understand the roles of different components and how they interact, aiding in debugging and expansion without needing to read the entire codebase for every query.
+This document provides a high-level overview of the PixiJS game engine architecture used in this project. Shared 3D contract: [3D_GAME_REQUIREMENTS.md](../../../project_docs/3D_GAME_REQUIREMENTS.md). Renderer-neutral managers live in `GameSession` (`src/lib/game-engine/core/GameSession.ts`); `PixiEngine` aliases those services so existing `BaseGame` subclasses stay source-compatible.
 
 ## Core Concepts
 
 *   **Managers:** Self-contained classes responsible for specific domains (e.g., audio, scoring, timers, game state). They often interact via the EventBus.
-*   **`PixiEngine`:** The central orchestrator that initializes and holds references to all managers and the current game instance.
+*   **`PixiEngine`:** Pixi orchestrator. Owns the Pixi application, assets, ticker, and `BaseGame`. Manager lifecycle is delegated to `GameSession`.
+*   **`GameRuntime` / `PixiRuntimeAdapter`:** React HUD talks to a renderer-neutral runtime. The adapter wraps `PixiEngine` without changing `GameFactory` / `BaseGame`.
 *   **`PixiApplication`:** A wrapper around the core PixiJS `Application`, handling canvas setup, rendering loop (ticker), and resizing.
 *   **`EventBus`:** A critical component for decoupled communication. Managers and game instances emit events, and others subscribe to react to those events. Event types are defined in `EventTypes.ts`.
 *   **`BaseGame`:** An abstract class that specific game modes (like `MultipleChoiceGame`) extend. It defines the standard game lifecycle (`init`, `start`, `update`, `render`, `end`, `destroy`) and provides access to engine managers.
@@ -22,22 +23,23 @@ This document provides a high-level overview of the PixiJS game engine architect
     *   **Interactions:**
         *   Receives user input from `GameSetupPanel`.
         *   Assembles the `GameConfig`.
-        *   Renders `GameplayView` when switching to 'playing' state, passing the `GameConfig` and a `gameFactory`.
+        *   Resolves `gameModeRegistry.get(gameSlug)` (unknown slugs fail).
+        *   Renders `GameplayView` when switching to 'playing' state, passing the `GameConfig` and a `runtimeFactory`.
         *   Listens for game over events from `GameplayView` (which proxies them from `PixiEngine`) to switch to the 'gameover' view.
         *   Handles routing/cleanup when exiting the game.
 
 2.  **`GameplayView.tsx` (React)**
     *   **Role:** Renders the actual gameplay UI overlays (scores, nav menu) and the PixiJS canvas mount point. Manages the `PixiEngine` lifecycle.
     *   **Interactions:**
-        *   Receives `GameConfig` and `gameFactory` from `GameContainer`.
-        *   Creates and initializes the `PixiEngine` instance (`engineInstanceRef`) within a `useEffect`.
-        *   Passes the `pixiMountPointRef` to the engine for canvas mounting.
+        *   Receives `GameConfig` and `runtimeFactory` from `GameContainer`.
+        *   Creates and initializes one `GameRuntime` (`runtimeRef`) within a `useEffect`.
+        *   Passes the `gameMountPointRef` to the runtime for canvas mounting.
         *   Uses the engine's `EventBus` (`managersRef.current.eventBus`) to:
             *   Listen for `GAME_ENDED`, `SCORE_UPDATED`, `ACTIVE_TEAM_CHANGED` to update React state (scores, active player highlight).
             *   Listen for `SETTINGS_EVENTS` to sync local audio state (volume, mute) with `AudioManager`.
             *   Emit `SETTINGS_EVENTS` when UI controls (volume slider, mute toggles in `GameControlDropdown`) are changed.
         *   Renders child UI components like `PlayerScore`, `NavMenu`, `GameControlDropdown`, passing necessary data and callbacks (like `onExit`).
-        *   Calls `PixiEngine.destroy()` during component unmount cleanup.
+        *   Calls `PixiEngine.destroy()` during component unmount cleanup (via `GameRuntime.destroy()`).
 
 3.  **`GameControlDropdown.tsx` (React)**
     *   **Role:** UI component providing audio controls and game actions (Restart, Quit) within a dropdown.
@@ -50,8 +52,8 @@ This document provides a high-level overview of the PixiJS game engine architect
 4.  **`PixiEngine.ts` (Core Engine)**
     *   **Role:** Orchestrator. Initializes, holds, and provides access to all managers and the current game instance. Manages the main update loop.
     *   **Interactions:**
-        *   Constructor: Initializes `PixiApplication`, `EventBus`, `StorageManager`, `GameStateManager`, `TimerManager`, `ControlsManager`, `ScoringManager`.
-        *   `init()`: Initializes remaining managers (`AudioManager`, `PowerUpManager`, `RuleEngine`) using `GameConfig`. Calls the `gameFactory` to create the specific `BaseGame` instance. Initializes `PIXI.Assets`. Calls `currentGame.init()`. Starts the ticker (`handleUpdate`). Emits `ENGINE_READY_FOR_GAME`.
+        *   Constructor: Initializes `PixiApplication` and a `GameSession` (EventBus, StorageManager, GameStateManager, TimerManager, ControlsManager, ScoringManager).
+        *   `init()`: Initializes Pixi Assets, then `session.init(config)` (AudioManager, PowerUpManager, **RuleEngine last**). Calls the `gameFactory` to create the specific `BaseGame` instance. Calls `currentGame.init()`. Starts the ticker (`handleUpdate`). Emits `ENGINE_READY_FOR_GAME`.
         *   `handleUpdate()`: Called by the ticker. Calculates delta time. Calls `PowerUpManager.update()` and `currentGame.update()`.
         *   `handleResize()`: Called by `PixiApplication`. Emits `ENGINE_EVENTS.RESIZED`. Calls `currentGame.onResize()`.
         *   `destroy()`: Stops ticker, calls `currentGame.destroy()`, calls `destroy()` on managers, destroys `PixiApplication`.

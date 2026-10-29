@@ -1,6 +1,11 @@
 import { QuestionType } from '@/types/question_types'
 
-export type GameModeId = 'multiple-choice' | 'splash-dash' | 'ninja-climb'
+export type GameModeId =
+  | 'multiple-choice'
+  | 'splash-dash'
+  | 'ninja-climb'
+  | 'quiz-room-3d'
+  | 'tug-of-war-3d'
 
 /** Max answer length that still fits Splash Dash crate tiers. */
 export const SPLASH_DASH_MAX_ANSWER_LENGTH = 40
@@ -11,6 +16,7 @@ export const NINJA_CLIMB_MAX_ANSWER_LENGTH = 48
 export interface EligibilityQuestion {
   type?: string | null
   answers?: (string | null | undefined)[] | null
+  correctAnswer?: string | null
 }
 
 export interface EligibilityQuiz {
@@ -94,7 +100,65 @@ export function getEligibleGameModes(quiz: EligibilityQuiz): GameModeId[] {
   if (isNinjaClimbEligible(quiz)) {
     modes.push('ninja-climb')
   }
+  if (isQuizRoom3dEligible(quiz)) {
+    modes.push('quiz-room-3d')
+  }
+  if (isTugOfWar3dEligible(quiz)) {
+    modes.push('tug-of-war-3d')
+  }
   return modes
+}
+
+function questionFailsQuizRoom3d(
+  question: EligibilityQuestion
+): 'type' | 'count' | 'answer' | null {
+  if (!isMultipleChoiceType(question.type)) return 'type'
+  const answers = normalizeAnswers(question.answers)
+  if (answers.length < 2 || answers.length > 4) return 'count'
+  if (
+    question.correctAnswer &&
+    !answers.includes(question.correctAnswer.trim())
+  ) {
+    return 'answer'
+  }
+  return null
+}
+
+/** Experimental 3D room supports standard 2–4 option multiple-choice data. */
+export function isQuizRoom3dEligible(quiz: EligibilityQuiz): boolean {
+  if (!quiz.questions?.length) return false
+  return quiz.questions.every((question) => questionFailsQuizRoom3d(question) === null)
+}
+
+export function getQuizRoom3dBlockReason(quiz: EligibilityQuiz): string | null {
+  if (isQuizRoom3dEligible(quiz)) return null
+  if (!quiz.questions?.length) return 'This quiz has no questions yet.'
+
+  for (const question of quiz.questions) {
+    const failure = questionFailsQuizRoom3d(question)
+    if (failure === 'type') return '3D Quiz Room supports multiple-choice questions only.'
+    if (failure === 'count') return '3D Quiz Room needs 2–4 answers per question.'
+    if (failure === 'answer') return 'A correct answer is missing from its answer choices.'
+  }
+  return 'This quiz cannot be played in 3D Quiz Room.'
+}
+
+/** Tug of War uses the same multiple-choice 2–4 answer quizzes as 3D Quiz Room. */
+export function isTugOfWar3dEligible(quiz: EligibilityQuiz): boolean {
+  return isQuizRoom3dEligible(quiz)
+}
+
+export function getTugOfWar3dBlockReason(quiz: EligibilityQuiz): string | null {
+  if (isTugOfWar3dEligible(quiz)) return null
+  if (!quiz.questions?.length) return 'This quiz has no questions yet.'
+
+  for (const question of quiz.questions) {
+    const failure = questionFailsQuizRoom3d(question)
+    if (failure === 'type') return 'Tug of War supports multiple-choice questions only.'
+    if (failure === 'count') return 'Tug of War needs 2–4 answers per question.'
+    if (failure === 'answer') return 'A correct answer is missing from its answer choices.'
+  }
+  return 'This quiz cannot be played in Tug of War.'
 }
 
 export function getSplashDashBlockReason(quiz: EligibilityQuiz): string | null {

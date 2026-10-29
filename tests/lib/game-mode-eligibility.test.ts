@@ -4,12 +4,16 @@ import {
   SPLASH_DASH_MAX_ANSWER_LENGTH,
   NINJA_CLIMB_MAX_ANSWER_LENGTH,
   getEligibleGameModes,
+  getQuizRoom3dBlockReason,
   getSplashDashBlockReason,
   getNinjaClimbBlockReason,
+  getTugOfWar3dBlockReason,
   hasAnswersTooLongForSplashDash,
   hasAnswersTooLongForNinjaClimb,
-  isSplashDashEligible,
   isNinjaClimbEligible,
+  isQuizRoom3dEligible,
+  isSplashDashEligible,
+  isTugOfWar3dEligible,
 } from '@/lib/game-mode-eligibility'
 
 const shortMc = {
@@ -90,21 +94,63 @@ describe('isNinjaClimbEligible', () => {
 })
 
 describe('getEligibleGameModes', () => {
-  it('includes Team Quiz, Splash Dash, and Ninja Climb when eligible', () => {
+  it('includes Team Quiz, Splash Dash, Ninja Climb, and 3D modes when eligible', () => {
     expect(getEligibleGameModes({ questions: [shortMc] })).toEqual([
       'multiple-choice',
       'splash-dash',
       'ninja-climb',
+      'quiz-room-3d',
+      'tug-of-war-3d',
     ])
   })
 
-  it('only includes Team Quiz when ineligible for race modes', () => {
+  it('keeps Ninja Climb and 3D modes when Splash Dash answers are too long', () => {
+    const long = 'x'.repeat(SPLASH_DASH_MAX_ANSWER_LENGTH + 1)
+    expect(
+      getEligibleGameModes({
+        questions: [{ type: QuestionType.MULTIPLE_CHOICE, answers: [long, 'B'] }],
+      })
+    ).toEqual(['multiple-choice', 'ninja-climb', 'quiz-room-3d', 'tug-of-war-3d'])
+  })
+
+  it('only includes Team Quiz and 3D modes when Ninja Climb answers are too long', () => {
     const long = 'x'.repeat(NINJA_CLIMB_MAX_ANSWER_LENGTH + 1)
     expect(
       getEligibleGameModes({
         questions: [{ type: QuestionType.MULTIPLE_CHOICE, answers: [long, 'B'] }],
       })
-    ).toEqual(['multiple-choice'])
+    ).toEqual(['multiple-choice', 'quiz-room-3d', 'tug-of-war-3d'])
+  })
+})
+
+describe('isQuizRoom3dEligible / getQuizRoom3dBlockReason', () => {
+  it('accepts standard multiple-choice quizzes', () => {
+    expect(isQuizRoom3dEligible({ questions: [shortMc] })).toBe(true)
+    expect(getQuizRoom3dBlockReason({ questions: [shortMc] })).toBeNull()
+  })
+
+  it('rejects wrong answer counts and missing correct answers', () => {
+    expect(
+      isQuizRoom3dEligible({
+        questions: [{ type: QuestionType.MULTIPLE_CHOICE, answers: ['Only'] }],
+      })
+    ).toBe(false)
+    expect(
+      getQuizRoom3dBlockReason({
+        questions: [{ type: QuestionType.MULTIPLE_CHOICE, answers: ['Only'] }],
+      })
+    ).toContain('2–4 answers')
+    expect(
+      getQuizRoom3dBlockReason({
+        questions: [
+          {
+            type: QuestionType.MULTIPLE_CHOICE,
+            answers: ['A', 'B'],
+            correctAnswer: 'C',
+          },
+        ],
+      })
+    ).toContain('correct answer')
   })
 })
 
@@ -136,5 +182,17 @@ describe('getNinjaClimbBlockReason / hasAnswersTooLongForNinjaClimb', () => {
 
   it('returns null for eligible quizzes', () => {
     expect(getNinjaClimbBlockReason({ questions: [shortMc] })).toBeNull()
+  })
+})
+
+describe('isTugOfWar3dEligible / getTugOfWar3dBlockReason', () => {
+  it('matches 3D Quiz Room eligibility', () => {
+    expect(isTugOfWar3dEligible({ questions: [shortMc] })).toBe(true)
+    expect(getTugOfWar3dBlockReason({ questions: [shortMc] })).toBeNull()
+    expect(
+      getTugOfWar3dBlockReason({
+        questions: [{ type: QuestionType.MULTIPLE_CHOICE, answers: ['Only'] }],
+      })
+    ).toContain('2–4 answers')
   })
 })

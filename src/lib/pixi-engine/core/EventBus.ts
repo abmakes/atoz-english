@@ -1,5 +1,5 @@
 import EventEmitter from 'eventemitter3';
-import { EngineEvents, TIMER_EVENTS } from './EventTypes'; // Import the event map and specific events
+import { EngineEvents, TIMER_EVENTS, TUG_EVENTS } from './EventTypes'; // Import the event map and specific events
 
 /**
  * EventBus provides a central hub for event-driven communication
@@ -76,7 +76,7 @@ export class EventBus {
    * @param args - The arguments passed with the event.
    */
   private logEvent<K extends keyof EngineEvents>(eventName: K, args: Parameters<EngineEvents[K]>): void {
-    if (eventName === TIMER_EVENTS.TIMER_TICK) {
+    if (eventName === TIMER_EVENTS.TIMER_TICK || eventName === TUG_EVENTS.OFFSET_CHANGED) {
         return;
     }
     console.log(`[EventBus] Event Emitted: ${String(eventName)}`, args.length > 0 ? args : '(No Payload)');

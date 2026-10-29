@@ -16,13 +16,13 @@ import {
     ControlsConfig,
     AudioConfiguration,
 } from '@/lib/pixi-engine/config/GameConfig';
-import { PixiEngineManagers } from '@/lib/pixi-engine/core/PixiEngine';
-import type { BaseGame } from '@/lib/pixi-engine/game/BaseGame';
 import type { NavMenuItemProps } from './NavMenu';
-import { GAME_EVENTS, ENGINE_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
+import { GAME_EVENTS, ENGINE_EVENTS, TUG_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
 import { PowerupConfig, STANDARD_SCORE_MODE_POWERUPS } from '@/lib/pixi-engine/config/PowerupConfig';
 import LoadingSpinner from '../loading_spinner';
 import { useGameStore } from '@/stores/useGameStore'; // Import the store
+import { gameModeRegistry } from '@/lib/game-engine/modes/builtinGameModes';
+import type { GameRuntimeFactory } from '@/lib/game-engine/runtime/GameRuntime';
 
 const GameplayView = dynamic(() => import('./GameplayView'), {
     ssr: false,
@@ -33,8 +33,6 @@ const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height
 
 type GameView = 'setup' | 'playing' | 'gameover';
 
-type GameConstructor = new (config: GameConfig, managers: PixiEngineManagers) => BaseGame;
-
 /**
  * Props for the GameContainer component.
  */
@@ -43,19 +41,6 @@ interface GameContainerProps {
   quizId: string;
   /** The URL slug for the game type (e.g., 'multiple-choice'). */
   gameSlug: string;
-}
-
-async function loadGameConstructor(gameSlug: string): Promise<GameConstructor> {
-  if (gameSlug === 'splash-dash') {
-    const mod = await import('@/lib/pixi-games/splash-dash/SplashDashGame');
-    return mod.SplashDashGame as unknown as GameConstructor;
-  }
-  if (gameSlug === 'ninja-climb') {
-    const mod = await import('@/lib/pixi-games/ninja-climb/NinjaClimbGame');
-    return mod.NinjaClimbGame as unknown as GameConstructor;
-  }
-  const mod = await import('@/lib/pixi-games/multiple-choice/MultipleChoiceGame');
-  return mod.MultipleChoiceGame as unknown as GameConstructor;
 }
 
 /**
@@ -72,21 +57,18 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
   const [celebrationImage, setCelebrationImage] = useState<string | undefined>(undefined);
   // const [isPaused, setIsPaused] = useState(false);
   
-  const pixiMountPointRef = useRef<HTMLDivElement>(null);
+  const gameMountPointRef = useRef<HTMLDivElement>(null);
   const setSelectedQuiz = useGameStore((state) => state.setSelectedQuiz);
-  const gameCtorRef = useRef<GameConstructor | null>(null);
+  const runtimeFactoryRef = useRef<GameRuntimeFactory | null>(null);
   const [isStartingPlay, setIsStartingPlay] = useState(false);
 
-  const createGameInstance = useCallback(
-    (config: GameConfig, managers: PixiEngineManagers) => {
-      const Ctor = gameCtorRef.current;
-      if (!Ctor) {
-        throw new Error('Game module not loaded yet');
-      }
-      return new Ctor(config, managers);
-    },
-    []
-  );
+  const createRuntime = useCallback(async () => {
+    const factory = runtimeFactoryRef.current;
+    if (!factory) {
+      throw new Error('Game runtime has not been selected.');
+    }
+    return factory();
+  }, []);
 
   useEffect(() => {
       setSelectedQuiz(quizId);
@@ -106,13 +88,13 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
       }
 
       setIsStartingPlay(true);
-      try {
-        gameCtorRef.current = await loadGameConstructor(gameSlug);
-      } catch (err) {
-        console.error('Failed to load game module:', err);
+      const modeDefinition = gameModeRegistry.get(gameSlug);
+      if (!modeDefinition) {
+        console.error(`Unknown game mode: ${gameSlug}`);
         setIsStartingPlay(false);
         return;
       }
+      runtimeFactoryRef.current = modeDefinition.loadRuntime;
 
       // Fire-and-forget play count (once per browser session)
       void import('@/lib/record-quiz-play').then(({ recordQuizPlay }) => {
@@ -139,35 +121,53 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
       console.log("GameContainer: Enabled powerups:", powerupConfig.availablePowerups.map(p => p.id));
 
       // --- Define Scoring Rule (using RuleDefinition) ---
-      const scoringRule: RuleDefinition = {
-          id: 'score-correct-answer',
-          description: 'Award points for correct multiple choice answer',
-          triggerEvent: GAME_EVENTS.ANSWER_SELECTED, // Use imported constant
-          conditions: [
-              {
-                  type: 'compareState', // Correct type
-                  property: 'isCorrect', // Correct property from payload
-                  operator: 'eq', // Correct operator
-                  value: true // Correct value to compare against
-              }
-          ],
-          actions: [
-              {
-                  type: 'modifyScore', // Correct action type
+      const scoringRule: RuleDefinition =
+        gameSlug === 'tug-of-war-3d'
+          ? {
+              id: 'score-round-win',
+              description: 'Award one point when a team wins a tug-of-war round',
+              triggerEvent: TUG_EVENTS.ROUND_WON,
+              conditions: [],
+              actions: [
+                {
+                  type: 'modifyScore',
                   params: {
-                      target: 'payload.teamId' // Target team from event payload
-                  }
-              }
-          ]
-      };
-      
-      // --- Dynamically Set Scoring Params ---
+                    target: 'payload.teamId',
+                    mode: 'fixed',
+                    points: 1,
+                  },
+                },
+              ],
+            }
+          : {
+              id: 'score-correct-answer',
+              description: 'Award points for correct multiple choice answer',
+              triggerEvent: GAME_EVENTS.ANSWER_SELECTED,
+              conditions: [
+                {
+                  type: 'compareState',
+                  property: 'isCorrect',
+                  operator: 'eq',
+                  value: true,
+                },
+              ],
+              actions: [
+                {
+                  type: 'modifyScore',
+                  params: {
+                    target: 'payload.teamId',
+                  },
+                },
+              ],
+            };
+
+      if (gameSlug !== 'tug-of-war-3d') {
       const modifyScoreAction = scoringRule.actions.find(action => action.type === 'modifyScore');
       if (modifyScoreAction && modifyScoreAction.params) {
            if (setupData.gameFeatures === 'boosted') {
                console.log("GameContainer: Applying BOOSTED scoring rules.");
                modifyScoreAction.params.mode = 'progressive';
-               modifyScoreAction.params.timerId = 'multipleChoiceQuestionTimer'; // Make sure this ID matches game timer
+               modifyScoreAction.params.timerId = modeDefinition.questionTimerId;
                modifyScoreAction.params.pointsPerSecond = 5; // Set progressive points
                delete modifyScoreAction.params.points; // Clean up fixed points param
            } else { // 'basic' or default
@@ -179,6 +179,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
            }
       } else {
           console.error("GameContainer: Could not find 'modifyScore' action in scoringRule to set parameters.");
+      }
       }
       // --- End Dynamic Scoring Params ---
       
@@ -247,91 +248,12 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
       };
 
       // --- Define Controls Config (using ControlsConfig) ---
-      const controlConfig: ControlsConfig =
-        gameSlug === 'splash-dash'
-          ? {
-              actionMap: {
-                MOVE_PLAYER1: {
-                  keyboard: 'KeyA',
-                  touchArea: 'button-player1',
-                },
-                MOVE_PLAYER2: {
-                  keyboard: 'KeyL',
-                  touchArea: 'button-player2',
-                },
-              },
-              playerMappings: [
-                { playerId: 'player1', deviceType: 'keyboard' },
-                { playerId: 'player2', deviceType: 'keyboard' },
-              ],
-              gamepadDeadzone: DEFAULT_GAME_CONFIG.controls.gamepadDeadzone,
-            }
-          : gameSlug === 'ninja-climb'
-            ? {
-                actionMap: {
-                  ANSWER_1: { keyboard: 'Digit1' },
-                  ANSWER_2: { keyboard: 'Digit2' },
-                  ANSWER_3: { keyboard: 'Digit3' },
-                  ANSWER_4: { keyboard: 'Digit4' },
-                  POWERUP_TELEPORT: { keyboard: 'KeyZ' },
-                  POWERUP_ROPE: { keyboard: 'KeyX' },
-                  POWERUP_SMOKE: { keyboard: 'KeyC' },
-                },
-                playerMappings: [{ playerId: 'player1', deviceType: 'keyboard' }],
-                gamepadDeadzone: DEFAULT_GAME_CONFIG.controls.gamepadDeadzone,
-              }
-            : {
-                actionMap: {
-                  UP: { keyboard: 'ArrowUp' },
-                  DOWN: { keyboard: 'ArrowDown' },
-                  LEFT: { keyboard: 'ArrowLeft' },
-                  RIGHT: { keyboard: 'ArrowRight' },
-                  ACTION_A: { keyboard: 'Space' },
-                  ACTION_B: { keyboard: 'Enter' },
-                },
-                playerMappings: [{ playerId: 'player1', deviceType: 'keyboard' }],
-                gamepadDeadzone: DEFAULT_GAME_CONFIG.controls.gamepadDeadzone,
-              };
+      const controlConfig: ControlsConfig = modeDefinition.buildControls(
+          DEFAULT_GAME_CONFIG.controls
+      );
 
       // --- Define Game-Specific Assets ---
-      const assetConfig =
-        gameSlug === 'splash-dash'
-          ? {
-              bundles: [
-                {
-                  name: 'splash-dash',
-                  assets: [
-                    {
-                      key: 'crate_5_4',
-                      src: '/images/splash-dash/crate_5_4.png',
-                    },
-                    {
-                      key: 'crate_square',
-                      src: '/images/splash-dash/crate_square.png',
-                    },
-                  ],
-                },
-              ],
-            }
-          : gameSlug === 'ninja-climb'
-            ? {
-                bundles: [
-                  {
-                    name: 'ninja-climb',
-                    assets: [
-                      { key: 'ninja_blue_idle', src: '/images/ninja-climb/ninja_blue_idle.webp' },
-                      { key: 'ninja_red_idle', src: '/images/ninja-climb/ninja_red_idle.webp' },
-                      { key: 'ninja_blue_climb', src: '/images/ninja-climb/ninja_blue_climb.png' },
-                      { key: 'ninja_red_climb', src: '/images/ninja-climb/ninja_red_climb.png' },
-                      { key: 'sky', src: '/images/ninja-climb/sky.webp' },
-                      { key: 'icon_teleport', src: '/images/ninja-climb/icon_teleport.png' },
-                      { key: 'icon_rope', src: '/images/ninja-climb/icon_rope.png' },
-                      { key: 'icon_smoke', src: '/images/ninja-climb/icon_smoke.png' },
-                    ],
-                  },
-                ],
-              }
-            : DEFAULT_GAME_CONFIG.assets;
+      const assetConfig = modeDefinition.buildAssets(DEFAULT_GAME_CONFIG.assets);
 
       // --- Define Audio Configuration ---
       const audioConfig: AudioConfiguration = {
@@ -490,8 +412,8 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
                     themeClassName={themeClassName}
                     onGameOver={handleGameOver}
                     onExit={handleExit}
-                    pixiMountPointRef={pixiMountPointRef as React.RefObject<HTMLDivElement>}
-                    gameFactory={createGameInstance}
+                    gameMountPointRef={gameMountPointRef as React.RefObject<HTMLDivElement>}
+                    runtimeFactory={createRuntime}
                 />
             </>
         );
