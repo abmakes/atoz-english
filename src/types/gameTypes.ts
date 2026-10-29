@@ -56,6 +56,15 @@ export interface SplashPowerupsData {
   immunity: boolean;
 }
 
+/** Ninja Climb starting power-ups (setup → GameConfig). */
+export interface NinjaPowerupsData {
+  enabled: boolean;
+  teleport: boolean;
+  rope: boolean;
+  smoke: boolean;
+  shortcuts: boolean;
+}
+
 export interface QuizDefaultSettings {
   theme: string;
   powerUps: string[];
@@ -77,6 +86,7 @@ export interface GameSetupData {
   limitedGuesses: number | null;
   powerups: PowerupsData;
   splashPowerups?: SplashPowerupsData;
+  ninjaPowerups?: NinjaPowerupsData;
 }
 
 export interface PlayerScoreData {

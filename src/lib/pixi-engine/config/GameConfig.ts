@@ -283,6 +283,15 @@ export interface GameConfig {
     immunity: boolean;
   };
 
+  /** Ninja Climb starting power-ups + shortcuts toggle. */
+  ninjaPowerups?: {
+    enabled: boolean;
+    teleport: boolean;
+    rope: boolean;
+    smoke: boolean;
+    shortcuts: boolean;
+  };
+
   /** Audio configuration */
   audio?: AudioConfiguration;
   

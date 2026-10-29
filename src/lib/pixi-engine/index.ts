@@ -13,6 +13,7 @@ export * from './game/PowerUpManager';
 export * from './assets/AssetLoader';
 // Add exports for ui and utils index files once they have content
 export * from './ui'; 
+export * from './fx';
 // export * from './utils';
 
 // Re-export commonly used PixiJS classes

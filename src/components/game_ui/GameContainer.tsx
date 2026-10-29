@@ -50,6 +50,10 @@ async function loadGameConstructor(gameSlug: string): Promise<GameConstructor> {
     const mod = await import('@/lib/pixi-games/splash-dash/SplashDashGame');
     return mod.SplashDashGame as unknown as GameConstructor;
   }
+  if (gameSlug === 'ninja-climb') {
+    const mod = await import('@/lib/pixi-games/ninja-climb/NinjaClimbGame');
+    return mod.NinjaClimbGame as unknown as GameConstructor;
+  }
   const mod = await import('@/lib/pixi-games/multiple-choice/MultipleChoiceGame');
   return mod.MultipleChoiceGame as unknown as GameConstructor;
 }
@@ -179,9 +183,10 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
       // --- End Dynamic Scoring Params ---
       
       // --- Define Rule Config Object ---
+      // Ninja Climb scores via RaceManager (barrier/boost); skip declarative modifyScore.
       const ruleConfig: RuleConfig = {
           rules: [
-              scoringRule,
+              ...(gameSlug === 'ninja-climb' ? [] : [scoringRule]),
               {
                   id: 'play-correct-sound',
                   description: 'Play correct answer sound when answer is correct',
@@ -242,57 +247,91 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
       };
 
       // --- Define Controls Config (using ControlsConfig) ---
-      const controlConfig: ControlsConfig = gameSlug === 'splash-dash' ? {
-          // Splash Dash specific controls for two players
-          actionMap: {
-              MOVE_PLAYER1: { 
+      const controlConfig: ControlsConfig =
+        gameSlug === 'splash-dash'
+          ? {
+              actionMap: {
+                MOVE_PLAYER1: {
                   keyboard: 'KeyA',
-                  touchArea: 'button-player1'  // Add touch area mapping
-              },
-              MOVE_PLAYER2: { 
+                  touchArea: 'button-player1',
+                },
+                MOVE_PLAYER2: {
                   keyboard: 'KeyL',
-                  touchArea: 'button-player2'  // Add touch area mapping
+                  touchArea: 'button-player2',
+                },
               },
-          },
-          playerMappings: [
-              { playerId: 'player1', deviceType: 'keyboard' },
-              { playerId: 'player2', deviceType: 'keyboard' }
-          ],
-          gamepadDeadzone: DEFAULT_GAME_CONFIG.controls.gamepadDeadzone,
-      } : {
-          // Multiple Choice controls
-          actionMap: { // Use action names consistent with DEFAULT_CONTROLS_CONFIG
-              UP: { keyboard: 'ArrowUp' },
-              DOWN: { keyboard: 'ArrowDown' },
-              LEFT: { keyboard: 'ArrowLeft' },
-              RIGHT: { keyboard: 'ArrowRight' },
-              ACTION_A: { keyboard: 'Space' }, // Map Space to ACTION_A
-              ACTION_B: { keyboard: 'Enter' }, // Map Enter to ACTION_B
-          },
-          playerMappings: [ // Need at least one player mapping usually
-                { playerId: 'player1', deviceType: 'keyboard' } 
-          ],
-          gamepadDeadzone: DEFAULT_GAME_CONFIG.controls.gamepadDeadzone,
-      };
-      
+              playerMappings: [
+                { playerId: 'player1', deviceType: 'keyboard' },
+                { playerId: 'player2', deviceType: 'keyboard' },
+              ],
+              gamepadDeadzone: DEFAULT_GAME_CONFIG.controls.gamepadDeadzone,
+            }
+          : gameSlug === 'ninja-climb'
+            ? {
+                actionMap: {
+                  ANSWER_1: { keyboard: 'Digit1' },
+                  ANSWER_2: { keyboard: 'Digit2' },
+                  ANSWER_3: { keyboard: 'Digit3' },
+                  ANSWER_4: { keyboard: 'Digit4' },
+                  POWERUP_TELEPORT: { keyboard: 'KeyZ' },
+                  POWERUP_ROPE: { keyboard: 'KeyX' },
+                  POWERUP_SMOKE: { keyboard: 'KeyC' },
+                },
+                playerMappings: [{ playerId: 'player1', deviceType: 'keyboard' }],
+                gamepadDeadzone: DEFAULT_GAME_CONFIG.controls.gamepadDeadzone,
+              }
+            : {
+                actionMap: {
+                  UP: { keyboard: 'ArrowUp' },
+                  DOWN: { keyboard: 'ArrowDown' },
+                  LEFT: { keyboard: 'ArrowLeft' },
+                  RIGHT: { keyboard: 'ArrowRight' },
+                  ACTION_A: { keyboard: 'Space' },
+                  ACTION_B: { keyboard: 'Enter' },
+                },
+                playerMappings: [{ playerId: 'player1', deviceType: 'keyboard' }],
+                gamepadDeadzone: DEFAULT_GAME_CONFIG.controls.gamepadDeadzone,
+              };
+
       // --- Define Game-Specific Assets ---
-      const assetConfig = gameSlug === 'splash-dash' ? {
-          bundles: [
-              {
+      const assetConfig =
+        gameSlug === 'splash-dash'
+          ? {
+              bundles: [
+                {
                   name: 'splash-dash',
                   assets: [
-                      {
-                          key: 'crate_5_4',
-                          src: '/images/splash-dash/crate_5_4.png'
-                      },
-                      {
-                          key: 'crate_square',
-                          src: '/images/splash-dash/crate_square.png'
-                      }
-                  ]
+                    {
+                      key: 'crate_5_4',
+                      src: '/images/splash-dash/crate_5_4.png',
+                    },
+                    {
+                      key: 'crate_square',
+                      src: '/images/splash-dash/crate_square.png',
+                    },
+                  ],
+                },
+              ],
+            }
+          : gameSlug === 'ninja-climb'
+            ? {
+                bundles: [
+                  {
+                    name: 'ninja-climb',
+                    assets: [
+                      { key: 'ninja_blue_idle', src: '/images/ninja-climb/ninja_blue_idle.webp' },
+                      { key: 'ninja_red_idle', src: '/images/ninja-climb/ninja_red_idle.webp' },
+                      { key: 'ninja_blue_climb', src: '/images/ninja-climb/ninja_blue_climb.png' },
+                      { key: 'ninja_red_climb', src: '/images/ninja-climb/ninja_red_climb.png' },
+                      { key: 'sky', src: '/images/ninja-climb/sky.webp' },
+                      { key: 'icon_teleport', src: '/images/ninja-climb/icon_teleport.png' },
+                      { key: 'icon_rope', src: '/images/ninja-climb/icon_rope.png' },
+                      { key: 'icon_smoke', src: '/images/ninja-climb/icon_smoke.png' },
+                    ],
+                  },
+                ],
               }
-          ]
-      } : DEFAULT_GAME_CONFIG.assets; // Use default for other games
+            : DEFAULT_GAME_CONFIG.assets;
 
       // --- Define Audio Configuration ---
       const audioConfig: AudioConfiguration = {
@@ -334,6 +373,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
           powerups: powerupConfig,
           intensityTimeLimit: setupData.intensityTimeLimit,
           splashPowerups: setupData.splashPowerups,
+          ninjaPowerups: setupData.ninjaPowerups,
           rules: ruleConfig, // Assign the RuleConfig object
           controls: controlConfig, // Assign the ControlsConfig object
           assets: assetConfig,

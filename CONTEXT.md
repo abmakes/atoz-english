@@ -9,7 +9,7 @@ How to keep docs honest after changes: [project_docs/DOCUMENTATION_MAINTENANCE.m
 
 ## What this product is
 
-Teacher-centric quiz platform: create quizzes (form, CSV, AI), then play them as classroom PixiJS games (multiple-choice and Splash Dash) with teams, timers, scoring, themes, and power-ups. Sentence Builder is a built-in grammar practice game at `/games/sentence-builder`. Students pick one structure, then build picture sentences for that structure only.
+Teacher-centric quiz platform: create quizzes (form, CSV, AI), then play them as classroom PixiJS games (multiple-choice, Splash Dash, and Ninja Climb) with teams, timers, scoring, themes, and power-ups. Sentence Builder is a built-in grammar practice game at `/games/sentence-builder`. Students pick one structure, then build picture sentences for that structure only.
 
 Also ships **Teacher Tools** (`/tools`): small classroom helpers. First tool is the **Story Creator** — AI-generated 4-picture stories (Gemini text + image), a printable 2×2 worksheet, a public student link for per-picture voice recording, and a live lip-synced "movie" player (canvas virtual camera; no video files are generated). Plan/architecture: [TEACHER_TOOLS_STORY_CREATOR_PLAN.md](TEACHER_TOOLS_STORY_CREATOR_PLAN.md).
 
@@ -36,7 +36,7 @@ Also ships **Teacher Tools** (`/tools`): small classroom helpers. First tool is 
 
 ## Architecture in one paragraph
 
-`GameSetupPanel` collects setup → `GameContainer` builds `GameConfig` and switches views → `GameplayView` creates/destroys a single `PixiEngine` → engine inits managers (EventBus, timers, scoring, audio, RuleEngine last) → `gameFactory` creates a `BaseGame` subclass (`MultipleChoiceGame` or `SplashDashGame`). React HUD listens on the EventBus; scoring normally goes through RuleEngine rules, not ad-hoc `addScore` calls.
+`GameSetupPanel` collects setup → `GameContainer` builds `GameConfig` and switches views → `GameplayView` creates/destroys a single `PixiEngine` → engine inits managers (EventBus, timers, scoring, audio, RuleEngine last) → `gameFactory` creates a `BaseGame` subclass (`MultipleChoiceGame`, `SplashDashGame`, or `NinjaClimbGame`). React HUD listens on the EventBus; scoring normally goes through RuleEngine rules, not ad-hoc `addScore` calls (Ninja Climb is an exception: race pipeline scores via `ScoringManager` directly).
 
 Canonical init sequence: [.cursor/rules/GAME_STARTUP_FLOW.mdc](.cursor/rules/GAME_STARTUP_FLOW.mdc)
 
@@ -52,7 +52,7 @@ scripts/                CI helpers (verify-assets)
 src/app/                Pages + REST API routes
 src/components/game_ui/ React game shell (GameContainer, GameplayView, setup)
 src/lib/pixi-engine/    Shared engine (PixiEngine, BaseGame, managers)
-src/lib/pixi-games/     Game implementations (multiple-choice, splash-dash, sentence-builder)
+src/lib/pixi-games/     Game implementations (multiple-choice, splash-dash, ninja-climb, sentence-builder)
 src/lib/schemas.ts      Zod schemas
 src/lib/prisma.ts       Prisma client
 src/lib/ai/              GenerationBrief, teacher-first prompts, lesson-image helpers
@@ -82,6 +82,8 @@ CONTEXT.md              This hub
 | **Adding a game** | [project_docs/game-development-guide.md](project_docs/game-development-guide.md) | New game mode |
 | **Splash Dash behavior** | [src/lib/pixi-games/splash-dash/SPLASH_DASH_MECHANICS.md](src/lib/pixi-games/splash-dash/SPLASH_DASH_MECHANICS.md) | SD scoring/timer/movement |
 | **Splash Dash integration** | [src/lib/pixi-games/splash-dash/README.md](src/lib/pixi-games/splash-dash/README.md) | SD wiring checklist |
+| **Ninja Climb behavior** | [src/lib/pixi-games/ninja-climb/NINJA_CLIMB_MECHANICS.md](src/lib/pixi-games/ninja-climb/NINJA_CLIMB_MECHANICS.md) | NC race/power-ups/shortcuts |
+| **Ninja Climb integration** | [src/lib/pixi-games/ninja-climb/README.md](src/lib/pixi-games/ninja-climb/README.md) | NC wiring checklist |
 | **Multiple-choice flow** | [src/lib/pixi-games/multiple-choice/MultipleChoiceFlow.md](src/lib/pixi-games/multiple-choice/MultipleChoiceFlow.md) | MC-specific deep dive |
 | **Sentence Builder** | [src/lib/pixi-games/sentence-builder/README.md](src/lib/pixi-games/sentence-builder/README.md) | Built-in picture sentence practice |
 | **API / Zod conventions** | [src/lib/README.md](src/lib/README.md) | API routes, schemas, responses |

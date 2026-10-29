@@ -135,8 +135,8 @@ const GameControlDropdown: React.FC<GameControlDropdownProps> = ({
     <DropdownMenu onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild className={className}>
         {/* Use a simple Button or just the icon as the trigger */}
-        <Button variant="navIcon" className={`border-2 border-primary-accent hover:bg-transparent hover:border-2 hover:border-primary-accent rounded-full`} aria-label="Game Settings">
-           <Settings className="" />
+        <Button variant="navIcon" className={`border-2 border-primary-accent hover:bg-transparent hover:border-2 hover:border-primary-accent rounded-full h-8 w-8 p-1.5 sm:h-10 sm:w-10 sm:p-2`} aria-label="Game Settings">
+           <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
