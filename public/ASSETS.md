@@ -19,6 +19,7 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 | `images/dark/bg_image.webp` | Dark theme |
 | `images/forest/bg_image.webp` | Forest theme |
 | `images/placeholder.webp` | Quiz/question fallbacks |
+| `images/story-styles/*.webp` | Story Creator art-style picker previews |
 | `images/splash-dash/crate_5_4.png` | Splash Dash crates |
 | `images/splash-dash/capy_spritesheet.png` | Splash Dash players |
 | `fonts/GrandstanderVF.ttf` | Game UI font |

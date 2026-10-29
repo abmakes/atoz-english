@@ -122,3 +122,75 @@ model Tag {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 }
+
+enum StoryStatus {
+  DRAFT
+  READY
+  ARCHIVED
+}
+
+enum StorySubmissionStatus {
+  SUBMITTED
+  REVIEWED
+}
+
+/// Teacher Tools: 4-panel picture story for Cambridge Movers storytelling practice.
+model Story {
+  id                    String      @id @default(cuid())
+  authorId              String      @default("admin")
+  title                 String
+  topicPrompt           String
+  tags                  String[]    // discovery tags: level, topic, grammar
+  storyType             String?
+  characterSheet        String?     // AI character description reused for image (re)generation
+  artStyle              String?     // AI art style locked at first generation
+  exampleStory          String?     // full example text shown on the printout
+  showExampleToStudents Boolean     @default(false)
+  status                StoryStatus @default(DRAFT)
+  shareToken            String      @unique
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  panels                StoryPanel[]
+  submissions           StorySubmission[]
+
+  @@index([authorId])
+}
+
+model StoryPanel {
+  id               String  @id @default(cuid())
+  storyId          String
+  order            Int     // 1-4
+  imageUrl         String? // Vercel Blob; null until generated
+  sceneDescription String  // AI scene text, reused for regeneration
+  imagePrompt      String? // full prompt used for the last generation
+  exampleSentence  String?
+  mouth            Json?   // { x, y, scale, rotation, style } normalized 0-1
+  story            Story   @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, order])
+}
+
+model StorySubmission {
+  id          String                @id @default(cuid())
+  storyId     String
+  studentName String
+  status      StorySubmissionStatus @default(SUBMITTED)
+  createdAt   DateTime              @default(now())
+  recordings  StoryRecording[]
+  story       Story                 @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@index([storyId])
+}
+
+model StoryRecording {
+  id           String @id @default(cuid())
+  submissionId String
+  panelOrder   Int    // 1-4
+  audioUrl     String // Vercel Blob
+  mimeType     String // audio/webm (Chrome/Android) or audio/mp4 (iOS Safari)
+  durationMs   Int
+  envelope     Json?  // number[] amplitude envelope (RMS per 50 ms window, 0-1)
+  submission   StorySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, panelOrder])
+}
