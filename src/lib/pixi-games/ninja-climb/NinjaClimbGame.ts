@@ -686,9 +686,15 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
 
   private _syncCamera(immediate: boolean): void {
     if (!this.playerManager || !this.mountainManager) return
+    const activeId = String(this.getState().activeTeam ?? '')
     const positions = this.playerManager.getWorldPositions()
     this.mountainManager.setCameraTargets(
-      positions.map((p) => ({ x: p.x, y: p.y })),
+      positions.map((p) => ({
+        x: p.x,
+        y: p.y,
+        stepIndex: this.playerManager.getStepIndex(p.teamId),
+        active: p.teamId === activeId,
+      })),
       immediate
     )
   }

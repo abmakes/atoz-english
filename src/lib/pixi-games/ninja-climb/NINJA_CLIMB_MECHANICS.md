@@ -70,14 +70,14 @@ When the quiz pool is short relative to summit height, questions **recycle in co
 
 ## Camera
 
-Fit-zoom on both climbers: midpoint in the play window (between sky band and bottom bar), zoom clamped to `[0.45, 1]`, eased per frame.
+Zoomed-out fit on both climbers (zoom `0.34`–`0.7`) so they stay in the play window between the sky band and the bottom bar. If the widest zoom still cannot hold both, the camera centers the active climber and a chip points up or down with how many steps the other climber is ahead or behind. Eased per frame.
 
 ## UI regions
 
 - **Top sky band:** answer options sit on soft cumulus badges (`AnswerCloudShape` — overlapping white knobs, softened as one silhouette so construction circles never show). Clustered mid-screen clear of the score panel and nav/timer, staggered rows, drifting side to side. Clicking does not fade them.
-- **Cloud and foliage frame:** `v2/clouds.png` and `v2/bush.png`, screen-fixed above the cliff and below the HUD. The center stays clear so the painted ledges stay readable.
+- **Cloud frame:** `v2/clouds.png`, screen-fixed above the cliff. `v2/bush.png` stays in the asset pack but is not drawn, so the ledge flowers are not covered by the foreground blossoms.
 - **Timer:** enlarged ring on a solid white disc, dropped below the React nav cluster (right side)
-- **Middle play window:** painted cliff (`v2/base` → repeating `v2/mid` → `v2/top`) over `v2/background`, with `v2/clouds` and `v2/bush` framing the screen. Camera fits climbers at 1.3× so characters read larger
+- **Middle play window:** painted cliff (`v2/base` → repeating `v2/mid` → `v2/top`) over `v2/background`, with `v2/clouds` framing the screen. Ninjas draw at about 168px so they read larger than the painted ledge flowers
 - **Bottom bar:** Splash Dash pattern — question image up to 200×200 (overlaps the play window), 20px gap to the question text, two corner power trays. Extra padding between Team 1 powers and the photo.
 
 ## Turn model

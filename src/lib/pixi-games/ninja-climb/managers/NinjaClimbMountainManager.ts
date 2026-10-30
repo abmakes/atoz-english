@@ -5,20 +5,23 @@ import type { PixiApplication } from '@/lib/pixi-engine/core/PixiApplication'
 import type { NinjaClimbLayoutManager } from './NinjaClimbLayoutManager'
 import type { ShortcutNodeDef } from './NinjaClimbRaceManager'
 import { buildCliffLayout, type CliffLayout, type Waypoint } from '../mountainPath'
+import { frameClimbers, type ClimberPoint, type OffscreenRival } from '../cameraFrame'
 
 const SCENE_BASE = '/images/ninja-climb/v2'
 const PROP_BASE = '/images/ninja-climb'
 
 /**
  * Painted cliff: distant vista, base → tiled mid zigzag → summit,
- * with a screen-fixed cloud and foliage frame.
+ * with a screen-fixed cloud frame. The foliage frame is not drawn.
  */
 export class NinjaClimbMountainManager {
   private view: PIXI.Container
   private world: PIXI.Container
   private backdrop: PIXI.Sprite | null = null
   private cloudFrame: PIXI.Sprite | null = null
-  private bushFrame: PIXI.Sprite | null = null
+  private rivalGuide: PIXI.Container
+  private rivalCues: OffscreenRival[] = []
+  private rivalKey = ''
   private cliff: CliffLayout | null = null
   private trailGraphics: PIXI.Graphics
   private gateSprites: Map<string, PIXI.Sprite> = new Map()
@@ -43,8 +46,10 @@ export class NinjaClimbMountainManager {
   ) {
     this.view = new PIXI.Container()
     this.world = new PIXI.Container()
+    this.rivalGuide = new PIXI.Container()
     this.trailGraphics = new PIXI.Graphics()
     this.view.addChild(this.world)
+    this.view.addChild(this.rivalGuide)
     this.eventBus.on(ENGINE_EVENTS.RESIZED, this._onResize)
   }
 
@@ -85,6 +90,7 @@ export class NinjaClimbMountainManager {
     await this._buildCliffTiles()
     await this._placeGates(nodes)
     await this._buildFrames()
+    this.view.addChild(this.rivalGuide)
 
     this.world.addChild(this.trailGraphics)
     this._drawTrail()
@@ -138,7 +144,7 @@ export class NinjaClimbMountainManager {
     }
   }
 
-  /** Side clouds and foliage, screen-fixed in front of the cliff and behind the HUD. */
+  /** Side clouds, screen-fixed in front of the cliff and behind the HUD. */
   private async _buildFrames(): Promise<void> {
     try {
       const clouds = await PIXI.Assets.load(`${SCENE_BASE}/clouds.png`)
@@ -147,14 +153,6 @@ export class NinjaClimbMountainManager {
       this.view.addChild(this.cloudFrame)
     } catch (e) {
       console.warn('NinjaClimbMountainManager: clouds failed', e)
-    }
-    try {
-      const bush = await PIXI.Assets.load(`${SCENE_BASE}/bush.png`)
-      this.bushFrame = new PIXI.Sprite(bush)
-      this._coverScreen(this.bushFrame)
-      this.view.addChild(this.bushFrame)
-    } catch (e) {
-      console.warn('NinjaClimbMountainManager: bush frame failed', e)
     }
   }
 
@@ -236,33 +234,20 @@ export class NinjaClimbMountainManager {
   }
 
   /**
-   * Update camera target from climber world positions.
+   * Fit every climber in the play window when the ninjas would still read clearly.
+   * Otherwise center the active climber and point toward anyone left outside.
    * When `immediate` is true, snap instead of easing.
    */
-  public setCameraTargets(
-    positions: Array<{ x: number; y: number }>,
-    immediate = false
-  ): void {
-    if (positions.length === 0) return
+  public setCameraTargets(climbers: ClimberPoint[], immediate = false): void {
+    if (climbers.length === 0) return
     const play = this.layoutManager.getPlayWindow(this.screenH)
-
-    let minY = Infinity
-    let maxY = -Infinity
-    let sumX = 0
-    let sumY = 0
-    for (const p of positions) {
-      minY = Math.min(minY, p.y)
-      maxY = Math.max(maxY, p.y)
-      sumX += p.x
-      sumY += p.y
-    }
-    this.targetCameraX = sumX / positions.length
-    this.targetCameraY = sumY / positions.length
-
-    const spanY = Math.max(80, maxY - minY)
-    const margin = 160
-    // 1.3× fit so the ninjas read larger on screen.
-    this.targetZoom = Math.max(0.45, Math.min(1.3, (play.height / (spanY + margin)) * 1.3))
+    const ninjaSize = this.layoutManager.getLayoutParams().ninjaDisplaySize
+    const frame = frameClimbers(climbers, play.height, ninjaSize)
+    this.targetCameraX = frame.x
+    this.targetCameraY = frame.y
+    this.targetZoom = frame.zoom
+    this.rivalCues = frame.offscreen
+    this._syncRivalGuide()
 
     if (immediate) {
       this.cameraX = this.targetCameraX
@@ -315,8 +300,76 @@ export class NinjaClimbMountainManager {
     this.layoutManager.updateLayout(width, height)
     if (this.backdrop) this._coverScreen(this.backdrop)
     if (this.cloudFrame) this._coverScreen(this.cloudFrame)
-    if (this.bushFrame) this._coverScreen(this.bushFrame)
+    this.rivalKey = ''
+    this._syncRivalGuide()
     this._applyCameraTransform()
+  }
+
+  private _syncRivalGuide(): void {
+    const key = this.rivalCues.map((cue) => `${cue.direction}:${cue.stepDelta}`).join('|')
+    if (key !== this.rivalKey) {
+      this.rivalKey = key
+      for (const child of this.rivalGuide.removeChildren()) {
+        child.destroy({ children: true })
+      }
+      for (const cue of this.rivalCues) {
+        this.rivalGuide.addChild(this._rivalChip(cue))
+      }
+    }
+    this._placeRivalGuide()
+  }
+
+  private _rivalChip(cue: OffscreenRival): PIXI.Container {
+    const steps = Math.abs(cue.stepDelta)
+    const label =
+      steps === 0
+        ? 'Same ledge'
+        : `${steps} ${steps === 1 ? 'step' : 'steps'} ${cue.stepDelta > 0 ? 'ahead' : 'behind'}`
+    const text = new PIXI.Text({
+      text: label,
+      style: {
+        fontFamily: 'Grandstander',
+        fontSize: 18,
+        fontWeight: 'bold',
+        fill: 0x163e66,
+      },
+    })
+    const padX = 14
+    const height = 40
+    const width = Math.ceil(text.width) + padX * 2 + 22
+    const chip = new PIXI.Container()
+    const bg = new PIXI.Graphics()
+    bg.roundRect(0, 0, width, height, 20).fill({ color: 0xffffff, alpha: 0.95 })
+    bg.roundRect(0, 0, width, height, 20).stroke({ width: 3, color: 0x163e66 })
+    const arrow = new PIXI.Graphics()
+    const ax = padX + 6
+    if (cue.direction < 0) {
+      arrow.poly([ax, 10, ax - 7, 24, ax + 7, 24]).fill({ color: 0x163e66 })
+    } else {
+      arrow.poly([ax - 7, 16, ax + 7, 16, ax, 30]).fill({ color: 0x163e66 })
+    }
+    text.x = padX + 18
+    text.y = (height - text.height) / 2
+    chip.addChild(bg, arrow, text)
+    return chip
+  }
+
+  private _placeRivalGuide(): void {
+    const play = this.layoutManager.getPlayWindow(this.screenH)
+    let above = 0
+    let below = 0
+    this.rivalGuide.children.forEach((chip, index) => {
+      const cue = this.rivalCues[index]
+      if (!cue) return
+      chip.x = this.screenW / 2 - chip.width / 2
+      if (cue.direction < 0) {
+        chip.y = play.top + 8 + above * 46
+        above += 1
+      } else {
+        chip.y = play.bottom - chip.height - 8 - below * 46
+        below += 1
+      }
+    })
   }
 
   public destroy(): void {

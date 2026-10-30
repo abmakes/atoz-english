@@ -31,7 +31,6 @@ export function getNinjaClimbSceneAssetUrls(): string[] {
     '/images/ninja-climb/v2/mid.png',
     '/images/ninja-climb/v2/top.png',
     '/images/ninja-climb/v2/clouds.png',
-    '/images/ninja-climb/v2/bush.png',
     '/images/ninja-climb/sky.webp',
     '/images/ninja-climb/cliff_a.webp',
     '/images/ninja-climb/cliff_b.webp',
