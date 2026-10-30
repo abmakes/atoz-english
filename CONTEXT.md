@@ -86,6 +86,7 @@ CONTEXT.md              This hub
 | **Startup / config handoff** | [.cursor/rules/GAME_STARTUP_FLOW.mdc](.cursor/rules/GAME_STARTUP_FLOW.mdc) | Engine, games, game_ui changes |
 | **Styling & themes** | [src/styles/stylingGuide.md](src/styles/stylingGuide.md) | React themes or Pixi colors/fonts |
 | **Engine architecture** | [src/lib/pixi-engine/engineHelperDoc.md](src/lib/pixi-engine/engineHelperDoc.md) | Managers, EventBus, lifecycle |
+| **PixiJS 8.17 migration** | [project_docs/PIXIJS_8_17_MIGRATION_GUIDE.md](project_docs/PIXIJS_8_17_MIGRATION_GUIDE.md) | Runtime upgrade, GIF validation, optional Layout and AI skills |
 | **Pixi / TS lessons** | [project_docs/lessons-learned.md](project_docs/lessons-learned.md) | GIFs, Assets.unload, React↔Pixi pitfalls |
 | **Adding a 3D game** | [project_docs/3D_GAME_REQUIREMENTS.md](project_docs/3D_GAME_REQUIREMENTS.md) | ThreeGame contract, events, managers, prohibitions |
 | **Tug of War ninjas** | [project_docs/TUG_OF_WAR_NINJA_ASSET_SPEC.md](project_docs/TUG_OF_WAR_NINJA_ASSET_SPEC.md) | Pose clips, painted sprite canvas rules, GLB delivery |
