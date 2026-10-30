@@ -37,7 +37,7 @@ export class SplashDashUIManager {
     private view: PIXI.Container;
 
     private bottomUIContainer: PIXI.Container;
-    private bottomUIBackground: PIXI.Graphics;
+    private bottomUIBackground!: PIXI.Graphics;
     private questionContainer: PIXI.Container;
     private questionText: PIXI.Text;
     private questionImage: PIXI.Sprite | null = null;

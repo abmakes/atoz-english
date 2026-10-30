@@ -200,7 +200,7 @@ export default function StudentSession({
   const selectedDef = selected ? getPart(selected.partId) : undefined
 
   useEffect(() => {
-    if (!customizing || !selectedId || !character) return
+    if (!customizing || !selectedId) return
     const onKey = (event: KeyboardEvent) => {
       const target = event.target
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return
