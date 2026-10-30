@@ -331,10 +331,9 @@ export class MultipleChoiceUIManager {
             button.view.y = buttonPadding + row * (buttonHeight + gap + this.shadowOffsetY);
             // ---
 
-            button.onPress.connect(() => {
+            this._bindAnswerTap(button, () => {
                 this.gameRef.handleAnswerSelected(questionId, option.id);
             });
-
             this._setupButtonInteractionEffects(button);
             optionsContainer.addChild(button.view);
             this.answerButtons.push(button);
@@ -349,15 +348,34 @@ export class MultipleChoiceUIManager {
         console.log("UIManager: Finished setupAnswerButtons (Restored themeConfig usage).");
     }
 
+    /**
+     * Select on pointerup. @pixi/ui's press signal uses `click` on desktop and
+     * `pointertap` on phones, and a press that scales the button makes the
+     * finger land outside, so the tap never counts.
+     */
+    private _bindAnswerTap(button: Button, choose: () => void): void {
+        let armed = false
+        button.view.on('pointerdown', () => {
+            armed = true
+        })
+        button.view.on('pointerup', () => {
+            if (!armed || !button.enabled) return
+            armed = false
+            choose()
+        })
+        button.view.on('pointerupoutside', () => {
+            armed = false
+        })
+    }
+
     private _setupButtonInteractionEffects(button: Button): void {
-        // Use theme colors if desired, otherwise keep simple tints
         const hoverTint = 0xDDDDDD;
         const defaultTint = 0xFFFFFF;
         button.onHover.connect(() => button.view.tint = hoverTint);
         button.onOut.connect(() => button.view.tint = defaultTint);
-        button.onDown.connect(() => button.view.scale.set(0.95));
-        button.onUp.connect(() => button.view.scale.set(1.0));
-        button.onUpOut.connect(() => button.view.scale.set(1.0));
+        button.onDown.connect(() => button.view.tint = hoverTint);
+        button.onUp.connect(() => button.view.tint = defaultTint);
+        button.onUpOut.connect(() => button.view.tint = defaultTint);
     }
 
     public drawBackgroundPanel(
