@@ -140,6 +140,21 @@ export function createFlagTexture(): THREE.CanvasTexture {
   })
 }
 
+/** Soft gold radial used as a Super Saiyan aura behind a ninja sprite. */
+export function createAuraTexture(): THREE.CanvasTexture {
+  return canvasTexture(128, 128, (ctx) => {
+    const gradient = ctx.createRadialGradient(64, 64, 6, 64, 64, 62)
+    gradient.addColorStop(0, 'rgba(255, 250, 210, 0.95)')
+    gradient.addColorStop(0.35, 'rgba(255, 214, 70, 0.7)')
+    gradient.addColorStop(0.7, 'rgba(255, 170, 30, 0.28)')
+    gradient.addColorStop(1, 'rgba(255, 140, 0, 0)')
+    ctx.fillStyle = gradient
+    ctx.beginPath()
+    ctx.arc(64, 64, 62, 0, Math.PI * 2)
+    ctx.fill()
+  })
+}
+
 /** Soft chalk stripe for each team's win line on the dirt. */
 export function createChalkTexture(tint: string): THREE.CanvasTexture {
   return canvasTexture(32, 256, (ctx) => {

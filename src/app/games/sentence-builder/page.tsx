@@ -1,12 +1,5 @@
-import type { Metadata } from 'next'
-import SentenceBuilderScreen from '@/components/game_ui/sentence-builder/SentenceBuilderScreen'
+import { redirect } from 'next/navigation'
 
-export const metadata: Metadata = {
-  title: 'Sentence Builder — PlaytoZ',
-  description:
-    'Build English sentences one word at a time from a picture. Practice present simple, present continuous, WH questions, be, has/have, and past simple.',
-}
-
-export default function SentenceBuilderPage() {
-  return <SentenceBuilderScreen />
+export default function SentenceBuilderRedirectPage() {
+  redirect('/practice/sentence-builder')
 }

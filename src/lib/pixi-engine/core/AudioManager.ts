@@ -254,24 +254,19 @@ export class AudioManager {
   }
 
   /**
-   * Stop all currently playing sounds
+   * Stop all sounds owned by this manager.
+   *
+   * Must not call Howler.stop() — that stops every Howl in the page, including
+   * a surviving AudioManager during React Strict Mode remount.
    */
   public stopAll(): void {
-    console.log("Stopping all sounds via Howler.stop()");
-    // Use Howler's global stop, which should trigger stop events if needed
-    Howler.stop(); 
-    // Clear tracked music state
-    this.currentMusicId = null; 
+    console.log("Stopping all sounds owned by this AudioManager");
+    this.sounds.forEach((soundData, id) => {
+      console.log(`   -> Stopping sound: ${id}`);
+      soundData.sound.stop();
+    });
+    this.currentMusicId = null;
     this.currentMusicPlayingId = null;
-    // Note: Howler.stop() stops everything. We might need more granular control
-    // if we only want to stop *our* managed sounds, but this is simpler for now.
-    // Alternative: Iterate this.sounds and call stop() on each.
-    // this.sounds.forEach((soundData, id) => {
-    //     console.log(`Stopping sound: ${id}`);
-    //     soundData.sound.stop();
-    // });
-    // this.currentMusicId = null;
-    // this.currentMusicPlayingId = null;
   }
 
   /**
@@ -388,13 +383,15 @@ export class AudioManager {
   }
 
   /**
-   * Clean up all sounds and reset the manager
+   * Clean up all sounds owned by this manager.
+   *
+   * Must not call Howler.stop() or Howler.unload() — both are process-global.
+   * Howler.unload() also closes the shared Web Audio context, which would kill
+   * a surviving game's music after a Strict Mode / racing destroy.
    */
   public destroy(): void {
     console.log('Destroying AudioManager...');
-    // Use stopAll to clear Howler state and our tracked state
-    this.stopAll(); 
-    // Unload all sounds
+    this.stopAll();
     this.sounds.forEach((soundData, id) => {
          console.log(`   -> Unloading sound: ${id}`);
          soundData.sound.unload();
@@ -403,7 +400,5 @@ export class AudioManager {
     this.currentMusicId = null;
     this.currentMusicPlayingId = null;
     console.log('AudioManager destroyed.');
-    // No need to reset Howler global volume here, as it persists across instances
-    Howler.unload();
   }
 } 

@@ -72,10 +72,12 @@ export default function Navigation() {
   const clerkActive = useIsClerkActive();
 
   const isGamePage = pathname.startsWith('/games/') && pathname.length > '/games/'.length;
+  const isPracticePlayPage =
+    pathname.startsWith('/practice/') && pathname.length > '/practice/'.length;
   // Student-facing story pages (recording / watching) get a clean, nav-free screen.
   const isStudentStoryPage = pathname.startsWith('/story/');
 
-  if (isGamePage || isStudentStoryPage) {
+  if (isGamePage || isPracticePlayPage || isStudentStoryPage) {
     return null;
   }
 
@@ -87,6 +89,7 @@ export default function Navigation() {
 
       <div className="hidden lg:flex gap-6 h-full items-center grandstander">
         <Link href="/games" className="text-[--text-color] transition-colors hover:font-semibold">Games</Link>
+        <Link href="/practice" className="text-[--text-color] transition-colors hover:font-semibold">Practice</Link>
         {clerkActive ? (
           <SignedIn>
             <Link href="/create" className="text-[--text-color] transition-colors hover:font-semibold">Create</Link>
@@ -126,6 +129,13 @@ export default function Navigation() {
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Games
+            </Link>
+            <Link
+              href="/practice"
+              className="text-[--text-color] transition-colors hover:font-semibold py-2"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Practice
             </Link>
             {clerkActive ? (
               <SignedIn>

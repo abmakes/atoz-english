@@ -5,6 +5,8 @@ Interactive educational quiz games built with **Next.js 15**, **React 19**, **Ty
 ## Features
 
 - **Multiple-choice** and **Splash Dash** PixiJS games (timers, scoring, power-ups, teams)
+- **Practice** tab (`/practice`): single-player games such as Sentence Builder
+- **Teacher Tools** (`/tools`, signed-in): Story Creator, temporary Image curator, and other classroom helpers
 - Modular engine: `EventBus`, `RuleEngine`, `ScoringManager`, `TimerManager`, `PowerUpManager`, `AssetLoader`
 - Quiz CRUD with Zod-validated REST APIs and Prisma/PostgreSQL
 - Optional **Clerk** auth (UI + mutating API routes)
@@ -26,6 +28,8 @@ Interactive educational quiz games built with **Next.js 15**, **React 19**, **Ty
 | Tests | Vitest |
 
 ## Getting Started
+
+Requires **Node.js 22.23.4+** (24.22.1+ or 26.12.1+ also fine). Node 20 is end-of-life and has no fix for the October 2026 Brotli RCE (CVE-2026-111497).
 
 1. Clone the repo and install dependencies:
    ```bash
@@ -69,7 +73,7 @@ src/app/                App Router pages + REST API routes
 src/components/         React UI (game shell, quiz management, shadcn)
 src/lib/
   pixi-engine/          Core Pixi engine (BaseGame, managers, UI)
-  pixi-games/           Game implementations (multiple-choice, splash-dash)
+  pixi-games/           Game implementations (multiple-choice, splash-dash, sentence-builder)
   auth.ts               Clerk requireAuth helper
   schemas.ts            Shared Zod schemas
   prisma.ts             Prisma client + retry helpers

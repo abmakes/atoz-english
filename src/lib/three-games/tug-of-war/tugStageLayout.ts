@@ -19,7 +19,7 @@ export const TUG_NINJA_SLOT_X = [3.3, 4.75, 6.2] as const
 /** Width the six ninjas need before the row starts to compress. */
 export const TUG_LAYOUT_WIDTH = 15.4
 
-/** Rope-centre travel at |offset| = 1; each team's win line sits here. */
+/** Rope-centre travel at a full-round lead (|normalized offset| = 1). */
 export const TUG_ROPE_TRAVEL = 1.6
 
 /** Share of any vertical crop taken from the bottom of the plate. */

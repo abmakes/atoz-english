@@ -20,6 +20,8 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 | `images/forest/bg_image.webp` | Forest theme |
 | `images/placeholder.webp` | Quiz/question fallbacks |
 | `images/story-styles/*.webp` | Story Creator art-style picker previews |
+| `images/thoughts/*.png` | Thoughts sticker atlases (heads, mouths, eyes, parts) |
+| `images/thoughts/manifest.json` | Thoughts part ids and frame rectangles |
 | `images/splash-dash/crate_5_4.png` | Splash Dash crates |
 | `images/splash-dash/capy_spritesheet.png` | Splash Dash players |
 | `images/sentence-builder/*.jpg` | Sentence Builder scene pictures (20) |
@@ -27,7 +29,13 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 | `images/ninja-climb/ninja_red_idle.webp` | Ninja Climb red team |
 | `images/ninja-climb/ninja_blue_idle_b.webp` | Ninja Climb blue idle pose B |
 | `images/ninja-climb/ninja_red_idle_b.webp` | Ninja Climb red idle pose B |
-| `images/ninja-climb/sky.webp` | Ninja Climb sky |
+| `images/ninja-climb/v2/background.png` | Ninja Climb distant mountains |
+| `images/ninja-climb/v2/base.png` | Ninja Climb start cliff |
+| `images/ninja-climb/v2/mid.png` | Ninja Climb tiled zigzag |
+| `images/ninja-climb/v2/top.png` | Ninja Climb summit |
+| `images/ninja-climb/v2/clouds.png` | Ninja Climb cloud frame |
+| `images/ninja-climb/v2/bush.png` | Ninja Climb foliage frame |
+| `images/ninja-climb/sky.webp` | Ninja Climb legacy sky |
 | `images/ninja-climb/cliff_foot.webp` | Ninja Climb mountain foot (always bottom) |
 | `images/ninja-climb/cliff_mid_brown.webp` | Ninja Climb mid brown tile (alternates) |
 | `images/ninja-climb/cliff_mid_tone_a.webp` | Ninja Climb mid two-tone A (alternates) |
@@ -51,7 +59,7 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 ## Ninja Climb notes
 
 - Character strips: `ninja_{blue|red}_idle.webp` / `idle_b.webp` (2 frames each), `ninja_{blue|red}_climb.png` (4 frames), `ninja_{blue|red}_rope.webp` (action).
-- Mountain tiles stack vertically: `cliff_foot.webp` (always base) → alternating `cliff_mid_brown.webp` / `cliff_mid_tone_a.webp` / `cliff_mid_tone_b.webp` (count follows climb height) → `cliff_top.webp` (always summit). Uniform width scale; no mirroring. Legacy `cliff_{a|b|c}.webp` and `summit.webp` remain as aliases. Ledge props: `plateau_{1|2|3}.webp`.
+- Mountain scene is `images/ninja-climb/v2/`: `background.png` (screen vista), `base.png` (start), `mid.png` tiled for the climb, `top.png` (finish line), plus screen-fixed `clouds.png` and `bush.png`. Hop points are the measured grass pads in `mountainPath.ts`, so feet land on the painted ledges. Legacy `cliff_*.webp` tiles remain on disk but are not used by the climb.
 - UI: procedural `AnswerCloudShape` for sky answers; `deco_{tree|bush|hut}.webp` for sparse ledge props.
 - Shared rope VFX: `images/shared/kunai_tip.png`, `images/shared/rope_segment.png` (used by `RopeProjectile`).
 - Mode picker thumb: `public/images/marketing/ninjaclimb_thumb.png`.
@@ -67,3 +75,12 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 ```bash
 npm run verify-assets
 ```
+
+## Thoughts facial asset pack
+
+- Location: `public/images/thoughts/`; catalog and frame rectangles: `manifest.json`.
+- 10 transparent PNG atlases contain 88 selectable parts / 172 frames: 12 five-frame mouths, 12 four-frame blinking eyes, 60 static accessories, and 4 blank heads.
+- Three mixable styles: photographic cutout, cartoon, pencil sketch. Hair, single ears, noses, glasses, hats, bows, mustaches, and eyebrows are included.
+- Original generated artwork made with the built-in image_gen tool on 2026-10-30. Exact prompts and rendering notes are included in the asset folder. No runtime AI face generation.
+- Use explicit manifest rectangles: source art gutters are not perfectly uniform. Validate with `node scripts/build-thoughts-asset-manifest.mjs`.
+- Not yet wired into a Thoughts UI. Arbitrary drawn-line mouth deformation remains a separate implementation feature.

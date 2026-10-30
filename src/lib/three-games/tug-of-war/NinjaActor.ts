@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import type { TugNinjaClip, TugSide } from './tugOfWarLogic'
 import { TUG_NINJA_CLIPS } from './tugOfWarLogic'
-import { createCutoutMaterial } from './tugMaterials'
+import { createAuraMaterial, createCutoutMaterial } from './tugMaterials'
 import { TUG_NINJA_SPRITE, tugNinjaPx } from './tugStageLayout'
 
 export type { TugNinjaClip }
@@ -153,6 +153,7 @@ export interface NinjaActorOptions {
   baselineY?: number
   spriteScale?: number
   shadowTexture?: THREE.Texture
+  glowTexture?: THREE.Texture
   renderOrder?: number
 }
 
@@ -174,6 +175,8 @@ export class NinjaActor {
   private readonly material: THREE.MeshBasicMaterial
   private readonly body: THREE.Mesh
   private readonly shadow: THREE.Mesh | null
+  private readonly glow: THREE.Mesh | null
+  private readonly glowMaterial: THREE.MeshBasicMaterial | null
   private readonly phase: number
   private playing: { name: TugNinjaClip; elapsed: number } | null = null
   private queuedIdle = false
@@ -181,6 +184,8 @@ export class NinjaActor {
   private baselineY: number
   private worldX: number
   private pose: TugNinjaPose = 'pull'
+  private glowing = false
+  private glowElapsed = 0
 
   constructor(options: NinjaActorOptions) {
     this.side = options.side
@@ -200,6 +205,21 @@ export class NinjaActor {
     this.body.name = 'ninja-sprite'
     this.body.renderOrder = options.renderOrder ?? 10
     this.group.add(this.body)
+
+    if (options.glowTexture) {
+      this.glowMaterial = createAuraMaterial(options.glowTexture, 0)
+      this.glow = new THREE.Mesh(
+        new THREE.PlaneGeometry(1, 1),
+        this.glowMaterial
+      )
+      this.glow.name = 'ninja-aura'
+      this.glow.visible = false
+      this.glow.renderOrder = this.body.renderOrder - 1
+      this.group.add(this.glow)
+    } else {
+      this.glow = null
+      this.glowMaterial = null
+    }
 
     if (options.shadowTexture) {
       this.shadow = new THREE.Mesh(
@@ -231,7 +251,21 @@ export class NinjaActor {
     return this.pose
   }
 
+  public setGlow(enabled: boolean): void {
+    this.glowing = enabled
+    if (!enabled) {
+      this.glowElapsed = 0
+      if (this.glow) this.glow.visible = false
+      if (this.glowMaterial) this.glowMaterial.opacity = 0
+    }
+  }
+
+  public get isGlowing(): boolean {
+    return this.glowing
+  }
+
   public update(deltaMs: number): void {
+    this._updateGlow(deltaMs)
     if (!this.playing) return
     const definition = CLIPS[this.playing.name]
     this.playing.elapsed += deltaMs
@@ -313,6 +347,30 @@ export class NinjaActor {
     }
 
     this.group.position.set(this.worldX, this.baselineY, this.group.position.z)
+    this._layoutGlow()
+  }
+
+  private _updateGlow(deltaMs: number): void {
+    if (!this.glow || !this.glowMaterial || !this.glowing) return
+    this.glowElapsed += deltaMs
+    const pulse = 0.5 + 0.5 * Math.sin(this.glowElapsed / 180)
+    this.glow.visible = true
+    this.glowMaterial.opacity = 0.45 + 0.4 * pulse
+    this._layoutGlow(pulse)
+  }
+
+  private _layoutGlow(pulse = 0.5): void {
+    if (!this.glow) return
+    const s = this.spriteScale
+    const width = tugNinjaPx(TUG_NINJA_SPRITE.canvasWidthPx, s)
+    const height = tugNinjaPx(TUG_NINJA_SPRITE.canvasHeightPx, s)
+    const swell = 1.35 + 0.18 * pulse
+    this.glow.position.set(
+      this.body.position.x,
+      this.body.position.y + height * 0.18,
+      -0.02
+    )
+    this.glow.scale.set(width * swell, height * swell * 1.05, 1)
   }
 }
 

@@ -336,7 +336,7 @@ Payload helper: `createQuizRoomAnswerPayload` in `quizRoomLogic.ts`.
 
 ## Mode: Tug of War (`tug-of-war-3d`)
 
-Turn-based, **best of 3** (first to 2 round wins). Two teams required. Question card, timer, tug meter, and round dots are **React HUD overlays** (`hud` flags on the mode definition).
+Turn-based, **first to 3 round points**. Two teams required. Question card, timer, tug meter, and round dots are **React HUD overlays** (`hud` flags on the mode definition).
 
 The Three scene is a painted 2.5D stage (art in `public/images/tug-of-war/`, URLs in `tugArt.ts`):
 
@@ -347,7 +347,9 @@ The Three scene is a painted 2.5D stage (art in `public/images/tug-of-war/`, URL
 
 - Eligibility: same as 3D Quiz Room (MC, 2–4 answers). Setup forces Team Blue / Team Red.
 - Timer id: `tugOfWarQuestionTimer`.
-- Correct answer pulls toward the active team (base 0.18 + up to 0.12 speed bonus from remaining time). Wrong: opponent gets 50% of base. Timeout: 25% of base. `|offset| >= 1` wins the round; rope resets.
+- Discrete steps: a correct answer pulls **1 step toward the active team**. A miss or timeout **does not move the rope** (the opponent is not awarded a step). A **lead of 2** scores 1 round point and resets the rope. **Match win is first to 3 round points**, not best-of-3 (first to 2).
+- Streak double: after **3 correct in a row** for that team, the next correct is worth **2 steps**. The bonus repeats every four consecutive correct answers and clears on a miss.
+- Super Saiyan glow: ninjas get a gold additive aura while that team's next answer is the streak double, or while a classroom buff is active (`PowerUpManager`).
 - Questions exhausted: more round wins, then current rope advantage, then a draw.
 - Ninja clip names and GLB delivery: [TUG_OF_WAR_NINJA_ASSET_SPEC.md](TUG_OF_WAR_NINJA_ASSET_SPEC.md).
 - Pure logic: `tugOfWarLogic.ts` (unit-tested without WebGL).

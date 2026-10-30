@@ -24,7 +24,9 @@ The play canvas stays opaque, with `#f7fbff` as its base color, and the pale was
 | `content.ts` | 20 scenes and eight 20-prompt grammar banks |
 | `round.ts` | Scoring, penalties, score-run and survival queues |
 | `SentenceBuilderGame.ts` | PixiJS v8 view. One `Application` is created in `SentenceBuilderScreen` and destroyed on unmount |
-| `src/app/games/sentence-builder/page.tsx` | Route |
+| `src/app/practice/sentence-builder/page.tsx` | Play route |
+| `src/app/practice/page.tsx` | Practice hub (single-player games) |
+| `src/app/games/sentence-builder/page.tsx` | Redirects to `/practice/sentence-builder` |
 
 Theme colors come from `getPixiThemeConfig('default')`. Scene textures are loaded with `PIXI.Assets` and unloaded in `destroy()`.
 

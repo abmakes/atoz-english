@@ -100,9 +100,7 @@ export function getEligibleGameModes(quiz: EligibilityQuiz): GameModeId[] {
   if (isNinjaClimbEligible(quiz)) {
     modes.push('ninja-climb')
   }
-  if (isQuizRoom3dEligible(quiz)) {
-    modes.push('quiz-room-3d')
-  }
+  // quiz-room-3d stays in the registry for direct URLs, not classroom pickers.
   if (isTugOfWar3dEligible(quiz)) {
     modes.push('tug-of-war-3d')
   }

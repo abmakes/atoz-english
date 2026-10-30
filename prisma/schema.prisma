@@ -194,3 +194,53 @@ model StoryRecording {
 
   @@unique([submissionId, panelOrder])
 }
+
+enum ThoughtChallengeStatus {
+  DRAFT
+  READY
+  ARCHIVED
+}
+
+enum ThoughtSubmissionStatus {
+  SUBMITTED
+  APPROVED
+  HIDDEN
+}
+
+/// Teacher tool: one speaking prompt and a class link of sticker talking heads.
+model ThoughtChallenge {
+  id                 String                 @id @default(cuid())
+  authorId           String                 @default("admin")
+  title              String
+  prompt             String
+  status             ThoughtChallengeStatus @default(DRAFT)
+  acceptingResponses Boolean                @default(true)
+  showGallery        Boolean                @default(true)
+  allowFunnyVoices   Boolean                @default(true)
+  shareToken         String                 @unique
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  submissions        ThoughtSubmission[]
+
+  @@index([authorId])
+}
+
+model ThoughtSubmission {
+  id          String                  @id @default(cuid())
+  challengeId String
+  studentName String
+  character   Json
+  voiceEffect String                  @default("original")
+  /// Blob URL. Never send this to the browser; stream it from an API route.
+  audioPath   String
+  mimeType    String
+  durationMs  Int
+  envelope    Json
+  clientKey   String
+  status      ThoughtSubmissionStatus @default(SUBMITTED)
+  createdAt   DateTime                @default(now())
+  challenge   ThoughtChallenge        @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, clientKey])
+  @@index([challengeId, createdAt])
+}

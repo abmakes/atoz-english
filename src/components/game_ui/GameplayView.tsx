@@ -142,6 +142,13 @@ const GameplayView: React.FC<GameplayViewProps> = ({
   }, []);
   // -------------------------------------
 
+  const handlePixiGameOverRef = useRef(handlePixiGameOver);
+  handlePixiGameOverRef.current = handlePixiGameOver;
+  const handlePixiScoreUpdateRef = useRef(handlePixiScoreUpdate);
+  handlePixiScoreUpdateRef.current = handlePixiScoreUpdate;
+  const handlePixiActiveTeamChangedRef = useRef(handlePixiActiveTeamChanged);
+  handlePixiActiveTeamChangedRef.current = handlePixiActiveTeamChanged;
+
   // Optional: Add effect to log state whenever it changes
   useEffect(() => {
     console.log("React activeTeamId state CHANGED TO:", activeTeamId);
@@ -160,7 +167,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
 
   // --- Renderer-neutral runtime initialization effect ---
   useEffect(() => {
-    if (!stableConfig || !gameMountPointRef.current || runtimeRef.current) {
+    if (!stableConfig || !gameMountPointRef.current) {
       return;
     }
 
@@ -172,27 +179,43 @@ const GameplayView: React.FC<GameplayViewProps> = ({
 
     let cancelled = false;
     let runtime: GameRuntime | null = null;
+    const onGameEnded = () => handlePixiGameOverRef.current();
+    const onScoreUpdated = (payload: ScoringScoreUpdatedPayload) =>
+      handlePixiScoreUpdateRef.current(payload);
+    const onActiveTeamChanged = (payload: GameStateActiveTeamChangedPayload) =>
+      handlePixiActiveTeamChangedRef.current(payload);
 
     void runtimeFactoryRef.current()
       .then(async (createdRuntime) => {
         runtime = createdRuntime;
+        // React Strict Mode remounts before the async factory resolves. Init
+        // emits ENGINE_READY_FOR_GAME and starts background music, so a
+        // discarded instance must never reach init() (that is the double-track).
+        if (cancelled) {
+          await createdRuntime.destroy();
+          return;
+        }
+
         runtimeRef.current = createdRuntime;
         await createdRuntime.init({
           target: gameMountPointRef.current!,
           config: stableConfig,
         });
         if (cancelled) {
+          if (runtimeRef.current === createdRuntime) {
+            runtimeRef.current = null;
+          }
           await createdRuntime.destroy();
           return;
         }
 
         const services = createdRuntime.getServices();
         servicesRef.current = services;
-        services.eventBus.on(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
-        services.eventBus.on(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
+        services.eventBus.on(GAME_STATE_EVENTS.GAME_ENDED, onGameEnded);
+        services.eventBus.on(SCORING_EVENTS.SCORE_UPDATED, onScoreUpdated);
         services.eventBus.on(
           GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED,
-          handlePixiActiveTeamChanged
+          onActiveTeamChanged
         );
         setRuntimeReady(true);
       })
@@ -209,11 +232,11 @@ const GameplayView: React.FC<GameplayViewProps> = ({
       setRuntimeReady(false);
       const services = servicesRef.current;
       if (services) {
-        services.eventBus.off(GAME_STATE_EVENTS.GAME_ENDED, handlePixiGameOver);
-        services.eventBus.off(SCORING_EVENTS.SCORE_UPDATED, handlePixiScoreUpdate);
+        services.eventBus.off(GAME_STATE_EVENTS.GAME_ENDED, onGameEnded);
+        services.eventBus.off(SCORING_EVENTS.SCORE_UPDATED, onScoreUpdated);
         services.eventBus.off(
           GAME_STATE_EVENTS.ACTIVE_TEAM_CHANGED,
-          handlePixiActiveTeamChanged
+          onActiveTeamChanged
         );
       }
 
@@ -222,13 +245,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
       servicesRef.current = null;
       void activeRuntime?.destroy();
     };
-  }, [
-    stableConfig,
-    gameMountPointRef,
-    handlePixiGameOver,
-    handlePixiScoreUpdate,
-    handlePixiActiveTeamChanged,
-  ]);
+  }, [stableConfig, gameMountPointRef]);
 
   // Start only after this render so HUD overlays (question card, timer)
   // can subscribe before the first QUESTION_SHOWN / TIMER_STARTED events.

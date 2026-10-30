@@ -94,32 +94,32 @@ describe('isNinjaClimbEligible', () => {
 })
 
 describe('getEligibleGameModes', () => {
-  it('includes Team Quiz, Splash Dash, Ninja Climb, and 3D modes when eligible', () => {
+  it('includes Team Quiz, Splash Dash, Ninja Climb, and Tug of War when eligible', () => {
     expect(getEligibleGameModes({ questions: [shortMc] })).toEqual([
       'multiple-choice',
       'splash-dash',
       'ninja-climb',
-      'quiz-room-3d',
       'tug-of-war-3d',
     ])
+    expect(getEligibleGameModes({ questions: [shortMc] })).not.toContain('quiz-room-3d')
   })
 
-  it('keeps Ninja Climb and 3D modes when Splash Dash answers are too long', () => {
+  it('keeps Ninja Climb and Tug of War when Splash Dash answers are too long', () => {
     const long = 'x'.repeat(SPLASH_DASH_MAX_ANSWER_LENGTH + 1)
     expect(
       getEligibleGameModes({
         questions: [{ type: QuestionType.MULTIPLE_CHOICE, answers: [long, 'B'] }],
       })
-    ).toEqual(['multiple-choice', 'ninja-climb', 'quiz-room-3d', 'tug-of-war-3d'])
+    ).toEqual(['multiple-choice', 'ninja-climb', 'tug-of-war-3d'])
   })
 
-  it('only includes Team Quiz and 3D modes when Ninja Climb answers are too long', () => {
+  it('only includes Team Quiz and Tug of War when Ninja Climb answers are too long', () => {
     const long = 'x'.repeat(NINJA_CLIMB_MAX_ANSWER_LENGTH + 1)
     expect(
       getEligibleGameModes({
         questions: [{ type: QuestionType.MULTIPLE_CHOICE, answers: [long, 'B'] }],
       })
-    ).toEqual(['multiple-choice', 'quiz-room-3d', 'tug-of-war-3d'])
+    ).toEqual(['multiple-choice', 'tug-of-war-3d'])
   })
 })
 

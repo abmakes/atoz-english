@@ -118,6 +118,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             console.log("[MultipleChoiceGame] initImplementation: Awaiting Promise.all for engine assets and game data...");
             await Promise.all([engineAssetsPromise, gameDataPromise]);
             console.log("[MultipleChoiceGame] initImplementation: Promise.all COMPLETED. All assets/data loaded.");
+            if (this.isDestroyed) return;
 
             // Now that loading is done, hide the transition screen
             console.log("[MultipleChoiceGame] initImplementation: Calling hideTransition()...");
@@ -135,6 +136,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                 autoHide: true
             });
             console.log("[MultipleChoiceGame] initImplementation: Turn transition completed.");
+            if (this.isDestroyed) return;
 
             // Proceed with UI setup using loaded data
             console.log("[MultipleChoiceGame] initImplementation: Ensuring font loaded...");
@@ -196,6 +198,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
                 autoHide: true,
                 questionCounter: { current: firstQuestionIndex + 1, total: totalQuestions }
             });
+            if (this.isDestroyed) return;
 
             // Show the first question using the sequencer
             console.log("[MultipleChoiceGame] initImplementation: Calling _showQuestion() for first question...");
@@ -342,6 +345,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
      * Shows the next question using Data and UI Managers.
      */
     private _showQuestion(): void {
+        if (this.isDestroyed) return;
         if (!this.dataManager || !this.uiManager) {
             console.error("Cannot show question: Managers not initialized.");
             this._triggerGameOver();
@@ -514,7 +518,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         // --- Transition Logic ---
         await new Promise(resolve => setTimeout(resolve, 1500)); // Feedback delay
 
-        if (this.getState().hasTriggeredGameOver) { return; }
+        if (this.isDestroyed || this.getState().hasTriggeredGameOver) { return; }
 
         if (isSequenceFinished) {
             this._triggerGameOver();
@@ -570,7 +574,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             });
             console.log("[MultipleChoiceGame] _handleAnswerSelected: AFTER await showTransition (turn).");
 
-            if (this.getState().hasTriggeredGameOver) {
+            if (this.isDestroyed || this.getState().hasTriggeredGameOver) {
                 console.log("[MultipleChoiceGame] _handleAnswerSelected: Game over detected after turn transition. Exiting.");
                 return; 
             }
@@ -578,7 +582,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
             console.log("[MultipleChoiceGame] _handleAnswerSelected: Calling _showQuestion() for next turn...");
             this._showQuestion();
             console.log("[MultipleChoiceGame] _handleAnswerSelected: AFTER _showQuestion() for next turn.");
-            this.uiManager.setAnswerButtonsEnabled(true);
+            this.uiManager?.setAnswerButtonsEnabled(true);
         }
     }
     
@@ -763,7 +767,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
         await new Promise(resolve => setTimeout(resolve, 1500)); // Feedback delay
         console.log("[MultipleChoiceGame] _handleTimerComplete: Finished feedback delay.");
 
-        if (this.getState().hasTriggeredGameOver) { 
+        if (this.isDestroyed || this.getState().hasTriggeredGameOver) { 
             console.log("[MultipleChoiceGame] _handleTimerComplete: Game over detected after feedback delay. Exiting.");
             return; 
         } 
@@ -824,7 +828,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
              });
              console.log("[MultipleChoiceGame] _handleTimerComplete: AFTER await showTransition (turn)."); 
 
-             if (this.getState().hasTriggeredGameOver) {
+             if (this.isDestroyed || this.getState().hasTriggeredGameOver) {
                   console.log("[MultipleChoiceGame] _handleTimerComplete: Game over detected after turn transition. Exiting.");
                   return;
              }
@@ -833,7 +837,7 @@ export class MultipleChoiceGame extends BaseGame<MultipleChoiceGameState> {
              this._showQuestion();
              console.log("[MultipleChoiceGame] _handleTimerComplete: AFTER _showQuestion() for next turn."); 
 
-             this.uiManager.setAnswerButtonsEnabled(true);
+             this.uiManager?.setAnswerButtonsEnabled(true);
              console.log("[MultipleChoiceGame] _handleTimerComplete: End of method."); 
         }
     }

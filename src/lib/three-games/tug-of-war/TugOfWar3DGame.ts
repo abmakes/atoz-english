@@ -4,10 +4,12 @@ import {
   GAME_EVENTS,
   GAME_STATE_EVENTS,
   HUD_EVENTS,
+  POWERUP_EVENTS,
   TIMER_EVENTS,
   TUG_EVENTS,
   type HudAnswerSelectedPayload,
   type HudQuestionShownPayload,
+  type PowerUpEventPayload,
   type TimerEventPayload,
 } from '@/lib/pixi-engine/core/EventTypes'
 import { GamePhase } from '@/lib/pixi-engine/core/GameStateManager'
@@ -25,6 +27,7 @@ import { TugDust, TugPetals } from './tugEffects'
 import { TUG_ART } from './tugArt'
 import { createCutoutMaterial } from './tugMaterials'
 import {
+  createAuraTexture,
   createChalkTexture,
   createDustTexture,
   createFlagTexture,
@@ -45,9 +48,8 @@ import {
 import {
   TUG_NINJAS_PER_TEAM,
   TUG_QUESTION_TIMER_ID,
-  applyPull,
+  applyTugAnswer,
   canReplayHudQuestion,
-  computePullImpulse,
   createTugAnswerPayload,
   createTugMatchState,
   isTugOfWarQuestionEligible,
@@ -57,6 +59,9 @@ import {
   shouldEmitOffset,
   sideForTeam,
   stepDisplayedOffset,
+  streakForTeam,
+  teamHasSuperSaiyanGlow,
+  tugNormalizedOffset,
   type TugSide,
 } from './tugOfWarLogic'
 
@@ -76,8 +81,10 @@ interface TugArt {
 }
 
 /**
- * Turn-based, best-of-3 tug of war. Question UI lives in React; this class
- * owns the painted stage, rope, ninjas, and round/match rules.
+ * Turn-based tug of war: lead of 2 steps wins a round, first to 3
+ * round points wins the match. Misses do not move the rope.
+ * Question UI lives in React; this class owns the painted stage, rope,
+ * ninjas, and round/match rules.
  */
 export class TugOfWar3DGame implements ThreeGame {
   private readonly scene: THREE.Scene
@@ -108,6 +115,7 @@ export class TugOfWar3DGame implements ThreeGame {
   private rope: TugRope | null = null
   private dust: TugDust | null = null
   private petals: TugPetals | null = null
+  private auraTexture: THREE.Texture | null = null
   private shakeMs = 0
 
   constructor(private readonly context: ThreeGameContext) {
@@ -159,7 +167,20 @@ export class TugOfWar3DGame implements ThreeGame {
       TIMER_EVENTS.TIMER_COMPLETED,
       this.handleTimerCompleted
     )
+    this.context.services.eventBus.on(
+      POWERUP_EVENTS.ACTIVATED,
+      this.handlePowerUpChanged
+    )
+    this.context.services.eventBus.on(
+      POWERUP_EVENTS.DEACTIVATED,
+      this.handlePowerUpChanged
+    )
+    this.context.services.eventBus.on(
+      POWERUP_EVENTS.EXPIRED,
+      this.handlePowerUpChanged
+    )
     this._emitOffset(true)
+    this._syncTeamGlow()
   }
 
   public start(): void {
@@ -247,6 +268,18 @@ export class TugOfWar3DGame implements ThreeGame {
       TIMER_EVENTS.TIMER_COMPLETED,
       this.handleTimerCompleted
     )
+    this.context.services.eventBus.off(
+      POWERUP_EVENTS.ACTIVATED,
+      this.handlePowerUpChanged
+    )
+    this.context.services.eventBus.off(
+      POWERUP_EVENTS.DEACTIVATED,
+      this.handlePowerUpChanged
+    )
+    this.context.services.eventBus.off(
+      POWERUP_EVENTS.EXPIRED,
+      this.handlePowerUpChanged
+    )
     if (this.context.services.timerManager.getTimer(QUESTION_TIMER_ID)) {
       this.context.services.timerManager.removeTimer(QUESTION_TIMER_ID)
     }
@@ -265,6 +298,8 @@ export class TugOfWar3DGame implements ThreeGame {
       disposeTugArt(this.art)
       this.art = null
     }
+    this.auraTexture?.dispose()
+    this.auraTexture = null
   }
 
   private _showNextQuestion(): void {
@@ -332,29 +367,28 @@ export class TugOfWar3DGame implements ThreeGame {
       this.context.services.timerManager.removeTimer(QUESTION_TIMER_ID)
     }
 
-    const impulse = computePullImpulse({
+    const result = applyTugAnswer(this.match, this.activeTeamIndex, {
       isCorrect: payload.isCorrect,
       timedOut,
-      remainingTimeMs,
-      durationMs: this.durationMs,
     })
-    const result = applyPull(this.match, this.activeTeamIndex, impulse)
     this.match = {
       ...result.state,
       displayedOffset: this.match.displayedOffset,
     }
+    this._syncTeamGlow()
 
     const activeSide = sideForTeam(this.activeTeamIndex)
     const otherSide: TugSide = activeSide === 'blue' ? 'red' : 'blue'
     if (payload.isCorrect) {
       this._playTeamClip(activeSide, 'pull_heave')
       this._playTeamClip(otherSide, 'strain_lose')
+      this._kickDust(activeSide, 3)
+      this.shakeMs = SHAKE_MS
     } else {
       this._playTeamClip(activeSide, timedOut ? 'strain_lose' : 'stumble_slip')
-      this._playTeamClip(otherSide, 'pull_heave')
+      this._playTeamClip(otherSide, 'idle_hold')
+      this._kickDust(activeSide, 2)
     }
-    this._kickDust(payload.isCorrect ? activeSide : otherSide, 3)
-    this.shakeMs = SHAKE_MS
 
     this.pullSettledCallback = () => {
       if (this.disposed || this.ended) return
@@ -397,6 +431,7 @@ export class TugOfWar3DGame implements ThreeGame {
       this._smokeBomb()
       this.match = resetRound(this.match)
       this._syncRopeVisuals()
+      this._syncTeamGlow()
       this._smokeBomb()
       this._emitOffset(true)
       this._advanceTurn()
@@ -473,7 +508,9 @@ export class TugOfWar3DGame implements ThreeGame {
 
   private _syncRopeVisuals(): void {
     const shift =
-      this.match.displayedOffset * TUG_ROPE_TRAVEL * this.view.layoutScaleX
+      tugNormalizedOffset(this.match.displayedOffset) *
+      TUG_ROPE_TRAVEL *
+      this.view.layoutScaleX
     if (this.rope) this.rope.group.position.x = shift
     this.ninjas.forEach((ninja) => ninja.setWorldX(ninja.restX + shift))
   }
@@ -584,6 +621,7 @@ export class TugOfWar3DGame implements ThreeGame {
     this.root.add(this.rope.group)
 
     const shadowTexture = createShadowTexture()
+    this.auraTexture = createAuraTexture()
     for (let slot = 0; slot < TUG_NINJAS_PER_TEAM; slot++) {
       SIDES.forEach((side) => {
         const ninja = new NinjaActor({
@@ -593,6 +631,7 @@ export class TugOfWar3DGame implements ThreeGame {
           restX: tugSlotX(side, slot, 1),
           baselineY: TUG_FEET_Y,
           shadowTexture,
+          glowTexture: this.auraTexture ?? undefined,
           renderOrder: 10 + (TUG_NINJAS_PER_TEAM - slot),
         })
         this.ninjas.push(ninja)
@@ -630,6 +669,29 @@ export class TugOfWar3DGame implements ThreeGame {
     if (payload.timerId === QUESTION_TIMER_ID) {
       this._selectAnswer(null)
     }
+  }
+
+  private handlePowerUpChanged = (_payload: PowerUpEventPayload): void => {
+    this._syncTeamGlow()
+  }
+
+  private _syncTeamGlow(): void {
+    const teams = this.context.config.teams
+    SIDES.forEach((side, teamIndex) => {
+      const teamId = teams[teamIndex]?.id
+      const hasActivePowerUp =
+        teamId !== undefined &&
+        this.context.services.powerUpManager
+          .getActivePowerupsForTarget(teamId)
+          .some((powerup) => powerup.polarity === 'buff')
+      const glowing = teamHasSuperSaiyanGlow({
+        streak: streakForTeam(this.match, teamIndex),
+        hasActivePowerUp,
+      })
+      this.ninjas
+        .filter((ninja) => ninja.side === side)
+        .forEach((ninja) => ninja.setGlow(glowing))
+    })
   }
 }
 

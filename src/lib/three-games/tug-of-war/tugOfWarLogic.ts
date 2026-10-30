@@ -3,14 +3,16 @@ import type { QuestionData } from '@/types'
 import { QuestionType } from '@/types/question_types'
 
 export const TUG_QUESTION_TIMER_ID = 'tugOfWarQuestionTimer'
-export const TUG_ROUNDS_TO_WIN = 2
-export const TUG_BEST_OF = 3
-export const TUG_BASE_PULL = 0.18
-export const TUG_SPEED_BONUS = 0.12
-export const TUG_WRONG_PULL_FACTOR = 0.5
-export const TUG_TIMEOUT_PULL_FACTOR = 0.25
-export const TUG_ROUND_THRESHOLD = 1
-export const TUG_OFFSET_LERP_PER_SEC = 0.85
+/** First to this many round points wins the match. Not best-of-3 / first to 2. */
+export const TUG_ROUNDS_TO_WIN = 3
+/** One correct answer moves the rope this many steps toward the active team. */
+export const TUG_STEP = 1
+/** Consecutive correct answers a team needs before the next one is worth double. */
+export const TUG_STREAK_FOR_DOUBLE = 3
+export const TUG_DOUBLE_STEP_MULTIPLIER = 2
+/** A team wins the round once it is this many steps ahead. */
+export const TUG_ROUND_THRESHOLD = 2
+export const TUG_OFFSET_LERP_PER_SEC = 4
 export const TUG_PLACEHOLDER_IMAGE = '/images/placeholder.webp'
 export const TUG_MIN_ANSWERS = 2
 export const TUG_MAX_ANSWERS = 4
@@ -32,18 +34,22 @@ export const TUG_NINJA_CLIPS = [
 export type TugNinjaClip = (typeof TUG_NINJA_CLIPS)[number]
 
 export interface TugMatchState {
-  /** Target rope offset in [-1, 1]. Negative is toward blue (left). */
+  /** Target rope offset in steps. Negative is toward blue (left). */
   offset: number
   displayedOffset: number
   blueRoundWins: number
   redRoundWins: number
   roundNumber: number
   phase: TugMatchPhase
+  /** Consecutive correct answers for the blue (team 0) side. */
+  blueStreak: number
+  /** Consecutive correct answers for the red (team 1) side. */
+  redStreak: number
 }
 
 export interface TugPullImpulse {
   magnitude: number
-  /** When true, pull toward the active team; otherwise toward the opponent. */
+  /** When true, pull toward the active team; otherwise toward the opponent. Misses use magnitude 0. */
   towardActiveTeam: boolean
 }
 
@@ -66,6 +72,8 @@ export function createTugMatchState(): TugMatchState {
     redRoundWins: 0,
     roundNumber: 1,
     phase: 'playing',
+    blueStreak: 0,
+    redStreak: 0,
   }
 }
 
@@ -82,34 +90,69 @@ export function clampTugOffset(offset: number): number {
   return Math.max(-TUG_ROUND_THRESHOLD, Math.min(TUG_ROUND_THRESHOLD, offset))
 }
 
+/**
+ * Steps awarded for a correct answer given the team's current streak
+ * (count before this answer). After 3 in a row, the next is worth 2.
+ * The bonus repeats every four consecutive correct answers.
+ */
+export function stepsForCorrectStreak(streak: number): number {
+  return (streak + 1) % (TUG_STREAK_FOR_DOUBLE + 1) === 0
+    ? TUG_STEP * TUG_DOUBLE_STEP_MULTIPLIER
+    : TUG_STEP
+}
+
+export function streakForTeam(
+  state: TugMatchState,
+  teamIndex: number
+): number {
+  return sideForTeam(teamIndex) === 'blue' ? state.blueStreak : state.redStreak
+}
+
+export function withUpdatedStreak(
+  state: TugMatchState,
+  teamIndex: number,
+  isCorrect: boolean
+): TugMatchState {
+  const side = sideForTeam(teamIndex)
+  if (side === 'blue') {
+    return { ...state, blueStreak: isCorrect ? state.blueStreak + 1 : 0 }
+  }
+  return { ...state, redStreak: isCorrect ? state.redStreak + 1 : 0 }
+}
+
+/**
+ * Super Saiyan aura: classroom buffs from PowerUpManager, or while the
+ * team's next correct answer is the streak double.
+ */
+export function teamHasSuperSaiyanGlow(args: {
+  streak: number
+  hasActivePowerUp: boolean
+}): boolean {
+  return (
+    args.hasActivePowerUp ||
+    stepsForCorrectStreak(args.streak) === TUG_STEP * TUG_DOUBLE_STEP_MULTIPLIER
+  )
+}
+
+/** Map step offset onto the visual [-1, 1] rope / meter range. */
+export function tugNormalizedOffset(offset: number): number {
+  return offset / TUG_ROUND_THRESHOLD
+}
+
 export function computePullImpulse(args: {
   isCorrect: boolean
-  timedOut: boolean
-  remainingTimeMs: number
-  durationMs: number
+  timedOut?: boolean
+  streak?: number
 }): TugPullImpulse {
-  if (args.timedOut) {
+  if (args.timedOut || !args.isCorrect) {
     return {
-      magnitude: TUG_BASE_PULL * TUG_TIMEOUT_PULL_FACTOR,
-      towardActiveTeam: false,
+      magnitude: 0,
+      towardActiveTeam: true,
     }
   }
-
-  if (!args.isCorrect) {
-    return {
-      magnitude: TUG_BASE_PULL * TUG_WRONG_PULL_FACTOR,
-      towardActiveTeam: false,
-    }
-  }
-
-  const durationMs = Math.max(0, args.durationMs)
-  const speedRatio =
-    durationMs === 0
-      ? 0
-      : Math.max(0, Math.min(1, args.remainingTimeMs / durationMs))
 
   return {
-    magnitude: TUG_BASE_PULL + TUG_SPEED_BONUS * speedRatio,
+    magnitude: stepsForCorrectStreak(args.streak ?? 0),
     towardActiveTeam: true,
   }
 }
@@ -120,6 +163,24 @@ export function signedPullDelta(
 ): number {
   const toward = pullSignForTeam(teamIndex)
   return (impulse.towardActiveTeam ? toward : -toward) * impulse.magnitude
+}
+
+export function applyTugAnswer(
+  state: TugMatchState,
+  teamIndex: number,
+  args: { isCorrect: boolean; timedOut?: boolean }
+): TugPullResult {
+  if (state.phase === 'matchOver') {
+    return { state, roundWinner: null, matchWinner: winnerFromRounds(state) }
+  }
+
+  const isCorrect = args.isCorrect && !args.timedOut
+  const impulse = computePullImpulse({
+    isCorrect,
+    timedOut: args.timedOut,
+    streak: streakForTeam(state, teamIndex),
+  })
+  return applyPull(withUpdatedStreak(state, teamIndex, isCorrect), teamIndex, impulse)
 }
 
 export function applyPull(

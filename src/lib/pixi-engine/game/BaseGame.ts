@@ -196,6 +196,9 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
   /** Flag indicating if the game's asynchronous `init()` method has completed successfully. */
   protected isInitialized: boolean = false;
 
+  /** Set at the start of `destroy()` so in-flight async work can abort after awaits. */
+  protected isDestroyed = false;
+
   /** Current state of the game instance */
   protected gameState: GameState = GameState.NOT_INITIALIZED;
 
@@ -337,7 +340,10 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
     
     // Initialize the game (abstract method implemented by subclasses), passing the promise
     await this.initImplementation(this.engineAssetsPromise);
-    
+    if (this.isDestroyed) {
+      return;
+    }
+
     // Set game state and emit game started event
     this.gameState = GameState.INITIALIZED;
     this.isInitialized = true;
@@ -526,6 +532,7 @@ export abstract class BaseGame<TGameState extends BaseGameState = BaseGameState>
    * @throws Error if called before the game has been initialized
    */
   destroy(): void {
+    this.isDestroyed = true;
     // Destroy transition screen if it exists
     this.transitionScreen?.destroy();
     this.transitionScreen = undefined;

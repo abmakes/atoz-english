@@ -1,0 +1,86 @@
+{
+  "generator": "Built-in image_gen",
+  "created": "2026-10-30",
+  "sources": [
+    {
+      "style": "photo",
+      "kind": "mouths",
+      "cols": 5,
+      "rows": 4,
+      "prompt": "Production transparent PNG sprite atlas for a meme talking-face compositor. Exactly 5 equal columns and 4 equal rows, all 20 cells populated. Landscape 5:4 ratio. Invisible uniform grid, no lines, no captions, no labels, no checkerboard painted in. Each cell contains ONLY one photographic cutout human mouth, no nose no chin no face. 4 DIFFERENT mouth identities by ROW: row1 thick glossy rose-pink lips; row2 thin natural warm-brown lips; row3 full dark-brown lips; row4 broad peach lips with slightly crooked upper teeth when open. Within EACH row preserve identical lips identity, lip color, lighting, width, center position and scale across all 5 frames. Columns left-to-right are amplitude poses: 1 fully closed sealed lips, 2 slightly parted tiny dark opening, 3 medium opening with upper teeth, 4 large opening with upper teeth and tongue, 5 widest open with upper teeth and tongue. Clean funny realistic collage photography, original anonymous features, not cartoon. Each mouth centered in its equal cell, same horizontal midpoint and maximum width, generous transparent padding on every side, no parts cross cells. Real alpha transparent background. No skin rectangle, only very narrow natural lip-edge cutout. No drop shadows. Sprite art only, no UI.",
+      "file": "photo-mouths.png"
+    },
+    {
+      "style": "photo",
+      "kind": "eyes",
+      "cols": 4,
+      "rows": 4,
+      "prompt": "Transparent PNG production sprite atlas, square canvas, EXACTLY 4 columns by 4 rows, 16 cells. Each cell contains ONE SINGLE photographic human eye cutout (NOT a pair), frontal view, with narrow surrounding eyelid skin only, no eyebrows, no face. Four rows are four identities: row1 wide brown eye with warm beige skin; row2 blue eye with fair skin and fine lashes; row3 hazel eye with deep brown skin; row4 slightly sleepy green eye with olive skin. Same eye identity and same lighting iris size scale and anchor across each row. Four columns are blink sequence: OPEN, HALF CLOSED with upper lid down halfway, FULLY CLOSED with lids sealed and NO iris visible, HALF CLOSED identical to column2. Exact evenly spaced centers at 12.5%,37.5%,62.5%,87.5% of width and height. Eye fits within center 70% of each cell leaving large transparent margins. True alpha background, no checkerboard drawing, no text labels numbers grid lines shadows. Photorealistic funny meme collage asset, natural human eye textures, clean cut edges, family-friendly, not horror. Keep rows consistent. No other parts. The closed pose must be a realistic closed eyelid, not an open eye.",
+      "file": "photo-eyes.png"
+    },
+    {
+      "style": "photo",
+      "kind": "parts",
+      "cols": 5,
+      "rows": 4,
+      "prompt": "Production transparent PNG atlas of STATIC facial accessories for funny photo-collage talking heads. Exactly 5 equal columns by 4 equal rows, landscape 5:4 canvas. 20 independent cutout objects centered in 20 cells with large transparent margins; NEVER overlap or cross a cell. Photorealistic studio cutout textures, original anonymous features, realistic human hair skin and fabric, humorous meme collage. Row1 five HAIR cutouts only: short black curls, brown side-part fringe, blonde swoop, gray wispy tufts, vivid teal messy wig. No heads or faces attached. Row2 five single EAR cutouts, front/three-quarter view, for mirroring in code: rounded fair human ear, rounded warm tan human ear, rounded deep brown human ear, pointed latex elf ear, round furry costume ear. Row3 five NOSES only: small fair button nose, long tan nose, broad deep brown nose, round red foam clown nose, shiny metal robot nose. Row4 five EXTRAS: round black glasses with transparent lenses, small navy bucket hat, red fabric bow, curled dark mustache, thick single dark eyebrow. Exact regular grid. Each object fits within inner 65 percent of cell, glasses and hair still contained. True transparent alpha background, no checkerboard pixels, no text numbers labels borders drop shadows or decorations. No eyes or mouths. This is an actual asset atlas not a presentation.",
+      "file": "photo-parts.png"
+    },
+    {
+      "style": "cartoon",
+      "kind": "mouths",
+      "cols": 5,
+      "rows": 4,
+      "prompt": "Transparent PNG production talking mouth sprite atlas. EXACTLY 5 columns and 4 rows, 20 cells in uniform grid, 5:4 landscape canvas. Flat 2D cartoon sticker art, bold smooth near-black outlines, expressive meme style rather than babyish, restrained coral pink white and dark plum palette. Only mouths, no faces. Row1 classic thin black smile, no outer lips, white upper teeth and pink tongue inside when open. Row2 thick coral cartoon lips. Row3 goofy buck-tooth mouth with TWO big front teeth visible when open. Row4 crooked asymmetrical mischievous mouth with uneven teeth. Each row a single consistent identity across 5 frames, anchored to same center and fixed mouth corner locations. Columns: fully SEALED CLOSED mouth with no dark interior; tiny opening; medium opening; large opening; wide maximum opening. Mouth opening grows vertically, corners stay fixed. Actual transparent alpha, no baked checkerboard, no text numbers captions grid lines or shadows. Each sprite fits inside central 65% width and 65% height of its cell, ample transparent space between every sprite and canvas edges. Equal cell centers are x=10%,30%,50%,70%,90% and y=12.5%,37.5%,62.5%,87.5%. Flat clean production game asset, no white sticker border.",
+      "file": "cartoon-mouths.png"
+    },
+    {
+      "style": "cartoon",
+      "kind": "eyes",
+      "cols": 4,
+      "rows": 4,
+      "prompt": "Transparent PNG production eye blink sprite atlas. EXACT 4 columns 4 rows square canvas, 16 evenly spaced cells. Flat 2D cartoon sticker art with bold near-black outlines and white eyeballs. Each cell ONE SINGLE EYE, not pairs, no face. Row1 round googly eye with black pupil; row2 almond eye with teal iris; row3 tall oval eye with violet iris and three expressive lashes; row4 sleepy angular eye with amber iris. Each row preserves identity color scale position and outer eye width. Four columns blink poses: 1 fully OPEN, 2 upper eyelid HALF CLOSED, 3 fully SHUT closed arc and no iris or white visible, 4 HALF CLOSED same as column2. Colored lids in cream/tan neutrals, humorous expressive design suitable to mix with real photographs. Every cell includes its frame including thin visible closed line. Each sprite contained within central 60% width and height of cell, large empty transparent margins; centers exactly at 12.5%,37.5%,62.5%,87.5% of width/height. No text labels numbers borders grid lines paper texture background shadows or checkerboard. Real alpha background, sharp game-ready artwork.",
+      "file": "cartoon-eyes.png"
+    },
+    {
+      "style": "cartoon",
+      "kind": "parts",
+      "cols": 5,
+      "rows": 4,
+      "prompt": "Transparent PNG production STATIC accessories atlas for a mixed-style talking-face app. EXACTLY 5 columns by 4 rows, uniform 20-cell grid, landscape 5:4. Bold flat cartoon sticker artwork, clean black outlines, restrained saturated colors, funny expressive collage parts. Row1 five HAIR pieces only: short black curls, brown side-part fringe, blonde swoop, gray wispy tufts, vivid teal messy spikes. Row2 five SINGLE ears for code mirroring: rounded peach human ear, rounded tan human ear, rounded dark brown human ear, pointed green elf ear, round brown furry bear ear. Row3 five noses: small peach button nose, long tan angular nose, broad dark brown nose, red clown ball nose, silver triangular robot nose. Row4 five extras: round black glasses with EMPTY TRANSPARENT lenses, navy bucket hat, red bow, curled black mustache, thick single dark eyebrow. No faces or heads attached. Center each object in exact equal cell with ample empty margins, ALL artwork stays inside inner 65% of each cell. Grid centers x10,30,50,70,90 percent y12.5,37.5,62.5,87.5 percent. Transparent alpha background not white, no checkerboard painted, no text labels numbers borders grid lines shadows or white sticker borders. Usable isolated accessories, not UI.",
+      "file": "cartoon-parts.png"
+    },
+    {
+      "style": "sketch",
+      "kind": "mouths",
+      "cols": 5,
+      "rows": 4,
+      "prompt": "Production transparent PNG mouth animation sprite atlas. Landscape 5:4 ratio, EXACTLY 5 columns by 4 rows uniform cells. Genuine hand-drawn pencil / charcoal doodle style, slightly wobbly dark graphite lines, visible pencil strokes, dark charcoal mouth interiors, white teeth and very light dusty pink tongue. NO PAPER BACKGROUND. Isolated mouths ONLY, no faces. Four rows: row1 simple straight drawn line mouth, row2 curved smile line mouth, row3 angular zigzag mischievous mouth, row4 loosely sketched full lips. Each row FIVE poses same identity fixed mouth corner anchors and same width. Column1 completely CLOSED original line (for row4 sealed lips); column2 tiny opening; column3 medium opening; column4 large opening; column5 wide opening. In columns2-5 the drawn line splits into upper and lower curves revealing dark interior with upper white teeth and tongue. Closed line in column1 must be visibly dark and present in EVERY row. This demonstrates a drawn line becoming a mouth. Same scale and center per row, no viewpoint changes. Center every part on the exact uniform grid, keep inside central 65% of cell with large transparent padding. Actual alpha transparent background, no white rectangles, no checkerboard, no captions numbers grid lines or UI. Use crisp sufficiently thick graphite lines visible when scaled to 100px.",
+      "file": "sketch-mouths.png"
+    },
+    {
+      "style": "sketch",
+      "kind": "eyes",
+      "cols": 4,
+      "rows": 4,
+      "prompt": "Transparent PNG eye blink sprite atlas for pencil doodle collage. EXACTLY 4 equal columns and 4 equal rows, square canvas, 16 cells. Dark graphite hand-drawn lines with pencil texture, bold enough for small display, white eyeball fill, black pupils, no paper background. Each cell ONE SINGLE eye, no pairs or faces. Four rows: row1 simple round doodle eye; row2 almond pencil-realistic eye; row3 tall oval comic eye with three lashes; row4 angular skeptical eye. Four columns: fully OPEN, HALF CLOSED upper eyelid halfway down, fully SHUT no iris visible only closed lid/arc, HALF CLOSED matching column2. Keep each row identity size width and anchor consistent across blink. Closed eye must be visible pencil line, not missing. Slightly imperfect humorous hand-drawn charm. Each item fits central 65% of cell with generous transparent space, exactly uniform center positions. True alpha transparent outside art, no checkerboard, no text numbers labels borders grid lines UI shadows or decorations. No eyebrows. Practical game sprite sheet.",
+      "file": "sketch-eyes.png"
+    },
+    {
+      "style": "sketch",
+      "kind": "parts",
+      "cols": 5,
+      "rows": 4,
+      "prompt": "Transparent PNG STATIC face accessory sprite atlas. Exact 5 columns by 4 rows uniform grid, landscape 5:4. Hand-drawn graphite pencil sketch style with deliberate textured dark strokes, white highlights only inside objects, no paper rectangles or background. Funny expressive doodle pieces to paste on real photos. Row1 five isolated HAIR pieces: short curls, side-part fringe, swooping quiff, wispy tufts, messy spikes. Row2 five SINGLE EARS: small round human ear, long human ear, broad human ear, pointed elf ear, round furry bear ear. Row3 five NOSES: button nose, long angular nose, broad nose, round clown nose, triangular robot nose. Row4 five EXTRAS: round glasses with truly empty transparent lenses, bucket hat, bow, curled mustache, thick single eyebrow. Exactly 20 separated objects, each centered and fully contained inside central 65% of its own equal-size cell; large transparent gaps. No faces, no heads, no eyes or mouths attached. No text labels numbers grid lines borders drop shadows or checkerboard. Genuine alpha transparent background, crisp dark pencil strokes visible when reduced, coordinated hand-drawn visual family.",
+      "file": "sketch-parts.png"
+    },
+    {
+      "style": "cartoon",
+      "kind": "heads",
+      "cols": 2,
+      "rows": 2,
+      "prompt": "Transparent PNG asset atlas of FOUR blank head bases for a mixed-media funny talking-head builder. EXACT 2x2 grid square canvas, each isolated object fully inside its quadrant with large transparent margins. Top left: photorealistic irregular brown potato standing vertically with natural speckled skin. Top right: photorealistic slice of golden toast, frontal, warm toasted texture and crust. Bottom left: illustrated pale gray full moon disc with subtle craters, mostly blank center. Bottom right: retro brushed silver rounded-square robot head with small top antenna and side bolts, mostly blank silver front panel. ALL FOUR FACELESS: absolutely NO eyes NO mouth NO nose NO eyebrows. No attached arms or legs. Photo-cutout potato and toast, subtle tactile moon and robot, coordinated straight-on views. Each head fills about 65 percent of quadrant width and height centered exactly at quadrant center. Actual alpha transparent background, no shadows on ground, no floor, no checkerboard painted, no text labels numbers borders UI. These are blank canvases to attach separate facial stickers.",
+      "file": "heads.png"
+    }
+  ]
+}

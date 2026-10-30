@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
+  BASE_PLATFORMS,
+  MID_PLATFORMS,
+  TOP_PLATFORMS,
+  buildCliffLayout,
   buildPath,
   clampStepIndex,
   getSummitWaypoint,
@@ -8,10 +12,6 @@ import {
 const baseOpts = {
   totalSteps: 12,
   screenWidth: 1280,
-  stepHeight: 80,
-  stepsPerSection: 4,
-  margin: 120,
-  worldBottomY: 2000,
 }
 
 describe('buildPath', () => {
@@ -32,29 +32,52 @@ describe('buildPath', () => {
     }
   })
 
-  it('keeps X inside margins', () => {
-    const path = buildPath(baseOpts)
-    for (const wp of path) {
-      expect(wp.x).toBeGreaterThanOrEqual(baseOpts.margin)
-      expect(wp.x).toBeLessThanOrEqual(baseOpts.screenWidth - baseOpts.margin)
-    }
+  it('starts on the base lawn and ends on the summit', () => {
+    const layout = buildCliffLayout(baseOpts)
+    const path = layout.waypoints
+    const center = baseOpts.screenWidth / 2
+    const base = layout.tiles.find((tile) => tile.kind === 'base')
+    const top = layout.tiles.find((tile) => tile.kind === 'top')
+    expect(base).toBeTruthy()
+    expect(top).toBeTruthy()
+    expect(path[0].x).toBeCloseTo(center + (BASE_PLATFORMS[0].nx - 0.5) * base!.width, 4)
+    expect(path[0].y).toBeCloseTo(base!.bottomY - (1 - BASE_PLATFORMS[0].ny) * base!.height, 4)
+    const summitPad = TOP_PLATFORMS[TOP_PLATFORMS.length - 1]
+    expect(path[path.length - 1].x).toBeCloseTo(center + (summitPad.nx - 0.5) * top!.width, 4)
+    expect(getSummitWaypoint(path)?.index).toBe(11)
   })
 
-  it('alternates direction per section', () => {
-    const path = buildPath(baseOpts)
-    // Section 0 (indices 0-3): dir 1
-    expect(path.slice(0, 4).every((w) => w.dir === 1 && w.section === 0)).toBe(true)
-    // Section 1 (indices 4-7): dir -1
-    expect(path.slice(4, 8).every((w) => w.dir === -1 && w.section === 1)).toBe(true)
-    // Section 2 (indices 8-11): dir 1
-    expect(path.slice(8, 12).every((w) => w.dir === 1 && w.section === 2)).toBe(true)
+  it('repeats the mid.png left-right zigzag on matching tiles', () => {
+    const layout = buildCliffLayout({ totalSteps: 9, screenWidth: 1280 })
+    const mids = layout.tiles.filter((tile) => tile.kind === 'mid')
+    expect(mids).toHaveLength(1)
+    const mid = mids[0]
+    const center = 1280 / 2
+    // base (3) then the four mid pads
+    const midSteps = layout.waypoints.slice(3, 7)
+    expect(midSteps).toHaveLength(MID_PLATFORMS.length)
+    midSteps.forEach((wp, i) => {
+      const pad = MID_PLATFORMS[i]
+      expect(wp.x).toBeCloseTo(center + (pad.nx - 0.5) * mid.width, 4)
+      expect(wp.y).toBeCloseTo(mid.bottomY - (1 - pad.ny) * mid.height, 4)
+      expect(wp.dir).toBe(pad.dir)
+    })
+    expect(midSteps[0].x).toBeLessThan(center)
+    expect(midSteps[1].x).toBeGreaterThan(center)
+    expect(midSteps[2].x).toBeLessThan(center)
+    expect(midSteps[3].x).toBeGreaterThan(center)
   })
 
-  it('summit is the last waypoint', () => {
-    const path = buildPath(baseOpts)
-    const summit = getSummitWaypoint(path)
-    expect(summit).toEqual(path[path.length - 1])
-    expect(summit?.index).toBe(11)
+  it('stacks a second mid tile on the same horizontal anchors', () => {
+    const layout = buildCliffLayout({ totalSteps: 13, screenWidth: 1280 })
+    const [first, second] = layout.tiles.filter((tile) => tile.kind === 'mid')
+    expect(second.bottomY).toBeLessThan(first.bottomY)
+    const center = 1280 / 2
+    const firstPad = layout.waypoints[BASE_PLATFORMS.length]
+    const secondPad = layout.waypoints[BASE_PLATFORMS.length + MID_PLATFORMS.length]
+    expect(firstPad.x).toBeCloseTo(center + (MID_PLATFORMS[0].nx - 0.5) * first.width, 4)
+    expect(secondPad.x).toBeCloseTo(firstPad.x, 4)
+    expect(secondPad.y).toBeLessThan(firstPad.y)
   })
 })
 

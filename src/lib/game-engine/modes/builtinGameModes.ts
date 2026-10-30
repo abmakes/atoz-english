@@ -168,7 +168,7 @@ const quizRoom3d: GameModeDefinition = {
 const tugOfWar3d: GameModeDefinition = {
   slug: 'tug-of-war-3d',
   title: 'Tug of War',
-  description: 'Two teams take turns answering — pull the rope to win best of 3.',
+  description: 'Two teams take turns answering — first to 3 round points wins.',
   thumbnail: '/images/marketing/teamquiz_thumb.png',
   renderer: 'three',
   questionTimerId: 'tugOfWarQuestionTimer',

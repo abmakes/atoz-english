@@ -37,6 +37,7 @@ export class SplashDashUIManager {
     private view: PIXI.Container;
 
     private bottomUIContainer: PIXI.Container;
+    private bottomUIBackground: PIXI.Graphics;
     private questionContainer: PIXI.Container;
     private questionText: PIXI.Text;
     private questionImage: PIXI.Sprite | null = null;
@@ -122,6 +123,7 @@ export class SplashDashUIManager {
         this.view.addChild(this.pixiTimerInstance);
 
         this._bindEvents();
+        this._updateLayout();
         console.log('SplashDashUIManager created');
     }
 
@@ -164,12 +166,12 @@ export class SplashDashUIManager {
                 fontFamily: 'Grandstander',
                 fontSize: 24,
                 fill: 0x000000,
-                align: 'center',
+                align: 'left',
                 wordWrap: true,
                 wordWrapWidth: 400 // Will be updated dynamically in _updateLayout
             }
         });
-        text.anchor.set(0.5);
+        text.anchor.set(0, 0.5);
         return text;
     }
 
@@ -184,10 +186,10 @@ export class SplashDashUIManager {
                 fontFamily: 'Grandstander',
                 fontSize: 18,
                 fill: 0x666666,
-                align: 'center'
+                align: 'left'
             }
         });
-        text.anchor.set(0.5);
+        text.anchor.set(0, 0);
         return text;
     }
 
@@ -197,21 +199,10 @@ export class SplashDashUIManager {
      */
     private _createBottomUIContainer(): PIXI.Container {
         const container = new PIXI.Container();
-        const screenSize = this.app.getScreenSize();
-        
-        // Create white background rectangle (no border)
-        const params = this.layoutManager.getLayoutParams();
-        console.log(`[SplashDashUIManager] Creating bottom UI - Screen: ${screenSize.width}x${screenSize.height}, bottomUIHeight: ${params.bottomUIHeight}`);
-        const background = new PIXI.Graphics();
-        background.clear();
-        background.rect(0, 0, screenSize.width, params.bottomUIHeight);
-        background.fill({color: 0xFFFFFF});
-        
-        container.addChild(background);
-        container.y = screenSize.height - params.bottomUIHeight;
-        container.alpha = 1.0; // Ensure container is fully opaque
-        container.visible = true; // Ensure container is visible
-        
+        this.bottomUIBackground = new PIXI.Graphics();
+        container.addChild(this.bottomUIBackground);
+        container.alpha = 1.0;
+        container.visible = true;
         return container;
     }
 
@@ -276,64 +267,69 @@ export class SplashDashUIManager {
      */
     private _updateLayout(): void {
         const screenSize = this.app.getScreenSize();
-        console.log(`[SplashDashUIManager] _updateLayout: Screen size ${screenSize.width}x${screenSize.height}`);
-        
         this.layoutManager.updateLayout(screenSize.width, screenSize.height);
         const params = this.layoutManager.getLayoutParams();
-        
-        // Update bottom UI container position
-        this.bottomUIContainer.y = screenSize.height - params.bottomUIHeight;
-        
-        // Position control buttons absolutely with padding from edges
+        const barH = params.bottomUIHeight;
+        const innerPad = 8;
+
+        // Pin the bar to the canvas bottom and fill any leftover pixels from rounding.
+        this.bottomUIContainer.y = Math.max(0, screenSize.height - barH);
+        const fillH = Math.max(barH, screenSize.height - this.bottomUIContainer.y);
+        this.bottomUIBackground.clear();
+        this.bottomUIBackground.rect(0, 0, screenSize.width, fillH);
+        this.bottomUIBackground.fill({ color: 0xFFFFFF });
+
         this.controlButtonA.x = params.controlButtonRadius + params.controlButtonPadding;
-        this.controlButtonA.y = params.bottomUIHeight / 2;
-        
+        this.controlButtonA.y = barH / 2;
         this.controlButtonL.x = screenSize.width - params.controlButtonRadius - params.controlButtonPadding;
-        this.controlButtonL.y = params.bottomUIHeight / 2;
-        
-        console.log(`Button positions - A: (${this.controlButtonA.x}, ${this.controlButtonA.y}), L: (${this.controlButtonL.x}, ${this.controlButtonL.y})`);
-        
-        // Calculate question container width using layout manager (for reference)
-        // const containerWidth = this.layoutManager.calculateQuestionContainerWidth(width);
-        
-        // Position question container in the center of the game area
-        this.questionContainer.x = screenSize.width / 2;
-        this.questionContainer.y = params.bottomUIHeight / 2;
-        
-        // Calculate the available space between buttons (with padding)
-        const leftButtonRight = this.controlButtonA.x + params.controlButtonRadius + 20; // Add padding
-        const rightButtonLeft = this.controlButtonL.x - params.controlButtonRadius - 20; // Add padding
-        const availableWidth = rightButtonLeft - leftButtonRight;
-        
-        // Position image and text within the available space
-        const imageWidth = params.questionImageWidth;
-        const textAreaWidth = availableWidth - imageWidth - params.questionImagePadding;
-        
-        // Position question image to the left of center (moved 50px to the right)
-        if (this.questionImage) {
-            this.questionImage.x = -(textAreaWidth / 2) - (params.questionImagePadding / 2) + 50;
-            this.questionImage.y = 0;
+        this.controlButtonL.y = barH / 2;
+
+        const contentLeft = this.controlButtonA.x + params.controlButtonRadius + 16;
+        const contentRight = this.controlButtonL.x - params.controlButtonRadius - 16;
+        const contentWidth = Math.max(80, contentRight - contentLeft);
+
+        this.questionContainer.x = contentLeft;
+        this.questionContainer.y = 0;
+
+        let imageSlot = 0;
+        if (this.questionImage && !this.questionImage.destroyed) {
+            const texW = this.questionImage.texture.width || 1;
+            const texH = this.questionImage.texture.height || 1;
+            const maxImageH = Math.max(40, barH - innerPad * 2);
+            const maxImageW = Math.min(params.questionImageWidth, Math.floor(contentWidth * 0.32));
+            const scale = Math.min(maxImageH / texH, maxImageW / texW, 1);
+            this.questionImage.scale.set(scale);
+            this.questionImage.anchor.set(0, 0.5);
+            this.questionImage.x = 0;
+            this.questionImage.y = barH / 2;
+            imageSlot = this.questionImage.width + params.questionImagePadding;
         }
-        
-        // Position question text to the right of image with padding
-        this.questionText.x = (imageWidth / 2) + (params.questionImagePadding / 2);
-        this.questionText.y = -20;
-        
-        // Position question counter below question text
-        this.questionCounter.x = (imageWidth / 2) + (params.questionImagePadding / 2);
-        this.questionCounter.y = 20;
-        
-        // Update question text wordWrapWidth to use the calculated text area width
-        if (this.questionText.style) {
-            this.questionText.style.wordWrapWidth = Math.max(200, textAreaWidth - 20); // Minimum width with margin
+
+        const textWidth = Math.max(80, contentWidth - imageSlot);
+        this.questionText.anchor.set(0, 0.5);
+        this.questionText.style.align = 'left';
+        this.questionText.style.wordWrap = true;
+        this.questionText.style.fontSize = params.questionFontSize;
+        this.questionText.style.wordWrapWidth = textWidth;
+
+        this.questionCounter.anchor.set(0, 0);
+        this.questionCounter.style.align = 'left';
+        this.questionCounter.style.fontSize = params.questionCounterFontSize;
+        this.questionCounter.x = imageSlot;
+        this.questionText.x = imageSlot;
+
+        const gap = 4;
+        let blockH = this.questionText.height + gap + this.questionCounter.height;
+        if (blockH > barH - innerPad * 2 && params.questionFontSize > 16) {
+            this.questionText.style.fontSize = Math.max(16, params.questionFontSize - 4);
+            blockH = this.questionText.height + gap + this.questionCounter.height;
         }
-        
-        // Position timer below nav buttons (moved down)
+        const blockTop = Math.max(innerPad, (barH - blockH) / 2);
+        this.questionText.y = blockTop + this.questionText.height / 2;
+        this.questionCounter.y = blockTop + this.questionText.height + gap;
+
         this.pixiTimerInstance.x = screenSize.width - 80;
-        this.pixiTimerInstance.y = 120; // Moved down from 80 to 120
-        
-        console.log(`[SplashDashUIManager] Layout updated - Screen: ${screenSize.width}x${screenSize.height}, Available width: ${availableWidth}, Text area: ${textAreaWidth}, Bottom UI at y=${this.bottomUIContainer.y}`);
-        console.log(`[SplashDashUIManager] Question container at (${this.questionContainer.x}, ${this.questionContainer.y}), Image at (${this.questionImage?.x || 'N/A'}, ${this.questionImage?.y || 'N/A'}), Text at (${this.questionText.x}, ${this.questionText.y})`);
+        this.pixiTimerInstance.y = 120;
     }
 
     /**
@@ -364,13 +360,7 @@ export class SplashDashUIManager {
                     
                     if (isSprite || isAnimatedSprite || isGifSprite) {
                         this.questionImage = displayObject as PIXI.Sprite;
-                        this.questionImage.anchor.set(0.5);
-                        
-                        // Scale image to maximum 120px height while maintaining aspect ratio
-                        const maxHeight = 120;
-                        const scale = Math.min(maxHeight / this.questionImage.height, 1);
-                        this.questionImage.scale.set(scale);
-                        
+                        this.questionImage.anchor.set(0, 0.5);
                         this.questionContainer.addChild(this.questionImage);
                         this._updateLayout();
                         

@@ -32,3 +32,18 @@ export function setCutoutOpacity(
   material.opacity = opacity
   material.color.setScalar(opacity)
 }
+
+/** Additive gold aura for Super Saiyan ninja glow. */
+export function createAuraMaterial(
+  map: THREE.Texture,
+  opacity = 0
+): THREE.MeshBasicMaterial {
+  return new THREE.MeshBasicMaterial({
+    map,
+    color: 0xffe066,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    opacity,
+  })
+}

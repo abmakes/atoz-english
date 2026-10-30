@@ -232,6 +232,35 @@ exports.Prisma.StoryRecordingScalarFieldEnum = {
   envelope: 'envelope'
 };
 
+exports.Prisma.ThoughtChallengeScalarFieldEnum = {
+  id: 'id',
+  authorId: 'authorId',
+  title: 'title',
+  prompt: 'prompt',
+  status: 'status',
+  acceptingResponses: 'acceptingResponses',
+  showGallery: 'showGallery',
+  allowFunnyVoices: 'allowFunnyVoices',
+  shareToken: 'shareToken',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ThoughtSubmissionScalarFieldEnum = {
+  id: 'id',
+  challengeId: 'challengeId',
+  studentName: 'studentName',
+  character: 'character',
+  voiceEffect: 'voiceEffect',
+  audioPath: 'audioPath',
+  mimeType: 'mimeType',
+  durationMs: 'durationMs',
+  envelope: 'envelope',
+  clientKey: 'clientKey',
+  status: 'status',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -239,6 +268,10 @@ exports.Prisma.SortOrder = {
 
 exports.Prisma.NullableJsonNullValueInput = {
   DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull
+};
+
+exports.Prisma.JsonNullValueInput = {
   JsonNull: Prisma.JsonNull
 };
 
@@ -279,6 +312,18 @@ exports.StorySubmissionStatus = exports.$Enums.StorySubmissionStatus = {
   REVIEWED: 'REVIEWED'
 };
 
+exports.ThoughtChallengeStatus = exports.$Enums.ThoughtChallengeStatus = {
+  DRAFT: 'DRAFT',
+  READY: 'READY',
+  ARCHIVED: 'ARCHIVED'
+};
+
+exports.ThoughtSubmissionStatus = exports.$Enums.ThoughtSubmissionStatus = {
+  SUBMITTED: 'SUBMITTED',
+  APPROVED: 'APPROVED',
+  HIDDEN: 'HIDDEN'
+};
+
 exports.Prisma.ModelName = {
   Quiz: 'Quiz',
   QuizLike: 'QuizLike',
@@ -289,7 +334,9 @@ exports.Prisma.ModelName = {
   Story: 'Story',
   StoryPanel: 'StoryPanel',
   StorySubmission: 'StorySubmission',
-  StoryRecording: 'StoryRecording'
+  StoryRecording: 'StoryRecording',
+  ThoughtChallenge: 'ThoughtChallenge',
+  ThoughtSubmission: 'ThoughtSubmission'
 };
 
 /**

@@ -584,8 +584,12 @@
   position: absolute;
   inset: 0; /* Make it cover the entire gameplay view container */
   z-index: 0; /* Ensure it's behind the overlays */
-  /* Styles for the canvas element itself (if needed) */
-  /* canvas { display: block; width: 100%; height: 100%; } */
+}
+
+.pixiCanvasContainer canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .backgroundOverlay { /* For clouds or other background elements */

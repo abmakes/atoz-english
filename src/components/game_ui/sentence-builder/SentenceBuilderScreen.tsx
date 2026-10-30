@@ -368,8 +368,8 @@ function Setup({
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 md:py-12">
       <div className="flex items-center justify-between">
-        <Link href="/games" className="grandstander font-bold underline">
-          All games
+        <Link href="/practice" className="grandstander font-bold underline">
+          Practice
         </Link>
         <SoundButton sounds={sounds} onClick={() => onSounds(!sounds)} />
       </div>

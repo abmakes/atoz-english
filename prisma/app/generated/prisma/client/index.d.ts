@@ -63,6 +63,16 @@ export type StorySubmission = $Result.DefaultSelection<Prisma.$StorySubmissionPa
  * 
  */
 export type StoryRecording = $Result.DefaultSelection<Prisma.$StoryRecordingPayload>
+/**
+ * Model ThoughtChallenge
+ * Teacher tool: one speaking prompt and a class link of sticker talking heads.
+ */
+export type ThoughtChallenge = $Result.DefaultSelection<Prisma.$ThoughtChallengePayload>
+/**
+ * Model ThoughtSubmission
+ * 
+ */
+export type ThoughtSubmission = $Result.DefaultSelection<Prisma.$ThoughtSubmissionPayload>
 
 /**
  * Enums
@@ -98,6 +108,24 @@ export const StorySubmissionStatus: {
 
 export type StorySubmissionStatus = (typeof StorySubmissionStatus)[keyof typeof StorySubmissionStatus]
 
+
+export const ThoughtChallengeStatus: {
+  DRAFT: 'DRAFT',
+  READY: 'READY',
+  ARCHIVED: 'ARCHIVED'
+};
+
+export type ThoughtChallengeStatus = (typeof ThoughtChallengeStatus)[keyof typeof ThoughtChallengeStatus]
+
+
+export const ThoughtSubmissionStatus: {
+  SUBMITTED: 'SUBMITTED',
+  APPROVED: 'APPROVED',
+  HIDDEN: 'HIDDEN'
+};
+
+export type ThoughtSubmissionStatus = (typeof ThoughtSubmissionStatus)[keyof typeof ThoughtSubmissionStatus]
+
 }
 
 export type QuestionType = $Enums.QuestionType
@@ -111,6 +139,14 @@ export const StoryStatus: typeof $Enums.StoryStatus
 export type StorySubmissionStatus = $Enums.StorySubmissionStatus
 
 export const StorySubmissionStatus: typeof $Enums.StorySubmissionStatus
+
+export type ThoughtChallengeStatus = $Enums.ThoughtChallengeStatus
+
+export const ThoughtChallengeStatus: typeof $Enums.ThoughtChallengeStatus
+
+export type ThoughtSubmissionStatus = $Enums.ThoughtSubmissionStatus
+
+export const ThoughtSubmissionStatus: typeof $Enums.ThoughtSubmissionStatus
 
 /**
  * ##  Prisma Client ʲˢ
@@ -334,6 +370,26 @@ export class PrismaClient<
     * ```
     */
   get storyRecording(): Prisma.StoryRecordingDelegate<ExtArgs>;
+
+  /**
+   * `prisma.thoughtChallenge`: Exposes CRUD operations for the **ThoughtChallenge** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more ThoughtChallenges
+    * const thoughtChallenges = await prisma.thoughtChallenge.findMany()
+    * ```
+    */
+  get thoughtChallenge(): Prisma.ThoughtChallengeDelegate<ExtArgs>;
+
+  /**
+   * `prisma.thoughtSubmission`: Exposes CRUD operations for the **ThoughtSubmission** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more ThoughtSubmissions
+    * const thoughtSubmissions = await prisma.thoughtSubmission.findMany()
+    * ```
+    */
+  get thoughtSubmission(): Prisma.ThoughtSubmissionDelegate<ExtArgs>;
 }
 
 export namespace Prisma {
@@ -784,7 +840,9 @@ export namespace Prisma {
     Story: 'Story',
     StoryPanel: 'StoryPanel',
     StorySubmission: 'StorySubmission',
-    StoryRecording: 'StoryRecording'
+    StoryRecording: 'StoryRecording',
+    ThoughtChallenge: 'ThoughtChallenge',
+    ThoughtSubmission: 'ThoughtSubmission'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -800,7 +858,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "quiz" | "quizLike" | "quizFavorite" | "question" | "storedImage" | "tag" | "story" | "storyPanel" | "storySubmission" | "storyRecording"
+      modelProps: "quiz" | "quizLike" | "quizFavorite" | "question" | "storedImage" | "tag" | "story" | "storyPanel" | "storySubmission" | "storyRecording" | "thoughtChallenge" | "thoughtSubmission"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1504,6 +1562,146 @@ export namespace Prisma {
           }
         }
       }
+      ThoughtChallenge: {
+        payload: Prisma.$ThoughtChallengePayload<ExtArgs>
+        fields: Prisma.ThoughtChallengeFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.ThoughtChallengeFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtChallengePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.ThoughtChallengeFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtChallengePayload>
+          }
+          findFirst: {
+            args: Prisma.ThoughtChallengeFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtChallengePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.ThoughtChallengeFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtChallengePayload>
+          }
+          findMany: {
+            args: Prisma.ThoughtChallengeFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtChallengePayload>[]
+          }
+          create: {
+            args: Prisma.ThoughtChallengeCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtChallengePayload>
+          }
+          createMany: {
+            args: Prisma.ThoughtChallengeCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.ThoughtChallengeCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtChallengePayload>[]
+          }
+          delete: {
+            args: Prisma.ThoughtChallengeDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtChallengePayload>
+          }
+          update: {
+            args: Prisma.ThoughtChallengeUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtChallengePayload>
+          }
+          deleteMany: {
+            args: Prisma.ThoughtChallengeDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.ThoughtChallengeUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.ThoughtChallengeUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtChallengePayload>
+          }
+          aggregate: {
+            args: Prisma.ThoughtChallengeAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateThoughtChallenge>
+          }
+          groupBy: {
+            args: Prisma.ThoughtChallengeGroupByArgs<ExtArgs>
+            result: $Utils.Optional<ThoughtChallengeGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.ThoughtChallengeCountArgs<ExtArgs>
+            result: $Utils.Optional<ThoughtChallengeCountAggregateOutputType> | number
+          }
+        }
+      }
+      ThoughtSubmission: {
+        payload: Prisma.$ThoughtSubmissionPayload<ExtArgs>
+        fields: Prisma.ThoughtSubmissionFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.ThoughtSubmissionFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtSubmissionPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.ThoughtSubmissionFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtSubmissionPayload>
+          }
+          findFirst: {
+            args: Prisma.ThoughtSubmissionFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtSubmissionPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.ThoughtSubmissionFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtSubmissionPayload>
+          }
+          findMany: {
+            args: Prisma.ThoughtSubmissionFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtSubmissionPayload>[]
+          }
+          create: {
+            args: Prisma.ThoughtSubmissionCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtSubmissionPayload>
+          }
+          createMany: {
+            args: Prisma.ThoughtSubmissionCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.ThoughtSubmissionCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtSubmissionPayload>[]
+          }
+          delete: {
+            args: Prisma.ThoughtSubmissionDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtSubmissionPayload>
+          }
+          update: {
+            args: Prisma.ThoughtSubmissionUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtSubmissionPayload>
+          }
+          deleteMany: {
+            args: Prisma.ThoughtSubmissionDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.ThoughtSubmissionUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.ThoughtSubmissionUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ThoughtSubmissionPayload>
+          }
+          aggregate: {
+            args: Prisma.ThoughtSubmissionAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateThoughtSubmission>
+          }
+          groupBy: {
+            args: Prisma.ThoughtSubmissionGroupByArgs<ExtArgs>
+            result: $Utils.Optional<ThoughtSubmissionGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.ThoughtSubmissionCountArgs<ExtArgs>
+            result: $Utils.Optional<ThoughtSubmissionCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -1777,6 +1975,37 @@ export namespace Prisma {
    */
   export type StorySubmissionCountOutputTypeCountRecordingsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: StoryRecordingWhereInput
+  }
+
+
+  /**
+   * Count Type ThoughtChallengeCountOutputType
+   */
+
+  export type ThoughtChallengeCountOutputType = {
+    submissions: number
+  }
+
+  export type ThoughtChallengeCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    submissions?: boolean | ThoughtChallengeCountOutputTypeCountSubmissionsArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * ThoughtChallengeCountOutputType without action
+   */
+  export type ThoughtChallengeCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtChallengeCountOutputType
+     */
+    select?: ThoughtChallengeCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * ThoughtChallengeCountOutputType without action
+   */
+  export type ThoughtChallengeCountOutputTypeCountSubmissionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ThoughtSubmissionWhereInput
   }
 
 
@@ -11598,6 +11827,2072 @@ export namespace Prisma {
 
 
   /**
+   * Model ThoughtChallenge
+   */
+
+  export type AggregateThoughtChallenge = {
+    _count: ThoughtChallengeCountAggregateOutputType | null
+    _min: ThoughtChallengeMinAggregateOutputType | null
+    _max: ThoughtChallengeMaxAggregateOutputType | null
+  }
+
+  export type ThoughtChallengeMinAggregateOutputType = {
+    id: string | null
+    authorId: string | null
+    title: string | null
+    prompt: string | null
+    status: $Enums.ThoughtChallengeStatus | null
+    acceptingResponses: boolean | null
+    showGallery: boolean | null
+    allowFunnyVoices: boolean | null
+    shareToken: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type ThoughtChallengeMaxAggregateOutputType = {
+    id: string | null
+    authorId: string | null
+    title: string | null
+    prompt: string | null
+    status: $Enums.ThoughtChallengeStatus | null
+    acceptingResponses: boolean | null
+    showGallery: boolean | null
+    allowFunnyVoices: boolean | null
+    shareToken: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type ThoughtChallengeCountAggregateOutputType = {
+    id: number
+    authorId: number
+    title: number
+    prompt: number
+    status: number
+    acceptingResponses: number
+    showGallery: number
+    allowFunnyVoices: number
+    shareToken: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type ThoughtChallengeMinAggregateInputType = {
+    id?: true
+    authorId?: true
+    title?: true
+    prompt?: true
+    status?: true
+    acceptingResponses?: true
+    showGallery?: true
+    allowFunnyVoices?: true
+    shareToken?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type ThoughtChallengeMaxAggregateInputType = {
+    id?: true
+    authorId?: true
+    title?: true
+    prompt?: true
+    status?: true
+    acceptingResponses?: true
+    showGallery?: true
+    allowFunnyVoices?: true
+    shareToken?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type ThoughtChallengeCountAggregateInputType = {
+    id?: true
+    authorId?: true
+    title?: true
+    prompt?: true
+    status?: true
+    acceptingResponses?: true
+    showGallery?: true
+    allowFunnyVoices?: true
+    shareToken?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type ThoughtChallengeAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ThoughtChallenge to aggregate.
+     */
+    where?: ThoughtChallengeWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ThoughtChallenges to fetch.
+     */
+    orderBy?: ThoughtChallengeOrderByWithRelationInput | ThoughtChallengeOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: ThoughtChallengeWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ThoughtChallenges from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ThoughtChallenges.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned ThoughtChallenges
+    **/
+    _count?: true | ThoughtChallengeCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: ThoughtChallengeMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: ThoughtChallengeMaxAggregateInputType
+  }
+
+  export type GetThoughtChallengeAggregateType<T extends ThoughtChallengeAggregateArgs> = {
+        [P in keyof T & keyof AggregateThoughtChallenge]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateThoughtChallenge[P]>
+      : GetScalarType<T[P], AggregateThoughtChallenge[P]>
+  }
+
+
+
+
+  export type ThoughtChallengeGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ThoughtChallengeWhereInput
+    orderBy?: ThoughtChallengeOrderByWithAggregationInput | ThoughtChallengeOrderByWithAggregationInput[]
+    by: ThoughtChallengeScalarFieldEnum[] | ThoughtChallengeScalarFieldEnum
+    having?: ThoughtChallengeScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: ThoughtChallengeCountAggregateInputType | true
+    _min?: ThoughtChallengeMinAggregateInputType
+    _max?: ThoughtChallengeMaxAggregateInputType
+  }
+
+  export type ThoughtChallengeGroupByOutputType = {
+    id: string
+    authorId: string
+    title: string
+    prompt: string
+    status: $Enums.ThoughtChallengeStatus
+    acceptingResponses: boolean
+    showGallery: boolean
+    allowFunnyVoices: boolean
+    shareToken: string
+    createdAt: Date
+    updatedAt: Date
+    _count: ThoughtChallengeCountAggregateOutputType | null
+    _min: ThoughtChallengeMinAggregateOutputType | null
+    _max: ThoughtChallengeMaxAggregateOutputType | null
+  }
+
+  type GetThoughtChallengeGroupByPayload<T extends ThoughtChallengeGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<ThoughtChallengeGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof ThoughtChallengeGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], ThoughtChallengeGroupByOutputType[P]>
+            : GetScalarType<T[P], ThoughtChallengeGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type ThoughtChallengeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    authorId?: boolean
+    title?: boolean
+    prompt?: boolean
+    status?: boolean
+    acceptingResponses?: boolean
+    showGallery?: boolean
+    allowFunnyVoices?: boolean
+    shareToken?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    submissions?: boolean | ThoughtChallenge$submissionsArgs<ExtArgs>
+    _count?: boolean | ThoughtChallengeCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["thoughtChallenge"]>
+
+  export type ThoughtChallengeSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    authorId?: boolean
+    title?: boolean
+    prompt?: boolean
+    status?: boolean
+    acceptingResponses?: boolean
+    showGallery?: boolean
+    allowFunnyVoices?: boolean
+    shareToken?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["thoughtChallenge"]>
+
+  export type ThoughtChallengeSelectScalar = {
+    id?: boolean
+    authorId?: boolean
+    title?: boolean
+    prompt?: boolean
+    status?: boolean
+    acceptingResponses?: boolean
+    showGallery?: boolean
+    allowFunnyVoices?: boolean
+    shareToken?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type ThoughtChallengeInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    submissions?: boolean | ThoughtChallenge$submissionsArgs<ExtArgs>
+    _count?: boolean | ThoughtChallengeCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type ThoughtChallengeIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+
+  export type $ThoughtChallengePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "ThoughtChallenge"
+    objects: {
+      submissions: Prisma.$ThoughtSubmissionPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      authorId: string
+      title: string
+      prompt: string
+      status: $Enums.ThoughtChallengeStatus
+      acceptingResponses: boolean
+      showGallery: boolean
+      allowFunnyVoices: boolean
+      shareToken: string
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["thoughtChallenge"]>
+    composites: {}
+  }
+
+  type ThoughtChallengeGetPayload<S extends boolean | null | undefined | ThoughtChallengeDefaultArgs> = $Result.GetResult<Prisma.$ThoughtChallengePayload, S>
+
+  type ThoughtChallengeCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<ThoughtChallengeFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: ThoughtChallengeCountAggregateInputType | true
+    }
+
+  export interface ThoughtChallengeDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['ThoughtChallenge'], meta: { name: 'ThoughtChallenge' } }
+    /**
+     * Find zero or one ThoughtChallenge that matches the filter.
+     * @param {ThoughtChallengeFindUniqueArgs} args - Arguments to find a ThoughtChallenge
+     * @example
+     * // Get one ThoughtChallenge
+     * const thoughtChallenge = await prisma.thoughtChallenge.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends ThoughtChallengeFindUniqueArgs>(args: SelectSubset<T, ThoughtChallengeFindUniqueArgs<ExtArgs>>): Prisma__ThoughtChallengeClient<$Result.GetResult<Prisma.$ThoughtChallengePayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one ThoughtChallenge that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {ThoughtChallengeFindUniqueOrThrowArgs} args - Arguments to find a ThoughtChallenge
+     * @example
+     * // Get one ThoughtChallenge
+     * const thoughtChallenge = await prisma.thoughtChallenge.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends ThoughtChallengeFindUniqueOrThrowArgs>(args: SelectSubset<T, ThoughtChallengeFindUniqueOrThrowArgs<ExtArgs>>): Prisma__ThoughtChallengeClient<$Result.GetResult<Prisma.$ThoughtChallengePayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first ThoughtChallenge that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ThoughtChallengeFindFirstArgs} args - Arguments to find a ThoughtChallenge
+     * @example
+     * // Get one ThoughtChallenge
+     * const thoughtChallenge = await prisma.thoughtChallenge.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends ThoughtChallengeFindFirstArgs>(args?: SelectSubset<T, ThoughtChallengeFindFirstArgs<ExtArgs>>): Prisma__ThoughtChallengeClient<$Result.GetResult<Prisma.$ThoughtChallengePayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first ThoughtChallenge that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ThoughtChallengeFindFirstOrThrowArgs} args - Arguments to find a ThoughtChallenge
+     * @example
+     * // Get one ThoughtChallenge
+     * const thoughtChallenge = await prisma.thoughtChallenge.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends ThoughtChallengeFindFirstOrThrowArgs>(args?: SelectSubset<T, ThoughtChallengeFindFirstOrThrowArgs<ExtArgs>>): Prisma__ThoughtChallengeClient<$Result.GetResult<Prisma.$ThoughtChallengePayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more ThoughtChallenges that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ThoughtChallengeFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all ThoughtChallenges
+     * const thoughtChallenges = await prisma.thoughtChallenge.findMany()
+     * 
+     * // Get first 10 ThoughtChallenges
+     * const thoughtChallenges = await prisma.thoughtChallenge.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const thoughtChallengeWithIdOnly = await prisma.thoughtChallenge.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends ThoughtChallengeFindManyArgs>(args?: SelectSubset<T, ThoughtChallengeFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ThoughtChallengePayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a ThoughtChallenge.
+     * @param {ThoughtChallengeCreateArgs} args - Arguments to create a ThoughtChallenge.
+     * @example
+     * // Create one ThoughtChallenge
+     * const ThoughtChallenge = await prisma.thoughtChallenge.create({
+     *   data: {
+     *     // ... data to create a ThoughtChallenge
+     *   }
+     * })
+     * 
+     */
+    create<T extends ThoughtChallengeCreateArgs>(args: SelectSubset<T, ThoughtChallengeCreateArgs<ExtArgs>>): Prisma__ThoughtChallengeClient<$Result.GetResult<Prisma.$ThoughtChallengePayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many ThoughtChallenges.
+     * @param {ThoughtChallengeCreateManyArgs} args - Arguments to create many ThoughtChallenges.
+     * @example
+     * // Create many ThoughtChallenges
+     * const thoughtChallenge = await prisma.thoughtChallenge.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends ThoughtChallengeCreateManyArgs>(args?: SelectSubset<T, ThoughtChallengeCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many ThoughtChallenges and returns the data saved in the database.
+     * @param {ThoughtChallengeCreateManyAndReturnArgs} args - Arguments to create many ThoughtChallenges.
+     * @example
+     * // Create many ThoughtChallenges
+     * const thoughtChallenge = await prisma.thoughtChallenge.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many ThoughtChallenges and only return the `id`
+     * const thoughtChallengeWithIdOnly = await prisma.thoughtChallenge.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends ThoughtChallengeCreateManyAndReturnArgs>(args?: SelectSubset<T, ThoughtChallengeCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ThoughtChallengePayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a ThoughtChallenge.
+     * @param {ThoughtChallengeDeleteArgs} args - Arguments to delete one ThoughtChallenge.
+     * @example
+     * // Delete one ThoughtChallenge
+     * const ThoughtChallenge = await prisma.thoughtChallenge.delete({
+     *   where: {
+     *     // ... filter to delete one ThoughtChallenge
+     *   }
+     * })
+     * 
+     */
+    delete<T extends ThoughtChallengeDeleteArgs>(args: SelectSubset<T, ThoughtChallengeDeleteArgs<ExtArgs>>): Prisma__ThoughtChallengeClient<$Result.GetResult<Prisma.$ThoughtChallengePayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one ThoughtChallenge.
+     * @param {ThoughtChallengeUpdateArgs} args - Arguments to update one ThoughtChallenge.
+     * @example
+     * // Update one ThoughtChallenge
+     * const thoughtChallenge = await prisma.thoughtChallenge.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends ThoughtChallengeUpdateArgs>(args: SelectSubset<T, ThoughtChallengeUpdateArgs<ExtArgs>>): Prisma__ThoughtChallengeClient<$Result.GetResult<Prisma.$ThoughtChallengePayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more ThoughtChallenges.
+     * @param {ThoughtChallengeDeleteManyArgs} args - Arguments to filter ThoughtChallenges to delete.
+     * @example
+     * // Delete a few ThoughtChallenges
+     * const { count } = await prisma.thoughtChallenge.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends ThoughtChallengeDeleteManyArgs>(args?: SelectSubset<T, ThoughtChallengeDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ThoughtChallenges.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ThoughtChallengeUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many ThoughtChallenges
+     * const thoughtChallenge = await prisma.thoughtChallenge.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends ThoughtChallengeUpdateManyArgs>(args: SelectSubset<T, ThoughtChallengeUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one ThoughtChallenge.
+     * @param {ThoughtChallengeUpsertArgs} args - Arguments to update or create a ThoughtChallenge.
+     * @example
+     * // Update or create a ThoughtChallenge
+     * const thoughtChallenge = await prisma.thoughtChallenge.upsert({
+     *   create: {
+     *     // ... data to create a ThoughtChallenge
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the ThoughtChallenge we want to update
+     *   }
+     * })
+     */
+    upsert<T extends ThoughtChallengeUpsertArgs>(args: SelectSubset<T, ThoughtChallengeUpsertArgs<ExtArgs>>): Prisma__ThoughtChallengeClient<$Result.GetResult<Prisma.$ThoughtChallengePayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of ThoughtChallenges.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ThoughtChallengeCountArgs} args - Arguments to filter ThoughtChallenges to count.
+     * @example
+     * // Count the number of ThoughtChallenges
+     * const count = await prisma.thoughtChallenge.count({
+     *   where: {
+     *     // ... the filter for the ThoughtChallenges we want to count
+     *   }
+     * })
+    **/
+    count<T extends ThoughtChallengeCountArgs>(
+      args?: Subset<T, ThoughtChallengeCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], ThoughtChallengeCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a ThoughtChallenge.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ThoughtChallengeAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends ThoughtChallengeAggregateArgs>(args: Subset<T, ThoughtChallengeAggregateArgs>): Prisma.PrismaPromise<GetThoughtChallengeAggregateType<T>>
+
+    /**
+     * Group by ThoughtChallenge.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ThoughtChallengeGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends ThoughtChallengeGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: ThoughtChallengeGroupByArgs['orderBy'] }
+        : { orderBy?: ThoughtChallengeGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, ThoughtChallengeGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetThoughtChallengeGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the ThoughtChallenge model
+   */
+  readonly fields: ThoughtChallengeFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for ThoughtChallenge.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__ThoughtChallengeClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    submissions<T extends ThoughtChallenge$submissionsArgs<ExtArgs> = {}>(args?: Subset<T, ThoughtChallenge$submissionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ThoughtSubmissionPayload<ExtArgs>, T, "findMany"> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the ThoughtChallenge model
+   */ 
+  interface ThoughtChallengeFieldRefs {
+    readonly id: FieldRef<"ThoughtChallenge", 'String'>
+    readonly authorId: FieldRef<"ThoughtChallenge", 'String'>
+    readonly title: FieldRef<"ThoughtChallenge", 'String'>
+    readonly prompt: FieldRef<"ThoughtChallenge", 'String'>
+    readonly status: FieldRef<"ThoughtChallenge", 'ThoughtChallengeStatus'>
+    readonly acceptingResponses: FieldRef<"ThoughtChallenge", 'Boolean'>
+    readonly showGallery: FieldRef<"ThoughtChallenge", 'Boolean'>
+    readonly allowFunnyVoices: FieldRef<"ThoughtChallenge", 'Boolean'>
+    readonly shareToken: FieldRef<"ThoughtChallenge", 'String'>
+    readonly createdAt: FieldRef<"ThoughtChallenge", 'DateTime'>
+    readonly updatedAt: FieldRef<"ThoughtChallenge", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * ThoughtChallenge findUnique
+   */
+  export type ThoughtChallengeFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtChallenge
+     */
+    select?: ThoughtChallengeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtChallengeInclude<ExtArgs> | null
+    /**
+     * Filter, which ThoughtChallenge to fetch.
+     */
+    where: ThoughtChallengeWhereUniqueInput
+  }
+
+  /**
+   * ThoughtChallenge findUniqueOrThrow
+   */
+  export type ThoughtChallengeFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtChallenge
+     */
+    select?: ThoughtChallengeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtChallengeInclude<ExtArgs> | null
+    /**
+     * Filter, which ThoughtChallenge to fetch.
+     */
+    where: ThoughtChallengeWhereUniqueInput
+  }
+
+  /**
+   * ThoughtChallenge findFirst
+   */
+  export type ThoughtChallengeFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtChallenge
+     */
+    select?: ThoughtChallengeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtChallengeInclude<ExtArgs> | null
+    /**
+     * Filter, which ThoughtChallenge to fetch.
+     */
+    where?: ThoughtChallengeWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ThoughtChallenges to fetch.
+     */
+    orderBy?: ThoughtChallengeOrderByWithRelationInput | ThoughtChallengeOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ThoughtChallenges.
+     */
+    cursor?: ThoughtChallengeWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ThoughtChallenges from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ThoughtChallenges.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ThoughtChallenges.
+     */
+    distinct?: ThoughtChallengeScalarFieldEnum | ThoughtChallengeScalarFieldEnum[]
+  }
+
+  /**
+   * ThoughtChallenge findFirstOrThrow
+   */
+  export type ThoughtChallengeFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtChallenge
+     */
+    select?: ThoughtChallengeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtChallengeInclude<ExtArgs> | null
+    /**
+     * Filter, which ThoughtChallenge to fetch.
+     */
+    where?: ThoughtChallengeWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ThoughtChallenges to fetch.
+     */
+    orderBy?: ThoughtChallengeOrderByWithRelationInput | ThoughtChallengeOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ThoughtChallenges.
+     */
+    cursor?: ThoughtChallengeWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ThoughtChallenges from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ThoughtChallenges.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ThoughtChallenges.
+     */
+    distinct?: ThoughtChallengeScalarFieldEnum | ThoughtChallengeScalarFieldEnum[]
+  }
+
+  /**
+   * ThoughtChallenge findMany
+   */
+  export type ThoughtChallengeFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtChallenge
+     */
+    select?: ThoughtChallengeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtChallengeInclude<ExtArgs> | null
+    /**
+     * Filter, which ThoughtChallenges to fetch.
+     */
+    where?: ThoughtChallengeWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ThoughtChallenges to fetch.
+     */
+    orderBy?: ThoughtChallengeOrderByWithRelationInput | ThoughtChallengeOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing ThoughtChallenges.
+     */
+    cursor?: ThoughtChallengeWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ThoughtChallenges from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ThoughtChallenges.
+     */
+    skip?: number
+    distinct?: ThoughtChallengeScalarFieldEnum | ThoughtChallengeScalarFieldEnum[]
+  }
+
+  /**
+   * ThoughtChallenge create
+   */
+  export type ThoughtChallengeCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtChallenge
+     */
+    select?: ThoughtChallengeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtChallengeInclude<ExtArgs> | null
+    /**
+     * The data needed to create a ThoughtChallenge.
+     */
+    data: XOR<ThoughtChallengeCreateInput, ThoughtChallengeUncheckedCreateInput>
+  }
+
+  /**
+   * ThoughtChallenge createMany
+   */
+  export type ThoughtChallengeCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many ThoughtChallenges.
+     */
+    data: ThoughtChallengeCreateManyInput | ThoughtChallengeCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * ThoughtChallenge createManyAndReturn
+   */
+  export type ThoughtChallengeCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtChallenge
+     */
+    select?: ThoughtChallengeSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many ThoughtChallenges.
+     */
+    data: ThoughtChallengeCreateManyInput | ThoughtChallengeCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * ThoughtChallenge update
+   */
+  export type ThoughtChallengeUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtChallenge
+     */
+    select?: ThoughtChallengeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtChallengeInclude<ExtArgs> | null
+    /**
+     * The data needed to update a ThoughtChallenge.
+     */
+    data: XOR<ThoughtChallengeUpdateInput, ThoughtChallengeUncheckedUpdateInput>
+    /**
+     * Choose, which ThoughtChallenge to update.
+     */
+    where: ThoughtChallengeWhereUniqueInput
+  }
+
+  /**
+   * ThoughtChallenge updateMany
+   */
+  export type ThoughtChallengeUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update ThoughtChallenges.
+     */
+    data: XOR<ThoughtChallengeUpdateManyMutationInput, ThoughtChallengeUncheckedUpdateManyInput>
+    /**
+     * Filter which ThoughtChallenges to update
+     */
+    where?: ThoughtChallengeWhereInput
+  }
+
+  /**
+   * ThoughtChallenge upsert
+   */
+  export type ThoughtChallengeUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtChallenge
+     */
+    select?: ThoughtChallengeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtChallengeInclude<ExtArgs> | null
+    /**
+     * The filter to search for the ThoughtChallenge to update in case it exists.
+     */
+    where: ThoughtChallengeWhereUniqueInput
+    /**
+     * In case the ThoughtChallenge found by the `where` argument doesn't exist, create a new ThoughtChallenge with this data.
+     */
+    create: XOR<ThoughtChallengeCreateInput, ThoughtChallengeUncheckedCreateInput>
+    /**
+     * In case the ThoughtChallenge was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<ThoughtChallengeUpdateInput, ThoughtChallengeUncheckedUpdateInput>
+  }
+
+  /**
+   * ThoughtChallenge delete
+   */
+  export type ThoughtChallengeDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtChallenge
+     */
+    select?: ThoughtChallengeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtChallengeInclude<ExtArgs> | null
+    /**
+     * Filter which ThoughtChallenge to delete.
+     */
+    where: ThoughtChallengeWhereUniqueInput
+  }
+
+  /**
+   * ThoughtChallenge deleteMany
+   */
+  export type ThoughtChallengeDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ThoughtChallenges to delete
+     */
+    where?: ThoughtChallengeWhereInput
+  }
+
+  /**
+   * ThoughtChallenge.submissions
+   */
+  export type ThoughtChallenge$submissionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtSubmission
+     */
+    select?: ThoughtSubmissionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtSubmissionInclude<ExtArgs> | null
+    where?: ThoughtSubmissionWhereInput
+    orderBy?: ThoughtSubmissionOrderByWithRelationInput | ThoughtSubmissionOrderByWithRelationInput[]
+    cursor?: ThoughtSubmissionWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: ThoughtSubmissionScalarFieldEnum | ThoughtSubmissionScalarFieldEnum[]
+  }
+
+  /**
+   * ThoughtChallenge without action
+   */
+  export type ThoughtChallengeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtChallenge
+     */
+    select?: ThoughtChallengeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtChallengeInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model ThoughtSubmission
+   */
+
+  export type AggregateThoughtSubmission = {
+    _count: ThoughtSubmissionCountAggregateOutputType | null
+    _avg: ThoughtSubmissionAvgAggregateOutputType | null
+    _sum: ThoughtSubmissionSumAggregateOutputType | null
+    _min: ThoughtSubmissionMinAggregateOutputType | null
+    _max: ThoughtSubmissionMaxAggregateOutputType | null
+  }
+
+  export type ThoughtSubmissionAvgAggregateOutputType = {
+    durationMs: number | null
+  }
+
+  export type ThoughtSubmissionSumAggregateOutputType = {
+    durationMs: number | null
+  }
+
+  export type ThoughtSubmissionMinAggregateOutputType = {
+    id: string | null
+    challengeId: string | null
+    studentName: string | null
+    voiceEffect: string | null
+    audioPath: string | null
+    mimeType: string | null
+    durationMs: number | null
+    clientKey: string | null
+    status: $Enums.ThoughtSubmissionStatus | null
+    createdAt: Date | null
+  }
+
+  export type ThoughtSubmissionMaxAggregateOutputType = {
+    id: string | null
+    challengeId: string | null
+    studentName: string | null
+    voiceEffect: string | null
+    audioPath: string | null
+    mimeType: string | null
+    durationMs: number | null
+    clientKey: string | null
+    status: $Enums.ThoughtSubmissionStatus | null
+    createdAt: Date | null
+  }
+
+  export type ThoughtSubmissionCountAggregateOutputType = {
+    id: number
+    challengeId: number
+    studentName: number
+    character: number
+    voiceEffect: number
+    audioPath: number
+    mimeType: number
+    durationMs: number
+    envelope: number
+    clientKey: number
+    status: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type ThoughtSubmissionAvgAggregateInputType = {
+    durationMs?: true
+  }
+
+  export type ThoughtSubmissionSumAggregateInputType = {
+    durationMs?: true
+  }
+
+  export type ThoughtSubmissionMinAggregateInputType = {
+    id?: true
+    challengeId?: true
+    studentName?: true
+    voiceEffect?: true
+    audioPath?: true
+    mimeType?: true
+    durationMs?: true
+    clientKey?: true
+    status?: true
+    createdAt?: true
+  }
+
+  export type ThoughtSubmissionMaxAggregateInputType = {
+    id?: true
+    challengeId?: true
+    studentName?: true
+    voiceEffect?: true
+    audioPath?: true
+    mimeType?: true
+    durationMs?: true
+    clientKey?: true
+    status?: true
+    createdAt?: true
+  }
+
+  export type ThoughtSubmissionCountAggregateInputType = {
+    id?: true
+    challengeId?: true
+    studentName?: true
+    character?: true
+    voiceEffect?: true
+    audioPath?: true
+    mimeType?: true
+    durationMs?: true
+    envelope?: true
+    clientKey?: true
+    status?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type ThoughtSubmissionAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ThoughtSubmission to aggregate.
+     */
+    where?: ThoughtSubmissionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ThoughtSubmissions to fetch.
+     */
+    orderBy?: ThoughtSubmissionOrderByWithRelationInput | ThoughtSubmissionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: ThoughtSubmissionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ThoughtSubmissions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ThoughtSubmissions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned ThoughtSubmissions
+    **/
+    _count?: true | ThoughtSubmissionCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: ThoughtSubmissionAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: ThoughtSubmissionSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: ThoughtSubmissionMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: ThoughtSubmissionMaxAggregateInputType
+  }
+
+  export type GetThoughtSubmissionAggregateType<T extends ThoughtSubmissionAggregateArgs> = {
+        [P in keyof T & keyof AggregateThoughtSubmission]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateThoughtSubmission[P]>
+      : GetScalarType<T[P], AggregateThoughtSubmission[P]>
+  }
+
+
+
+
+  export type ThoughtSubmissionGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ThoughtSubmissionWhereInput
+    orderBy?: ThoughtSubmissionOrderByWithAggregationInput | ThoughtSubmissionOrderByWithAggregationInput[]
+    by: ThoughtSubmissionScalarFieldEnum[] | ThoughtSubmissionScalarFieldEnum
+    having?: ThoughtSubmissionScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: ThoughtSubmissionCountAggregateInputType | true
+    _avg?: ThoughtSubmissionAvgAggregateInputType
+    _sum?: ThoughtSubmissionSumAggregateInputType
+    _min?: ThoughtSubmissionMinAggregateInputType
+    _max?: ThoughtSubmissionMaxAggregateInputType
+  }
+
+  export type ThoughtSubmissionGroupByOutputType = {
+    id: string
+    challengeId: string
+    studentName: string
+    character: JsonValue
+    voiceEffect: string
+    audioPath: string
+    mimeType: string
+    durationMs: number
+    envelope: JsonValue
+    clientKey: string
+    status: $Enums.ThoughtSubmissionStatus
+    createdAt: Date
+    _count: ThoughtSubmissionCountAggregateOutputType | null
+    _avg: ThoughtSubmissionAvgAggregateOutputType | null
+    _sum: ThoughtSubmissionSumAggregateOutputType | null
+    _min: ThoughtSubmissionMinAggregateOutputType | null
+    _max: ThoughtSubmissionMaxAggregateOutputType | null
+  }
+
+  type GetThoughtSubmissionGroupByPayload<T extends ThoughtSubmissionGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<ThoughtSubmissionGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof ThoughtSubmissionGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], ThoughtSubmissionGroupByOutputType[P]>
+            : GetScalarType<T[P], ThoughtSubmissionGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type ThoughtSubmissionSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    challengeId?: boolean
+    studentName?: boolean
+    character?: boolean
+    voiceEffect?: boolean
+    audioPath?: boolean
+    mimeType?: boolean
+    durationMs?: boolean
+    envelope?: boolean
+    clientKey?: boolean
+    status?: boolean
+    createdAt?: boolean
+    challenge?: boolean | ThoughtChallengeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["thoughtSubmission"]>
+
+  export type ThoughtSubmissionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    challengeId?: boolean
+    studentName?: boolean
+    character?: boolean
+    voiceEffect?: boolean
+    audioPath?: boolean
+    mimeType?: boolean
+    durationMs?: boolean
+    envelope?: boolean
+    clientKey?: boolean
+    status?: boolean
+    createdAt?: boolean
+    challenge?: boolean | ThoughtChallengeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["thoughtSubmission"]>
+
+  export type ThoughtSubmissionSelectScalar = {
+    id?: boolean
+    challengeId?: boolean
+    studentName?: boolean
+    character?: boolean
+    voiceEffect?: boolean
+    audioPath?: boolean
+    mimeType?: boolean
+    durationMs?: boolean
+    envelope?: boolean
+    clientKey?: boolean
+    status?: boolean
+    createdAt?: boolean
+  }
+
+  export type ThoughtSubmissionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    challenge?: boolean | ThoughtChallengeDefaultArgs<ExtArgs>
+  }
+  export type ThoughtSubmissionIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    challenge?: boolean | ThoughtChallengeDefaultArgs<ExtArgs>
+  }
+
+  export type $ThoughtSubmissionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "ThoughtSubmission"
+    objects: {
+      challenge: Prisma.$ThoughtChallengePayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      challengeId: string
+      studentName: string
+      character: Prisma.JsonValue
+      voiceEffect: string
+      /**
+       * Private Blob URL. Never send this to the browser; stream it from an API route.
+       */
+      audioPath: string
+      mimeType: string
+      durationMs: number
+      envelope: Prisma.JsonValue
+      clientKey: string
+      status: $Enums.ThoughtSubmissionStatus
+      createdAt: Date
+    }, ExtArgs["result"]["thoughtSubmission"]>
+    composites: {}
+  }
+
+  type ThoughtSubmissionGetPayload<S extends boolean | null | undefined | ThoughtSubmissionDefaultArgs> = $Result.GetResult<Prisma.$ThoughtSubmissionPayload, S>
+
+  type ThoughtSubmissionCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<ThoughtSubmissionFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: ThoughtSubmissionCountAggregateInputType | true
+    }
+
+  export interface ThoughtSubmissionDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['ThoughtSubmission'], meta: { name: 'ThoughtSubmission' } }
+    /**
+     * Find zero or one ThoughtSubmission that matches the filter.
+     * @param {ThoughtSubmissionFindUniqueArgs} args - Arguments to find a ThoughtSubmission
+     * @example
+     * // Get one ThoughtSubmission
+     * const thoughtSubmission = await prisma.thoughtSubmission.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends ThoughtSubmissionFindUniqueArgs>(args: SelectSubset<T, ThoughtSubmissionFindUniqueArgs<ExtArgs>>): Prisma__ThoughtSubmissionClient<$Result.GetResult<Prisma.$ThoughtSubmissionPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one ThoughtSubmission that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {ThoughtSubmissionFindUniqueOrThrowArgs} args - Arguments to find a ThoughtSubmission
+     * @example
+     * // Get one ThoughtSubmission
+     * const thoughtSubmission = await prisma.thoughtSubmission.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends ThoughtSubmissionFindUniqueOrThrowArgs>(args: SelectSubset<T, ThoughtSubmissionFindUniqueOrThrowArgs<ExtArgs>>): Prisma__ThoughtSubmissionClient<$Result.GetResult<Prisma.$ThoughtSubmissionPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first ThoughtSubmission that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ThoughtSubmissionFindFirstArgs} args - Arguments to find a ThoughtSubmission
+     * @example
+     * // Get one ThoughtSubmission
+     * const thoughtSubmission = await prisma.thoughtSubmission.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends ThoughtSubmissionFindFirstArgs>(args?: SelectSubset<T, ThoughtSubmissionFindFirstArgs<ExtArgs>>): Prisma__ThoughtSubmissionClient<$Result.GetResult<Prisma.$ThoughtSubmissionPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first ThoughtSubmission that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ThoughtSubmissionFindFirstOrThrowArgs} args - Arguments to find a ThoughtSubmission
+     * @example
+     * // Get one ThoughtSubmission
+     * const thoughtSubmission = await prisma.thoughtSubmission.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends ThoughtSubmissionFindFirstOrThrowArgs>(args?: SelectSubset<T, ThoughtSubmissionFindFirstOrThrowArgs<ExtArgs>>): Prisma__ThoughtSubmissionClient<$Result.GetResult<Prisma.$ThoughtSubmissionPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more ThoughtSubmissions that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ThoughtSubmissionFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all ThoughtSubmissions
+     * const thoughtSubmissions = await prisma.thoughtSubmission.findMany()
+     * 
+     * // Get first 10 ThoughtSubmissions
+     * const thoughtSubmissions = await prisma.thoughtSubmission.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const thoughtSubmissionWithIdOnly = await prisma.thoughtSubmission.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends ThoughtSubmissionFindManyArgs>(args?: SelectSubset<T, ThoughtSubmissionFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ThoughtSubmissionPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a ThoughtSubmission.
+     * @param {ThoughtSubmissionCreateArgs} args - Arguments to create a ThoughtSubmission.
+     * @example
+     * // Create one ThoughtSubmission
+     * const ThoughtSubmission = await prisma.thoughtSubmission.create({
+     *   data: {
+     *     // ... data to create a ThoughtSubmission
+     *   }
+     * })
+     * 
+     */
+    create<T extends ThoughtSubmissionCreateArgs>(args: SelectSubset<T, ThoughtSubmissionCreateArgs<ExtArgs>>): Prisma__ThoughtSubmissionClient<$Result.GetResult<Prisma.$ThoughtSubmissionPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many ThoughtSubmissions.
+     * @param {ThoughtSubmissionCreateManyArgs} args - Arguments to create many ThoughtSubmissions.
+     * @example
+     * // Create many ThoughtSubmissions
+     * const thoughtSubmission = await prisma.thoughtSubmission.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends ThoughtSubmissionCreateManyArgs>(args?: SelectSubset<T, ThoughtSubmissionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many ThoughtSubmissions and returns the data saved in the database.
+     * @param {ThoughtSubmissionCreateManyAndReturnArgs} args - Arguments to create many ThoughtSubmissions.
+     * @example
+     * // Create many ThoughtSubmissions
+     * const thoughtSubmission = await prisma.thoughtSubmission.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many ThoughtSubmissions and only return the `id`
+     * const thoughtSubmissionWithIdOnly = await prisma.thoughtSubmission.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends ThoughtSubmissionCreateManyAndReturnArgs>(args?: SelectSubset<T, ThoughtSubmissionCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ThoughtSubmissionPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a ThoughtSubmission.
+     * @param {ThoughtSubmissionDeleteArgs} args - Arguments to delete one ThoughtSubmission.
+     * @example
+     * // Delete one ThoughtSubmission
+     * const ThoughtSubmission = await prisma.thoughtSubmission.delete({
+     *   where: {
+     *     // ... filter to delete one ThoughtSubmission
+     *   }
+     * })
+     * 
+     */
+    delete<T extends ThoughtSubmissionDeleteArgs>(args: SelectSubset<T, ThoughtSubmissionDeleteArgs<ExtArgs>>): Prisma__ThoughtSubmissionClient<$Result.GetResult<Prisma.$ThoughtSubmissionPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one ThoughtSubmission.
+     * @param {ThoughtSubmissionUpdateArgs} args - Arguments to update one ThoughtSubmission.
+     * @example
+     * // Update one ThoughtSubmission
+     * const thoughtSubmission = await prisma.thoughtSubmission.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends ThoughtSubmissionUpdateArgs>(args: SelectSubset<T, ThoughtSubmissionUpdateArgs<ExtArgs>>): Prisma__ThoughtSubmissionClient<$Result.GetResult<Prisma.$ThoughtSubmissionPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more ThoughtSubmissions.
+     * @param {ThoughtSubmissionDeleteManyArgs} args - Arguments to filter ThoughtSubmissions to delete.
+     * @example
+     * // Delete a few ThoughtSubmissions
+     * const { count } = await prisma.thoughtSubmission.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends ThoughtSubmissionDeleteManyArgs>(args?: SelectSubset<T, ThoughtSubmissionDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ThoughtSubmissions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ThoughtSubmissionUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many ThoughtSubmissions
+     * const thoughtSubmission = await prisma.thoughtSubmission.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends ThoughtSubmissionUpdateManyArgs>(args: SelectSubset<T, ThoughtSubmissionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one ThoughtSubmission.
+     * @param {ThoughtSubmissionUpsertArgs} args - Arguments to update or create a ThoughtSubmission.
+     * @example
+     * // Update or create a ThoughtSubmission
+     * const thoughtSubmission = await prisma.thoughtSubmission.upsert({
+     *   create: {
+     *     // ... data to create a ThoughtSubmission
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the ThoughtSubmission we want to update
+     *   }
+     * })
+     */
+    upsert<T extends ThoughtSubmissionUpsertArgs>(args: SelectSubset<T, ThoughtSubmissionUpsertArgs<ExtArgs>>): Prisma__ThoughtSubmissionClient<$Result.GetResult<Prisma.$ThoughtSubmissionPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of ThoughtSubmissions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ThoughtSubmissionCountArgs} args - Arguments to filter ThoughtSubmissions to count.
+     * @example
+     * // Count the number of ThoughtSubmissions
+     * const count = await prisma.thoughtSubmission.count({
+     *   where: {
+     *     // ... the filter for the ThoughtSubmissions we want to count
+     *   }
+     * })
+    **/
+    count<T extends ThoughtSubmissionCountArgs>(
+      args?: Subset<T, ThoughtSubmissionCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], ThoughtSubmissionCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a ThoughtSubmission.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ThoughtSubmissionAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends ThoughtSubmissionAggregateArgs>(args: Subset<T, ThoughtSubmissionAggregateArgs>): Prisma.PrismaPromise<GetThoughtSubmissionAggregateType<T>>
+
+    /**
+     * Group by ThoughtSubmission.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ThoughtSubmissionGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends ThoughtSubmissionGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: ThoughtSubmissionGroupByArgs['orderBy'] }
+        : { orderBy?: ThoughtSubmissionGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, ThoughtSubmissionGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetThoughtSubmissionGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the ThoughtSubmission model
+   */
+  readonly fields: ThoughtSubmissionFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for ThoughtSubmission.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__ThoughtSubmissionClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    challenge<T extends ThoughtChallengeDefaultArgs<ExtArgs> = {}>(args?: Subset<T, ThoughtChallengeDefaultArgs<ExtArgs>>): Prisma__ThoughtChallengeClient<$Result.GetResult<Prisma.$ThoughtChallengePayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the ThoughtSubmission model
+   */ 
+  interface ThoughtSubmissionFieldRefs {
+    readonly id: FieldRef<"ThoughtSubmission", 'String'>
+    readonly challengeId: FieldRef<"ThoughtSubmission", 'String'>
+    readonly studentName: FieldRef<"ThoughtSubmission", 'String'>
+    readonly character: FieldRef<"ThoughtSubmission", 'Json'>
+    readonly voiceEffect: FieldRef<"ThoughtSubmission", 'String'>
+    readonly audioPath: FieldRef<"ThoughtSubmission", 'String'>
+    readonly mimeType: FieldRef<"ThoughtSubmission", 'String'>
+    readonly durationMs: FieldRef<"ThoughtSubmission", 'Int'>
+    readonly envelope: FieldRef<"ThoughtSubmission", 'Json'>
+    readonly clientKey: FieldRef<"ThoughtSubmission", 'String'>
+    readonly status: FieldRef<"ThoughtSubmission", 'ThoughtSubmissionStatus'>
+    readonly createdAt: FieldRef<"ThoughtSubmission", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * ThoughtSubmission findUnique
+   */
+  export type ThoughtSubmissionFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtSubmission
+     */
+    select?: ThoughtSubmissionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtSubmissionInclude<ExtArgs> | null
+    /**
+     * Filter, which ThoughtSubmission to fetch.
+     */
+    where: ThoughtSubmissionWhereUniqueInput
+  }
+
+  /**
+   * ThoughtSubmission findUniqueOrThrow
+   */
+  export type ThoughtSubmissionFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtSubmission
+     */
+    select?: ThoughtSubmissionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtSubmissionInclude<ExtArgs> | null
+    /**
+     * Filter, which ThoughtSubmission to fetch.
+     */
+    where: ThoughtSubmissionWhereUniqueInput
+  }
+
+  /**
+   * ThoughtSubmission findFirst
+   */
+  export type ThoughtSubmissionFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtSubmission
+     */
+    select?: ThoughtSubmissionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtSubmissionInclude<ExtArgs> | null
+    /**
+     * Filter, which ThoughtSubmission to fetch.
+     */
+    where?: ThoughtSubmissionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ThoughtSubmissions to fetch.
+     */
+    orderBy?: ThoughtSubmissionOrderByWithRelationInput | ThoughtSubmissionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ThoughtSubmissions.
+     */
+    cursor?: ThoughtSubmissionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ThoughtSubmissions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ThoughtSubmissions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ThoughtSubmissions.
+     */
+    distinct?: ThoughtSubmissionScalarFieldEnum | ThoughtSubmissionScalarFieldEnum[]
+  }
+
+  /**
+   * ThoughtSubmission findFirstOrThrow
+   */
+  export type ThoughtSubmissionFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtSubmission
+     */
+    select?: ThoughtSubmissionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtSubmissionInclude<ExtArgs> | null
+    /**
+     * Filter, which ThoughtSubmission to fetch.
+     */
+    where?: ThoughtSubmissionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ThoughtSubmissions to fetch.
+     */
+    orderBy?: ThoughtSubmissionOrderByWithRelationInput | ThoughtSubmissionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ThoughtSubmissions.
+     */
+    cursor?: ThoughtSubmissionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ThoughtSubmissions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ThoughtSubmissions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ThoughtSubmissions.
+     */
+    distinct?: ThoughtSubmissionScalarFieldEnum | ThoughtSubmissionScalarFieldEnum[]
+  }
+
+  /**
+   * ThoughtSubmission findMany
+   */
+  export type ThoughtSubmissionFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtSubmission
+     */
+    select?: ThoughtSubmissionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtSubmissionInclude<ExtArgs> | null
+    /**
+     * Filter, which ThoughtSubmissions to fetch.
+     */
+    where?: ThoughtSubmissionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ThoughtSubmissions to fetch.
+     */
+    orderBy?: ThoughtSubmissionOrderByWithRelationInput | ThoughtSubmissionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing ThoughtSubmissions.
+     */
+    cursor?: ThoughtSubmissionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ThoughtSubmissions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ThoughtSubmissions.
+     */
+    skip?: number
+    distinct?: ThoughtSubmissionScalarFieldEnum | ThoughtSubmissionScalarFieldEnum[]
+  }
+
+  /**
+   * ThoughtSubmission create
+   */
+  export type ThoughtSubmissionCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtSubmission
+     */
+    select?: ThoughtSubmissionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtSubmissionInclude<ExtArgs> | null
+    /**
+     * The data needed to create a ThoughtSubmission.
+     */
+    data: XOR<ThoughtSubmissionCreateInput, ThoughtSubmissionUncheckedCreateInput>
+  }
+
+  /**
+   * ThoughtSubmission createMany
+   */
+  export type ThoughtSubmissionCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many ThoughtSubmissions.
+     */
+    data: ThoughtSubmissionCreateManyInput | ThoughtSubmissionCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * ThoughtSubmission createManyAndReturn
+   */
+  export type ThoughtSubmissionCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtSubmission
+     */
+    select?: ThoughtSubmissionSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many ThoughtSubmissions.
+     */
+    data: ThoughtSubmissionCreateManyInput | ThoughtSubmissionCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtSubmissionIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * ThoughtSubmission update
+   */
+  export type ThoughtSubmissionUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtSubmission
+     */
+    select?: ThoughtSubmissionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtSubmissionInclude<ExtArgs> | null
+    /**
+     * The data needed to update a ThoughtSubmission.
+     */
+    data: XOR<ThoughtSubmissionUpdateInput, ThoughtSubmissionUncheckedUpdateInput>
+    /**
+     * Choose, which ThoughtSubmission to update.
+     */
+    where: ThoughtSubmissionWhereUniqueInput
+  }
+
+  /**
+   * ThoughtSubmission updateMany
+   */
+  export type ThoughtSubmissionUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update ThoughtSubmissions.
+     */
+    data: XOR<ThoughtSubmissionUpdateManyMutationInput, ThoughtSubmissionUncheckedUpdateManyInput>
+    /**
+     * Filter which ThoughtSubmissions to update
+     */
+    where?: ThoughtSubmissionWhereInput
+  }
+
+  /**
+   * ThoughtSubmission upsert
+   */
+  export type ThoughtSubmissionUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtSubmission
+     */
+    select?: ThoughtSubmissionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtSubmissionInclude<ExtArgs> | null
+    /**
+     * The filter to search for the ThoughtSubmission to update in case it exists.
+     */
+    where: ThoughtSubmissionWhereUniqueInput
+    /**
+     * In case the ThoughtSubmission found by the `where` argument doesn't exist, create a new ThoughtSubmission with this data.
+     */
+    create: XOR<ThoughtSubmissionCreateInput, ThoughtSubmissionUncheckedCreateInput>
+    /**
+     * In case the ThoughtSubmission was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<ThoughtSubmissionUpdateInput, ThoughtSubmissionUncheckedUpdateInput>
+  }
+
+  /**
+   * ThoughtSubmission delete
+   */
+  export type ThoughtSubmissionDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtSubmission
+     */
+    select?: ThoughtSubmissionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtSubmissionInclude<ExtArgs> | null
+    /**
+     * Filter which ThoughtSubmission to delete.
+     */
+    where: ThoughtSubmissionWhereUniqueInput
+  }
+
+  /**
+   * ThoughtSubmission deleteMany
+   */
+  export type ThoughtSubmissionDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ThoughtSubmissions to delete
+     */
+    where?: ThoughtSubmissionWhereInput
+  }
+
+  /**
+   * ThoughtSubmission without action
+   */
+  export type ThoughtSubmissionDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtSubmission
+     */
+    select?: ThoughtSubmissionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtSubmissionInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -11751,6 +14046,41 @@ export namespace Prisma {
   export type StoryRecordingScalarFieldEnum = (typeof StoryRecordingScalarFieldEnum)[keyof typeof StoryRecordingScalarFieldEnum]
 
 
+  export const ThoughtChallengeScalarFieldEnum: {
+    id: 'id',
+    authorId: 'authorId',
+    title: 'title',
+    prompt: 'prompt',
+    status: 'status',
+    acceptingResponses: 'acceptingResponses',
+    showGallery: 'showGallery',
+    allowFunnyVoices: 'allowFunnyVoices',
+    shareToken: 'shareToken',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type ThoughtChallengeScalarFieldEnum = (typeof ThoughtChallengeScalarFieldEnum)[keyof typeof ThoughtChallengeScalarFieldEnum]
+
+
+  export const ThoughtSubmissionScalarFieldEnum: {
+    id: 'id',
+    challengeId: 'challengeId',
+    studentName: 'studentName',
+    character: 'character',
+    voiceEffect: 'voiceEffect',
+    audioPath: 'audioPath',
+    mimeType: 'mimeType',
+    durationMs: 'durationMs',
+    envelope: 'envelope',
+    clientKey: 'clientKey',
+    status: 'status',
+    createdAt: 'createdAt'
+  };
+
+  export type ThoughtSubmissionScalarFieldEnum = (typeof ThoughtSubmissionScalarFieldEnum)[keyof typeof ThoughtSubmissionScalarFieldEnum]
+
+
   export const SortOrder: {
     asc: 'asc',
     desc: 'desc'
@@ -11765,6 +14095,13 @@ export namespace Prisma {
   };
 
   export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
+  export const JsonNullValueInput: {
+    JsonNull: typeof JsonNull
+  };
+
+  export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
   export const QueryMode: {
@@ -11892,6 +14229,34 @@ export namespace Prisma {
    * Reference to a field of type 'StorySubmissionStatus[]'
    */
   export type ListEnumStorySubmissionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'StorySubmissionStatus[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'ThoughtChallengeStatus'
+   */
+  export type EnumThoughtChallengeStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ThoughtChallengeStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'ThoughtChallengeStatus[]'
+   */
+  export type ListEnumThoughtChallengeStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ThoughtChallengeStatus[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'ThoughtSubmissionStatus'
+   */
+  export type EnumThoughtSubmissionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ThoughtSubmissionStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'ThoughtSubmissionStatus[]'
+   */
+  export type ListEnumThoughtSubmissionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ThoughtSubmissionStatus[]'>
     
 
 
@@ -12626,6 +14991,184 @@ export namespace Prisma {
     mimeType?: StringWithAggregatesFilter<"StoryRecording"> | string
     durationMs?: IntWithAggregatesFilter<"StoryRecording"> | number
     envelope?: JsonNullableWithAggregatesFilter<"StoryRecording">
+  }
+
+  export type ThoughtChallengeWhereInput = {
+    AND?: ThoughtChallengeWhereInput | ThoughtChallengeWhereInput[]
+    OR?: ThoughtChallengeWhereInput[]
+    NOT?: ThoughtChallengeWhereInput | ThoughtChallengeWhereInput[]
+    id?: StringFilter<"ThoughtChallenge"> | string
+    authorId?: StringFilter<"ThoughtChallenge"> | string
+    title?: StringFilter<"ThoughtChallenge"> | string
+    prompt?: StringFilter<"ThoughtChallenge"> | string
+    status?: EnumThoughtChallengeStatusFilter<"ThoughtChallenge"> | $Enums.ThoughtChallengeStatus
+    acceptingResponses?: BoolFilter<"ThoughtChallenge"> | boolean
+    showGallery?: BoolFilter<"ThoughtChallenge"> | boolean
+    allowFunnyVoices?: BoolFilter<"ThoughtChallenge"> | boolean
+    shareToken?: StringFilter<"ThoughtChallenge"> | string
+    createdAt?: DateTimeFilter<"ThoughtChallenge"> | Date | string
+    updatedAt?: DateTimeFilter<"ThoughtChallenge"> | Date | string
+    submissions?: ThoughtSubmissionListRelationFilter
+  }
+
+  export type ThoughtChallengeOrderByWithRelationInput = {
+    id?: SortOrder
+    authorId?: SortOrder
+    title?: SortOrder
+    prompt?: SortOrder
+    status?: SortOrder
+    acceptingResponses?: SortOrder
+    showGallery?: SortOrder
+    allowFunnyVoices?: SortOrder
+    shareToken?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    submissions?: ThoughtSubmissionOrderByRelationAggregateInput
+  }
+
+  export type ThoughtChallengeWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    shareToken?: string
+    AND?: ThoughtChallengeWhereInput | ThoughtChallengeWhereInput[]
+    OR?: ThoughtChallengeWhereInput[]
+    NOT?: ThoughtChallengeWhereInput | ThoughtChallengeWhereInput[]
+    authorId?: StringFilter<"ThoughtChallenge"> | string
+    title?: StringFilter<"ThoughtChallenge"> | string
+    prompt?: StringFilter<"ThoughtChallenge"> | string
+    status?: EnumThoughtChallengeStatusFilter<"ThoughtChallenge"> | $Enums.ThoughtChallengeStatus
+    acceptingResponses?: BoolFilter<"ThoughtChallenge"> | boolean
+    showGallery?: BoolFilter<"ThoughtChallenge"> | boolean
+    allowFunnyVoices?: BoolFilter<"ThoughtChallenge"> | boolean
+    createdAt?: DateTimeFilter<"ThoughtChallenge"> | Date | string
+    updatedAt?: DateTimeFilter<"ThoughtChallenge"> | Date | string
+    submissions?: ThoughtSubmissionListRelationFilter
+  }, "id" | "shareToken">
+
+  export type ThoughtChallengeOrderByWithAggregationInput = {
+    id?: SortOrder
+    authorId?: SortOrder
+    title?: SortOrder
+    prompt?: SortOrder
+    status?: SortOrder
+    acceptingResponses?: SortOrder
+    showGallery?: SortOrder
+    allowFunnyVoices?: SortOrder
+    shareToken?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: ThoughtChallengeCountOrderByAggregateInput
+    _max?: ThoughtChallengeMaxOrderByAggregateInput
+    _min?: ThoughtChallengeMinOrderByAggregateInput
+  }
+
+  export type ThoughtChallengeScalarWhereWithAggregatesInput = {
+    AND?: ThoughtChallengeScalarWhereWithAggregatesInput | ThoughtChallengeScalarWhereWithAggregatesInput[]
+    OR?: ThoughtChallengeScalarWhereWithAggregatesInput[]
+    NOT?: ThoughtChallengeScalarWhereWithAggregatesInput | ThoughtChallengeScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"ThoughtChallenge"> | string
+    authorId?: StringWithAggregatesFilter<"ThoughtChallenge"> | string
+    title?: StringWithAggregatesFilter<"ThoughtChallenge"> | string
+    prompt?: StringWithAggregatesFilter<"ThoughtChallenge"> | string
+    status?: EnumThoughtChallengeStatusWithAggregatesFilter<"ThoughtChallenge"> | $Enums.ThoughtChallengeStatus
+    acceptingResponses?: BoolWithAggregatesFilter<"ThoughtChallenge"> | boolean
+    showGallery?: BoolWithAggregatesFilter<"ThoughtChallenge"> | boolean
+    allowFunnyVoices?: BoolWithAggregatesFilter<"ThoughtChallenge"> | boolean
+    shareToken?: StringWithAggregatesFilter<"ThoughtChallenge"> | string
+    createdAt?: DateTimeWithAggregatesFilter<"ThoughtChallenge"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"ThoughtChallenge"> | Date | string
+  }
+
+  export type ThoughtSubmissionWhereInput = {
+    AND?: ThoughtSubmissionWhereInput | ThoughtSubmissionWhereInput[]
+    OR?: ThoughtSubmissionWhereInput[]
+    NOT?: ThoughtSubmissionWhereInput | ThoughtSubmissionWhereInput[]
+    id?: StringFilter<"ThoughtSubmission"> | string
+    challengeId?: StringFilter<"ThoughtSubmission"> | string
+    studentName?: StringFilter<"ThoughtSubmission"> | string
+    character?: JsonFilter<"ThoughtSubmission">
+    voiceEffect?: StringFilter<"ThoughtSubmission"> | string
+    audioPath?: StringFilter<"ThoughtSubmission"> | string
+    mimeType?: StringFilter<"ThoughtSubmission"> | string
+    durationMs?: IntFilter<"ThoughtSubmission"> | number
+    envelope?: JsonFilter<"ThoughtSubmission">
+    clientKey?: StringFilter<"ThoughtSubmission"> | string
+    status?: EnumThoughtSubmissionStatusFilter<"ThoughtSubmission"> | $Enums.ThoughtSubmissionStatus
+    createdAt?: DateTimeFilter<"ThoughtSubmission"> | Date | string
+    challenge?: XOR<ThoughtChallengeRelationFilter, ThoughtChallengeWhereInput>
+  }
+
+  export type ThoughtSubmissionOrderByWithRelationInput = {
+    id?: SortOrder
+    challengeId?: SortOrder
+    studentName?: SortOrder
+    character?: SortOrder
+    voiceEffect?: SortOrder
+    audioPath?: SortOrder
+    mimeType?: SortOrder
+    durationMs?: SortOrder
+    envelope?: SortOrder
+    clientKey?: SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    challenge?: ThoughtChallengeOrderByWithRelationInput
+  }
+
+  export type ThoughtSubmissionWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    challengeId_clientKey?: ThoughtSubmissionChallengeIdClientKeyCompoundUniqueInput
+    AND?: ThoughtSubmissionWhereInput | ThoughtSubmissionWhereInput[]
+    OR?: ThoughtSubmissionWhereInput[]
+    NOT?: ThoughtSubmissionWhereInput | ThoughtSubmissionWhereInput[]
+    challengeId?: StringFilter<"ThoughtSubmission"> | string
+    studentName?: StringFilter<"ThoughtSubmission"> | string
+    character?: JsonFilter<"ThoughtSubmission">
+    voiceEffect?: StringFilter<"ThoughtSubmission"> | string
+    audioPath?: StringFilter<"ThoughtSubmission"> | string
+    mimeType?: StringFilter<"ThoughtSubmission"> | string
+    durationMs?: IntFilter<"ThoughtSubmission"> | number
+    envelope?: JsonFilter<"ThoughtSubmission">
+    clientKey?: StringFilter<"ThoughtSubmission"> | string
+    status?: EnumThoughtSubmissionStatusFilter<"ThoughtSubmission"> | $Enums.ThoughtSubmissionStatus
+    createdAt?: DateTimeFilter<"ThoughtSubmission"> | Date | string
+    challenge?: XOR<ThoughtChallengeRelationFilter, ThoughtChallengeWhereInput>
+  }, "id" | "challengeId_clientKey">
+
+  export type ThoughtSubmissionOrderByWithAggregationInput = {
+    id?: SortOrder
+    challengeId?: SortOrder
+    studentName?: SortOrder
+    character?: SortOrder
+    voiceEffect?: SortOrder
+    audioPath?: SortOrder
+    mimeType?: SortOrder
+    durationMs?: SortOrder
+    envelope?: SortOrder
+    clientKey?: SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    _count?: ThoughtSubmissionCountOrderByAggregateInput
+    _avg?: ThoughtSubmissionAvgOrderByAggregateInput
+    _max?: ThoughtSubmissionMaxOrderByAggregateInput
+    _min?: ThoughtSubmissionMinOrderByAggregateInput
+    _sum?: ThoughtSubmissionSumOrderByAggregateInput
+  }
+
+  export type ThoughtSubmissionScalarWhereWithAggregatesInput = {
+    AND?: ThoughtSubmissionScalarWhereWithAggregatesInput | ThoughtSubmissionScalarWhereWithAggregatesInput[]
+    OR?: ThoughtSubmissionScalarWhereWithAggregatesInput[]
+    NOT?: ThoughtSubmissionScalarWhereWithAggregatesInput | ThoughtSubmissionScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"ThoughtSubmission"> | string
+    challengeId?: StringWithAggregatesFilter<"ThoughtSubmission"> | string
+    studentName?: StringWithAggregatesFilter<"ThoughtSubmission"> | string
+    character?: JsonWithAggregatesFilter<"ThoughtSubmission">
+    voiceEffect?: StringWithAggregatesFilter<"ThoughtSubmission"> | string
+    audioPath?: StringWithAggregatesFilter<"ThoughtSubmission"> | string
+    mimeType?: StringWithAggregatesFilter<"ThoughtSubmission"> | string
+    durationMs?: IntWithAggregatesFilter<"ThoughtSubmission"> | number
+    envelope?: JsonWithAggregatesFilter<"ThoughtSubmission">
+    clientKey?: StringWithAggregatesFilter<"ThoughtSubmission"> | string
+    status?: EnumThoughtSubmissionStatusWithAggregatesFilter<"ThoughtSubmission"> | $Enums.ThoughtSubmissionStatus
+    createdAt?: DateTimeWithAggregatesFilter<"ThoughtSubmission"> | Date | string
   }
 
   export type QuizCreateInput = {
@@ -13416,6 +15959,212 @@ export namespace Prisma {
     envelope?: NullableJsonNullValueInput | InputJsonValue
   }
 
+  export type ThoughtChallengeCreateInput = {
+    id?: string
+    authorId?: string
+    title: string
+    prompt: string
+    status?: $Enums.ThoughtChallengeStatus
+    acceptingResponses?: boolean
+    showGallery?: boolean
+    allowFunnyVoices?: boolean
+    shareToken: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    submissions?: ThoughtSubmissionCreateNestedManyWithoutChallengeInput
+  }
+
+  export type ThoughtChallengeUncheckedCreateInput = {
+    id?: string
+    authorId?: string
+    title: string
+    prompt: string
+    status?: $Enums.ThoughtChallengeStatus
+    acceptingResponses?: boolean
+    showGallery?: boolean
+    allowFunnyVoices?: boolean
+    shareToken: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    submissions?: ThoughtSubmissionUncheckedCreateNestedManyWithoutChallengeInput
+  }
+
+  export type ThoughtChallengeUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    prompt?: StringFieldUpdateOperationsInput | string
+    status?: EnumThoughtChallengeStatusFieldUpdateOperationsInput | $Enums.ThoughtChallengeStatus
+    acceptingResponses?: BoolFieldUpdateOperationsInput | boolean
+    showGallery?: BoolFieldUpdateOperationsInput | boolean
+    allowFunnyVoices?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    submissions?: ThoughtSubmissionUpdateManyWithoutChallengeNestedInput
+  }
+
+  export type ThoughtChallengeUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    prompt?: StringFieldUpdateOperationsInput | string
+    status?: EnumThoughtChallengeStatusFieldUpdateOperationsInput | $Enums.ThoughtChallengeStatus
+    acceptingResponses?: BoolFieldUpdateOperationsInput | boolean
+    showGallery?: BoolFieldUpdateOperationsInput | boolean
+    allowFunnyVoices?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    submissions?: ThoughtSubmissionUncheckedUpdateManyWithoutChallengeNestedInput
+  }
+
+  export type ThoughtChallengeCreateManyInput = {
+    id?: string
+    authorId?: string
+    title: string
+    prompt: string
+    status?: $Enums.ThoughtChallengeStatus
+    acceptingResponses?: boolean
+    showGallery?: boolean
+    allowFunnyVoices?: boolean
+    shareToken: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ThoughtChallengeUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    prompt?: StringFieldUpdateOperationsInput | string
+    status?: EnumThoughtChallengeStatusFieldUpdateOperationsInput | $Enums.ThoughtChallengeStatus
+    acceptingResponses?: BoolFieldUpdateOperationsInput | boolean
+    showGallery?: BoolFieldUpdateOperationsInput | boolean
+    allowFunnyVoices?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ThoughtChallengeUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    prompt?: StringFieldUpdateOperationsInput | string
+    status?: EnumThoughtChallengeStatusFieldUpdateOperationsInput | $Enums.ThoughtChallengeStatus
+    acceptingResponses?: BoolFieldUpdateOperationsInput | boolean
+    showGallery?: BoolFieldUpdateOperationsInput | boolean
+    allowFunnyVoices?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ThoughtSubmissionCreateInput = {
+    id?: string
+    studentName: string
+    character: JsonNullValueInput | InputJsonValue
+    voiceEffect?: string
+    audioPath: string
+    mimeType: string
+    durationMs: number
+    envelope: JsonNullValueInput | InputJsonValue
+    clientKey: string
+    status?: $Enums.ThoughtSubmissionStatus
+    createdAt?: Date | string
+    challenge: ThoughtChallengeCreateNestedOneWithoutSubmissionsInput
+  }
+
+  export type ThoughtSubmissionUncheckedCreateInput = {
+    id?: string
+    challengeId: string
+    studentName: string
+    character: JsonNullValueInput | InputJsonValue
+    voiceEffect?: string
+    audioPath: string
+    mimeType: string
+    durationMs: number
+    envelope: JsonNullValueInput | InputJsonValue
+    clientKey: string
+    status?: $Enums.ThoughtSubmissionStatus
+    createdAt?: Date | string
+  }
+
+  export type ThoughtSubmissionUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    studentName?: StringFieldUpdateOperationsInput | string
+    character?: JsonNullValueInput | InputJsonValue
+    voiceEffect?: StringFieldUpdateOperationsInput | string
+    audioPath?: StringFieldUpdateOperationsInput | string
+    mimeType?: StringFieldUpdateOperationsInput | string
+    durationMs?: IntFieldUpdateOperationsInput | number
+    envelope?: JsonNullValueInput | InputJsonValue
+    clientKey?: StringFieldUpdateOperationsInput | string
+    status?: EnumThoughtSubmissionStatusFieldUpdateOperationsInput | $Enums.ThoughtSubmissionStatus
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    challenge?: ThoughtChallengeUpdateOneRequiredWithoutSubmissionsNestedInput
+  }
+
+  export type ThoughtSubmissionUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    challengeId?: StringFieldUpdateOperationsInput | string
+    studentName?: StringFieldUpdateOperationsInput | string
+    character?: JsonNullValueInput | InputJsonValue
+    voiceEffect?: StringFieldUpdateOperationsInput | string
+    audioPath?: StringFieldUpdateOperationsInput | string
+    mimeType?: StringFieldUpdateOperationsInput | string
+    durationMs?: IntFieldUpdateOperationsInput | number
+    envelope?: JsonNullValueInput | InputJsonValue
+    clientKey?: StringFieldUpdateOperationsInput | string
+    status?: EnumThoughtSubmissionStatusFieldUpdateOperationsInput | $Enums.ThoughtSubmissionStatus
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ThoughtSubmissionCreateManyInput = {
+    id?: string
+    challengeId: string
+    studentName: string
+    character: JsonNullValueInput | InputJsonValue
+    voiceEffect?: string
+    audioPath: string
+    mimeType: string
+    durationMs: number
+    envelope: JsonNullValueInput | InputJsonValue
+    clientKey: string
+    status?: $Enums.ThoughtSubmissionStatus
+    createdAt?: Date | string
+  }
+
+  export type ThoughtSubmissionUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    studentName?: StringFieldUpdateOperationsInput | string
+    character?: JsonNullValueInput | InputJsonValue
+    voiceEffect?: StringFieldUpdateOperationsInput | string
+    audioPath?: StringFieldUpdateOperationsInput | string
+    mimeType?: StringFieldUpdateOperationsInput | string
+    durationMs?: IntFieldUpdateOperationsInput | number
+    envelope?: JsonNullValueInput | InputJsonValue
+    clientKey?: StringFieldUpdateOperationsInput | string
+    status?: EnumThoughtSubmissionStatusFieldUpdateOperationsInput | $Enums.ThoughtSubmissionStatus
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ThoughtSubmissionUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    challengeId?: StringFieldUpdateOperationsInput | string
+    studentName?: StringFieldUpdateOperationsInput | string
+    character?: JsonNullValueInput | InputJsonValue
+    voiceEffect?: StringFieldUpdateOperationsInput | string
+    audioPath?: StringFieldUpdateOperationsInput | string
+    mimeType?: StringFieldUpdateOperationsInput | string
+    durationMs?: IntFieldUpdateOperationsInput | number
+    envelope?: JsonNullValueInput | InputJsonValue
+    clientKey?: StringFieldUpdateOperationsInput | string
+    status?: EnumThoughtSubmissionStatusFieldUpdateOperationsInput | $Enums.ThoughtSubmissionStatus
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type StringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -14131,6 +16880,198 @@ export namespace Prisma {
     durationMs?: SortOrder
   }
 
+  export type EnumThoughtChallengeStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.ThoughtChallengeStatus | EnumThoughtChallengeStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.ThoughtChallengeStatus[] | ListEnumThoughtChallengeStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ThoughtChallengeStatus[] | ListEnumThoughtChallengeStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumThoughtChallengeStatusFilter<$PrismaModel> | $Enums.ThoughtChallengeStatus
+  }
+
+  export type ThoughtSubmissionListRelationFilter = {
+    every?: ThoughtSubmissionWhereInput
+    some?: ThoughtSubmissionWhereInput
+    none?: ThoughtSubmissionWhereInput
+  }
+
+  export type ThoughtSubmissionOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type ThoughtChallengeCountOrderByAggregateInput = {
+    id?: SortOrder
+    authorId?: SortOrder
+    title?: SortOrder
+    prompt?: SortOrder
+    status?: SortOrder
+    acceptingResponses?: SortOrder
+    showGallery?: SortOrder
+    allowFunnyVoices?: SortOrder
+    shareToken?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type ThoughtChallengeMaxOrderByAggregateInput = {
+    id?: SortOrder
+    authorId?: SortOrder
+    title?: SortOrder
+    prompt?: SortOrder
+    status?: SortOrder
+    acceptingResponses?: SortOrder
+    showGallery?: SortOrder
+    allowFunnyVoices?: SortOrder
+    shareToken?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type ThoughtChallengeMinOrderByAggregateInput = {
+    id?: SortOrder
+    authorId?: SortOrder
+    title?: SortOrder
+    prompt?: SortOrder
+    status?: SortOrder
+    acceptingResponses?: SortOrder
+    showGallery?: SortOrder
+    allowFunnyVoices?: SortOrder
+    shareToken?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type EnumThoughtChallengeStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.ThoughtChallengeStatus | EnumThoughtChallengeStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.ThoughtChallengeStatus[] | ListEnumThoughtChallengeStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ThoughtChallengeStatus[] | ListEnumThoughtChallengeStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumThoughtChallengeStatusWithAggregatesFilter<$PrismaModel> | $Enums.ThoughtChallengeStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumThoughtChallengeStatusFilter<$PrismaModel>
+    _max?: NestedEnumThoughtChallengeStatusFilter<$PrismaModel>
+  }
+  export type JsonFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<JsonFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type EnumThoughtSubmissionStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.ThoughtSubmissionStatus | EnumThoughtSubmissionStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.ThoughtSubmissionStatus[] | ListEnumThoughtSubmissionStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ThoughtSubmissionStatus[] | ListEnumThoughtSubmissionStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumThoughtSubmissionStatusFilter<$PrismaModel> | $Enums.ThoughtSubmissionStatus
+  }
+
+  export type ThoughtChallengeRelationFilter = {
+    is?: ThoughtChallengeWhereInput
+    isNot?: ThoughtChallengeWhereInput
+  }
+
+  export type ThoughtSubmissionChallengeIdClientKeyCompoundUniqueInput = {
+    challengeId: string
+    clientKey: string
+  }
+
+  export type ThoughtSubmissionCountOrderByAggregateInput = {
+    id?: SortOrder
+    challengeId?: SortOrder
+    studentName?: SortOrder
+    character?: SortOrder
+    voiceEffect?: SortOrder
+    audioPath?: SortOrder
+    mimeType?: SortOrder
+    durationMs?: SortOrder
+    envelope?: SortOrder
+    clientKey?: SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type ThoughtSubmissionAvgOrderByAggregateInput = {
+    durationMs?: SortOrder
+  }
+
+  export type ThoughtSubmissionMaxOrderByAggregateInput = {
+    id?: SortOrder
+    challengeId?: SortOrder
+    studentName?: SortOrder
+    voiceEffect?: SortOrder
+    audioPath?: SortOrder
+    mimeType?: SortOrder
+    durationMs?: SortOrder
+    clientKey?: SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type ThoughtSubmissionMinOrderByAggregateInput = {
+    id?: SortOrder
+    challengeId?: SortOrder
+    studentName?: SortOrder
+    voiceEffect?: SortOrder
+    audioPath?: SortOrder
+    mimeType?: SortOrder
+    durationMs?: SortOrder
+    clientKey?: SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type ThoughtSubmissionSumOrderByAggregateInput = {
+    durationMs?: SortOrder
+  }
+  export type JsonWithAggregatesFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedJsonFilter<$PrismaModel>
+    _max?: NestedJsonFilter<$PrismaModel>
+  }
+
+  export type EnumThoughtSubmissionStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.ThoughtSubmissionStatus | EnumThoughtSubmissionStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.ThoughtSubmissionStatus[] | ListEnumThoughtSubmissionStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ThoughtSubmissionStatus[] | ListEnumThoughtSubmissionStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumThoughtSubmissionStatusWithAggregatesFilter<$PrismaModel> | $Enums.ThoughtSubmissionStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumThoughtSubmissionStatusFilter<$PrismaModel>
+    _max?: NestedEnumThoughtSubmissionStatusFilter<$PrismaModel>
+  }
+
   export type QuizCreatetagsInput = {
     set: string[]
   }
@@ -14545,6 +17486,70 @@ export namespace Prisma {
     update?: XOR<XOR<StorySubmissionUpdateToOneWithWhereWithoutRecordingsInput, StorySubmissionUpdateWithoutRecordingsInput>, StorySubmissionUncheckedUpdateWithoutRecordingsInput>
   }
 
+  export type ThoughtSubmissionCreateNestedManyWithoutChallengeInput = {
+    create?: XOR<ThoughtSubmissionCreateWithoutChallengeInput, ThoughtSubmissionUncheckedCreateWithoutChallengeInput> | ThoughtSubmissionCreateWithoutChallengeInput[] | ThoughtSubmissionUncheckedCreateWithoutChallengeInput[]
+    connectOrCreate?: ThoughtSubmissionCreateOrConnectWithoutChallengeInput | ThoughtSubmissionCreateOrConnectWithoutChallengeInput[]
+    createMany?: ThoughtSubmissionCreateManyChallengeInputEnvelope
+    connect?: ThoughtSubmissionWhereUniqueInput | ThoughtSubmissionWhereUniqueInput[]
+  }
+
+  export type ThoughtSubmissionUncheckedCreateNestedManyWithoutChallengeInput = {
+    create?: XOR<ThoughtSubmissionCreateWithoutChallengeInput, ThoughtSubmissionUncheckedCreateWithoutChallengeInput> | ThoughtSubmissionCreateWithoutChallengeInput[] | ThoughtSubmissionUncheckedCreateWithoutChallengeInput[]
+    connectOrCreate?: ThoughtSubmissionCreateOrConnectWithoutChallengeInput | ThoughtSubmissionCreateOrConnectWithoutChallengeInput[]
+    createMany?: ThoughtSubmissionCreateManyChallengeInputEnvelope
+    connect?: ThoughtSubmissionWhereUniqueInput | ThoughtSubmissionWhereUniqueInput[]
+  }
+
+  export type EnumThoughtChallengeStatusFieldUpdateOperationsInput = {
+    set?: $Enums.ThoughtChallengeStatus
+  }
+
+  export type ThoughtSubmissionUpdateManyWithoutChallengeNestedInput = {
+    create?: XOR<ThoughtSubmissionCreateWithoutChallengeInput, ThoughtSubmissionUncheckedCreateWithoutChallengeInput> | ThoughtSubmissionCreateWithoutChallengeInput[] | ThoughtSubmissionUncheckedCreateWithoutChallengeInput[]
+    connectOrCreate?: ThoughtSubmissionCreateOrConnectWithoutChallengeInput | ThoughtSubmissionCreateOrConnectWithoutChallengeInput[]
+    upsert?: ThoughtSubmissionUpsertWithWhereUniqueWithoutChallengeInput | ThoughtSubmissionUpsertWithWhereUniqueWithoutChallengeInput[]
+    createMany?: ThoughtSubmissionCreateManyChallengeInputEnvelope
+    set?: ThoughtSubmissionWhereUniqueInput | ThoughtSubmissionWhereUniqueInput[]
+    disconnect?: ThoughtSubmissionWhereUniqueInput | ThoughtSubmissionWhereUniqueInput[]
+    delete?: ThoughtSubmissionWhereUniqueInput | ThoughtSubmissionWhereUniqueInput[]
+    connect?: ThoughtSubmissionWhereUniqueInput | ThoughtSubmissionWhereUniqueInput[]
+    update?: ThoughtSubmissionUpdateWithWhereUniqueWithoutChallengeInput | ThoughtSubmissionUpdateWithWhereUniqueWithoutChallengeInput[]
+    updateMany?: ThoughtSubmissionUpdateManyWithWhereWithoutChallengeInput | ThoughtSubmissionUpdateManyWithWhereWithoutChallengeInput[]
+    deleteMany?: ThoughtSubmissionScalarWhereInput | ThoughtSubmissionScalarWhereInput[]
+  }
+
+  export type ThoughtSubmissionUncheckedUpdateManyWithoutChallengeNestedInput = {
+    create?: XOR<ThoughtSubmissionCreateWithoutChallengeInput, ThoughtSubmissionUncheckedCreateWithoutChallengeInput> | ThoughtSubmissionCreateWithoutChallengeInput[] | ThoughtSubmissionUncheckedCreateWithoutChallengeInput[]
+    connectOrCreate?: ThoughtSubmissionCreateOrConnectWithoutChallengeInput | ThoughtSubmissionCreateOrConnectWithoutChallengeInput[]
+    upsert?: ThoughtSubmissionUpsertWithWhereUniqueWithoutChallengeInput | ThoughtSubmissionUpsertWithWhereUniqueWithoutChallengeInput[]
+    createMany?: ThoughtSubmissionCreateManyChallengeInputEnvelope
+    set?: ThoughtSubmissionWhereUniqueInput | ThoughtSubmissionWhereUniqueInput[]
+    disconnect?: ThoughtSubmissionWhereUniqueInput | ThoughtSubmissionWhereUniqueInput[]
+    delete?: ThoughtSubmissionWhereUniqueInput | ThoughtSubmissionWhereUniqueInput[]
+    connect?: ThoughtSubmissionWhereUniqueInput | ThoughtSubmissionWhereUniqueInput[]
+    update?: ThoughtSubmissionUpdateWithWhereUniqueWithoutChallengeInput | ThoughtSubmissionUpdateWithWhereUniqueWithoutChallengeInput[]
+    updateMany?: ThoughtSubmissionUpdateManyWithWhereWithoutChallengeInput | ThoughtSubmissionUpdateManyWithWhereWithoutChallengeInput[]
+    deleteMany?: ThoughtSubmissionScalarWhereInput | ThoughtSubmissionScalarWhereInput[]
+  }
+
+  export type ThoughtChallengeCreateNestedOneWithoutSubmissionsInput = {
+    create?: XOR<ThoughtChallengeCreateWithoutSubmissionsInput, ThoughtChallengeUncheckedCreateWithoutSubmissionsInput>
+    connectOrCreate?: ThoughtChallengeCreateOrConnectWithoutSubmissionsInput
+    connect?: ThoughtChallengeWhereUniqueInput
+  }
+
+  export type EnumThoughtSubmissionStatusFieldUpdateOperationsInput = {
+    set?: $Enums.ThoughtSubmissionStatus
+  }
+
+  export type ThoughtChallengeUpdateOneRequiredWithoutSubmissionsNestedInput = {
+    create?: XOR<ThoughtChallengeCreateWithoutSubmissionsInput, ThoughtChallengeUncheckedCreateWithoutSubmissionsInput>
+    connectOrCreate?: ThoughtChallengeCreateOrConnectWithoutSubmissionsInput
+    upsert?: ThoughtChallengeUpsertWithoutSubmissionsInput
+    connect?: ThoughtChallengeWhereUniqueInput
+    update?: XOR<XOR<ThoughtChallengeUpdateToOneWithWhereWithoutSubmissionsInput, ThoughtChallengeUpdateWithoutSubmissionsInput>, ThoughtChallengeUncheckedUpdateWithoutSubmissionsInput>
+  }
+
   export type NestedStringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -14790,6 +17795,62 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedEnumStorySubmissionStatusFilter<$PrismaModel>
     _max?: NestedEnumStorySubmissionStatusFilter<$PrismaModel>
+  }
+
+  export type NestedEnumThoughtChallengeStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.ThoughtChallengeStatus | EnumThoughtChallengeStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.ThoughtChallengeStatus[] | ListEnumThoughtChallengeStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ThoughtChallengeStatus[] | ListEnumThoughtChallengeStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumThoughtChallengeStatusFilter<$PrismaModel> | $Enums.ThoughtChallengeStatus
+  }
+
+  export type NestedEnumThoughtChallengeStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.ThoughtChallengeStatus | EnumThoughtChallengeStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.ThoughtChallengeStatus[] | ListEnumThoughtChallengeStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ThoughtChallengeStatus[] | ListEnumThoughtChallengeStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumThoughtChallengeStatusWithAggregatesFilter<$PrismaModel> | $Enums.ThoughtChallengeStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumThoughtChallengeStatusFilter<$PrismaModel>
+    _max?: NestedEnumThoughtChallengeStatusFilter<$PrismaModel>
+  }
+
+  export type NestedEnumThoughtSubmissionStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.ThoughtSubmissionStatus | EnumThoughtSubmissionStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.ThoughtSubmissionStatus[] | ListEnumThoughtSubmissionStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ThoughtSubmissionStatus[] | ListEnumThoughtSubmissionStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumThoughtSubmissionStatusFilter<$PrismaModel> | $Enums.ThoughtSubmissionStatus
+  }
+  export type NestedJsonFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<NestedJsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type NestedJsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type NestedEnumThoughtSubmissionStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.ThoughtSubmissionStatus | EnumThoughtSubmissionStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.ThoughtSubmissionStatus[] | ListEnumThoughtSubmissionStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ThoughtSubmissionStatus[] | ListEnumThoughtSubmissionStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumThoughtSubmissionStatusWithAggregatesFilter<$PrismaModel> | $Enums.ThoughtSubmissionStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumThoughtSubmissionStatusFilter<$PrismaModel>
+    _max?: NestedEnumThoughtSubmissionStatusFilter<$PrismaModel>
   }
 
   export type QuestionCreateWithoutQuizInput = {
@@ -15579,6 +18640,150 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type ThoughtSubmissionCreateWithoutChallengeInput = {
+    id?: string
+    studentName: string
+    character: JsonNullValueInput | InputJsonValue
+    voiceEffect?: string
+    audioPath: string
+    mimeType: string
+    durationMs: number
+    envelope: JsonNullValueInput | InputJsonValue
+    clientKey: string
+    status?: $Enums.ThoughtSubmissionStatus
+    createdAt?: Date | string
+  }
+
+  export type ThoughtSubmissionUncheckedCreateWithoutChallengeInput = {
+    id?: string
+    studentName: string
+    character: JsonNullValueInput | InputJsonValue
+    voiceEffect?: string
+    audioPath: string
+    mimeType: string
+    durationMs: number
+    envelope: JsonNullValueInput | InputJsonValue
+    clientKey: string
+    status?: $Enums.ThoughtSubmissionStatus
+    createdAt?: Date | string
+  }
+
+  export type ThoughtSubmissionCreateOrConnectWithoutChallengeInput = {
+    where: ThoughtSubmissionWhereUniqueInput
+    create: XOR<ThoughtSubmissionCreateWithoutChallengeInput, ThoughtSubmissionUncheckedCreateWithoutChallengeInput>
+  }
+
+  export type ThoughtSubmissionCreateManyChallengeInputEnvelope = {
+    data: ThoughtSubmissionCreateManyChallengeInput | ThoughtSubmissionCreateManyChallengeInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type ThoughtSubmissionUpsertWithWhereUniqueWithoutChallengeInput = {
+    where: ThoughtSubmissionWhereUniqueInput
+    update: XOR<ThoughtSubmissionUpdateWithoutChallengeInput, ThoughtSubmissionUncheckedUpdateWithoutChallengeInput>
+    create: XOR<ThoughtSubmissionCreateWithoutChallengeInput, ThoughtSubmissionUncheckedCreateWithoutChallengeInput>
+  }
+
+  export type ThoughtSubmissionUpdateWithWhereUniqueWithoutChallengeInput = {
+    where: ThoughtSubmissionWhereUniqueInput
+    data: XOR<ThoughtSubmissionUpdateWithoutChallengeInput, ThoughtSubmissionUncheckedUpdateWithoutChallengeInput>
+  }
+
+  export type ThoughtSubmissionUpdateManyWithWhereWithoutChallengeInput = {
+    where: ThoughtSubmissionScalarWhereInput
+    data: XOR<ThoughtSubmissionUpdateManyMutationInput, ThoughtSubmissionUncheckedUpdateManyWithoutChallengeInput>
+  }
+
+  export type ThoughtSubmissionScalarWhereInput = {
+    AND?: ThoughtSubmissionScalarWhereInput | ThoughtSubmissionScalarWhereInput[]
+    OR?: ThoughtSubmissionScalarWhereInput[]
+    NOT?: ThoughtSubmissionScalarWhereInput | ThoughtSubmissionScalarWhereInput[]
+    id?: StringFilter<"ThoughtSubmission"> | string
+    challengeId?: StringFilter<"ThoughtSubmission"> | string
+    studentName?: StringFilter<"ThoughtSubmission"> | string
+    character?: JsonFilter<"ThoughtSubmission">
+    voiceEffect?: StringFilter<"ThoughtSubmission"> | string
+    audioPath?: StringFilter<"ThoughtSubmission"> | string
+    mimeType?: StringFilter<"ThoughtSubmission"> | string
+    durationMs?: IntFilter<"ThoughtSubmission"> | number
+    envelope?: JsonFilter<"ThoughtSubmission">
+    clientKey?: StringFilter<"ThoughtSubmission"> | string
+    status?: EnumThoughtSubmissionStatusFilter<"ThoughtSubmission"> | $Enums.ThoughtSubmissionStatus
+    createdAt?: DateTimeFilter<"ThoughtSubmission"> | Date | string
+  }
+
+  export type ThoughtChallengeCreateWithoutSubmissionsInput = {
+    id?: string
+    authorId?: string
+    title: string
+    prompt: string
+    status?: $Enums.ThoughtChallengeStatus
+    acceptingResponses?: boolean
+    showGallery?: boolean
+    allowFunnyVoices?: boolean
+    shareToken: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ThoughtChallengeUncheckedCreateWithoutSubmissionsInput = {
+    id?: string
+    authorId?: string
+    title: string
+    prompt: string
+    status?: $Enums.ThoughtChallengeStatus
+    acceptingResponses?: boolean
+    showGallery?: boolean
+    allowFunnyVoices?: boolean
+    shareToken: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ThoughtChallengeCreateOrConnectWithoutSubmissionsInput = {
+    where: ThoughtChallengeWhereUniqueInput
+    create: XOR<ThoughtChallengeCreateWithoutSubmissionsInput, ThoughtChallengeUncheckedCreateWithoutSubmissionsInput>
+  }
+
+  export type ThoughtChallengeUpsertWithoutSubmissionsInput = {
+    update: XOR<ThoughtChallengeUpdateWithoutSubmissionsInput, ThoughtChallengeUncheckedUpdateWithoutSubmissionsInput>
+    create: XOR<ThoughtChallengeCreateWithoutSubmissionsInput, ThoughtChallengeUncheckedCreateWithoutSubmissionsInput>
+    where?: ThoughtChallengeWhereInput
+  }
+
+  export type ThoughtChallengeUpdateToOneWithWhereWithoutSubmissionsInput = {
+    where?: ThoughtChallengeWhereInput
+    data: XOR<ThoughtChallengeUpdateWithoutSubmissionsInput, ThoughtChallengeUncheckedUpdateWithoutSubmissionsInput>
+  }
+
+  export type ThoughtChallengeUpdateWithoutSubmissionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    prompt?: StringFieldUpdateOperationsInput | string
+    status?: EnumThoughtChallengeStatusFieldUpdateOperationsInput | $Enums.ThoughtChallengeStatus
+    acceptingResponses?: BoolFieldUpdateOperationsInput | boolean
+    showGallery?: BoolFieldUpdateOperationsInput | boolean
+    allowFunnyVoices?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ThoughtChallengeUncheckedUpdateWithoutSubmissionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    prompt?: StringFieldUpdateOperationsInput | string
+    status?: EnumThoughtChallengeStatusFieldUpdateOperationsInput | $Enums.ThoughtChallengeStatus
+    acceptingResponses?: BoolFieldUpdateOperationsInput | boolean
+    showGallery?: BoolFieldUpdateOperationsInput | boolean
+    allowFunnyVoices?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type QuestionCreateManyQuizInput = {
     id?: string
     question: string
@@ -15769,6 +18974,62 @@ export namespace Prisma {
     envelope?: NullableJsonNullValueInput | InputJsonValue
   }
 
+  export type ThoughtSubmissionCreateManyChallengeInput = {
+    id?: string
+    studentName: string
+    character: JsonNullValueInput | InputJsonValue
+    voiceEffect?: string
+    audioPath: string
+    mimeType: string
+    durationMs: number
+    envelope: JsonNullValueInput | InputJsonValue
+    clientKey: string
+    status?: $Enums.ThoughtSubmissionStatus
+    createdAt?: Date | string
+  }
+
+  export type ThoughtSubmissionUpdateWithoutChallengeInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    studentName?: StringFieldUpdateOperationsInput | string
+    character?: JsonNullValueInput | InputJsonValue
+    voiceEffect?: StringFieldUpdateOperationsInput | string
+    audioPath?: StringFieldUpdateOperationsInput | string
+    mimeType?: StringFieldUpdateOperationsInput | string
+    durationMs?: IntFieldUpdateOperationsInput | number
+    envelope?: JsonNullValueInput | InputJsonValue
+    clientKey?: StringFieldUpdateOperationsInput | string
+    status?: EnumThoughtSubmissionStatusFieldUpdateOperationsInput | $Enums.ThoughtSubmissionStatus
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ThoughtSubmissionUncheckedUpdateWithoutChallengeInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    studentName?: StringFieldUpdateOperationsInput | string
+    character?: JsonNullValueInput | InputJsonValue
+    voiceEffect?: StringFieldUpdateOperationsInput | string
+    audioPath?: StringFieldUpdateOperationsInput | string
+    mimeType?: StringFieldUpdateOperationsInput | string
+    durationMs?: IntFieldUpdateOperationsInput | number
+    envelope?: JsonNullValueInput | InputJsonValue
+    clientKey?: StringFieldUpdateOperationsInput | string
+    status?: EnumThoughtSubmissionStatusFieldUpdateOperationsInput | $Enums.ThoughtSubmissionStatus
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ThoughtSubmissionUncheckedUpdateManyWithoutChallengeInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    studentName?: StringFieldUpdateOperationsInput | string
+    character?: JsonNullValueInput | InputJsonValue
+    voiceEffect?: StringFieldUpdateOperationsInput | string
+    audioPath?: StringFieldUpdateOperationsInput | string
+    mimeType?: StringFieldUpdateOperationsInput | string
+    durationMs?: IntFieldUpdateOperationsInput | number
+    envelope?: JsonNullValueInput | InputJsonValue
+    clientKey?: StringFieldUpdateOperationsInput | string
+    status?: EnumThoughtSubmissionStatusFieldUpdateOperationsInput | $Enums.ThoughtSubmissionStatus
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
 
 
   /**
@@ -15786,6 +19047,10 @@ export namespace Prisma {
      * @deprecated Use StorySubmissionCountOutputTypeDefaultArgs instead
      */
     export type StorySubmissionCountOutputTypeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = StorySubmissionCountOutputTypeDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use ThoughtChallengeCountOutputTypeDefaultArgs instead
+     */
+    export type ThoughtChallengeCountOutputTypeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = ThoughtChallengeCountOutputTypeDefaultArgs<ExtArgs>
     /**
      * @deprecated Use QuizDefaultArgs instead
      */
@@ -15826,6 +19091,14 @@ export namespace Prisma {
      * @deprecated Use StoryRecordingDefaultArgs instead
      */
     export type StoryRecordingArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = StoryRecordingDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use ThoughtChallengeDefaultArgs instead
+     */
+    export type ThoughtChallengeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = ThoughtChallengeDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use ThoughtSubmissionDefaultArgs instead
+     */
+    export type ThoughtSubmissionArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = ThoughtSubmissionDefaultArgs<ExtArgs>
 
   /**
    * Batch Payload for updateMany & deleteMany & createMany

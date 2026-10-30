@@ -248,7 +248,7 @@ export const TUG_EVENTS = {
 } as const;
 
 export interface TugOffsetChangedPayload {
-  /** Target rope offset in [-1, 1]. Negative is toward blue (left). */
+  /** Target rope offset in steps. Negative is toward blue (left); ±2 wins the round. */
   offset: number
   /** Smoothed offset currently shown in the scene / meter. */
   displayedOffset: number

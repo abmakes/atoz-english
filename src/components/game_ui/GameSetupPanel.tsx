@@ -536,7 +536,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
         )}
         {isTugOfWar && (
           <p className="text-center text-sm text-[var(--text-color)] mb-4 opacity-80">
-            Tug of War · 2 teams · best of 3 · BETA
+            Tug of War · 2 teams · first to 3 · BETA
           </p>
         )}
 

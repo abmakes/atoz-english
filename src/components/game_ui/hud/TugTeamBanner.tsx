@@ -54,10 +54,10 @@ const TugTeamBanner: React.FC<TugTeamBannerProps> = ({
         <span className={`grandstander max-w-[4.5rem] truncate text-xs font-bold lg:max-w-[7.5rem] lg:text-base ${colors.text}`}>
           {name}
         </span>
-        <RoundDots wins={wins} max={3} side={side} />
+        <RoundDots wins={wins} side={side} />
       </div>
       <div className="min-[480px]:hidden">
-        <RoundDots wins={wins} max={3} side={side} />
+        <RoundDots wins={wins} side={side} />
       </div>
       <span
         className={`grandstander flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#163e66] text-sm font-bold text-white lg:h-12 lg:w-12 lg:text-xl ${colors.fill}`}

@@ -26,12 +26,13 @@ export function getSplashDashSceneAssetUrls(): string[] {
 /** Ninja Climb scene art — keep in sync with NinjaClimb managers. */
 export function getNinjaClimbSceneAssetUrls(): string[] {
   return [
+    '/images/ninja-climb/v2/background.png',
+    '/images/ninja-climb/v2/base.png',
+    '/images/ninja-climb/v2/mid.png',
+    '/images/ninja-climb/v2/top.png',
+    '/images/ninja-climb/v2/clouds.png',
+    '/images/ninja-climb/v2/bush.png',
     '/images/ninja-climb/sky.webp',
-    '/images/ninja-climb/cliff_foot.webp',
-    '/images/ninja-climb/cliff_mid_brown.webp',
-    '/images/ninja-climb/cliff_mid_tone_a.webp',
-    '/images/ninja-climb/cliff_mid_tone_b.webp',
-    '/images/ninja-climb/cliff_top.webp',
     '/images/ninja-climb/cliff_a.webp',
     '/images/ninja-climb/cliff_b.webp',
     '/images/ninja-climb/cliff_c.webp',

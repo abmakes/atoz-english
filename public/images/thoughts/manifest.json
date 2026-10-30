@@ -1,0 +1,3265 @@
+{
+  "version": 1,
+  "generatedOn": "2026-10-30",
+  "provenance": "AI-generated original assets using the built-in image_gen tool. Prompts in generation-prompts.json.",
+  "coordinateSystem": "Source rectangles in image pixels; pivot and default placement normalized 0–1.",
+  "animation": {
+    "mouth": {
+      "selector": "round(clamp(amplitude, 0, 1) * 4)",
+      "frames": 5
+    },
+    "eyes": {
+      "sequence": [
+        0,
+        1,
+        2,
+        3,
+        0
+      ],
+      "transitionMs": [
+        60,
+        70,
+        60,
+        90
+      ],
+      "idleRangeMs": [
+        2400,
+        5200
+      ]
+    }
+  },
+  "sheets": [
+    {
+      "id": "photo-mouths",
+      "src": "/images/thoughts/photo-mouths.png",
+      "width": 1402,
+      "height": 1122,
+      "columns": 5,
+      "rows": 4,
+      "transparent": true
+    },
+    {
+      "id": "photo-eyes",
+      "src": "/images/thoughts/photo-eyes.png",
+      "width": 1254,
+      "height": 1254,
+      "columns": 4,
+      "rows": 4,
+      "transparent": true
+    },
+    {
+      "id": "photo-parts",
+      "src": "/images/thoughts/photo-parts.png",
+      "width": 1402,
+      "height": 1122,
+      "columns": 5,
+      "rows": 4,
+      "transparent": true
+    },
+    {
+      "id": "cartoon-mouths",
+      "src": "/images/thoughts/cartoon-mouths.png",
+      "width": 1402,
+      "height": 1122,
+      "columns": 5,
+      "rows": 4,
+      "transparent": true
+    },
+    {
+      "id": "cartoon-eyes",
+      "src": "/images/thoughts/cartoon-eyes.png",
+      "width": 1254,
+      "height": 1254,
+      "columns": 4,
+      "rows": 4,
+      "transparent": true
+    },
+    {
+      "id": "cartoon-parts",
+      "src": "/images/thoughts/cartoon-parts.png",
+      "width": 1402,
+      "height": 1122,
+      "columns": 5,
+      "rows": 4,
+      "transparent": true
+    },
+    {
+      "id": "sketch-mouths",
+      "src": "/images/thoughts/sketch-mouths.png",
+      "width": 1402,
+      "height": 1122,
+      "columns": 5,
+      "rows": 4,
+      "transparent": true
+    },
+    {
+      "id": "sketch-eyes",
+      "src": "/images/thoughts/sketch-eyes.png",
+      "width": 1254,
+      "height": 1254,
+      "columns": 4,
+      "rows": 4,
+      "transparent": true
+    },
+    {
+      "id": "sketch-parts",
+      "src": "/images/thoughts/sketch-parts.png",
+      "width": 1402,
+      "height": 1122,
+      "columns": 5,
+      "rows": 4,
+      "transparent": true
+    },
+    {
+      "id": "heads",
+      "src": "/images/thoughts/heads.png",
+      "width": 1254,
+      "height": 1254,
+      "columns": 2,
+      "rows": 2,
+      "transparent": true
+    }
+  ],
+  "parts": [
+    {
+      "id": "photo-mouth-glossy-rose",
+      "label": "Glossy rose",
+      "style": "photo",
+      "category": "mouth",
+      "sheet": "photo-mouths",
+      "frames": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 280,
+          "height": 290,
+          "index": 0
+        },
+        {
+          "x": 280,
+          "y": 0,
+          "width": 281,
+          "height": 290,
+          "index": 1
+        },
+        {
+          "x": 561,
+          "y": 0,
+          "width": 280,
+          "height": 290,
+          "index": 2
+        },
+        {
+          "x": 841,
+          "y": 0,
+          "width": 281,
+          "height": 290,
+          "index": 3
+        },
+        {
+          "x": 1122,
+          "y": 0,
+          "width": 280,
+          "height": 290,
+          "index": 4
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 50,
+      "animation": "mouth",
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.65,
+        "scale": 0.3,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-mouth-natural-warm",
+      "label": "Natural warm",
+      "style": "photo",
+      "category": "mouth",
+      "sheet": "photo-mouths",
+      "frames": [
+        {
+          "x": 0,
+          "y": 290,
+          "width": 280,
+          "height": 271,
+          "index": 0
+        },
+        {
+          "x": 280,
+          "y": 290,
+          "width": 281,
+          "height": 271,
+          "index": 1
+        },
+        {
+          "x": 561,
+          "y": 290,
+          "width": 280,
+          "height": 271,
+          "index": 2
+        },
+        {
+          "x": 841,
+          "y": 290,
+          "width": 281,
+          "height": 271,
+          "index": 3
+        },
+        {
+          "x": 1122,
+          "y": 290,
+          "width": 280,
+          "height": 271,
+          "index": 4
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 50,
+      "animation": "mouth",
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.65,
+        "scale": 0.3,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-mouth-full-brown",
+      "label": "Full brown",
+      "style": "photo",
+      "category": "mouth",
+      "sheet": "photo-mouths",
+      "frames": [
+        {
+          "x": 0,
+          "y": 561,
+          "width": 281,
+          "height": 275,
+          "index": 0
+        },
+        {
+          "x": 281,
+          "y": 561,
+          "width": 280,
+          "height": 275,
+          "index": 1
+        },
+        {
+          "x": 561,
+          "y": 561,
+          "width": 280,
+          "height": 275,
+          "index": 2
+        },
+        {
+          "x": 841,
+          "y": 561,
+          "width": 281,
+          "height": 275,
+          "index": 3
+        },
+        {
+          "x": 1122,
+          "y": 561,
+          "width": 280,
+          "height": 275,
+          "index": 4
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 50,
+      "animation": "mouth",
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.65,
+        "scale": 0.3,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-mouth-crooked-peach",
+      "label": "Crooked peach",
+      "style": "photo",
+      "category": "mouth",
+      "sheet": "photo-mouths",
+      "frames": [
+        {
+          "x": 0,
+          "y": 836,
+          "width": 282,
+          "height": 286,
+          "index": 0
+        },
+        {
+          "x": 282,
+          "y": 836,
+          "width": 279,
+          "height": 286,
+          "index": 1
+        },
+        {
+          "x": 561,
+          "y": 836,
+          "width": 280,
+          "height": 286,
+          "index": 2
+        },
+        {
+          "x": 841,
+          "y": 836,
+          "width": 281,
+          "height": 286,
+          "index": 3
+        },
+        {
+          "x": 1122,
+          "y": 836,
+          "width": 280,
+          "height": 286,
+          "index": 4
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 50,
+      "animation": "mouth",
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.65,
+        "scale": 0.3,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-eyes-brown",
+      "label": "Brown",
+      "style": "photo",
+      "category": "eyes",
+      "sheet": "photo-eyes",
+      "frames": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 317,
+          "height": 313,
+          "index": 0
+        },
+        {
+          "x": 317,
+          "y": 0,
+          "width": 310,
+          "height": 313,
+          "index": 1
+        },
+        {
+          "x": 627,
+          "y": 0,
+          "width": 313,
+          "height": 313,
+          "index": 2
+        },
+        {
+          "x": 940,
+          "y": 0,
+          "width": 314,
+          "height": 313,
+          "index": 3
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 30,
+      "animation": "eyes",
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.4,
+        "scale": 0.18,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-eyes-blue",
+      "label": "Blue",
+      "style": "photo",
+      "category": "eyes",
+      "sheet": "photo-eyes",
+      "frames": [
+        {
+          "x": 0,
+          "y": 313,
+          "width": 317,
+          "height": 314,
+          "index": 0
+        },
+        {
+          "x": 317,
+          "y": 313,
+          "width": 310,
+          "height": 314,
+          "index": 1
+        },
+        {
+          "x": 627,
+          "y": 313,
+          "width": 313,
+          "height": 314,
+          "index": 2
+        },
+        {
+          "x": 940,
+          "y": 313,
+          "width": 314,
+          "height": 314,
+          "index": 3
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 30,
+      "animation": "eyes",
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.4,
+        "scale": 0.18,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-eyes-hazel",
+      "label": "Hazel",
+      "style": "photo",
+      "category": "eyes",
+      "sheet": "photo-eyes",
+      "frames": [
+        {
+          "x": 0,
+          "y": 627,
+          "width": 318,
+          "height": 299,
+          "index": 0
+        },
+        {
+          "x": 318,
+          "y": 627,
+          "width": 309,
+          "height": 299,
+          "index": 1
+        },
+        {
+          "x": 627,
+          "y": 627,
+          "width": 313,
+          "height": 299,
+          "index": 2
+        },
+        {
+          "x": 940,
+          "y": 627,
+          "width": 314,
+          "height": 299,
+          "index": 3
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 30,
+      "animation": "eyes",
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.4,
+        "scale": 0.18,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-eyes-sleepy-green",
+      "label": "Sleepy green",
+      "style": "photo",
+      "category": "eyes",
+      "sheet": "photo-eyes",
+      "frames": [
+        {
+          "x": 0,
+          "y": 926,
+          "width": 317,
+          "height": 328,
+          "index": 0
+        },
+        {
+          "x": 317,
+          "y": 926,
+          "width": 310,
+          "height": 328,
+          "index": 1
+        },
+        {
+          "x": 627,
+          "y": 926,
+          "width": 313,
+          "height": 328,
+          "index": 2
+        },
+        {
+          "x": 940,
+          "y": 926,
+          "width": 314,
+          "height": 328,
+          "index": 3
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 30,
+      "animation": "eyes",
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.4,
+        "scale": 0.18,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-hair-curls",
+      "label": "Curls",
+      "style": "photo",
+      "category": "hair",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 281,
+          "height": 303,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 20,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.25,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-hair-side-part",
+      "label": "Side part",
+      "style": "photo",
+      "category": "hair",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 281,
+          "y": 0,
+          "width": 280,
+          "height": 303,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 20,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.25,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-hair-swoop",
+      "label": "Swoop",
+      "style": "photo",
+      "category": "hair",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 561,
+          "y": 0,
+          "width": 280,
+          "height": 303,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 20,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.25,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-hair-wispy",
+      "label": "Wispy",
+      "style": "photo",
+      "category": "hair",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 841,
+          "y": 0,
+          "width": 281,
+          "height": 303,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 20,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.25,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-hair-spikes",
+      "label": "Spikes",
+      "style": "photo",
+      "category": "hair",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 1122,
+          "y": 0,
+          "width": 280,
+          "height": 303,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 20,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.25,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-ears-round-ear",
+      "label": "Round ear",
+      "style": "photo",
+      "category": "ears",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 0,
+          "y": 303,
+          "width": 280,
+          "height": 275,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 0,
+      "animation": null,
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-ears-long-ear",
+      "label": "Long ear",
+      "style": "photo",
+      "category": "ears",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 280,
+          "y": 303,
+          "width": 281,
+          "height": 275,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 0,
+      "animation": null,
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-ears-broad-ear",
+      "label": "Broad ear",
+      "style": "photo",
+      "category": "ears",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 561,
+          "y": 303,
+          "width": 280,
+          "height": 275,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 0,
+      "animation": null,
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-ears-elf-ear",
+      "label": "Elf ear",
+      "style": "photo",
+      "category": "ears",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 841,
+          "y": 303,
+          "width": 281,
+          "height": 275,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 0,
+      "animation": null,
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-ears-furry-ear",
+      "label": "Furry ear",
+      "style": "photo",
+      "category": "ears",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 1122,
+          "y": 303,
+          "width": 280,
+          "height": 275,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 0,
+      "animation": null,
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-nose-button-nose",
+      "label": "Button nose",
+      "style": "photo",
+      "category": "nose",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 0,
+          "y": 578,
+          "width": 280,
+          "height": 263,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 40,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-nose-long-nose",
+      "label": "Long nose",
+      "style": "photo",
+      "category": "nose",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 280,
+          "y": 578,
+          "width": 281,
+          "height": 263,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 40,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-nose-broad-nose",
+      "label": "Broad nose",
+      "style": "photo",
+      "category": "nose",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 561,
+          "y": 578,
+          "width": 280,
+          "height": 263,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 40,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-nose-clown-nose",
+      "label": "Clown nose",
+      "style": "photo",
+      "category": "nose",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 841,
+          "y": 578,
+          "width": 281,
+          "height": 263,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 40,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-nose-robot-nose",
+      "label": "Robot nose",
+      "style": "photo",
+      "category": "nose",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 1122,
+          "y": 578,
+          "width": 280,
+          "height": 263,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 40,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-extras-round-glasses",
+      "label": "Round glasses",
+      "style": "photo",
+      "category": "extras",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 0,
+          "y": 841,
+          "width": 283,
+          "height": 281,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 60,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-extras-bucket-hat",
+      "label": "Bucket hat",
+      "style": "photo",
+      "category": "extras",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 283,
+          "y": 841,
+          "width": 279,
+          "height": 281,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 60,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-extras-bow",
+      "label": "Bow",
+      "style": "photo",
+      "category": "extras",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 562,
+          "y": 841,
+          "width": 279,
+          "height": 281,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 60,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-extras-mustache",
+      "label": "Mustache",
+      "style": "photo",
+      "category": "extras",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 841,
+          "y": 841,
+          "width": 281,
+          "height": 281,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 60,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "photo-extras-eyebrow",
+      "label": "Eyebrow",
+      "style": "photo",
+      "category": "extras",
+      "sheet": "photo-parts",
+      "frames": [
+        {
+          "x": 1122,
+          "y": 841,
+          "width": 280,
+          "height": 281,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 60,
+      "animation": null,
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-mouth-classic-smile",
+      "label": "Classic smile",
+      "style": "cartoon",
+      "category": "mouth",
+      "sheet": "cartoon-mouths",
+      "frames": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 280,
+          "height": 280,
+          "index": 0
+        },
+        {
+          "x": 280,
+          "y": 0,
+          "width": 281,
+          "height": 280,
+          "index": 1
+        },
+        {
+          "x": 561,
+          "y": 0,
+          "width": 280,
+          "height": 280,
+          "index": 2
+        },
+        {
+          "x": 841,
+          "y": 0,
+          "width": 281,
+          "height": 280,
+          "index": 3
+        },
+        {
+          "x": 1122,
+          "y": 0,
+          "width": 280,
+          "height": 280,
+          "index": 4
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 50,
+      "animation": "mouth",
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.65,
+        "scale": 0.3,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-mouth-coral-lips",
+      "label": "Coral lips",
+      "style": "cartoon",
+      "category": "mouth",
+      "sheet": "cartoon-mouths",
+      "frames": [
+        {
+          "x": 0,
+          "y": 280,
+          "width": 280,
+          "height": 281,
+          "index": 0
+        },
+        {
+          "x": 280,
+          "y": 280,
+          "width": 281,
+          "height": 281,
+          "index": 1
+        },
+        {
+          "x": 561,
+          "y": 280,
+          "width": 280,
+          "height": 281,
+          "index": 2
+        },
+        {
+          "x": 841,
+          "y": 280,
+          "width": 281,
+          "height": 281,
+          "index": 3
+        },
+        {
+          "x": 1122,
+          "y": 280,
+          "width": 280,
+          "height": 281,
+          "index": 4
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 50,
+      "animation": "mouth",
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.65,
+        "scale": 0.3,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-mouth-buck-teeth",
+      "label": "Buck teeth",
+      "style": "cartoon",
+      "category": "mouth",
+      "sheet": "cartoon-mouths",
+      "frames": [
+        {
+          "x": 0,
+          "y": 561,
+          "width": 280,
+          "height": 280,
+          "index": 0
+        },
+        {
+          "x": 280,
+          "y": 561,
+          "width": 281,
+          "height": 280,
+          "index": 1
+        },
+        {
+          "x": 561,
+          "y": 561,
+          "width": 280,
+          "height": 280,
+          "index": 2
+        },
+        {
+          "x": 841,
+          "y": 561,
+          "width": 281,
+          "height": 280,
+          "index": 3
+        },
+        {
+          "x": 1122,
+          "y": 561,
+          "width": 280,
+          "height": 280,
+          "index": 4
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 50,
+      "animation": "mouth",
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.65,
+        "scale": 0.3,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-mouth-crooked-grin",
+      "label": "Crooked grin",
+      "style": "cartoon",
+      "category": "mouth",
+      "sheet": "cartoon-mouths",
+      "frames": [
+        {
+          "x": 0,
+          "y": 841,
+          "width": 280,
+          "height": 281,
+          "index": 0
+        },
+        {
+          "x": 280,
+          "y": 841,
+          "width": 281,
+          "height": 281,
+          "index": 1
+        },
+        {
+          "x": 561,
+          "y": 841,
+          "width": 280,
+          "height": 281,
+          "index": 2
+        },
+        {
+          "x": 841,
+          "y": 841,
+          "width": 281,
+          "height": 281,
+          "index": 3
+        },
+        {
+          "x": 1122,
+          "y": 841,
+          "width": 280,
+          "height": 281,
+          "index": 4
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 50,
+      "animation": "mouth",
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.65,
+        "scale": 0.3,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-eyes-googly",
+      "label": "Googly",
+      "style": "cartoon",
+      "category": "eyes",
+      "sheet": "cartoon-eyes",
+      "frames": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 313,
+          "height": 313,
+          "index": 0
+        },
+        {
+          "x": 313,
+          "y": 0,
+          "width": 314,
+          "height": 313,
+          "index": 1
+        },
+        {
+          "x": 627,
+          "y": 0,
+          "width": 313,
+          "height": 313,
+          "index": 2
+        },
+        {
+          "x": 940,
+          "y": 0,
+          "width": 314,
+          "height": 313,
+          "index": 3
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 30,
+      "animation": "eyes",
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.4,
+        "scale": 0.18,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-eyes-teal-almond",
+      "label": "Teal almond",
+      "style": "cartoon",
+      "category": "eyes",
+      "sheet": "cartoon-eyes",
+      "frames": [
+        {
+          "x": 0,
+          "y": 313,
+          "width": 313,
+          "height": 314,
+          "index": 0
+        },
+        {
+          "x": 313,
+          "y": 313,
+          "width": 314,
+          "height": 314,
+          "index": 1
+        },
+        {
+          "x": 627,
+          "y": 313,
+          "width": 313,
+          "height": 314,
+          "index": 2
+        },
+        {
+          "x": 940,
+          "y": 313,
+          "width": 314,
+          "height": 314,
+          "index": 3
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 30,
+      "animation": "eyes",
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.4,
+        "scale": 0.18,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-eyes-violet-lashes",
+      "label": "Violet lashes",
+      "style": "cartoon",
+      "category": "eyes",
+      "sheet": "cartoon-eyes",
+      "frames": [
+        {
+          "x": 0,
+          "y": 627,
+          "width": 313,
+          "height": 313,
+          "index": 0
+        },
+        {
+          "x": 313,
+          "y": 627,
+          "width": 314,
+          "height": 313,
+          "index": 1
+        },
+        {
+          "x": 627,
+          "y": 627,
+          "width": 313,
+          "height": 313,
+          "index": 2
+        },
+        {
+          "x": 940,
+          "y": 627,
+          "width": 314,
+          "height": 313,
+          "index": 3
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 30,
+      "animation": "eyes",
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.4,
+        "scale": 0.18,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-eyes-amber-skeptical",
+      "label": "Amber skeptical",
+      "style": "cartoon",
+      "category": "eyes",
+      "sheet": "cartoon-eyes",
+      "frames": [
+        {
+          "x": 0,
+          "y": 940,
+          "width": 313,
+          "height": 314,
+          "index": 0
+        },
+        {
+          "x": 313,
+          "y": 940,
+          "width": 314,
+          "height": 314,
+          "index": 1
+        },
+        {
+          "x": 627,
+          "y": 940,
+          "width": 313,
+          "height": 314,
+          "index": 2
+        },
+        {
+          "x": 940,
+          "y": 940,
+          "width": 314,
+          "height": 314,
+          "index": 3
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 30,
+      "animation": "eyes",
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.4,
+        "scale": 0.18,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-hair-curls",
+      "label": "Curls",
+      "style": "cartoon",
+      "category": "hair",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 292,
+          "height": 280,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 20,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.25,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-hair-side-part",
+      "label": "Side part",
+      "style": "cartoon",
+      "category": "hair",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 292,
+          "y": 0,
+          "width": 269,
+          "height": 280,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 20,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.25,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-hair-swoop",
+      "label": "Swoop",
+      "style": "cartoon",
+      "category": "hair",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 561,
+          "y": 0,
+          "width": 280,
+          "height": 280,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 20,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.25,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-hair-wispy",
+      "label": "Wispy",
+      "style": "cartoon",
+      "category": "hair",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 841,
+          "y": 0,
+          "width": 281,
+          "height": 280,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 20,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.25,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-hair-spikes",
+      "label": "Spikes",
+      "style": "cartoon",
+      "category": "hair",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 1122,
+          "y": 0,
+          "width": 280,
+          "height": 280,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 20,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.25,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-ears-round-ear",
+      "label": "Round ear",
+      "style": "cartoon",
+      "category": "ears",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 0,
+          "y": 280,
+          "width": 280,
+          "height": 281,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 0,
+      "animation": null,
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-ears-long-ear",
+      "label": "Long ear",
+      "style": "cartoon",
+      "category": "ears",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 280,
+          "y": 280,
+          "width": 281,
+          "height": 281,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 0,
+      "animation": null,
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-ears-broad-ear",
+      "label": "Broad ear",
+      "style": "cartoon",
+      "category": "ears",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 561,
+          "y": 280,
+          "width": 280,
+          "height": 281,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 0,
+      "animation": null,
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-ears-elf-ear",
+      "label": "Elf ear",
+      "style": "cartoon",
+      "category": "ears",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 841,
+          "y": 280,
+          "width": 281,
+          "height": 281,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 0,
+      "animation": null,
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-ears-furry-ear",
+      "label": "Furry ear",
+      "style": "cartoon",
+      "category": "ears",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 1122,
+          "y": 280,
+          "width": 280,
+          "height": 281,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 0,
+      "animation": null,
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-nose-button-nose",
+      "label": "Button nose",
+      "style": "cartoon",
+      "category": "nose",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 0,
+          "y": 561,
+          "width": 280,
+          "height": 280,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 40,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-nose-long-nose",
+      "label": "Long nose",
+      "style": "cartoon",
+      "category": "nose",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 280,
+          "y": 561,
+          "width": 281,
+          "height": 280,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 40,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-nose-broad-nose",
+      "label": "Broad nose",
+      "style": "cartoon",
+      "category": "nose",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 561,
+          "y": 561,
+          "width": 280,
+          "height": 280,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 40,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-nose-clown-nose",
+      "label": "Clown nose",
+      "style": "cartoon",
+      "category": "nose",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 841,
+          "y": 561,
+          "width": 281,
+          "height": 280,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 40,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-nose-robot-nose",
+      "label": "Robot nose",
+      "style": "cartoon",
+      "category": "nose",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 1122,
+          "y": 561,
+          "width": 280,
+          "height": 280,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 40,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-extras-round-glasses",
+      "label": "Round glasses",
+      "style": "cartoon",
+      "category": "extras",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 0,
+          "y": 841,
+          "width": 292,
+          "height": 281,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 60,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-extras-bucket-hat",
+      "label": "Bucket hat",
+      "style": "cartoon",
+      "category": "extras",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 292,
+          "y": 841,
+          "width": 282,
+          "height": 281,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 60,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-extras-bow",
+      "label": "Bow",
+      "style": "cartoon",
+      "category": "extras",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 574,
+          "y": 841,
+          "width": 267,
+          "height": 281,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 60,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-extras-mustache",
+      "label": "Mustache",
+      "style": "cartoon",
+      "category": "extras",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 841,
+          "y": 841,
+          "width": 281,
+          "height": 281,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 60,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "cartoon-extras-eyebrow",
+      "label": "Eyebrow",
+      "style": "cartoon",
+      "category": "extras",
+      "sheet": "cartoon-parts",
+      "frames": [
+        {
+          "x": 1122,
+          "y": 841,
+          "width": 280,
+          "height": 281,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 60,
+      "animation": null,
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-mouth-straight-line",
+      "label": "Straight line",
+      "style": "sketch",
+      "category": "mouth",
+      "sheet": "sketch-mouths",
+      "frames": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 280,
+          "height": 280,
+          "index": 0
+        },
+        {
+          "x": 280,
+          "y": 0,
+          "width": 281,
+          "height": 280,
+          "index": 1
+        },
+        {
+          "x": 561,
+          "y": 0,
+          "width": 280,
+          "height": 280,
+          "index": 2
+        },
+        {
+          "x": 841,
+          "y": 0,
+          "width": 281,
+          "height": 280,
+          "index": 3
+        },
+        {
+          "x": 1122,
+          "y": 0,
+          "width": 280,
+          "height": 280,
+          "index": 4
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 50,
+      "animation": "mouth",
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.65,
+        "scale": 0.3,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-mouth-smile-line",
+      "label": "Smile line",
+      "style": "sketch",
+      "category": "mouth",
+      "sheet": "sketch-mouths",
+      "frames": [
+        {
+          "x": 0,
+          "y": 280,
+          "width": 280,
+          "height": 281,
+          "index": 0
+        },
+        {
+          "x": 280,
+          "y": 280,
+          "width": 281,
+          "height": 281,
+          "index": 1
+        },
+        {
+          "x": 561,
+          "y": 280,
+          "width": 280,
+          "height": 281,
+          "index": 2
+        },
+        {
+          "x": 841,
+          "y": 280,
+          "width": 281,
+          "height": 281,
+          "index": 3
+        },
+        {
+          "x": 1122,
+          "y": 280,
+          "width": 280,
+          "height": 281,
+          "index": 4
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 50,
+      "animation": "mouth",
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.65,
+        "scale": 0.3,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-mouth-zigzag-line",
+      "label": "Zigzag line",
+      "style": "sketch",
+      "category": "mouth",
+      "sheet": "sketch-mouths",
+      "frames": [
+        {
+          "x": 0,
+          "y": 561,
+          "width": 280,
+          "height": 267,
+          "index": 0
+        },
+        {
+          "x": 280,
+          "y": 561,
+          "width": 281,
+          "height": 267,
+          "index": 1
+        },
+        {
+          "x": 561,
+          "y": 561,
+          "width": 280,
+          "height": 267,
+          "index": 2
+        },
+        {
+          "x": 841,
+          "y": 561,
+          "width": 281,
+          "height": 267,
+          "index": 3
+        },
+        {
+          "x": 1122,
+          "y": 561,
+          "width": 280,
+          "height": 267,
+          "index": 4
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 50,
+      "animation": "mouth",
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.65,
+        "scale": 0.3,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-mouth-pencil-lips",
+      "label": "Pencil lips",
+      "style": "sketch",
+      "category": "mouth",
+      "sheet": "sketch-mouths",
+      "frames": [
+        {
+          "x": 0,
+          "y": 828,
+          "width": 280,
+          "height": 294,
+          "index": 0
+        },
+        {
+          "x": 280,
+          "y": 828,
+          "width": 281,
+          "height": 294,
+          "index": 1
+        },
+        {
+          "x": 561,
+          "y": 828,
+          "width": 280,
+          "height": 294,
+          "index": 2
+        },
+        {
+          "x": 841,
+          "y": 828,
+          "width": 281,
+          "height": 294,
+          "index": 3
+        },
+        {
+          "x": 1122,
+          "y": 828,
+          "width": 280,
+          "height": 294,
+          "index": 4
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 50,
+      "animation": "mouth",
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.65,
+        "scale": 0.3,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-eyes-round-doodle",
+      "label": "Round doodle",
+      "style": "sketch",
+      "category": "eyes",
+      "sheet": "sketch-eyes",
+      "frames": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 313,
+          "height": 327,
+          "index": 0
+        },
+        {
+          "x": 313,
+          "y": 0,
+          "width": 314,
+          "height": 327,
+          "index": 1
+        },
+        {
+          "x": 627,
+          "y": 0,
+          "width": 313,
+          "height": 327,
+          "index": 2
+        },
+        {
+          "x": 940,
+          "y": 0,
+          "width": 314,
+          "height": 327,
+          "index": 3
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 30,
+      "animation": "eyes",
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.4,
+        "scale": 0.18,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-eyes-pencil-almond",
+      "label": "Pencil almond",
+      "style": "sketch",
+      "category": "eyes",
+      "sheet": "sketch-eyes",
+      "frames": [
+        {
+          "x": 0,
+          "y": 327,
+          "width": 337,
+          "height": 300,
+          "index": 0
+        },
+        {
+          "x": 337,
+          "y": 327,
+          "width": 293,
+          "height": 300,
+          "index": 1
+        },
+        {
+          "x": 630,
+          "y": 327,
+          "width": 310,
+          "height": 300,
+          "index": 2
+        },
+        {
+          "x": 940,
+          "y": 327,
+          "width": 314,
+          "height": 300,
+          "index": 3
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 30,
+      "animation": "eyes",
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.4,
+        "scale": 0.18,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-eyes-oval-lashes",
+      "label": "Oval lashes",
+      "style": "sketch",
+      "category": "eyes",
+      "sheet": "sketch-eyes",
+      "frames": [
+        {
+          "x": 0,
+          "y": 627,
+          "width": 313,
+          "height": 316,
+          "index": 0
+        },
+        {
+          "x": 313,
+          "y": 627,
+          "width": 314,
+          "height": 316,
+          "index": 1
+        },
+        {
+          "x": 627,
+          "y": 627,
+          "width": 313,
+          "height": 316,
+          "index": 2
+        },
+        {
+          "x": 940,
+          "y": 627,
+          "width": 314,
+          "height": 316,
+          "index": 3
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 30,
+      "animation": "eyes",
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.4,
+        "scale": 0.18,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-eyes-skeptical",
+      "label": "Skeptical",
+      "style": "sketch",
+      "category": "eyes",
+      "sheet": "sketch-eyes",
+      "frames": [
+        {
+          "x": 0,
+          "y": 943,
+          "width": 331,
+          "height": 311,
+          "index": 0
+        },
+        {
+          "x": 331,
+          "y": 943,
+          "width": 298,
+          "height": 311,
+          "index": 1
+        },
+        {
+          "x": 629,
+          "y": 943,
+          "width": 311,
+          "height": 311,
+          "index": 2
+        },
+        {
+          "x": 940,
+          "y": 943,
+          "width": 314,
+          "height": 311,
+          "index": 3
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 30,
+      "animation": "eyes",
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.4,
+        "scale": 0.18,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-hair-curls",
+      "label": "Curls",
+      "style": "sketch",
+      "category": "hair",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 309,
+          "height": 295,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 20,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.25,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-hair-side-part",
+      "label": "Side part",
+      "style": "sketch",
+      "category": "hair",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 309,
+          "y": 0,
+          "width": 255,
+          "height": 295,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 20,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.25,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-hair-swoop",
+      "label": "Swoop",
+      "style": "sketch",
+      "category": "hair",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 564,
+          "y": 0,
+          "width": 277,
+          "height": 295,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 20,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.25,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-hair-wispy",
+      "label": "Wispy",
+      "style": "sketch",
+      "category": "hair",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 841,
+          "y": 0,
+          "width": 266,
+          "height": 295,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 20,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.25,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-hair-spikes",
+      "label": "Spikes",
+      "style": "sketch",
+      "category": "hair",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 1107,
+          "y": 0,
+          "width": 295,
+          "height": 295,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 20,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.25,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-ears-round-ear",
+      "label": "Round ear",
+      "style": "sketch",
+      "category": "ears",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 0,
+          "y": 295,
+          "width": 280,
+          "height": 292,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 0,
+      "animation": null,
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-ears-long-ear",
+      "label": "Long ear",
+      "style": "sketch",
+      "category": "ears",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 280,
+          "y": 295,
+          "width": 281,
+          "height": 292,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 0,
+      "animation": null,
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-ears-broad-ear",
+      "label": "Broad ear",
+      "style": "sketch",
+      "category": "ears",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 561,
+          "y": 295,
+          "width": 280,
+          "height": 292,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 0,
+      "animation": null,
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-ears-elf-ear",
+      "label": "Elf ear",
+      "style": "sketch",
+      "category": "ears",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 841,
+          "y": 295,
+          "width": 281,
+          "height": 292,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 0,
+      "animation": null,
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-ears-furry-ear",
+      "label": "Furry ear",
+      "style": "sketch",
+      "category": "ears",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 1122,
+          "y": 295,
+          "width": 280,
+          "height": 292,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 0,
+      "animation": null,
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-nose-button-nose",
+      "label": "Button nose",
+      "style": "sketch",
+      "category": "nose",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 0,
+          "y": 587,
+          "width": 280,
+          "height": 267,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 40,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-nose-long-nose",
+      "label": "Long nose",
+      "style": "sketch",
+      "category": "nose",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 280,
+          "y": 587,
+          "width": 281,
+          "height": 267,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 40,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-nose-broad-nose",
+      "label": "Broad nose",
+      "style": "sketch",
+      "category": "nose",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 561,
+          "y": 587,
+          "width": 280,
+          "height": 267,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 40,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-nose-clown-nose",
+      "label": "Clown nose",
+      "style": "sketch",
+      "category": "nose",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 841,
+          "y": 587,
+          "width": 281,
+          "height": 267,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 40,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-nose-robot-nose",
+      "label": "Robot nose",
+      "style": "sketch",
+      "category": "nose",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 1122,
+          "y": 587,
+          "width": 280,
+          "height": 267,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 40,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-extras-round-glasses",
+      "label": "Round glasses",
+      "style": "sketch",
+      "category": "extras",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 0,
+          "y": 854,
+          "width": 318,
+          "height": 268,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 60,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-extras-bucket-hat",
+      "label": "Bucket hat",
+      "style": "sketch",
+      "category": "extras",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 318,
+          "y": 854,
+          "width": 267,
+          "height": 268,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 60,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-extras-bow",
+      "label": "Bow",
+      "style": "sketch",
+      "category": "extras",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 585,
+          "y": 854,
+          "width": 256,
+          "height": 268,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 60,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-extras-mustache",
+      "label": "Mustache",
+      "style": "sketch",
+      "category": "extras",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 841,
+          "y": 854,
+          "width": 281,
+          "height": 268,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 60,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sketch-extras-eyebrow",
+      "label": "Eyebrow",
+      "style": "sketch",
+      "category": "extras",
+      "sheet": "sketch-parts",
+      "frames": [
+        {
+          "x": 1122,
+          "y": 854,
+          "width": 280,
+          "height": 268,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 60,
+      "animation": null,
+      "mirrorable": true,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.25,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "base-head-potato",
+      "label": "Potato",
+      "style": "mixed",
+      "category": "head",
+      "sheet": "heads",
+      "frames": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 627,
+          "height": 627,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 10,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.8,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "base-head-toast",
+      "label": "Toast",
+      "style": "mixed",
+      "category": "head",
+      "sheet": "heads",
+      "frames": [
+        {
+          "x": 627,
+          "y": 0,
+          "width": 627,
+          "height": 627,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 10,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.8,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "base-head-moon",
+      "label": "Moon",
+      "style": "mixed",
+      "category": "head",
+      "sheet": "heads",
+      "frames": [
+        {
+          "x": 0,
+          "y": 627,
+          "width": 627,
+          "height": 627,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 10,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.8,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "base-head-robot",
+      "label": "Robot",
+      "style": "mixed",
+      "category": "head",
+      "sheet": "heads",
+      "frames": [
+        {
+          "x": 627,
+          "y": 627,
+          "width": 627,
+          "height": 627,
+          "index": 0
+        }
+      ],
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "layer": 10,
+      "animation": null,
+      "mirrorable": false,
+      "defaultPlacement": {
+        "x": 0.5,
+        "y": 0.5,
+        "scale": 0.8,
+        "rotation": 0
+      }
+    }
+  ]
+}

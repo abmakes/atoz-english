@@ -9,12 +9,17 @@ How to keep docs honest after changes: [project_docs/DOCUMENTATION_MAINTENANCE.m
 
 ## What this product is
 
-Teacher-centric quiz platform: create quizzes (form, CSV, AI), then play them as classroom games — PixiJS 2D (Team Quiz, Splash Dash, Ninja Climb) and Three.js 3D (Quiz Room, Tug of War) — with teams, timers, scoring, themes, and power-ups. Sentence Builder is a built-in grammar practice game. Teacher Tools (`/tools`) includes Story Creator and a temporary Image curator.
+Teacher-centric quiz platform: create quizzes (form, CSV, AI), then play them as classroom games — PixiJS 2D (Team Quiz, Splash Dash, Ninja Climb) and Three.js 3D (Tug of War) — with teams, timers, scoring, themes, and power-ups.
+
+**Practice** (`/practice`, public): single-player games that do not need a teacher quiz. First game is **Sentence Builder** at `/practice/sentence-builder` — pick one grammar structure, then build picture sentences for that structure only.
+
+**Teacher Tools** (`/tools`, signed-in only): small classroom helpers. **Story Creator** — AI-generated 4-picture stories (Gemini text + image), a printable 2×2 worksheet, a public student link for per-picture voice recording, and a live lip-synced "movie" player (canvas virtual camera; no video files are generated). Plan/architecture: [TEACHER_TOOLS_STORY_CREATOR_PLAN.md](TEACHER_TOOLS_STORY_CREATOR_PLAN.md). **Thoughts** — a class speaking wall: students open a share link, decorate a sticker face from `public/images/thoughts/`, and record a short answer. The face talks from the amplitude envelope. Teachers approve which clips the class can watch. Student audio is stored in the public Vercel Blob store (unguessable path) and streamed through an access check. The file URL is never sent to the browser. Also includes a **temporary Image curator** (`/tools/image-curator`) that saves Pixabay photos into the quiz image library by CEFR word until a full collection exists.
 
 ## Stack snapshot (working)
 
 | Layer | Technology |
 |-------|------------|
+| Runtime | **Node.js 24 LTS** (22.23.4+ required; Node 20 is EOL) |
 | Framework | Next.js 15 (App Router) |
 | UI | React 19, Tailwind, shadcn/ui |
 | Games | **PixiJS v8** (2D class engine) + **Three.js** (3D class runtime), Howler |
@@ -61,6 +66,8 @@ src/lib/lexicon/         Open lexicon resolver + soft language audit
 src/lib/taxonomy/        Discovery tags + AI-only generation controls
 src/lib/stories/         Story Creator: schemas, prompts, Gemini image gen, timeline, lip-sync
 src/components/story_creator/  Story Creator UI (brief form, editor, recorder, movie player)
+src/lib/thoughts/        Thoughts: sticker catalog, lip-sync, private audio, class access
+src/components/thoughts/ Thoughts UI (face builder, recorder, teacher review)
 src/stores/             Zustand stores
 src/styles/             globals.css + stylingGuide.md
 src/types/              Shared TS types
@@ -148,3 +155,7 @@ Official Pixi v8 API reference: https://pixijs.download/release/docs/index.html
 | Stack or folder layout | **This file (`CONTEXT.md`)** |
 
 Full checklist: [DOCUMENTATION_MAINTENANCE.md](project_docs/DOCUMENTATION_MAINTENANCE.md)
+
+### Thoughts (2026-10-30)
+
+Teacher tool at `/tools/thoughts`. Students use `/thoughts/{shareToken}`. Facial parts are the atlases in `public/images/thoughts/` (`manifest.json` has frame rectangles). Recordings use the existing public Vercel Blob store (`access: 'public'`, random suffix). The URL stays on the server and playback goes through the approval check. Rebuild atlas metadata with `node scripts/build-thoughts-asset-manifest.mjs`.

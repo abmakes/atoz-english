@@ -406,6 +406,7 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
      * Shows the next question with transition screen preview
      */
     private async _showQuestionWithTransition(): Promise<void> {
+        if (this.isDestroyed) return;
         if (!this.dataManager || !this.uiManager) {
             console.error("Cannot show question: Managers not initialized.");
             this._triggerGameOver();
@@ -431,6 +432,7 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
             showCountdown: true,
             autoHide: false
         });
+        if (this.isDestroyed) return;
 
         // After transition completes, show the actual question
         await this._showQuestion(question);
@@ -440,6 +442,7 @@ export class SplashDashGame extends BaseGame<SplashDashGameState> {
      * Shows the next question using Data and UI Managers.
      */
     private async _showQuestion(question?: QuestionData): Promise<void> {
+        if (this.isDestroyed) return;
         if (!this.dataManager || !this.uiManager) {
             console.error("Cannot show question: Managers not initialized.");
             this._triggerGameOver();

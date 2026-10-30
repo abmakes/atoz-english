@@ -13,7 +13,7 @@ Turn-based two-team mountain race. Quiz points convert to climb distance on a sh
 3. **managers/**
    - `NinjaClimbDataManager` — `BaseQuizDataManager` wrapper
    - `NinjaClimbRaceManager` — pure race rules (`POINTS_PER_STEP`, barriers by step, shortcuts)
-   - `NinjaClimbMountainManager` — foot/mid/top cliff stack, plateaus, trail, gates, barrier, fit-zoom camera, light `MountainCloudOverlay`
+   - `NinjaClimbMountainManager` — v2 base/mid/top cliff, grass-pad trail, gates, barrier, fit-zoom camera, painted cloud and bush frame
    - `NinjaClimbPlayerManager` — arc hops, facing, occupancy, idle pose variants
    - `NinjaClimbUIManager` — bottom bar, sky answer clouds, dual power trays, shortcut prompt
    - `NinjaClimbLayoutManager` — sky band / bottom bar / cloud / tray profile

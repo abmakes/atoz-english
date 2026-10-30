@@ -64,8 +64,8 @@ When the quiz pool is short relative to summit height, questions **recycle in co
 
 ## Trail & occupancy
 
-- One shared switchback trail (`mountainPath.buildPath`).
-- Characters hop arc between waypoints and face travel direction.
+- One shared trail (`mountainPath.buildCliffLayout`). Pads are the grass ledges measured on `v2/mid.png` (left–right zigzag, tiled), with the base lawn as the start and the top finish line as the summit.
+- Characters hop arc between those pads and face the next ledge.
 - Same ledge → `plateauSlots.layoutOccupants` places 2 side-by-side (air gap) or 3–4 magazine-rack fan with pose variants + phase offsets.
 
 ## Camera
@@ -75,9 +75,9 @@ Fit-zoom on both climbers: midpoint in the play window (between sky band and bot
 ## UI regions
 
 - **Top sky band:** answer options sit on soft cumulus badges (`AnswerCloudShape` — overlapping white knobs, softened as one silhouette so construction circles never show). Clustered mid-screen clear of the score panel and nav/timer, staggered rows, drifting side to side. Clicking does not fade them.
-- **Cloud bank:** original light `MountainCloudOverlay` (engine `fx/`) — three drifting blob layers (dense / wispy / faint, blob alpha ~0.06–0.50) with blur + noise + displacement filters and a vertical gradient alpha mask; covers ~top 62% of the screen and fades out so the mountain stays readable. Screen-space, on the game view above the world and below the puff answer HUD. No solid white ceiling sheet.
+- **Cloud and foliage frame:** `v2/clouds.png` and `v2/bush.png`, screen-fixed above the cliff and below the HUD. The center stays clear so the painted ledges stay readable.
 - **Timer:** enlarged ring on a solid white disc, dropped below the React nav cluster (right side)
-- **Middle play window:** vertically stacked mountain (`cliff_foot` → alternating brown / two-tone mids by height → `cliff_top`), camera fits climbers at 1.3× so characters read larger
+- **Middle play window:** painted cliff (`v2/base` → repeating `v2/mid` → `v2/top`) over `v2/background`, with `v2/clouds` and `v2/bush` framing the screen. Camera fits climbers at 1.3× so characters read larger
 - **Bottom bar:** Splash Dash pattern — question image up to 200×200 (overlaps the play window), 20px gap to the question text, two corner power trays. Extra padding between Team 1 powers and the photo.
 
 ## Turn model

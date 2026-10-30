@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
-  TUG_BASE_PULL,
+  TUG_DOUBLE_STEP_MULTIPLIER,
   TUG_OFFSET_LERP_PER_SEC,
+  TUG_ROUND_THRESHOLD,
   TUG_ROUNDS_TO_WIN,
-  TUG_SPEED_BONUS,
-  TUG_TIMEOUT_PULL_FACTOR,
-  TUG_WRONG_PULL_FACTOR,
+  TUG_STEP,
+  TUG_STREAK_FOR_DOUBLE,
   applyPull,
+  applyTugAnswer,
   canReplayHudQuestion,
   clampTugOffset,
   computePullImpulse,
@@ -20,6 +21,9 @@ import {
   shouldEmitOffset,
   signedPullDelta,
   stepDisplayedOffset,
+  stepsForCorrectStreak,
+  teamHasSuperSaiyanGlow,
+  tugNormalizedOffset,
   winnerFromRounds,
 } from '@/lib/three-games/tug-of-war/tugOfWarLogic'
 import { QuestionType } from '@/types/question_types'
@@ -33,96 +37,194 @@ const mc: QuestionData = {
   type: QuestionType.MULTIPLE_CHOICE,
 }
 
+function applyCorrect(state: ReturnType<typeof createTugMatchState>, teamIndex: number) {
+  return applyTugAnswer(state, teamIndex, { isCorrect: true })
+}
+
+function winRoundFromCenter(
+  state: ReturnType<typeof createTugMatchState>,
+  teamIndex: number
+) {
+  const first = applyCorrect(state, teamIndex)
+  expect(first.roundWinner).toBeNull()
+  return applyCorrect(first.state, teamIndex)
+}
+
 describe('tugOfWarLogic pull math', () => {
-  it('awards base plus a speed bonus for a fast correct answer', () => {
+  it('awards one step toward the active team for a correct answer', () => {
+    const blue = applyCorrect(createTugMatchState(), 0)
+    expect(blue.state.offset).toBe(-TUG_STEP)
+    expect(blue.roundWinner).toBeNull()
     expect(
       computePullImpulse({
         isCorrect: true,
         timedOut: false,
-        remainingTimeMs: 8000,
-        durationMs: 8000,
+        streak: 0,
       })
     ).toEqual({
-      magnitude: TUG_BASE_PULL + TUG_SPEED_BONUS,
+      magnitude: TUG_STEP,
       towardActiveTeam: true,
     })
     expect(
       computePullImpulse({
         isCorrect: true,
-        timedOut: false,
-        remainingTimeMs: 0,
-        durationMs: 8000,
+        streak: TUG_STREAK_FOR_DOUBLE - 1,
       }).magnitude
-    ).toBeCloseTo(TUG_BASE_PULL)
+    ).toBe(TUG_STEP)
   })
 
-  it('gives the opponent 50% of the base pull on a wrong answer', () => {
+  it('does not move the rope on a wrong answer or timeout', () => {
     expect(
       computePullImpulse({
         isCorrect: false,
         timedOut: false,
-        remainingTimeMs: 4000,
-        durationMs: 8000,
       })
     ).toEqual({
-      magnitude: TUG_BASE_PULL * TUG_WRONG_PULL_FACTOR,
-      towardActiveTeam: false,
+      magnitude: 0,
+      towardActiveTeam: true,
     })
-  })
-
-  it('gives the opponent 25% of the base pull on timeout', () => {
     expect(
       computePullImpulse({
-        isCorrect: false,
+        isCorrect: true,
         timedOut: true,
-        remainingTimeMs: 0,
-        durationMs: 8000,
       })
     ).toEqual({
-      magnitude: TUG_BASE_PULL * TUG_TIMEOUT_PULL_FACTOR,
-      towardActiveTeam: false,
+      magnitude: 0,
+      towardActiveTeam: true,
     })
+
+    const leading = applyCorrect(createTugMatchState(), 0)
+    expect(leading.state.offset).toBe(-TUG_STEP)
+    const miss = applyTugAnswer(leading.state, 0, { isCorrect: false })
+    expect(miss.state.offset).toBe(-TUG_STEP)
+    expect(miss.roundWinner).toBeNull()
+    const timeout = applyTugAnswer(leading.state, 1, {
+      isCorrect: false,
+      timedOut: true,
+    })
+    expect(timeout.state.offset).toBe(-TUG_STEP)
+    expect(timeout.roundWinner).toBeNull()
+
+    const bothMiss = applyTugAnswer(
+      applyTugAnswer(createTugMatchState(), 0, { isCorrect: false }).state,
+      1,
+      { isCorrect: false }
+    )
+    expect(bothMiss.state.offset).toBe(0)
   })
 
   it('pulls blue left and red right on a correct answer', () => {
-    const impulse = computePullImpulse({
-      isCorrect: true,
-      timedOut: false,
-      remainingTimeMs: 0,
-      durationMs: 1000,
-    })
+    const impulse = computePullImpulse({ isCorrect: true, streak: 0 })
     expect(pullSignForTeam(0)).toBe(-1)
     expect(pullSignForTeam(1)).toBe(1)
-    expect(signedPullDelta(0, impulse)).toBeCloseTo(-TUG_BASE_PULL)
-    expect(signedPullDelta(1, impulse)).toBeCloseTo(TUG_BASE_PULL)
+    expect(signedPullDelta(0, impulse)).toBeCloseTo(-TUG_STEP)
+    expect(signedPullDelta(1, impulse)).toBeCloseTo(TUG_STEP)
+  })
+
+  it('doubles the next correct after three in a row', () => {
+    const steps = [0, 1, 2, 3].map((streak) => stepsForCorrectStreak(streak))
+    expect(steps).toEqual([
+      TUG_STEP,
+      TUG_STEP,
+      TUG_STEP,
+      TUG_STEP * TUG_DOUBLE_STEP_MULTIPLIER,
+    ])
+    expect(
+      computePullImpulse({
+        isCorrect: true,
+        streak: TUG_STREAK_FOR_DOUBLE,
+      }).magnitude
+    ).toBe(2)
+    expect(stepsForCorrectStreak(TUG_STREAK_FOR_DOUBLE + 1)).toBe(TUG_STEP)
   })
 })
 
 describe('tugOfWarLogic round / match state', () => {
-  it('starts centered and awards a round when the marker crosses a threshold', () => {
-    let state = createTugMatchState()
-    const fullPull = { magnitude: 1, towardActiveTeam: true as const }
-    const first = applyPull(state, 0, fullPull)
-    expect(first.roundWinner).toBe('blue')
-    expect(first.state.blueRoundWins).toBe(1)
-    expect(first.matchWinner).toBeNull()
-    expect(first.state.phase).toBe('roundOver')
+  it('awards a round at a lead of two steps and resets the rope', () => {
+    const first = applyCorrect(createTugMatchState(), 0)
+    expect(first.roundWinner).toBeNull()
+    expect(first.state.offset).toBe(-1)
+    expect(first.state.blueStreak).toBe(1)
 
-    state = resetRound(first.state)
-    expect(state.offset).toBe(0)
-    expect(state.roundNumber).toBe(2)
-    expect(state.phase).toBe('playing')
-
-    const second = applyPull(state, 0, fullPull)
+    const second = applyCorrect(first.state, 0)
     expect(second.roundWinner).toBe('blue')
-    expect(second.matchWinner).toBe('blue')
-    expect(second.state.blueRoundWins).toBe(TUG_ROUNDS_TO_WIN)
-    expect(second.state.phase).toBe('matchOver')
+    expect(second.state.blueRoundWins).toBe(1)
+    expect(second.matchWinner).toBeNull()
+    expect(second.state.phase).toBe('roundOver')
+    expect(second.state.offset).toBe(-TUG_ROUND_THRESHOLD)
+
+    const nextRound = resetRound(second.state)
+    expect(nextRound.offset).toBe(0)
+    expect(nextRound.roundNumber).toBe(2)
+    expect(nextRound.phase).toBe('playing')
   })
 
-  it('clamps offset to the round threshold', () => {
-    expect(clampTugOffset(-4)).toBe(-1)
-    expect(clampTugOffset(4)).toBe(1)
+  it('ends the match at three round wins, not two', () => {
+    const first = winRoundFromCenter(createTugMatchState(), 0)
+    expect(first.matchWinner).toBeNull()
+    expect(first.state.blueRoundWins).toBe(1)
+
+    const second = winRoundFromCenter(resetRound(first.state), 0)
+    expect(second.roundWinner).toBe('blue')
+    expect(second.matchWinner).toBeNull()
+    expect(second.state.blueRoundWins).toBe(2)
+    expect(second.state.phase).toBe('roundOver')
+    expect(winnerFromRounds(second.state)).toBeNull()
+
+    const third = winRoundFromCenter(resetRound(second.state), 0)
+    expect(third.roundWinner).toBe('blue')
+    expect(third.matchWinner).toBe('blue')
+    expect(third.state.blueRoundWins).toBe(TUG_ROUNDS_TO_WIN)
+    expect(third.state.phase).toBe('matchOver')
+  })
+
+  it('never awards a round when teams alternate correct answers at one step each', () => {
+    let state = createTugMatchState()
+    for (let i = 0; i < TUG_STREAK_FOR_DOUBLE; i++) {
+      const blue = applyCorrect(state, 0)
+      expect(blue.roundWinner).toBeNull()
+      expect(blue.state.offset).toBe(-TUG_STEP)
+      const red = applyCorrect(blue.state, 1)
+      expect(red.roundWinner).toBeNull()
+      expect(red.state.offset).toBe(0)
+      state = red.state
+    }
+    expect(state.blueRoundWins).toBe(0)
+    expect(state.redRoundWins).toBe(0)
+  })
+
+  it('lets a streak double win the round when both teams keep answering correctly', () => {
+    let state = createTugMatchState()
+    for (let i = 0; i < TUG_STREAK_FOR_DOUBLE; i++) {
+      const blue = applyCorrect(state, 0)
+      expect(blue.roundWinner).toBeNull()
+      const red = applyCorrect(blue.state, 1)
+      expect(red.roundWinner).toBeNull()
+      state = red.state
+    }
+    expect(state.offset).toBe(0)
+    expect(state.blueStreak).toBe(TUG_STREAK_FOR_DOUBLE)
+    expect(state.redStreak).toBe(TUG_STREAK_FOR_DOUBLE)
+
+    const doubled = applyCorrect(state, 0)
+    expect(doubled.roundWinner).toBe('blue')
+    expect(doubled.state.offset).toBe(-TUG_ROUND_THRESHOLD)
+  })
+
+  it('breaks a streak on a miss without awarding the opponent a step', () => {
+    const leading = applyCorrect(createTugMatchState(), 0)
+    expect(leading.state.blueStreak).toBe(1)
+    const miss = applyTugAnswer(leading.state, 0, { isCorrect: false })
+    expect(miss.state.blueStreak).toBe(0)
+    expect(miss.state.offset).toBe(-TUG_STEP)
+    expect(miss.roundWinner).toBeNull()
+  })
+
+  it('clamps offset to the two-step lead', () => {
+    expect(clampTugOffset(-4)).toBe(-TUG_ROUND_THRESHOLD)
+    expect(clampTugOffset(4)).toBe(TUG_ROUND_THRESHOLD)
+    expect(tugNormalizedOffset(-TUG_ROUND_THRESHOLD)).toBe(-1)
+    expect(tugNormalizedOffset(TUG_ROUND_THRESHOLD)).toBe(1)
   })
 
   it('breaks a questions-exhausted tie using the current rope advantage', () => {
@@ -130,7 +232,7 @@ describe('tugOfWarLogic round / match state', () => {
       ...createTugMatchState(),
       blueRoundWins: 1,
       redRoundWins: 1,
-      offset: -0.4,
+      offset: -1,
     }
     expect(resolveMatchOnQuestionsExhausted(tied)).toEqual({
       winner: 'blue',
@@ -144,18 +246,45 @@ describe('tugOfWarLogic round / match state', () => {
         ...tied,
         blueRoundWins: 1,
         redRoundWins: 0,
-        offset: 0.9,
+        offset: 2,
       })
     ).toEqual({ winner: 'blue', reason: 'rounds' })
     expect(winnerFromRounds(tied)).toBeNull()
   })
 
   it('lerps the displayed offset and throttles HUD emits', () => {
-    const stepped = stepDisplayedOffset(0, 0.85, 1000)
+    const stepped = stepDisplayedOffset(0, TUG_OFFSET_LERP_PER_SEC + 1, 1000)
     expect(stepped).toBeCloseTo(TUG_OFFSET_LERP_PER_SEC)
-    expect(stepDisplayedOffset(0.84, 0.85, 1000)).toBeCloseTo(0.85)
+    expect(stepDisplayedOffset(1.84, 2, 1000)).toBeCloseTo(2)
     expect(shouldEmitOffset(0, 0.009)).toBe(false)
     expect(shouldEmitOffset(0, 0.01)).toBe(true)
+  })
+
+  it('glows for an armed streak double or an active classroom buff', () => {
+    expect(
+      teamHasSuperSaiyanGlow({ streak: 0, hasActivePowerUp: false })
+    ).toBe(false)
+    expect(
+      teamHasSuperSaiyanGlow({
+        streak: TUG_STREAK_FOR_DOUBLE,
+        hasActivePowerUp: false,
+      })
+    ).toBe(true)
+    expect(
+      teamHasSuperSaiyanGlow({
+        streak: TUG_STREAK_FOR_DOUBLE + 1,
+        hasActivePowerUp: false,
+      })
+    ).toBe(false)
+    expect(
+      teamHasSuperSaiyanGlow({ streak: 0, hasActivePowerUp: true })
+    ).toBe(true)
+  })
+
+  it('still accepts a raw two-step impulse as a round win', () => {
+    const fullPull = { magnitude: TUG_ROUND_THRESHOLD, towardActiveTeam: true as const }
+    const first = applyPull(createTugMatchState(), 0, fullPull)
+    expect(first.roundWinner).toBe('blue')
   })
 })
 

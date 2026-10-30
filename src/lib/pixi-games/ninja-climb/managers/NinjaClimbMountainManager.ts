@@ -2,30 +2,27 @@ import * as PIXI from 'pixi.js'
 import { EventBus } from '@/lib/pixi-engine/core/EventBus'
 import { ENGINE_EVENTS } from '@/lib/pixi-engine/core/EventTypes'
 import type { PixiApplication } from '@/lib/pixi-engine/core/PixiApplication'
-import { MountainCloudOverlay } from '@/lib/pixi-engine/fx/MountainCloudOverlay'
 import type { NinjaClimbLayoutManager } from './NinjaClimbLayoutManager'
 import type { ShortcutNodeDef } from './NinjaClimbRaceManager'
-import { buildPath, type Waypoint } from '../mountainPath'
+import { buildCliffLayout, type CliffLayout, type Waypoint } from '../mountainPath'
 
-const ASSET_BASE = '/images/ninja-climb'
-/** Always bookend the climb; mids alternate by mountain height. */
-const CLIFF_FOOT = 'cliff_foot'
-const CLIFF_TOP = 'cliff_top'
-const CLIFF_MIDS = ['cliff_mid_brown', 'cliff_mid_tone_a', 'cliff_mid_tone_b'] as const
-const PLATEAU_KEYS = ['plateau_1', 'plateau_2', 'plateau_3'] as const
+const SCENE_BASE = '/images/ninja-climb/v2'
+const PROP_BASE = '/images/ninja-climb'
 
 /**
- * Tiled switchback mountain trail with eased fit-zoom camera.
+ * Painted cliff: distant vista, base → tiled mid zigzag → summit,
+ * with a screen-fixed cloud and foliage frame.
  */
 export class NinjaClimbMountainManager {
   private view: PIXI.Container
   private world: PIXI.Container
-  private skySprite: PIXI.Sprite | null = null
-  private cloudOverlay: MountainCloudOverlay | null = null
+  private backdrop: PIXI.Sprite | null = null
+  private cloudFrame: PIXI.Sprite | null = null
+  private bushFrame: PIXI.Sprite | null = null
+  private cliff: CliffLayout | null = null
   private trailGraphics: PIXI.Graphics
   private gateSprites: Map<string, PIXI.Sprite> = new Map()
   private barrierSprite: PIXI.Sprite | null = null
-  private flagSprite: PIXI.Sprite | null = null
   private path: Waypoint[] = []
   private screenW = 0
   private screenH = 0
@@ -59,9 +56,9 @@ export class NinjaClimbMountainManager {
     return this.world
   }
 
-  /** Screen-space blur bank; NinjaClimbGame parents this above the world, below the HUD. */
-  public getCloudOverlay(): MountainCloudOverlay | null {
-    return this.cloudOverlay
+  /** Painted clouds live inside this view. No separate procedural bank. */
+  public getCloudOverlay(): null {
+    return null
   }
 
   public getPath(): Waypoint[] {
@@ -77,35 +74,17 @@ export class NinjaClimbMountainManager {
     const { width, height } = this.pixiApp.getScreenSize()
     this.screenW = width
     this.screenH = height
-    const layout = this.layoutManager.getLayoutParams()
 
-    try {
-      const skyTex = await PIXI.Assets.load(`${ASSET_BASE}/sky.webp`)
-      this.skySprite = new PIXI.Sprite(skyTex)
-      this.skySprite.width = width
-      this.skySprite.height = height
-      this.view.addChildAt(this.skySprite, 0)
-    } catch {
-      const g = new PIXI.Graphics()
-      g.rect(0, 0, width, height).fill({ color: 0x87ceeb })
-      this.view.addChildAt(g, 0)
-    }
-
-    const worldBottomY = totalSteps * layout.stepHeight + 200
-    this.path = buildPath({
+    this.cliff = buildCliffLayout({
       totalSteps,
       screenWidth: width,
-      stepHeight: layout.stepHeight,
-      stepsPerSection: layout.stepsPerSection,
-      margin: layout.pathMargin,
-      worldBottomY,
     })
+    this.path = this.cliff.waypoints
 
-    await this._buildSections()
-    await this._placePlateaus()
-    await this._placeDecorations()
+    await this._buildBackdrop()
+    await this._buildCliffTiles()
     await this._placeGates(nodes)
-    await this._placeFlag()
+    await this._buildFrames()
 
     this.world.addChild(this.trailGraphics)
     this._drawTrail()
@@ -119,111 +98,74 @@ export class NinjaClimbMountainManager {
     }
     this._applyCameraTransform()
 
-    // Light first-version bank (blur + noise + displacement). Game view parents it
-    // above this world and below the puff answer HUD.
+  }
+
+  /** Distant mountains, screen-fixed behind the scrolling cliff. */
+  private async _buildBackdrop(): Promise<void> {
     try {
-      this.cloudOverlay = new MountainCloudOverlay(this.screenW, this.screenH)
+      const tex = await PIXI.Assets.load(`${SCENE_BASE}/background.png`)
+      this.backdrop = new PIXI.Sprite(tex)
+      this._coverScreen(this.backdrop)
+      this.view.addChildAt(this.backdrop, 0)
     } catch (e) {
-      console.warn('NinjaClimbMountainManager: cloud overlay failed', e)
-      this.cloudOverlay = null
+      console.warn('NinjaClimbMountainManager: backdrop failed', e)
+      const g = new PIXI.Graphics()
+      g.rect(0, 0, this.screenW, this.screenH).fill({ color: 0x87ceeb })
+      this.view.addChildAt(g, 0)
     }
   }
 
   /**
-   * Stack cliff tiles bottom→top: foot, alternating mids, top.
-   * Uniform width scale (no stretch / no mirror) so vertical seams stay aligned.
+   * Stack base, repeating mid, and summit using the same tile boxes as the path
+   * so each waypoint sits on the painted grass.
    */
-  private async _buildSections(): Promise<void> {
-    if (this.path.length === 0) return
-    const layout = this.layoutManager.getLayoutParams()
-    const pathBottom = this.path[0].y
-    const pathTop = this.path[this.path.length - 1].y
-    const targetSpan =
-      Math.abs(pathBottom - pathTop) + layout.stepHeight * 2.5
-
+  private async _buildCliffTiles(): Promise<void> {
+    if (!this.cliff) return
+    const fileFor = { base: 'base.png', mid: 'mid.png', top: 'top.png' } as const
     try {
-      const footTex = await PIXI.Assets.load(`${ASSET_BASE}/${CLIFF_FOOT}.webp`)
-      const topTex = await PIXI.Assets.load(`${ASSET_BASE}/${CLIFF_TOP}.webp`)
-      const midTexs = await Promise.all(
-        CLIFF_MIDS.map((key) => PIXI.Assets.load(`${ASSET_BASE}/${key}.webp`))
-      )
-
-      const targetW = this.screenW * 1.02
-      const scaledH = (tex: PIXI.Texture) =>
-        (tex.height * targetW) / Math.max(1, tex.width)
-
-      const footH = scaledH(footTex)
-      const topH = scaledH(topTex)
-      const avgMidH =
-        midTexs.reduce((sum, tex) => sum + scaledH(tex), 0) / Math.max(1, midTexs.length)
-      const midCount = Math.max(1, Math.round(Math.max(avgMidH, targetSpan - footH - topH) / avgMidH))
-
-      const keys: string[] = [CLIFF_FOOT]
-      for (let i = 0; i < midCount; i++) {
-        keys.push(CLIFF_MIDS[i % CLIFF_MIDS.length])
-      }
-      keys.push(CLIFF_TOP)
-
-      // Stack upward from below the first ledge (Pixi Y grows downward).
-      let bottomY = pathBottom + layout.stepHeight * 0.6
-      for (const key of keys) {
-        const tex = await PIXI.Assets.load(`${ASSET_BASE}/${key}.webp`)
+      for (const tile of this.cliff.tiles) {
+        const tex = await PIXI.Assets.load(`${SCENE_BASE}/${fileFor[tile.kind]}`)
         const sprite = new PIXI.Sprite(tex)
         sprite.anchor.set(0.5, 1)
-        const scale = targetW / Math.max(1, tex.width)
-        sprite.scale.set(scale)
-        sprite.x = this.screenW / 2
-        sprite.y = bottomY
-        this.world.addChildAt(sprite, 0)
-        bottomY -= sprite.height
+        sprite.scale.set(tile.width / Math.max(1, tex.width))
+        sprite.x = tile.centerX
+        sprite.y = tile.bottomY
+        sprite.zIndex = 0
+        this.world.addChild(sprite)
       }
     } catch (e) {
       console.warn('NinjaClimbMountainManager: cliff stack failed', e)
     }
   }
 
-  private async _placePlateaus(): Promise<void> {
-    for (let i = 0; i < this.path.length; i++) {
-      const wp = this.path[i]
-      const key = PLATEAU_KEYS[i % PLATEAU_KEYS.length]
-      try {
-        const tex = await PIXI.Assets.load(`${ASSET_BASE}/${key}.webp`)
-        const sprite = new PIXI.Sprite(tex)
-        sprite.anchor.set(0.5, 0.15)
-        const charW = this.layoutManager.getLayoutParams().ninjaDisplaySize
-        const targetW = i === this.path.length - 1 ? charW * 3.4 : charW * 2.9
-        const scale = targetW / Math.max(1, tex.width)
-        sprite.scale.set(scale)
-        sprite.x = wp.x
-        sprite.y = wp.y
-        this.world.addChild(sprite)
-      } catch (e) {
-        console.warn('NinjaClimbMountainManager: plateau load failed', e)
-      }
+  /** Side clouds and foliage, screen-fixed in front of the cliff and behind the HUD. */
+  private async _buildFrames(): Promise<void> {
+    try {
+      const clouds = await PIXI.Assets.load(`${SCENE_BASE}/clouds.png`)
+      this.cloudFrame = new PIXI.Sprite(clouds)
+      this._coverScreen(this.cloudFrame)
+      this.view.addChild(this.cloudFrame)
+    } catch (e) {
+      console.warn('NinjaClimbMountainManager: clouds failed', e)
+    }
+    try {
+      const bush = await PIXI.Assets.load(`${SCENE_BASE}/bush.png`)
+      this.bushFrame = new PIXI.Sprite(bush)
+      this._coverScreen(this.bushFrame)
+      this.view.addChild(this.bushFrame)
+    } catch (e) {
+      console.warn('NinjaClimbMountainManager: bush frame failed', e)
     }
   }
 
-  private async _placeDecorations(): Promise<void> {
-    const decoFiles = ['deco_tree.webp', 'deco_bush.webp', 'deco_hut.webp']
-    for (let i = 0; i < this.path.length; i += 3) {
-      if (i === 0 || i === this.path.length - 1) continue
-      const wp = this.path[i]
-      const file = decoFiles[i % decoFiles.length]
-      try {
-        const tex = await PIXI.Assets.load(`${ASSET_BASE}/${file}`)
-        const sprite = new PIXI.Sprite(tex)
-        sprite.anchor.set(0.5, 1)
-        sprite.scale.set(0.35 + (i % 3) * 0.05)
-        // Place beside the trail based on section direction
-        const side = wp.dir === 1 ? -1 : 1
-        sprite.x = wp.x + side * 90
-        sprite.y = wp.y + 8
-        sprite.alpha = 0.95
-        this.world.addChild(sprite)
-      } catch {
-        /* optional */
-      }
-    }
+  private _coverScreen(sprite: PIXI.Sprite): void {
+    const texW = Math.max(1, sprite.texture.width)
+    const texH = Math.max(1, sprite.texture.height)
+    const scale = Math.max(this.screenW / texW, this.screenH / texH)
+    sprite.anchor.set(0.5, 0.5)
+    sprite.scale.set(scale)
+    sprite.x = this.screenW / 2
+    sprite.y = this.screenH / 2
   }
 
   private async _placeGates(nodes: ShortcutNodeDef[]): Promise<void> {
@@ -232,8 +174,8 @@ export class NinjaClimbMountainManager {
       if (!wp) continue
       const src =
         node.kind === 'forest'
-          ? `${ASSET_BASE}/gate_forest.png`
-          : `${ASSET_BASE}/gate_cave.png`
+          ? `${PROP_BASE}/gate_forest.png`
+          : `${PROP_BASE}/gate_cave.png`
       try {
         const tex = await PIXI.Assets.load(src)
         const sprite = new PIXI.Sprite(tex)
@@ -249,22 +191,6 @@ export class NinjaClimbMountainManager {
     }
   }
 
-  private async _placeFlag(): Promise<void> {
-    const summit = this.path[this.path.length - 1]
-    if (!summit) return
-    try {
-      const tex = await PIXI.Assets.load(`${ASSET_BASE}/flag_summit.png`)
-      this.flagSprite = new PIXI.Sprite(tex)
-      this.flagSprite.anchor.set(0.5, 1)
-      this.flagSprite.scale.set(0.45)
-      this.flagSprite.x = summit.x
-      this.flagSprite.y = summit.y - 20
-      this.world.addChild(this.flagSprite)
-    } catch (e) {
-      console.warn('NinjaClimbMountainManager: flag load failed', e)
-    }
-  }
-
   public async setBarrierAtStep(stepIndex: number | null): Promise<void> {
     if (this.barrierSprite) {
       this.world.removeChild(this.barrierSprite)
@@ -275,7 +201,7 @@ export class NinjaClimbMountainManager {
     const wp = this.getWaypoint(stepIndex)
     if (!wp) return
     try {
-      const tex = await PIXI.Assets.load(`${ASSET_BASE}/barrier.png`)
+      const tex = await PIXI.Assets.load(`${PROP_BASE}/barrier.png`)
       this.barrierSprite = new PIXI.Sprite(tex)
       this.barrierSprite.anchor.set(0.5, 0.5)
       this.barrierSprite.scale.set(0.55)
@@ -347,8 +273,6 @@ export class NinjaClimbMountainManager {
   }
 
   public update(deltaMs: number): void {
-    this.cloudOverlay?.update(deltaMs)
-
     // Ease camera
     const t = Math.min(1, (deltaMs / 16) * 0.08)
     this.cameraX += (this.targetCameraX - this.cameraX) * t
@@ -371,18 +295,7 @@ export class NinjaClimbMountainManager {
 
   private _drawTrail(): void {
     this.trailGraphics.clear()
-    if (this.path.length < 2) return
-
-    // Dotted polyline
-    for (let i = 1; i < this.path.length; i++) {
-      const a = this.path[i - 1]
-      const b = this.path[i]
-      this.trailGraphics.moveTo(a.x, a.y - 6)
-      this.trailGraphics.lineTo(b.x, b.y - 6)
-    }
-    this.trailGraphics.stroke({ width: 3, color: 0xffffff, alpha: 0.35 })
-
-    // Pulse next ledge
+    // Pulse the next painted pad. The pads themselves are in the cliff art.
     if (this.pulseStep != null) {
       const wp = this.getWaypoint(this.pulseStep)
       if (wp) {
@@ -400,21 +313,15 @@ export class NinjaClimbMountainManager {
     this.screenW = width
     this.screenH = height
     this.layoutManager.updateLayout(width, height)
-    if (this.skySprite) {
-      this.skySprite.width = width
-      this.skySprite.height = height
-    }
-    this.cloudOverlay?.resize(width, height)
+    if (this.backdrop) this._coverScreen(this.backdrop)
+    if (this.cloudFrame) this._coverScreen(this.cloudFrame)
+    if (this.bushFrame) this._coverScreen(this.bushFrame)
     this._applyCameraTransform()
   }
 
   public destroy(): void {
     this.destroyed = true
     this.eventBus.off(ENGINE_EVENTS.RESIZED, this._onResize)
-    if (this.cloudOverlay) {
-      this.cloudOverlay.destroy({ children: true })
-      this.cloudOverlay = null
-    }
     this.view.destroy({ children: true })
   }
 }

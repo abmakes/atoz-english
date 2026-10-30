@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { TUG_ROUNDS_TO_WIN } from '@/lib/three-games/tug-of-war/tugOfWarLogic'
 
 interface RoundDotsProps {
   wins: number
@@ -10,7 +11,7 @@ interface RoundDotsProps {
 
 const RoundDots: React.FC<RoundDotsProps> = ({
   wins,
-  max = 3,
+  max = TUG_ROUNDS_TO_WIN,
   side = 'blue',
 }) => {
   const fill = side === 'blue' ? 'bg-[#2b6cb0]' : 'bg-[#c53030]'

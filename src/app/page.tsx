@@ -294,7 +294,7 @@ export default function HomePage() {
           </div>
 
           <Link
-            href="/games/sentence-builder"
+            href="/practice"
             className="neo-card mt-8 flex flex-col items-start gap-3 bg-white p-7 md:flex-row md:items-center md:justify-between"
           >
             <div>

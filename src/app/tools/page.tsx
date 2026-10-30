@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
-import { Clapperboard, Images, Timer, Shuffle } from 'lucide-react'
+import { Clapperboard, Images, Timer, Shuffle, Smile } from 'lucide-react'
 
 const TOOLS = [
   {
@@ -11,6 +11,14 @@ const TOOLS = [
     description:
       'Generate a 4-picture story, print the worksheet, and let students record their own narrated movie.',
     icon: Clapperboard,
+    available: true,
+  },
+  {
+    slug: 'thoughts',
+    title: 'Thoughts',
+    description:
+      'Students build a sticker face, record a short answer, and you choose which clips the class can watch.',
+    icon: Smile,
     available: true,
   },
   {
