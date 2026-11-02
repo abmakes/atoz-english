@@ -26,6 +26,7 @@ import {
   QUESTION_SHAPE_LABELS,
   sanitizeShapeStem,
   splitTeacherExamples,
+  visibleAnswerFormat,
   type QuestionShape,
   type QuestionShapeLabel,
 } from '@/lib/ai/question-shapes'
@@ -146,7 +147,7 @@ function rowsFromSamples(samples: ShapeSampleDraft[] | undefined): ShapeRow[] {
       {
         shape: sample.shape,
         question: sample.question,
-        answerStyle: sample.answerStyle || 'A short classroom answer',
+        answerStyle: visibleAnswerFormat(sample.answerStyle ?? '', sample.shape),
         selected: Boolean(sample.selected),
       },
     ]
@@ -430,13 +431,17 @@ export default function AIGenerationForm({
       const teacherExamples = splitTeacherExamples(modelSentence)
       const exactExamples = new Set(teacherExamples)
       setShapeRows(
-        result.shapes.map((shape) => ({
-          ...sanitizeShapeStem(shape),
-          selected:
-            teacherExamples.length > 0
-              ? exactExamples.has(shape.question.trim())
-              : false,
-        }))
+        result.shapes.map((shape) => {
+          const cleaned = sanitizeShapeStem(shape)
+          return {
+            ...cleaned,
+            answerStyle: visibleAnswerFormat(cleaned.answerStyle, cleaned.shape),
+            selected:
+              teacherExamples.length > 0
+                ? exactExamples.has(cleaned.question.trim())
+                : false,
+          }
+        })
       )
       setPhase('pick')
     } catch (error) {
@@ -666,6 +671,19 @@ export default function AIGenerationForm({
                         updateRow(index, { question: event.target.value })
                       }
                       className="h-11 w-full rounded-md border-2 border-slate-200 bg-white px-3 text-center text-base font-medium"
+                    />
+                    <label className="block text-xs font-medium text-slate-500">
+                      Answer format
+                      <span className="font-normal"> (optional)</span>
+                    </label>
+                    <Input
+                      value={row.answerStyle}
+                      aria-label={`Answer format ${index + 1} (optional)`}
+                      placeholder="e.g. Yes, they are"
+                      onChange={(event) =>
+                        updateRow(index, { answerStyle: event.target.value })
+                      }
+                      className="h-9 w-full rounded-md border-2 border-slate-200 bg-white px-3 text-sm"
                     />
                   </div>
                 </div>

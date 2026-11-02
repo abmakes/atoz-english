@@ -40,6 +40,23 @@ export function splitTeacherExamples(raw: string): string[] {
     .slice(0, MAX_TEACHER_EXAMPLES);
 }
 
+export function isGenericAnswerStyle(
+  style: string,
+  shape: QuestionShapeLabel
+): boolean {
+  const text = style.trim()
+  if (!text) return true
+  if (/short classroom answer/i.test(text)) return true
+  return text === defaultAnswerStyleForShape(shape)
+}
+
+export function visibleAnswerFormat(
+  style: string,
+  shape: QuestionShapeLabel
+): string {
+  return isGenericAnswerStyle(style, shape) ? '' : style.trim()
+}
+
 export function defaultAnswerStyleForShape(shape: QuestionShapeLabel): string {
   switch (shape) {
     case 'Find the mistake':

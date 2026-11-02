@@ -7,6 +7,7 @@ import {
   parseGeneratedShapes,
   sanitizeShapeStem,
   splitTeacherExamples,
+  visibleAnswerFormat,
   type QuestionShape,
 } from '@/lib/ai/question-shapes'
 import { resolveLexicon } from '@/lib/lexicon/resolver'
@@ -45,6 +46,12 @@ const shapes: QuestionShape[] = [
 ]
 
 describe('question shape sample', () => {
+  it('hides generic answer-format text from the optional field', () => {
+    expect(visibleAnswerFormat('Yes or no', 'Yes/No question')).toBe('')
+    expect(visibleAnswerFormat('A short classroom answer that fits this question', 'Wh-question')).toBe('')
+    expect(visibleAnswerFormat('Yes, they are', 'Yes/No question')).toBe('Yes, they are')
+  })
+
   it('labels a wh-question, a yes/no question, and a gap', () => {
     expect(inferQuestionShape('What is he doing?')).toBe('Wh-question')
     expect(inferQuestionShape('Is she swimming?')).toBe('Yes/No question')
@@ -263,5 +270,39 @@ describe('selected shapes bind the full quiz prompt', () => {
     expect(prompt).toContain('I like playing football.')
     expect(prompt).toContain('Never a single word, never a blank, never a fragment')
     expect(prompt).toContain('the correct option is the full corrected sentence')
+  })
+
+  it('tells the model to copy a short yes/no pattern', () => {
+    const selection = resolveLexicon({
+      level: 'A1',
+      tags: ['Animals'],
+      limit: 10,
+    })
+    const prompt = createTeacherFirstPrompt({
+      brief: {
+        level: 'A1',
+        topics: ['Animals'],
+        grammarFocus: [],
+        teacherNotes: '',
+        modelSentence: 'Are there any pandas?',
+        sentenceForms: [],
+        questionStyles: [],
+        vocabularyFocus: 'Mixed',
+        numberOfQuestions: 6,
+        quizTitle: 'Animals',
+        quizDescription: '',
+        selectedShapes: [
+          {
+            shape: 'Yes/No question',
+            question: 'Are there any pandas?',
+            answerStyle: 'Yes, they are',
+          },
+        ],
+      },
+      selection,
+    })
+
+    expect(prompt).toContain('Yes, they are')
+    expect(prompt).toContain('Do not repeat the question\'s noun')
   })
 })

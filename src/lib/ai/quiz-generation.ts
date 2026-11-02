@@ -151,6 +151,7 @@ QUALITY:
 - Exactly one answer is correct.
 - Distractors must match the answer style and be unambiguously wrong.
 - For Find the mistake, the correct option is the full corrected sentence. Swapping one word in the stem must not be required.
+- If the answer style is a short model such as "Yes, they are", copy that pattern. Do not repeat the question's noun ("Yes, there are pandas" is wrong when the teacher asked for "Yes, they are").
 - correctAnswer must exactly match one string in answers.
 - Do not include answer labels such as "A)".
 - Also include a short imageKeyword (2-4 concrete words) for each question. For a number question, use the numeral.
