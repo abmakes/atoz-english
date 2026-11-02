@@ -561,7 +561,7 @@ export default function AIGenerationForm({
   }
 
   return (
-    <div className="grandstander flex flex-col gap-5 p-4 text-[--text-color] md:p-6">
+    <div className="grandstander flex min-w-0 flex-col gap-5 overflow-x-hidden p-3 text-[--text-color] sm:p-4 md:p-6">
       {aiDisabled && (
         <Card className="border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
           AI generation is available for multiple-choice quizzes only. Change
@@ -570,9 +570,9 @@ export default function AIGenerationForm({
       )}
 
       {phase === 'pick' ? (
-        <div className="flex flex-col gap-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0 flex-1 basis-48">
               <h3 className="text-lg font-bold leading-tight">
                 Select the question types you want
               </h3>
@@ -592,7 +592,7 @@ export default function AIGenerationForm({
             </Button>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               type="button"
               variant="outline"
@@ -615,52 +615,59 @@ export default function AIGenerationForm({
             </Button>
           </div>
 
-          <ul className="flex flex-col gap-2">
+          <ul className="flex min-w-0 flex-col gap-2">
             {shapeRows.map((row, index) => (
               <li
                 key={`${row.shape}-${index}`}
-                className={`rounded-lg px-2 py-2 ${
+                className={`rounded-lg px-3 py-3 ${
                   row.selected ? 'bg-emerald-50' : 'bg-slate-100'
                 }`}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-start gap-2">
                   <button
                     type="button"
                     title={row.selected ? 'Selected' : 'Select this shape'}
                     aria-pressed={row.selected}
                     aria-label={`Select example ${index + 1}`}
                     onClick={() => updateRow(index, { selected: !row.selected })}
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 transition-colors ${
+                    className={`mt-0.5 flex h-10 w-10 min-h-10 min-w-10 shrink-0 items-center justify-center rounded-lg border-2 transition-colors ${
                       row.selected
                         ? 'border-emerald-600 bg-emerald-500 text-white'
                         : 'border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                     }`}
                   >
-                    <Check className="h-4 w-4" />
+                    <Check className="h-5 w-5" />
                   </button>
-                  <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center">
-                    <Badge
-                      variant="secondary"
-                      className="h-8 w-fit shrink-0 px-2 text-xs sm:w-[7.5rem] sm:justify-center"
-                    >
-                      {row.shape}
-                    </Badge>
-                    <Input
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
+                      <Badge
+                        variant="secondary"
+                        className="mt-0.5 h-auto w-fit max-w-full shrink-0 whitespace-normal px-2 py-1 text-xs"
+                      >
+                        {row.shape}
+                      </Badge>
+                      <span className="mt-1 shrink-0 text-slate-500" aria-hidden>
+                        –
+                      </span>
+                      <Textarea
+                        value={row.answerStyle}
+                        aria-label={`Answer style ${index + 1}`}
+                        placeholder="How the answers should look"
+                        rows={2}
+                        onChange={(event) =>
+                          updateRow(index, { answerStyle: event.target.value })
+                        }
+                        className="min-w-0 flex-1 basis-[12rem] resize-none break-words rounded-md border-2 border-slate-200 bg-white px-3 py-1.5 text-sm leading-snug"
+                      />
+                    </div>
+                    <Textarea
                       value={row.question}
                       aria-label={`Example question ${index + 1}`}
+                      rows={2}
                       onChange={(event) =>
                         updateRow(index, { question: event.target.value })
                       }
-                      className="h-9 min-w-0 flex-[1.4] rounded-md border-2 border-slate-200 bg-white px-3 text-sm"
-                    />
-                    <Input
-                      value={row.answerStyle}
-                      aria-label={`Answer style ${index + 1}`}
-                      placeholder="How the answers should look"
-                      onChange={(event) =>
-                        updateRow(index, { answerStyle: event.target.value })
-                      }
-                      className="h-9 min-w-0 flex-1 rounded-md border-2 border-slate-200 bg-white px-3 text-sm"
+                      className="w-full resize-none break-words rounded-md border-2 border-slate-200 bg-white px-3 py-2 text-center text-base font-medium leading-snug"
                     />
                   </div>
                 </div>
@@ -668,7 +675,7 @@ export default function AIGenerationForm({
             ))}
           </ul>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-slate-200 bg-gray-50 px-4 py-3">
+          <div className="flex flex-col gap-3 rounded-xl border-2 border-slate-200 bg-gray-50 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4">
             <p className="text-sm font-semibold">How many questions?</p>
             <div className="flex flex-wrap items-center gap-2">
               {COUNT_PRESETS.map((count) => (
@@ -711,10 +718,11 @@ export default function AIGenerationForm({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <Button
               type="button"
               variant="outline"
+              className="w-full sm:w-auto"
               disabled={isSampling || aiDisabled}
               onClick={() =>
                 void requestShapes(shapeRows.map((row) => row.question).filter(Boolean))
@@ -733,7 +741,7 @@ export default function AIGenerationForm({
               type="button"
               onClick={() => void handleGenerateQuestions()}
               disabled={isGenerating || aiDisabled || selectedShapeCount === 0}
-              className="flex h-10 items-center gap-2 border border-[#1F6E91] bg-[--text-color] px-5 text-sm font-semibold text-white shadow-[3px_3px_0px_0px_#1F6E91] hover:bg-white hover:text-[--text-color]"
+              className="flex h-10 w-full items-center justify-center gap-2 border border-[#1F6E91] bg-[--text-color] px-5 text-sm font-semibold text-white shadow-[3px_3px_0px_0px_#1F6E91] hover:bg-white hover:text-[--text-color] sm:w-auto"
             >
               {isGenerating ? (
                 <>
@@ -917,12 +925,12 @@ export default function AIGenerationForm({
             </div>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-stretch sm:justify-end">
             <Button
               type="button"
               onClick={() => void requestShapes([])}
               disabled={isSampling || aiDisabled}
-              className="flex h-10 items-center gap-2 border border-[#1F6E91] bg-[--text-color] px-5 text-sm font-semibold text-white shadow-[3px_3px_0px_0px_#1F6E91] hover:bg-white hover:text-[--text-color]"
+              className="flex h-10 w-full items-center justify-center gap-2 border border-[#1F6E91] bg-[--text-color] px-5 text-sm font-semibold text-white shadow-[3px_3px_0px_0px_#1F6E91] hover:bg-white hover:text-[--text-color] sm:w-auto"
             >
               {isSampling ? (
                 <>
