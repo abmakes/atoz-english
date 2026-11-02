@@ -49,6 +49,8 @@ certification. Lexicon levels remain provisional.
 4. **Show 6 examples** asks Gemini for question stems only: no answers and no
    image keywords. About half stay close to the teacher's example. The rest are
    other forms of the same language point. Tags do not add a second task.
+   Find-the-mistake items use four complete sentences as options, not a single
+   word to swap. Fill-the-gap items stay as a blank plus a word or short phrase.
 5. The teacher ticks the shapes to keep, can edit a stem, and chooses how many
    questions to write (10, 15, 20, or another count from 1 to 20).
 6. Gemini writes the full multiple-choice items, with answers and image keywords,

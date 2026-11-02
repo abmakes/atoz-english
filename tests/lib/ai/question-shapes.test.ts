@@ -5,6 +5,7 @@ import {
   finalizeShapeSample,
   inferQuestionShape,
   parseGeneratedShapes,
+  sanitizeShapeStem,
   type QuestionShape,
 } from '@/lib/ai/question-shapes'
 import { resolveLexicon } from '@/lib/lexicon/resolver'
@@ -81,6 +82,9 @@ describe('question shape sample', () => {
     expect(prompt).toContain('do not write color questions')
     expect(prompt).toContain('present continuous')
     expect(prompt).not.toContain('imageKeyword')
+    expect(prompt).toContain('Never mix shapes')
+    expect(prompt).toContain('Four complete sentences. One is fully correct.')
+    expect(prompt).toContain('I like playing football.')
   })
 
   it('parses a fenced shape list and normalizes the label', () => {
@@ -95,6 +99,33 @@ describe('question shape sample', () => {
     const parsed = parseGeneratedShapes(raw)
     expect(parsed).toHaveLength(6)
     expect(parsed[0].shape).toBe('Yes/No question')
+    expect(parsed[4]).toMatchObject({
+      shape: 'Find the mistake',
+      answerStyle: 'Four complete sentences. One is fully correct.',
+    })
+  })
+
+  it('strips mixed gap-and-mistake wording', () => {
+    expect(
+      sanitizeShapeStem({
+        shape: 'Fill the gap',
+        question: 'My keys ______ on the black table. Find the mistake.',
+        answerStyle: 'The correction',
+      })
+    ).toMatchObject({
+      question: 'My keys ______ on the black table.',
+      answerStyle: 'A word or short phrase that fits the gap.',
+    })
+    expect(
+      sanitizeShapeStem({
+        shape: 'Find the mistake',
+        question: 'I am like play football. Find the mistake.',
+        answerStyle: 'like',
+      })
+    ).toMatchObject({
+      question: 'I am like play football.',
+      answerStyle: 'Four complete sentences. One is fully correct.',
+    })
   })
 
   it('rejects a short shape list', () => {
@@ -150,5 +181,42 @@ describe('selected shapes bind the full quiz prompt', () => {
     expect(prompt).toContain('do not add color questions')
     expect(prompt).not.toContain('Keep each answer under 6 words')
     expect(prompt).toContain('up to 12 words')
+    expect(prompt).toContain('Never mix shapes')
+    expect(prompt).toContain('Never a single word')
+  })
+
+  it('requires full-sentence options for a find-the-mistake shape', () => {
+    const selection = resolveLexicon({
+      level: 'A1',
+      tags: ['Sports & Activities'],
+      limit: 20,
+    })
+    const prompt = createTeacherFirstPrompt({
+      brief: {
+        level: 'A1',
+        topics: ['Sports & Activities'],
+        grammarFocus: ['Present Simple'],
+        teacherNotes: 'Like + -ing',
+        modelSentence: 'I am like play football.',
+        sentenceForms: [],
+        questionStyles: ['Find the mistake'],
+        vocabularyFocus: 'Mixed',
+        numberOfQuestions: 8,
+        quizTitle: 'Sports',
+        quizDescription: 'Likes',
+        selectedShapes: [
+          {
+            shape: 'Find the mistake',
+            question: 'I am like play football.',
+            answerStyle: 'Four complete sentences. One is fully correct.',
+          },
+        ],
+      },
+      selection,
+    })
+
+    expect(prompt).toContain('I like playing football.')
+    expect(prompt).toContain('Never a single word, never a blank, never a fragment')
+    expect(prompt).toContain('the correct option is the full corrected sentence')
   })
 })

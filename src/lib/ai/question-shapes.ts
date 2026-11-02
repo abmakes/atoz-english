@@ -23,6 +23,46 @@ export const questionShapeSchema = z.object({
 
 export type QuestionShape = z.infer<typeof questionShapeSchema>;
 
+export const FIND_THE_MISTAKE_ANSWER_STYLE =
+  'Four complete sentences. One is fully correct.';
+
+export const FILL_THE_GAP_ANSWER_STYLE =
+  'A word or short phrase that fits the gap.';
+
+export function canonicalAnswerStyle(shape: QuestionShape): string {
+  if (shape.shape === 'Find the mistake') return FIND_THE_MISTAKE_ANSWER_STYLE;
+  if (shape.shape === 'Fill the gap') {
+    const current = shape.answerStyle.toLowerCase();
+    if (/mistake|correct/.test(current)) return FILL_THE_GAP_ANSWER_STYLE;
+  }
+  return shape.answerStyle;
+}
+
+const FIND_THE_MISTAKE_TAIL = /\s*find the mistake\.?\s*$/i;
+
+export function sanitizeShapeStem(shape: QuestionShape): QuestionShape {
+  let question = shape.question.trim();
+  if (shape.shape === 'Fill the gap') {
+    question = question.replace(FIND_THE_MISTAKE_TAIL, '').trim();
+  }
+  if (shape.shape === 'Find the mistake') {
+    question = question.replace(FIND_THE_MISTAKE_TAIL, '').replace(/_{2,}/g, '').replace(/\s{2,}/g, ' ').trim();
+  }
+  return {
+    ...shape,
+    question: question || shape.question,
+    answerStyle: canonicalAnswerStyle({ ...shape, question }),
+  };
+}
+
+export const QUESTION_SHAPE_RULES = `SHAPE RULES:
+- Never mix shapes. A stem is one of: a question, a gap, a statement, or an error-correction item.
+- Find the mistake: the stem is a complete WRONG sentence. Do not use _____. Do not add "Find the mistake" as extra wording. Optional short instruction: "Choose the correct sentence."
+- Find the mistake answers are four complete sentences. One is fully grammatical. The other three are still wrong. Never a single word, never a blank, never a fragment.
+  Bad: stem "I am like play football." answers ["like","play","am","football"].
+  Good: stem "I am like play football." answers ["I like playing football.","I am playing football.","I like play football.","I am like football."].
+- Fill the gap: the stem has _____. Answers are words or short phrases that fit the blank. Do not write "Find the mistake" on a gap item.`;
+
 const WH_START = /^(what|where|who|when|why|how|which)\b/i;
 const YES_NO_START = /^(is|are|am|do|does|did|can|could|was|were|will|have|has)\b/i;
 const NEGATIVE_START = /^(don'?t|do not|doesn'?t|does not|isn'?t|is not|aren'?t|are not|wasn'?t|weren'?t|cannot|can'?t)\b/i;
@@ -87,7 +127,7 @@ export function parseGeneratedShapes(raw: string): QuestionShape[] {
     );
   }
 
-  return shapes.slice(0, SHAPE_SAMPLE_COUNT);
+  return shapes.slice(0, SHAPE_SAMPLE_COUNT).map(sanitizeShapeStem);
 }
 
 /** Keep the teacher's own sentence as row 1, and drop an exact copy from the rest. */
@@ -108,7 +148,7 @@ export function finalizeShapeSample(
       'A short classroom answer that fits this question',
   };
   const others = sample.filter((shape) => shape.question.trim() !== trimmed);
-  return [pinned, ...others].slice(0, SHAPE_SAMPLE_COUNT);
+  return [pinned, ...others].slice(0, SHAPE_SAMPLE_COUNT).map(sanitizeShapeStem);
 }
 
 export function createQuestionShapePrompt(brief: GenerationBrief): string {
@@ -157,10 +197,12 @@ CONTENT RULE:
 - If the example is a present continuous question, every stem practises present continuous.
 - Vary the people, actions, and numbers. Do not repeat one sentence six times.
 
+${QUESTION_SHAPE_RULES}
+
 Each object uses:
 - shape: one of ${QUESTION_SHAPE_LABELS.join(', ')}
-- question: the stem only. Use _____ for a gap.
-- answerStyle: one short line describing the four options. Not the options themselves.
+- question: the stem only. Use _____ only for Fill the gap.
+- answerStyle: one short line describing the four options. Not the options themselves. For Find the mistake use: "${FIND_THE_MISTAKE_ANSWER_STYLE}"
 
 Return only a JSON array of ${SHAPE_SAMPLE_COUNT} objects:
 [{"shape":"Wh-question","question":"What is he doing?","answerStyle":"A present continuous action"}]`;

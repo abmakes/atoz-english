@@ -23,6 +23,7 @@ import {
 import {
   inferQuestionShape,
   QUESTION_SHAPE_LABELS,
+  sanitizeShapeStem,
   type QuestionShape,
   type QuestionShapeLabel,
 } from '@/lib/ai/question-shapes'
@@ -39,7 +40,7 @@ import {
   type VocabularyFocus,
 } from '@/lib/taxonomy/quiz-taxonomy'
 import { QuestionType } from '@/types/question_types'
-import { ArrowLeft, Loader2, Minus, Plus, Sparkles } from 'lucide-react'
+import { ArrowLeft, Check, Loader2, Minus, Plus, Sparkles } from 'lucide-react'
 
 const NOTES_PLACEHOLDER =
   'Numbers from 100 to 1000. Ask what the number is, and have the answer written in full, with some mistakes.'
@@ -419,7 +420,7 @@ export default function AIGenerationForm({
         : null
       setShapeRows(
         result.shapes.map((shape) => ({
-          ...shape,
+          ...sanitizeShapeStem(shape),
           selected: exampleShape ? shape.shape === exampleShape : false,
         }))
       )
@@ -576,7 +577,7 @@ export default function AIGenerationForm({
                 Select the question types you want
               </h3>
               <p className="mt-1 text-sm text-slate-600">
-                Tick the shapes to use. The quiz follows only those rows.
+                Tick a row to keep that shape. The quiz follows only those rows.
               </p>
             </div>
             <Button
@@ -614,37 +615,52 @@ export default function AIGenerationForm({
             </Button>
           </div>
 
-          <ul className="flex flex-col gap-3">
+          <ul className="flex flex-col gap-2">
             {shapeRows.map((row, index) => (
               <li
                 key={`${row.shape}-${index}`}
-                className="rounded-xl border border-slate-200 bg-white p-3"
+                className={`rounded-lg px-2 py-2 ${
+                  row.selected ? 'bg-emerald-50' : 'bg-slate-100'
+                }`}
               >
-                <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    className="mt-1 h-4 w-4 accent-violet-600"
-                    checked={row.selected}
-                    aria-label={`Use example ${index + 1}`}
-                    onChange={(event) => updateRow(index, { selected: event.target.checked })}
-                  />
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <Badge variant="secondary" className="h-7 px-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    title={row.selected ? 'Selected' : 'Select this shape'}
+                    aria-pressed={row.selected}
+                    aria-label={`Select example ${index + 1}`}
+                    onClick={() => updateRow(index, { selected: !row.selected })}
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 transition-colors ${
+                      row.selected
+                        ? 'border-emerald-600 bg-emerald-500 text-white'
+                        : 'border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                    }`}
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center">
+                    <Badge
+                      variant="secondary"
+                      className="h-8 w-fit shrink-0 px-2 text-xs sm:w-[7.5rem] sm:justify-center"
+                    >
                       {row.shape}
                     </Badge>
-                    <Textarea
-                      rows={2}
+                    <Input
                       value={row.question}
                       aria-label={`Example question ${index + 1}`}
-                      onChange={(event) => updateRow(index, { question: event.target.value })}
-                      className="min-h-[4rem] rounded-md border-slate-200 bg-white"
+                      onChange={(event) =>
+                        updateRow(index, { question: event.target.value })
+                      }
+                      className="h-9 min-w-0 flex-[1.4] rounded-md border-2 border-slate-200 bg-white px-3 text-sm"
                     />
                     <Input
                       value={row.answerStyle}
                       aria-label={`Answer style ${index + 1}`}
                       placeholder="How the answers should look"
-                      onChange={(event) => updateRow(index, { answerStyle: event.target.value })}
-                      className="h-9 text-sm"
+                      onChange={(event) =>
+                        updateRow(index, { answerStyle: event.target.value })
+                      }
+                      className="h-9 min-w-0 flex-1 rounded-md border-2 border-slate-200 bg-white px-3 text-sm"
                     />
                   </div>
                 </div>
