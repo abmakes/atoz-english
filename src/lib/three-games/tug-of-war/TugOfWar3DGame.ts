@@ -9,7 +9,6 @@ import {
   TUG_EVENTS,
   type HudAnswerSelectedPayload,
   type HudQuestionShownPayload,
-  type PowerUpEventPayload,
   type TimerEventPayload,
 } from '@/lib/pixi-engine/core/EventTypes'
 import { GamePhase } from '@/lib/pixi-engine/core/GameStateManager'
@@ -671,7 +670,7 @@ export class TugOfWar3DGame implements ThreeGame {
     }
   }
 
-  private handlePowerUpChanged = (_payload: PowerUpEventPayload): void => {
+  private handlePowerUpChanged = (): void => {
     this._syncTeamGlow()
   }
 
