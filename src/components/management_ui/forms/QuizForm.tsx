@@ -407,9 +407,9 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
           <AccordionItem value={question.tempId || `q-${index}`} key={question.tempId || `q-${index}`} className="border-b border-[--border-light]">
             <Card className="relative overflow-hidden rounded-none border-none p-0">
               <div className="flex items-center border-none bg-[--background] px-2">
-                <AccordionTrigger className="flex w-full px-4 py-2 text-left hover:no-underline focus:no-underline">
-                  <div className="flex w-full items-center gap-3">
-                    <div className={`relative ml-2 h-14 w-full max-w-20 overflow-hidden rounded-sm bg-slate-300 ${openAccordionItems.includes(question.tempId || '') ? 'hidden' : 'block'}`}>
+                <AccordionTrigger className="flex min-w-0 flex-1 px-2 py-2 text-left hover:no-underline focus:no-underline md:px-4">
+                  <div className="flex min-w-0 w-full items-center gap-2 md:gap-3">
+                    <div className={`relative ml-2 h-14 w-full max-w-20 overflow-hidden rounded-sm bg-slate-300 ${openAccordionItems.includes(question.tempId || '') ? 'hidden' : 'hidden md:block'}`}>
                       <QuestionImage
                         file={question.imageFile}
                         imageUrl={question.imageUrl}
@@ -419,17 +419,34 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
                         className="rounded-md bg-slate-300 object-cover"
                       />
                     </div>
-                    <h2 className="flex pt-1 text-left text-xl font-semibold text-[--text-color]">
-                      {openAccordionItems.includes(question.tempId || '') ? null : ( 
-                        <div className="flex items-center gap-2 text-lg">
-                          <span className="text-lg">Question {index + 1}</span>
-                          {question.question ? <span>- {question.question.substring(0,50)}{question.question.length > 50 ? '...' : ''}</span> : ''}
-                        </div>
-                      )}
-                    </h2>
+                    {openAccordionItems.includes(question.tempId || '') ? null : (
+                      <>
+                        <span className="w-6 shrink-0 text-center text-lg font-semibold tabular-nums text-[--text-color] md:hidden">
+                          {index + 1}
+                        </span>
+                        <h2 className="hidden min-w-0 items-center gap-2 pt-1 text-left text-lg font-semibold text-[--text-color] md:flex">
+                          <span>Question {index + 1}</span>
+                          {question.question ? (
+                            <span>
+                              - {question.question.substring(0, 50)}
+                              {question.question.length > 50 ? '...' : ''}
+                            </span>
+                          ) : null}
+                        </h2>
+                        <p className="min-w-0 flex-1 text-left text-base font-semibold leading-snug text-[--text-color] line-clamp-2 md:hidden">
+                          {question.question || 'New question'}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </AccordionTrigger>
-                <div className="flex items-center justify-end gap-1 pl-2 text-[--text-color]">
+                <div
+                  className={`shrink-0 items-center justify-end gap-1 pl-2 text-[--text-color] ${
+                    openAccordionItems.includes(question.tempId || '')
+                      ? 'flex'
+                      : 'hidden md:flex'
+                  }`}
+                >
                     <Button type="button" size="icon" variant="ghost" onClick={() => openImageModal(index)} title="Change question image">
                       <Picture className="h-5 w-5 " />
                     </Button>
