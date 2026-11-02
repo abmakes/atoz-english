@@ -14,6 +14,7 @@ import type { GameSessionServices } from '@/lib/game-engine/core/GameSession';
 import type { GameRuntime, GameRuntimeFactory } from '@/lib/game-engine/runtime/GameRuntime';
 import { gameModeRegistry } from '@/lib/game-engine/modes/builtinGameModes';
 import QuestionPanel from './hud/QuestionPanel';
+import QuestionImageFallback from './hud/QuestionImageFallback';
 import TimerBadge from './hud/TimerBadge';
 import TugMeter from './hud/TugMeter';
 import TugTeamBanner from './hud/TugTeamBanner';
@@ -451,6 +452,10 @@ const GameplayView: React.FC<GameplayViewProps> = ({
           <div className="pointer-events-none absolute inset-x-0 top-11 z-10 flex justify-center px-1.5 sm:top-14 [@media(max-height:520px)_and_(max-width:1023px)]:right-24 [@media(max-height:520px)_and_(max-width:1023px)]:justify-end lg:inset-x-0 lg:top-[12%] lg:justify-center lg:px-3">
             <QuestionPanel eventBus={eventBus} className={themeClassName} />
           </div>
+        )}
+
+        {config.gameSlug === 'multiple-choice' && eventBus && (
+          <QuestionImageFallback eventBus={eventBus} />
         )}
 
         {hud?.tugMeter && eventBus && (

@@ -6,10 +6,18 @@ import { AssetLoader } from '@/lib/pixi-engine/assets/AssetLoader';
 import { EventBus } from '@/lib/pixi-engine/core/EventBus';
 import { PixiSpecificConfig } from '@/lib/themes';
 import { QuestionData } from '@/types';
-import { TimerEventPayload, TIMER_EVENTS, ENGINE_EVENTS, GAME_STATE_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
+import { TimerEventPayload, TIMER_EVENTS, ENGINE_EVENTS, GAME_STATE_EVENTS, HUD_EVENTS, TRANSITION_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
 import { MultipleChoiceLayoutManager, LayoutProfile } from './MultipleChoiceLayoutManager';
 import { PixiTimer } from '../ui/PixiTimer';
 import { VisualEffectsManager } from '@/lib/pixi-engine/ui/VisualEffectsManager';
+import {
+    isCoarsePointerDevice,
+    isPixiQuestionMediaReady,
+    mediaBoundsToSlot,
+    needsHtmlQuestionImageFallback,
+    questionMediaPixelSize,
+    type QuestionImageFallbackSlot,
+} from '@/lib/pixi-engine/game/questionImageFallback';
 
 // Define the structure for answer options data used by the UI manager
 export interface AnswerOptionUIData {
@@ -30,6 +38,8 @@ export class MultipleChoiceUIManager {
     private backgroundPanelDrawRafId: number | null = null;
     // Question counter now handled in transition screen
     private visualEffectsManager: VisualEffectsManager;
+    private lastQuestionImageUrl: string | undefined;
+    private lastMediaSlot: QuestionImageFallbackSlot | null = null;
     
     // Constants for button styling
     private readonly shadowOffsetY = 6;
@@ -77,6 +87,8 @@ export class MultipleChoiceUIManager {
         this.eventBus.on(ENGINE_EVENTS.RESIZED, this._handleResize);
         this.eventBus.on(GAME_STATE_EVENTS.GAME_PAUSED, this._handleGamePaused);
         this.eventBus.on(GAME_STATE_EVENTS.GAME_RESUMED, this._handleGameResumed);
+        this.eventBus.on(TRANSITION_EVENTS.START, this._handleTransitionStart);
+        this.eventBus.on(HUD_EVENTS.READY, this._handleHudReady);
 
         // Initialize visual effects manager
         this.visualEffectsManager = new VisualEffectsManager(this.pixiApp.getApp(), this.scene);
@@ -109,6 +121,8 @@ export class MultipleChoiceUIManager {
         this.answerButtons = []; // Clear internal button array
         this.currentQuestionId = null;
         this.currentGeneratedOptions = [];
+        this.lastQuestionImageUrl = undefined;
+        this._emitQuestionImageFallback(null, this.lastMediaSlot);
         
         // Clear any ongoing visual effects
         this.visualEffectsManager.clearAllEffects();
@@ -149,11 +163,13 @@ export class MultipleChoiceUIManager {
 
     public updateQuestionContent(question: QuestionData): void {
         console.log("UIManager: Updating question content");
+        this.lastQuestionImageUrl = question.imageUrl;
         this.scene.updateQuestion(question.question, question.imageUrl);
         
         // Add layout update after content change
         console.log("UIManager: Triggering layout update after content change");
         this._updateAndApplyLayout();
+        this._syncQuestionImageFallback();
     }
 
     public setupAnswerButtons(
@@ -632,6 +648,20 @@ export class MultipleChoiceUIManager {
         } else {
              console.log("UIManager: Not enough space for media bounds.");
         }
+        const timerGutter = 88
+        const overlayBounds =
+            mediaBounds && mediaBounds.width > timerGutter
+                ? new PIXI.Rectangle(
+                      mediaBounds.x,
+                      mediaBounds.y,
+                      mediaBounds.width - timerGutter,
+                      mediaBounds.height
+                  )
+                : mediaBounds
+        this.lastMediaSlot = mediaBoundsToSlot(overlayBounds, {
+            width: screenWidth,
+            height: screenHeight,
+        });
 
 
         // 3. Update Scene Layout (passing textBoundsConfig)
@@ -698,13 +728,46 @@ export class MultipleChoiceUIManager {
                 this._updateAndApplyLayout();
                 this.pixiTimerInstance.resize(timerScaleFactor);
                 this._positionTimerElements(); // Reposition after resize
+                this._syncQuestionImageFallback();
             }, 100);
         } else {
             this._updateAndApplyLayout();
             this.pixiTimerInstance.resize(timerScaleFactor);
             this._positionTimerElements();
+            this._syncQuestionImageFallback();
         }
     };
+
+    private _handleTransitionStart = (): void => {
+        this._emitQuestionImageFallback(null, this.lastMediaSlot);
+    };
+
+    private _handleHudReady = (): void => {
+        this._syncQuestionImageFallback();
+    };
+
+    private _syncQuestionImageFallback(): void {
+        const imageUrl = this.lastQuestionImageUrl;
+        const media = this.scene.currentQuestionMedia;
+        const pixelSize = questionMediaPixelSize(media);
+        const pixiReady = isPixiQuestionMediaReady(media, pixelSize);
+        const useHtml = needsHtmlQuestionImageFallback({
+            imageUrl,
+            pixiReady,
+            preferHtmlForAnimated: isCoarsePointerDevice(),
+        });
+        if (useHtml && media && !media.destroyed) {
+            media.visible = false;
+        }
+        this._emitQuestionImageFallback(useHtml ? imageUrl ?? null : null, this.lastMediaSlot);
+    }
+
+    private _emitQuestionImageFallback(
+        imageUrl: string | null,
+        slot: QuestionImageFallbackSlot | null
+    ): void {
+        this.eventBus.emit(HUD_EVENTS.QUESTION_IMAGE_FALLBACK, { imageUrl, slot });
+    }
 
     private _handleTimerTick = (payload: TimerEventPayload): void => {
         if (payload.remaining !== undefined) {
@@ -798,6 +861,9 @@ export class MultipleChoiceUIManager {
         // --- Unregister Pause/Resume Listeners ---
         this.eventBus.off(GAME_STATE_EVENTS.GAME_PAUSED, this._handleGamePaused);
         this.eventBus.off(GAME_STATE_EVENTS.GAME_RESUMED, this._handleGameResumed);
+        this.eventBus.off(TRANSITION_EVENTS.START, this._handleTransitionStart);
+        this.eventBus.off(HUD_EVENTS.READY, this._handleHudReady);
+        this._emitQuestionImageFallback(null, null);
         // --- End Unregister ---
 
         // Destroy PIXI objects created and managed here

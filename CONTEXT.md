@@ -110,7 +110,7 @@ CONTEXT.md              This hub
 2. **Init order:** Shared `GameSession` inits managers with **RuleEngine last**. Pixi: `PixiApplication` → `Assets` → session → `gameFactory` → `game.init(bundlePromise)` → ticker. Three: `ThreeWorld` → session → `ThreeGame.init` → one RAF loop. See GAME_STARTUP_FLOW.
 3. **React bridge:** One `GameRuntime` in `GameplayView` `useEffect`; guard double-init; destroy on unmount (Strict Mode / async races). For React HUD overlays, call `runtime.start()` only after `runtimeReady` so child listeners attach before the first `QUESTION_SHOWN`.
 4. **Assets cleanup:** Prefer `PIXI.Assets.unload(url)` for Assets-managed textures; don’t blindly `sprite.destroy({ texture: true })`. Three games use `disposeObject3D` + `renderer.dispose()`.
-5. **GIFs:** Register `GifAsset` from `pixi.js/gif`; use project `AssetLoader` display helpers; don’t assume file extension means format.
+5. **GIFs:** Register `GifAsset` from `pixi.js/gif`; use project `AssetLoader` display helpers; don’t assume file extension means format. Team Quiz falls back to an HTML `<img>` overlay when Pixi GIF display is blank (tablet / iOS fetch).
 6. **Scoring:** Emit game events; let RuleEngine apply `GameConfig.rules` (basic vs boosted).
 7. **Timers:** `TimerManager` = logic; `PixiTimer` = visuals; pause both when pausing.
 
