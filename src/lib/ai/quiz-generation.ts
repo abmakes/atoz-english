@@ -107,6 +107,7 @@ Split the questions as evenly as possible across the selected shapes.
 Change the people, actions, objects, and numbers. Keep the shape, the language point, and the answer style.
 Do not add a shape the teacher did not select.
 Do not copy a selected stem exactly unless the teacher asked for that fixed sentence.
+Never join two teacher examples into one question. Each selected stem is one item.
 
 ${shapeList}
 

@@ -26,7 +26,7 @@ export const generationBriefSchema = z.object({
   topics: z.array(z.string().trim().min(1)).max(8).default([]),
   grammarFocus: z.array(z.string().trim().min(1)).max(8).default([]),
   teacherNotes: z.string().trim().max(1200).default(''),
-  modelSentence: z.string().trim().max(240).default(''),
+  modelSentence: z.string().trim().max(800).default(''),
   sentenceForms: z.array(z.enum(SENTENCE_FORM_OPTIONS)).max(4).default([]),
   questionStyles: z.array(z.enum(QUESTION_STYLE_OPTIONS)).max(4).default([]),
   vocabularyFocus: z.enum(VOCABULARY_FOCUS_OPTIONS).default('Mixed'),

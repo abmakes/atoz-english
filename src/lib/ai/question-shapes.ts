@@ -29,6 +29,34 @@ export const FIND_THE_MISTAKE_ANSWER_STYLE =
 export const FILL_THE_GAP_ANSWER_STYLE =
   'A word or short phrase that fits the gap.';
 
+export const MAX_TEACHER_EXAMPLES = 4;
+
+/** Split the example field into one stem per line. Never treat two lines as one question. */
+export function splitTeacherExamples(raw: string): string[] {
+  return raw
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, MAX_TEACHER_EXAMPLES);
+}
+
+export function defaultAnswerStyleForShape(shape: QuestionShapeLabel): string {
+  switch (shape) {
+    case 'Find the mistake':
+      return FIND_THE_MISTAKE_ANSWER_STYLE;
+    case 'Fill the gap':
+      return FILL_THE_GAP_ANSWER_STYLE;
+    case 'Yes/No question':
+      return 'Yes or no';
+    case 'Wh-question':
+      return 'A short answer that matches the question';
+    case 'Negative':
+      return 'A negative sentence';
+    case 'Affirmative':
+      return 'A short classroom sentence';
+  }
+}
+
 export function canonicalAnswerStyle(shape: QuestionShape): string {
   if (shape.shape === 'Find the mistake') return FIND_THE_MISTAKE_ANSWER_STYLE;
   if (shape.shape === 'Fill the gap') {
@@ -130,25 +158,40 @@ export function parseGeneratedShapes(raw: string): QuestionShape[] {
   return shapes.slice(0, SHAPE_SAMPLE_COUNT).map(sanitizeShapeStem);
 }
 
-/** Keep the teacher's own sentence as row 1, and drop an exact copy from the rest. */
+/** Keep each teacher example as its own row. Never join two examples into one stem. */
 export function finalizeShapeSample(
   shapes: QuestionShape[],
   example: string
 ): QuestionShape[] {
   const sample = shapes.slice(0, SHAPE_SAMPLE_COUNT);
-  const trimmed = example.trim();
-  if (!trimmed) return sample;
+  const examples = splitTeacherExamples(example);
+  if (examples.length === 0) return sample;
 
-  const match = sample.find((shape) => shape.question.trim() === trimmed);
-  const pinned: QuestionShape = {
-    shape: inferQuestionShape(trimmed),
-    question: trimmed,
-    answerStyle:
-      match?.answerStyle?.trim() ||
-      'A short classroom answer that fits this question',
-  };
-  const others = sample.filter((shape) => shape.question.trim() !== trimmed);
-  return [pinned, ...others].slice(0, SHAPE_SAMPLE_COUNT).map(sanitizeShapeStem);
+  const exact = new Set(examples);
+  const pinned = examples.map((text) => {
+    const match = sample.find((shape) => shape.question.trim() === text);
+    const shape = inferQuestionShape(text);
+    return {
+      shape,
+      question: text,
+      answerStyle:
+        match?.answerStyle?.trim() || defaultAnswerStyleForShape(shape),
+    };
+  });
+  const others = sample.filter((shape) => {
+    const question = shape.question.trim();
+    if (exact.has(question)) return false;
+    if (
+      examples.length >= 2 &&
+      examples.every((item) => question.includes(item))
+    ) {
+      return false;
+    }
+    return true;
+  });
+  return [...pinned, ...others]
+    .slice(0, SHAPE_SAMPLE_COUNT)
+    .map(sanitizeShapeStem);
 }
 
 export function createQuestionShapePrompt(brief: GenerationBrief): string {
@@ -158,8 +201,16 @@ export function createQuestionShapePrompt(brief: GenerationBrief): string {
     preferred.length > 0
       ? `For the other forms, prefer: ${preferred.join(', ')}.`
       : 'For the other forms, use yes/no questions, fill-the-gap, find-the-mistake, or a short affirmative or negative sentence.';
-  const mix = example
-    ? `The teacher typed this example: "${example}"
+  const examples = splitTeacherExamples(example);
+  const mix =
+    examples.length > 1
+      ? `The teacher typed ${examples.length} separate example questions. Each is its own stem. Never join them into one question.
+${examples.map((item, index) => `${index + 1}. ${item}`).join('\n')}
+- The first ${examples.length} rows are those examples, each unchanged, one example per row.
+- Remaining rows are close variants or other forms of those language points.
+- ${preferredLine}`
+    : examples.length === 1
+      ? `The teacher typed this example: "${examples[0]}"
 - Row 1 is that sentence, unchanged.
 - Rows 2 and 3 keep that same shape. Change only the subject, verb, or number.
 - Rows 4, 5, and 6 are different forms of the same language point.

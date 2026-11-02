@@ -6,6 +6,7 @@ import {
   inferQuestionShape,
   parseGeneratedShapes,
   sanitizeShapeStem,
+  splitTeacherExamples,
   type QuestionShape,
 } from '@/lib/ai/question-shapes'
 import { resolveLexicon } from '@/lib/lexicon/resolver'
@@ -50,6 +51,30 @@ describe('question shape sample', () => {
     expect(inferQuestionShape('She is _____.')).toBe('Fill the gap')
   })
 
+  it('keeps two teacher examples as separate stems', () => {
+    expect(
+      splitTeacherExamples('Can a crocodile fly?\nAre there any pandas?')
+    ).toEqual(['Can a crocodile fly?', 'Are there any pandas?'])
+
+    const joined: QuestionShape[] = [
+      {
+        shape: 'Yes/No question',
+        question: 'Can a crocodile fly? Are there any pandas?',
+        answerStyle: 'Yes or no',
+      },
+      ...shapes.slice(1),
+    ]
+    const next = finalizeShapeSample(
+      joined,
+      'Can a crocodile fly?\nAre there any pandas?'
+    )
+    expect(next[0].question).toBe('Can a crocodile fly?')
+    expect(next[1].question).toBe('Are there any pandas?')
+    expect(next.map((shape) => shape.question)).not.toContain(
+      'Can a crocodile fly? Are there any pandas?'
+    )
+  })
+
   it('pins the teacher example as the first stem', () => {
     const next = finalizeShapeSample(shapes, 'What is he doing?')
     expect(next).toHaveLength(6)
@@ -85,6 +110,26 @@ describe('question shape sample', () => {
     expect(prompt).toContain('Never mix shapes')
     expect(prompt).toContain('Four complete sentences. One is fully correct.')
     expect(prompt).toContain('I like playing football.')
+  })
+
+  it('lists two teacher examples as separate stems in the prompt', () => {
+    const prompt = createQuestionShapePrompt({
+      level: 'A1',
+      topics: ['Animals'],
+      grammarFocus: [],
+      teacherNotes: '',
+      modelSentence: 'Can a crocodile fly?\nAre there any pandas?',
+      sentenceForms: [],
+      questionStyles: [],
+      vocabularyFocus: 'Mixed',
+      numberOfQuestions: 10,
+      quizTitle: 'Animals',
+      quizDescription: 'Yes/no questions',
+    })
+
+    expect(prompt).toContain('Never join them into one question')
+    expect(prompt).toContain('1. Can a crocodile fly?')
+    expect(prompt).toContain('2. Are there any pandas?')
   })
 
   it('parses a fenced shape list and normalizes the label', () => {

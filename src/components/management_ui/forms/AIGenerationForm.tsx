@@ -21,9 +21,11 @@ import {
   type LessonImageAnalysis,
 } from '@/lib/ai/generation-brief'
 import {
-  inferQuestionShape,
+  defaultAnswerStyleForShape,
+  MAX_TEACHER_EXAMPLES,
   QUESTION_SHAPE_LABELS,
   sanitizeShapeStem,
+  splitTeacherExamples,
   type QuestionShape,
   type QuestionShapeLabel,
 } from '@/lib/ai/question-shapes'
@@ -46,6 +48,12 @@ const NOTES_PLACEHOLDER =
   'Numbers from 100 to 1000. Ask what the number is, and have the answer written in full, with some mistakes.'
 
 const EXAMPLE_PLACEHOLDER = 'What is he doing?'
+const SECOND_EXAMPLE_PLACEHOLDER = 'Can a crocodile fly?'
+
+function exampleFieldsFromSentence(value: string): string[] {
+  const parts = splitTeacherExamples(value)
+  return parts.length > 0 ? parts : ['']
+}
 
 const COUNT_PRESETS = [10, 15, 20] as const
 
@@ -163,7 +171,9 @@ export default function AIGenerationForm({
     initialBrief?.level ?? levelFromTags(existingTags)
   )
   const [teacherNotes, setTeacherNotes] = useState(initialBrief?.teacherNotes ?? '')
-  const [modelSentence, setModelSentence] = useState(initialBrief?.modelSentence ?? '')
+  const [exampleQuestions, setExampleQuestions] = useState<string[]>(() =>
+    exampleFieldsFromSentence(initialBrief?.modelSentence ?? '')
+  )
   const [sentenceForms, setSentenceForms] = useState<SentenceForm[]>(
     initialBrief?.sentenceForms ?? []
   )
@@ -201,6 +211,7 @@ export default function AIGenerationForm({
     [selectedTags]
   )
   const topics = useMemo(() => resolveTopicTags(selectedTags), [selectedTags])
+  const modelSentence = exampleQuestions.map((item) => item.trim()).filter(Boolean).join('\n')
   const levelMissing = !selectedLevel
   const aiDisabled = quizType !== QuestionType.MULTIPLE_CHOICE
   const selectedShapeCount = shapeRows.filter((row) => row.selected).length
@@ -277,11 +288,12 @@ export default function AIGenerationForm({
   }
 
   const selectedShapes = shapeRows
-    .filter((row) => row.selected && row.question.trim() && row.answerStyle.trim())
+    .filter((row) => row.selected && row.question.trim())
     .map((row) => ({
       shape: row.shape,
       question: row.question.trim(),
-      answerStyle: row.answerStyle.trim(),
+      answerStyle:
+        row.answerStyle.trim() || defaultAnswerStyleForShape(row.shape),
     }))
 
   const handleLevelSelect = (level: CefrLevelId) => {
@@ -415,13 +427,15 @@ export default function AIGenerationForm({
       if (!response.ok || !result.success || !result.shapes?.length) {
         throw new Error(result.error || 'Failed to generate example questions')
       }
-      const exampleShape = modelSentence.trim()
-        ? inferQuestionShape(modelSentence)
-        : null
+      const teacherExamples = splitTeacherExamples(modelSentence)
+      const exactExamples = new Set(teacherExamples)
       setShapeRows(
         result.shapes.map((shape) => ({
           ...sanitizeShapeStem(shape),
-          selected: exampleShape ? shape.shape === exampleShape : false,
+          selected:
+            teacherExamples.length > 0
+              ? exactExamples.has(shape.question.trim())
+              : false,
         }))
       )
       setPhase('pick')
@@ -639,35 +653,19 @@ export default function AIGenerationForm({
                     <Check className="h-5 w-5" />
                   </button>
                   <div className="min-w-0 flex-1 space-y-2">
-                    <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
-                      <Badge
-                        variant="secondary"
-                        className="mt-0.5 h-auto w-fit max-w-full shrink-0 whitespace-normal px-2 py-1 text-xs"
-                      >
-                        {row.shape}
-                      </Badge>
-                      <span className="mt-1 shrink-0 text-slate-500" aria-hidden>
-                        –
-                      </span>
-                      <Textarea
-                        value={row.answerStyle}
-                        aria-label={`Answer style ${index + 1}`}
-                        placeholder="How the answers should look"
-                        rows={2}
-                        onChange={(event) =>
-                          updateRow(index, { answerStyle: event.target.value })
-                        }
-                        className="min-w-0 flex-1 basis-[12rem] resize-none break-words rounded-md border-2 border-slate-200 bg-white px-3 py-1.5 text-sm leading-snug"
-                      />
-                    </div>
-                    <Textarea
+                    <Badge
+                      variant="secondary"
+                      className="h-auto w-fit max-w-full px-2 py-1 text-xs"
+                    >
+                      {row.shape}
+                    </Badge>
+                    <Input
                       value={row.question}
                       aria-label={`Example question ${index + 1}`}
-                      rows={2}
                       onChange={(event) =>
                         updateRow(index, { question: event.target.value })
                       }
-                      className="w-full resize-none break-words rounded-md border-2 border-slate-200 bg-white px-3 py-2 text-center text-base font-medium leading-snug"
+                      className="h-11 w-full rounded-md border-2 border-slate-200 bg-white px-3 text-center text-base font-medium"
                     />
                   </div>
                 </div>
@@ -834,21 +832,63 @@ export default function AIGenerationForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="exampleQuestion" className="text-sm font-semibold">
-              Example question
-            </Label>
-            <Input
-              id="exampleQuestion"
-              value={modelSentence}
-              onChange={(event) => setModelSentence(event.target.value)}
-              placeholder={EXAMPLE_PLACEHOLDER}
-              disabled={aiDisabled}
-              className="h-11 rounded-md border-2 border-slate-200 bg-white"
-            />
+            <Label className="text-sm font-semibold">Example questions</Label>
             <p className="text-xs text-slate-500">
-              Optional. The first examples stay close to this sentence. The rest
-              try other forms of the same language point.
+              Optional. One question per line. If you want two types, add a
+              second example. We will not join them into one stem.
             </p>
+            <div className="space-y-2">
+              {exampleQuestions.map((example, index) => (
+                <div key={`example-${index}`} className="flex items-center gap-2">
+                  <Input
+                    id={index === 0 ? 'exampleQuestion' : `exampleQuestion-${index}`}
+                    value={example}
+                    onChange={(event) =>
+                      setExampleQuestions((current) =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === index ? event.target.value : item
+                        )
+                      )
+                    }
+                    placeholder={
+                      index === 0 ? EXAMPLE_PLACEHOLDER : SECOND_EXAMPLE_PLACEHOLDER
+                    }
+                    disabled={aiDisabled}
+                    className="h-11 rounded-md border-2 border-slate-200 bg-white"
+                  />
+                  {exampleQuestions.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 text-slate-500"
+                      disabled={aiDisabled}
+                      aria-label={`Remove example ${index + 1}`}
+                      onClick={() =>
+                        setExampleQuestions((current) =>
+                          current.filter((_, itemIndex) => itemIndex !== index)
+                        )
+                      }
+                    >
+                      &times;
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {exampleQuestions.length < MAX_TEACHER_EXAMPLES && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={aiDisabled}
+                onClick={() =>
+                  setExampleQuestions((current) => [...current, ''])
+                }
+              >
+                Add another example
+              </Button>
+            )}
           </div>
 
           {(lessonSummary || keyVocabulary.length > 0) && (
