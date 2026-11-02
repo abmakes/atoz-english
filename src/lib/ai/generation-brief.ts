@@ -36,9 +36,37 @@ export const generationBriefSchema = z.object({
   lessonSummary: z.string().trim().max(600).optional(),
   keyVocabulary: z.array(z.string().trim().min(1)).max(40).optional(),
   sentencePatterns: z.array(z.string().trim().min(1)).max(12).optional(),
+  selectedShapes: z
+    .array(
+      z.object({
+        shape: z.string().trim().min(1).max(48),
+        question: z.string().trim().min(1).max(240),
+        answerStyle: z.string().trim().min(1).max(200),
+      })
+    )
+    .max(8)
+    .optional(),
 });
 
 export type GenerationBrief = z.infer<typeof generationBriefSchema>;
+export type SelectedQuestionShape = NonNullable<
+  GenerationBrief['selectedShapes']
+>[number];
+
+/** Fold legacy flat tags into topics and grammar, then validate the brief. */
+export function briefFromRequest(
+  input: GenerationBrief & { tags?: string[] }
+): GenerationBrief {
+  return generationBriefSchema.parse({
+    ...input,
+    topics:
+      input.topics.length > 0 ? input.topics : (input.tags ?? []).filter(Boolean),
+    grammarFocus:
+      input.grammarFocus.length > 0
+        ? input.grammarFocus
+        : (input.tags ?? []).filter(Boolean),
+  });
+}
 
 export const lessonImageAnalysisSchema = z.object({
   lessonSummary: z.string().trim().min(1).max(600),

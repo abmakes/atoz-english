@@ -50,6 +50,10 @@ import {
   type VocabularyFocus,
 } from '@/lib/taxonomy/quiz-taxonomy'
 import { mergeApprovedQuestions } from '@/lib/ai/review-commit'
+import {
+  QUESTION_SHAPE_LABELS,
+  type QuestionShapeLabel,
+} from '@/lib/ai/question-shapes'
 
 function hydrateGenerationBrief(
   draft: DraftGenerationBrief,
@@ -80,6 +84,18 @@ function hydrateGenerationBrief(
     lessonSummary: draft.lessonSummary,
     keyVocabulary: draft.keyVocabulary,
     sentencePatterns: draft.sentencePatterns,
+    shapeSamples: (draft.shapeSamples ?? []).flatMap((sample) => {
+      if (!(QUESTION_SHAPE_LABELS as readonly string[]).includes(sample.shape)) return []
+      if (!sample.question?.trim()) return []
+      return [
+        {
+          shape: sample.shape as QuestionShapeLabel,
+          question: sample.question,
+          answerStyle: sample.answerStyle || 'A short classroom answer',
+          selected: Boolean(sample.selected),
+        },
+      ]
+    }),
   }
 }
 
@@ -267,6 +283,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
             lessonSummary: generationBrief.lessonSummary,
             keyVocabulary: generationBrief.keyVocabulary,
             sentencePatterns: generationBrief.sentencePatterns,
+            shapeSamples: generationBrief.shapeSamples,
           }
         : undefined,
     }
@@ -1370,7 +1387,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
                       AI Question Generator
                     </DialogTitle>
                     <DialogDescription className="text-sm text-slate-600">
-                      Generate and review questions here, then return to the manual editor.
+                      Choose example question shapes, then generate the full quiz.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="min-h-0 flex-1 overflow-y-auto">
