@@ -9,6 +9,7 @@ import {
   type CatalogPart,
   type FrameRect,
 } from '@/lib/thoughts/catalog'
+import { drawBackdrop } from '@/lib/thoughts/backdrop'
 import type { Character, PlacedPart } from '@/lib/thoughts/character'
 
 export function partFrame(
@@ -69,6 +70,20 @@ export function hitTestPart(
   return null
 }
 
+function drawCover(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  stage: number
+): void {
+  const sourceWidth = image.naturalWidth || image.width
+  const sourceHeight = image.naturalHeight || image.height
+  if (sourceWidth < 1 || sourceHeight < 1) return
+  const scale = Math.max(stage / sourceWidth, stage / sourceHeight)
+  const width = sourceWidth * scale
+  const height = sourceHeight * scale
+  ctx.drawImage(image, (stage - width) / 2, (stage - height) / 2, width, height)
+}
+
 export function drawCharacter(
   ctx: CanvasRenderingContext2D,
   character: Character,
@@ -79,10 +94,15 @@ export function drawCharacter(
     nowMs: number
     reducedMotion: boolean
     selectedId?: string | null
+    background?: HTMLImageElement | null
   }
 ): void {
   const bob = idleBobPx(options.nowMs, options.reducedMotion)
   ctx.clearRect(0, 0, options.stage, options.stage)
+  drawBackdrop(ctx, character.backdrop, options.stage)
+  const facePhoto = character.photoMode === 'face' ? options.background : null
+  const squareFace = Boolean(facePhoto && character.faceMask === 'square')
+  if (options.background && (!facePhoto || squareFace)) drawCover(ctx, options.background, options.stage)
   ctx.save()
   ctx.translate(0, bob)
   for (const part of orderedParts(character)) {
@@ -90,7 +110,7 @@ export function drawCharacter(
     if (!definition) continue
     const sheet = getSheet(definition.sheet)
     const image = sheet ? images.get(sheet.src) : undefined
-    if (!image) continue
+    if (!image && !(definition.category === 'head' && facePhoto)) continue
     const frame = partFrame(
       definition,
       options.amplitude,
@@ -102,6 +122,37 @@ export function drawCharacter(
     ctx.save()
     ctx.translate(part.x * options.stage, part.y * options.stage)
     ctx.rotate((part.rotation * Math.PI) / 180)
+    if (definition.category === 'head' && facePhoto) {
+      if (squareFace) {
+        ctx.restore()
+        continue
+      }
+      const diameter = Math.min(width, height)
+      const mask = character.faceMask === 'rounded' ? 'rounded' : 'circle'
+      ctx.beginPath()
+      if (mask === 'rounded') {
+        ctx.roundRect(-diameter / 2, -diameter / 2, diameter, diameter, diameter * 0.22)
+      } else {
+        ctx.arc(0, 0, diameter / 2, 0, Math.PI * 2)
+      }
+      ctx.clip()
+      const sourceWidth = facePhoto.naturalWidth || facePhoto.width
+      const sourceHeight = facePhoto.naturalHeight || facePhoto.height
+      if (sourceWidth < 1 || sourceHeight < 1) {
+        ctx.restore()
+        continue
+      }
+      const cover = Math.max(diameter / sourceWidth, diameter / sourceHeight)
+      const drawnWidth = sourceWidth * cover
+      const drawnHeight = sourceHeight * cover
+      ctx.drawImage(facePhoto, -drawnWidth / 2, -drawnHeight / 2, drawnWidth, drawnHeight)
+      ctx.restore()
+      continue
+    }
+    if (!image) {
+      ctx.restore()
+      continue
+    }
     if (part.mirror) ctx.scale(-1, 1)
     ctx.drawImage(
       image,

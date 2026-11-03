@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { Camera, ImageUp } from 'lucide-react'
 import FaceStage from '@/components/thoughts/FaceStage'
 import PartsTray from '@/components/thoughts/PartsTray'
 import { useClipPlayer } from '@/components/thoughts/useClipPlayer'
@@ -25,11 +26,11 @@ import {
 } from '@/lib/thoughts/character'
 import { getPart } from '@/lib/thoughts/catalog'
 import type { ThoughtPublicClip, ThoughtSessionDto } from '@/lib/thoughts/service'
+import { photoFileToDataUrl } from '@/lib/thoughts/photo'
 import { formatDuration, VOICE_EFFECTS, VOICE_LABELS, type VoiceEffect } from '@/lib/thoughts/voices'
 
 type Step = 'make' | 'talk' | 'send'
 type Tab = 'mine' | 'gallery'
-type StyleFilter = 'cartoon' | 'photo' | 'sketch'
 
 export default function StudentSession({
   token,
@@ -45,7 +46,6 @@ export default function StudentSession({
   const [character, setCharacter] = useState<Character | null>(null)
   const [undo, setUndo] = useState<Character[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [style, setStyle] = useState<StyleFilter>('cartoon')
   const [customizing, setCustomizing] = useState(false)
   const [name, setName] = useState('')
   const [voice, setVoice] = useState<VoiceEffect>('original')
@@ -58,6 +58,8 @@ export default function StudentSession({
   const [message, setMessage] = useState<string | null>(null)
   const [activeClip, setActiveClip] = useState<string | null>(null)
   const baselineRef = useRef<Character | null>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const uploadInputRef = useRef<HTMLInputElement>(null)
   const smoothRef = useRef(0)
   const liveRef = useRef(0)
   const finishRef = useRef<() => void>(() => {})
@@ -147,6 +149,17 @@ export default function StudentSession({
   }
   finishRef.current = () => {
     void finishRecording()
+  }
+
+  const usePhoto = async (file: File | undefined) => {
+    if (!file) return
+    try {
+      const background = await photoFileToDataUrl(file)
+      setCharacter((current) => (current ? { ...current, background } : current))
+      setMessage(null)
+    } catch {
+      setMessage('Could not use that picture. Try another one.')
+    }
   }
 
   const startRecording = async () => {
@@ -241,9 +254,9 @@ export default function StudentSession({
   const getLevel = () => (recorder.isRecording ? liveRef.current : player.levelRef.current)
 
   return (
-    <div className="min-h-[calc(100dvh-4rem)] bg-[#fbf6ef] px-4 py-6 text-[#1e1b4b]">
-      <div className="mx-auto max-w-6xl rounded-[2rem] border border-[#f3e7d3] bg-[#fffaf3] p-4 shadow-sm md:p-6">
-        <header className="flex flex-wrap items-center justify-between gap-3">
+    <div className="min-h-[calc(100dvh-4rem)] bg-[#fbf6ef] py-2 text-[#1e1b4b] lg:px-4 lg:py-6">
+      <div className="mx-auto max-w-6xl bg-[#fffaf3] lg:rounded-[2rem] lg:border lg:border-[#f3e7d3] lg:p-6 lg:shadow-sm">
+        <header className="flex flex-wrap items-center justify-between gap-3 px-3 lg:px-0">
           <div className="flex items-center gap-2">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-600 text-xl text-white">
               :)
@@ -280,6 +293,7 @@ export default function StudentSession({
         </header>
 
         {tab === 'gallery' ? (
+          <div className="px-3 lg:px-0">
           <Gallery
             showGallery={session.showGallery}
             clips={session.gallery}
@@ -296,6 +310,7 @@ export default function StudentSession({
               await player.play({ blob, envelope: clip.envelope, effect: clip.voiceEffect })
             }}
           />
+          </div>
         ) : sent ? (
           <div className="mx-auto max-w-lg py-16 text-center">
             <p className="grandstander text-3xl font-bold">Sent!</p>
@@ -323,8 +338,8 @@ export default function StudentSession({
             <p className="mt-6 text-slate-600">Your teacher has closed new recordings.</p>
           </div>
         ) : (
-          <div className="mt-6">
-            <ol className="mb-4 flex items-center justify-center gap-3 text-sm font-semibold">
+          <div className="mt-4 lg:mt-6">
+            <ol className="mb-3 flex items-center justify-center gap-3 px-3 text-sm font-semibold lg:px-0">
               {(['make', 'talk', 'send'] as const).map((item, index) => (
                 <li key={item} className="flex items-center gap-3">
                   <span className={step === item ? 'text-violet-700' : 'text-slate-400'}>
@@ -340,26 +355,9 @@ export default function StudentSession({
                 <p className="grandstander text-xl font-bold">{session.prompt}</p>
               </div>
             ) : null}
-            <div className={`grid gap-4 ${customizing || step === 'talk' ? 'lg:grid-cols-[240px_1fr_260px]' : ''}`}>
-              {customizing && step !== 'send' ? (
-                <PartsTray
-                  style={style}
-                  onStyle={setStyle}
-                  onPick={(partId) => {
-                    const result = addCatalogPart(character, partId)
-                    if ('error' in result) {
-                      setMessage(result.error)
-                      return
-                    }
-                    commit(result.character)
-                    setMessage(null)
-                  }}
-                />
-              ) : (
-                <div className="hidden lg:block" />
-              )}
+            <div className={`grid gap-4 ${step === 'talk' || step === 'send' ? 'lg:grid-cols-[1fr_260px]' : ''}`}>
               <div>
-                <div className="relative mx-auto max-w-md">
+                <div className="relative mx-auto w-full lg:max-w-2xl">
                   {countdown !== null && countdown > 0 ? (
                     <p className="grandstander pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-7xl font-bold text-violet-700">
                       {countdown}
@@ -368,62 +366,62 @@ export default function StudentSession({
                   <FaceStage
                     character={character}
                     getLevel={getLevel}
-                    interactive={customizing && step === 'make'}
+                    interactive={step === 'make'}
                     selectedId={selectedId}
                     onSelect={setSelectedId}
                     onMove={(instanceId, x, y) =>
                       setCharacter((current) => (current ? updatePart(current, instanceId, { x, y }) : current))
                     }
                   />
-                </div>
-                {customizing && step === 'make' && selected && selectedDef ? (
-                  <div className="mx-auto mt-3 flex max-w-md flex-wrap items-center gap-3 text-sm">
-                    {selectedDef.category === 'head' ? (
-                      <p>Pick another head in the tray. The head stays in the middle.</p>
-                    ) : (
-                      <>
-                        <label>
-                          Size
-                          <input
-                            type="range"
-                            min={0.08}
-                            max={0.9}
-                            step={0.01}
-                            value={selected.scale}
-                            onChange={(event) =>
-                              setCharacter((current) =>
-                                current
-                                  ? updatePart(current, selected.instanceId, {
-                                      scale: Number(event.target.value),
-                                    })
-                                  : current
-                              )
-                            }
-                          />
-                        </label>
-                        <label>
-                          Turn
-                          <input
-                            type="range"
-                            min={-180}
-                            max={180}
-                            step={1}
-                            value={selected.rotation}
-                            onChange={(event) =>
-                              setCharacter((current) =>
-                                current
-                                  ? updatePart(current, selected.instanceId, {
-                                      rotation: Number(event.target.value),
-                                    })
-                                  : current
-                              )
-                            }
-                          />
-                        </label>
+                  {step === 'make' && selected && selectedDef && selectedDef.category !== 'head' ? (
+                    <>
+                      <label className="absolute bottom-2 left-2 z-20 flex h-1/3 w-7 flex-col items-center gap-1 rounded-full bg-white px-0.5 py-1.5 shadow-sm">
+                        <span className="text-[10px] font-semibold leading-none text-slate-600">Size</span>
+                        <input
+                          type="range"
+                          aria-label="Size"
+                          min={0.08}
+                          max={1.2}
+                          step={0.01}
+                          value={selected.scale}
+                          onChange={(event) =>
+                            setCharacter((current) =>
+                              current
+                                ? updatePart(current, selected.instanceId, {
+                                    scale: Number(event.target.value),
+                                  })
+                                : current
+                            )
+                          }
+                          className="w-5 min-h-0 flex-1 cursor-pointer accent-violet-600 [direction:rtl] [writing-mode:vertical-lr]"
+                        />
+                      </label>
+                      <label className="absolute bottom-2 right-2 z-20 flex h-1/3 w-7 flex-col items-center gap-1 rounded-full bg-white px-0.5 py-1.5 shadow-sm">
+                        <span className="text-[10px] font-semibold leading-none text-slate-600">Turn</span>
+                        <input
+                          type="range"
+                          aria-label="Turn"
+                          min={-180}
+                          max={180}
+                          step={1}
+                          value={selected.rotation}
+                          onChange={(event) =>
+                            setCharacter((current) =>
+                              current
+                                ? updatePart(current, selected.instanceId, {
+                                    rotation: Number(event.target.value),
+                                  })
+                                : current
+                            )
+                          }
+                          className="w-5 min-h-0 flex-1 cursor-pointer accent-violet-600 [direction:rtl] [writing-mode:vertical-lr]"
+                        />
+                      </label>
+                      <div className="absolute inset-x-16 bottom-3 z-20 flex justify-center gap-2">
                         {selectedDef.mirrorable ? (
                           <button
                             type="button"
-                            className="rounded-full border px-3 py-1"
+                            className="rounded-full bg-white px-3 py-1 text-sm font-semibold shadow-md"
                             onClick={() =>
                               setCharacter((current) =>
                                 current
@@ -437,7 +435,7 @@ export default function StudentSession({
                         ) : null}
                         <button
                           type="button"
-                          className="rounded-full border px-3 py-1"
+                          className="rounded-full bg-white px-3 py-1 text-sm font-semibold shadow-md"
                           onClick={() =>
                             setCharacter((current) =>
                               current ? bringPartIntoView(current, selected.instanceId) : current
@@ -448,7 +446,7 @@ export default function StudentSession({
                         </button>
                         <button
                           type="button"
-                          className="rounded-full border px-3 py-1"
+                          className="rounded-full bg-white px-3 py-1 text-sm font-semibold shadow-md"
                           onClick={() => {
                             setCharacter((current) =>
                               current ? deletePart(current, selected.instanceId) : current
@@ -458,17 +456,47 @@ export default function StudentSession({
                         >
                           Delete
                         </button>
-                      </>
-                    )}
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+                {step === 'make' ? (
+                  <div className="mx-auto mt-3 w-full px-3 lg:max-w-2xl lg:px-0">
+                    <PartsTray
+                      backdrop={character.backdrop ?? 'white'}
+                      onBackdrop={(backdrop) =>
+                        setCharacter((current) => (current ? { ...current, backdrop } : current))
+                      }
+                      photoIsFace={character.photoMode === 'face' && Boolean(character.background)}
+                      faceMask={character.faceMask ?? 'circle'}
+                      onFaceMask={(faceMask) =>
+                        setCharacter((current) => (current ? { ...current, faceMask } : current))
+                      }
+                      onPick={(partId) => {
+                        const result = addCatalogPart(character, partId)
+                        if ('error' in result) {
+                          setMessage(result.error)
+                          return
+                        }
+                        commit(result.character)
+                        setMessage(null)
+                      }}
+                    />
                   </div>
                 ) : null}
                 {step === 'make' ? (
-                  <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  <div className="mt-4 flex flex-wrap justify-center gap-2 px-3 lg:px-0">
                     <button
                       type="button"
                       className="rounded-full border border-violet-200 bg-white px-4 py-2 font-semibold"
                       onClick={() => {
-                        const next = assembleRandomFace()
+                        const next = {
+                          ...assembleRandomFace(),
+                          background: character.background,
+                          photoMode: character.photoMode,
+                          backdrop: character.backdrop,
+                          faceMask: character.faceMask,
+                        }
                         commit(next)
                         baselineRef.current = next
                         setSelectedId(null)
@@ -521,6 +549,101 @@ export default function StudentSession({
                     >
                       Ready to talk
                     </button>
+                  </div>
+                ) : null}
+                {step === 'make' ? (
+                  <div className="mt-3 flex flex-wrap justify-center gap-2">
+                    <input
+                      ref={cameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="user"
+                      className="hidden"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0]
+                        event.target.value = ''
+                        void usePhoto(file)
+                      }}
+                    />
+                    <input
+                      ref={uploadInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0]
+                        event.target.value = ''
+                        void usePhoto(file)
+                      }}
+                    />
+                    <button
+                      type="button"
+                      aria-label="Take a picture"
+                      className="flex h-12 w-12 items-center justify-center rounded-full border border-violet-200 bg-white text-violet-700"
+                      onClick={() => cameraInputRef.current?.click()}
+                    >
+                      <Camera className="h-6 w-6" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Upload a picture"
+                      className="flex h-12 w-12 items-center justify-center rounded-full border border-violet-200 bg-white text-violet-700"
+                      onClick={() => uploadInputRef.current?.click()}
+                    >
+                      <ImageUp className="h-6 w-6" />
+                    </button>
+                    {character.background ? (
+                      <>
+                        <button
+                          type="button"
+                          className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                            character.photoMode === 'face'
+                              ? 'border border-violet-200 bg-white'
+                              : 'bg-violet-600 text-white'
+                          }`}
+                          onClick={() =>
+                            setCharacter((current) => {
+                              if (!current) return current
+                              const next = { ...current }
+                              delete next.photoMode
+                              return next
+                            })
+                          }
+                        >
+                          Put a face on it
+                        </button>
+                        <button
+                          type="button"
+                          className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                            character.photoMode === 'face'
+                              ? 'bg-violet-600 text-white'
+                              : 'border border-violet-200 bg-white'
+                          }`}
+                          onClick={() =>
+                            setCharacter((current) =>
+                              current ? { ...current, photoMode: 'face' } : current
+                            )
+                          }
+                        >
+                          Use it as the face
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-full border px-4 py-2 text-sm"
+                          onClick={() =>
+                            setCharacter((current) => {
+                              if (!current) return current
+                              const next = { ...current }
+                              delete next.background
+                              delete next.photoMode
+                              return next
+                            })
+                          }
+                        >
+                          Remove picture
+                        </button>
+                      </>
+                    ) : null}
                   </div>
                 ) : null}
                 {session.allowFunnyVoices && step !== 'make' ? (
@@ -602,9 +725,7 @@ export default function StudentSession({
                     </>
                   )}
                 </aside>
-              ) : (
-                <div className="hidden lg:block" />
-              )}
+              ) : null}
             </div>
             {step === 'send' ? (
               <div className="mt-4 text-center">

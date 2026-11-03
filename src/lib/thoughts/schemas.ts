@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { BACKDROP_IDS, FACE_MASKS } from '@/lib/thoughts/backdrop'
 import { PART_CAPS, getPart, type ThoughtCategory } from '@/lib/thoughts/catalog'
 import { VOICE_EFFECTS } from '@/lib/thoughts/voices'
 
@@ -10,6 +11,13 @@ const ENVELOPE_MAX_POINTS = Math.ceil(RECORDING_MAX_DURATION_MS / ENVELOPE_WINDO
 export const studentNameSchema = z.string().trim().min(1).max(40)
 
 export const voiceEffectSchema = z.enum(VOICE_EFFECTS)
+
+export const thoughtBackgroundSchema = z
+  .string()
+  .max(450_000)
+  .refine((value) => /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(value), {
+    message: 'The picture needs to be a photo.',
+  })
 
 export const placedPartSchema = z.object({
   instanceId: z.string().trim().min(8).max(80),
@@ -24,6 +32,10 @@ export const placedPartSchema = z.object({
 export const characterSchema = z
   .object({
     version: z.literal(1),
+    background: thoughtBackgroundSchema.optional(),
+    photoMode: z.enum(['background', 'face']).optional(),
+    backdrop: z.enum(BACKDROP_IDS).optional(),
+    faceMask: z.enum(FACE_MASKS).optional(),
     parts: z.array(placedPartSchema).min(1).max(19),
   })
   .superRefine((character, ctx) => {

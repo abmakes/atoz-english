@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { blinkFrame, mouthFrameIndex, stepAmplitude } from '@/lib/thoughts/animation'
 import { classCanWatch, submissionsAccepted } from '@/lib/thoughts/access'
-import { addCatalogPart, assembleRandomFace } from '@/lib/thoughts/character'
-import { getPart } from '@/lib/thoughts/catalog'
+import {
+  addCatalogPart,
+  assembleRandomFace,
+  normalizeCharacter,
+  sanitizeBackground,
+} from '@/lib/thoughts/character'
+import { getPart, partsIn } from '@/lib/thoughts/catalog'
 import { characterSchema } from '@/lib/thoughts/schemas'
 import { resolveVoiceEffect } from '@/lib/thoughts/voices'
 
@@ -41,11 +46,65 @@ describe('blinks', () => {
 })
 
 describe('characters', () => {
-  it('builds a complete cartoon face from known parts', () => {
+  it('starts with a head, two eyes, and a mouth', () => {
     let n = 0
     const face = assembleRandomFace(() => 0.2, () => `instance-${String(++n).padStart(8, '0')}`)
-    expect(characterSchema.parse(face).parts.filter((part) => getPart(part.partId)?.category === 'eyes')).toHaveLength(2)
-    expect(face.parts.filter((part) => getPart(part.partId)?.category === 'head')).toHaveLength(1)
+    const categories = face.parts.map((part) => getPart(part.partId)?.category)
+    expect(categories.filter((category) => category === 'head')).toHaveLength(1)
+    expect(categories.filter((category) => category === 'eyes')).toHaveLength(2)
+    expect(categories.filter((category) => category === 'mouth')).toHaveLength(1)
+    expect(categories.some((category) => category === 'hair' || category === 'ears' || category === 'nose')).toBe(false)
+    expect(characterSchema.parse(face).parts).toHaveLength(4)
+  })
+
+  it('puts the unmirrored eye and ear on the right', () => {
+    let n = 0
+    const face = assembleRandomFace(() => 0.2, () => `instance-${String(++n).padStart(8, '0')}`)
+    const eyes = face.parts.filter((part) => getPart(part.partId)?.category === 'eyes')
+    expect(eyes.find((part) => part.x < 0.5)?.mirror).toBe(true)
+    expect(eyes.find((part) => part.x > 0.5)?.mirror).toBe(false)
+
+    const ear = partsIn('ears', 'cartoon')[0]
+    const added = addCatalogPart(face, ear.id, () => `instance-${String(++n).padStart(8, '0')}`)
+    expect('character' in added).toBe(true)
+    if (!('character' in added)) return
+    const ears = added.character.parts.filter((part) => part.partId === ear.id)
+    expect(ears.find((part) => part.x < 0.5)?.mirror).toBe(true)
+    expect(ears.find((part) => part.x > 0.5)?.mirror).toBe(false)
+  })
+
+  it('places new hair large enough to sit on the head', () => {
+    let n = 0
+    const face = assembleRandomFace(() => 0.2, () => `instance-${String(++n).padStart(8, '0')}`)
+    const hair = partsIn('hair', 'cartoon')[0]
+    const added = addCatalogPart(face, hair.id, () => `instance-${String(++n).padStart(8, '0')}`)
+    expect('character' in added).toBe(true)
+    if (!('character' in added)) return
+    const placed = added.character.parts.find((part) => part.partId === hair.id)
+    expect(placed?.scale).toBeGreaterThanOrEqual(0.85)
+  })
+
+  it('keeps a resized photo and rejects a remote picture', () => {
+    let n = 0
+    const face = assembleRandomFace(() => 0.2, () => `instance-${String(++n).padStart(8, '0')}`)
+    const photo = `data:image/jpeg;base64,${'A'.repeat(32)}`
+    expect(sanitizeBackground(photo)).toBe(photo)
+    expect(characterSchema.parse({ ...face, background: photo }).background).toBe(photo)
+    expect(characterSchema.safeParse({ ...face, background: 'https://example.com/photo.jpg' }).success).toBe(false)
+    expect(characterSchema.parse({ ...face, background: photo, photoMode: 'face' }).photoMode).toBe('face')
+    expect(normalizeCharacter({ ...face, background: photo, photoMode: 'face' }).photoMode).toBe('face')
+    expect(normalizeCharacter({ ...face, photoMode: 'face' }).photoMode).toBeUndefined()
+    expect(normalizeCharacter({ ...face, backdrop: 'sunset' }).backdrop).toBe('sunset')
+    expect(normalizeCharacter({ ...face, backdrop: 'white' }).backdrop).toBeUndefined()
+    expect(normalizeCharacter({ ...face, backdrop: 'nope' }).backdrop).toBeUndefined()
+    const masked = normalizeCharacter({
+      ...face,
+      background: photo,
+      photoMode: 'face',
+      faceMask: 'square',
+    })
+    expect(masked.faceMask).toBe('square')
+    expect(characterSchema.safeParse({ ...face, backdrop: 'plaid' }).success).toBe(false)
   })
 
   it('rejects an unknown sticker', () => {
