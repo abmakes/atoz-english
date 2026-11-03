@@ -941,7 +941,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
          * PROGRESS INDICATOR
          * Shows the current step and allows navigation between steps
          * ======================================================================== */}
-        <div className="flex w-full sm:w-auto justify-center space-x-2 sm:space-x-4 grandstander font-semibold bg-[--text-color] rounded-full border-2 border-[--border-dark] shadow-[4px_4px_0px_0px_#1F6E91] mb-6">
+        <div className="flex w-full sm:w-auto justify-center space-x-2 sm:space-x-4 grandstander font-semibold bg-[--text-color] rounded-full border-2 border-[--border-dark] shadow-[4px_4px_0px_0px_#1F6E91] mb-3 lg:mb-6">
 
           {stepDetails.map((step, index) => {
             // Determine the status of each step for styling
@@ -1018,7 +1018,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
          * Main area for adding/editing questions and quiz content
          * ======================================================================== */}
         { creationStep === 'content' && (
-          <div className="max-w-screen-xl w-full flex flex-col flex-grow gap-4 mt-6">
+          <div className="max-w-screen-xl w-full flex flex-col flex-grow gap-4 mt-0 lg:mt-6">
             {hasAnswersTooLongForSplashDash(questionsList) && (
               <div
                 role="status"
@@ -1035,7 +1035,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
 
             <div className="flex flex-col lg:flex-row flex-grow gap-6 lg:gap-4">
             {/* SIDEBAR - Quiz Information and Navigation */}
-            <div className="basis-1/4 mb-4 flex h-full min-h-0 flex-col gap-4 grandstander items-center border border-[--border-dark] bg-white p-5 text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] rounded-lg lg:mb-0">
+            <div className="mb-2 flex h-auto min-h-0 w-full shrink-0 flex-col items-center gap-2 rounded-lg border border-[--border-dark] bg-white p-3 pb-4 text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] grandstander lg:mb-0 lg:h-full lg:w-auto lg:basis-1/4 lg:gap-4 lg:p-5">
               <div className="flex w-full flex-col items-center gap-1 text-center">
                 <h2 className="w-full text-xl font-bold leading-tight">
                   {quizSetupData.title || 'Quiz Title'}
@@ -1084,25 +1084,25 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-2">
+              <div className="flex w-full items-stretch justify-center gap-2">
                 <Button
                   variant="outline"
-                  className="flex h-12 items-center gap-2 border border-[--border-dark] bg-[--background] px-6 text-lg font-semibold text-[--text-color] shadow-[4px_4px_0px_0px_var(--border-dark)] hover:bg-teal-50 hover:border-[--border-dark] hover:shadow-[4px_6px_0px_0px_var(--border-dark)] hover:scale-105 transition-all duration-300"
+                  className="flex h-9 min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap border border-[--border-dark] bg-[--background] px-3 text-sm font-semibold text-[--text-color] shadow-[3px_3px_0px_0px_var(--border-dark)] transition-all duration-300 hover:border-[--border-dark] hover:bg-teal-50 lg:h-12 lg:flex-none lg:gap-2 lg:px-6 lg:text-lg lg:shadow-[4px_4px_0px_0px_var(--border-dark)] lg:hover:scale-105 lg:hover:shadow-[4px_6px_0px_0px_var(--border-dark)]"
                   onClick={() => setCreationStep('setup')}
                 >
-                  <ArrowLeft className="-mt-0.5" size={20} /> Edit Quiz Info
+                  <ArrowLeft className="-mt-0.5 h-4 w-4 shrink-0 lg:h-5 lg:w-5" /> Edit Info
                 </Button>
                 <Button
                   variant="outline"
-                  className="flex h-12 items-center gap-2 border border-[#1F6E91] bg-[--text-color] px-6 text-lg font-semibold text-white shadow-[4px_4px_0px_0px_#1F6E91] hover:bg-white hover:text-[--text-color] hover:border-[#1F6E91] hover:shadow-[4px_6px_0px_0px_#1F6E91] hover:scale-105 transition-all duration-300"
+                  className="flex h-9 min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap border border-[#1F6E91] bg-[--text-color] px-3 text-sm font-semibold text-white shadow-[3px_3px_0px_0px_#1F6E91] transition-all duration-300 hover:border-[#1F6E91] hover:bg-white hover:text-[--text-color] lg:h-12 lg:flex-none lg:gap-2 lg:px-6 lg:text-lg lg:shadow-[4px_4px_0px_0px_#1F6E91] lg:hover:scale-105 lg:hover:shadow-[4px_6px_0px_0px_#1F6E91]"
                   onClick={handleGoToPublishStep}
                 >
                   {mode === 'create' ? 'Review & Continue' : 'Update Quiz'}{' '}
-                  <ArrowRight className="-mt-0.5" size={20} />
+                  <ArrowRight className="-mt-0.5 h-4 w-4 shrink-0 lg:h-5 lg:w-5" />
                 </Button>
               </div>
 
-              <div className="w-full space-y-2 border-t border-slate-200 pt-4">
+              <div className="w-full space-y-2 border-t border-slate-200 pt-2 lg:pt-4">
                 <p className="inclusive-sans px-1 text-center text-xs text-slate-500">
                   {draftSavedAt
                     ? `Last saved ${new Date(draftSavedAt).toLocaleString([], {
