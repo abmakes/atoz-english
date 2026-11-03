@@ -50,6 +50,10 @@ import {
   type VocabularyFocus,
 } from '@/lib/taxonomy/quiz-taxonomy'
 import { mergeApprovedQuestions } from '@/lib/ai/review-commit'
+import {
+  QUESTION_SHAPE_LABELS,
+  type QuestionShapeLabel,
+} from '@/lib/ai/question-shapes'
 
 function hydrateGenerationBrief(
   draft: DraftGenerationBrief,
@@ -80,6 +84,18 @@ function hydrateGenerationBrief(
     lessonSummary: draft.lessonSummary,
     keyVocabulary: draft.keyVocabulary,
     sentencePatterns: draft.sentencePatterns,
+    shapeSamples: (draft.shapeSamples ?? []).flatMap((sample) => {
+      if (!(QUESTION_SHAPE_LABELS as readonly string[]).includes(sample.shape)) return []
+      if (!sample.question?.trim()) return []
+      return [
+        {
+          shape: sample.shape as QuestionShapeLabel,
+          question: sample.question,
+          answerStyle: sample.answerStyle || 'A short classroom answer',
+          selected: Boolean(sample.selected),
+        },
+      ]
+    }),
   }
 }
 
@@ -267,6 +283,7 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
             lessonSummary: generationBrief.lessonSummary,
             keyVocabulary: generationBrief.keyVocabulary,
             sentencePatterns: generationBrief.sentencePatterns,
+            shapeSamples: generationBrief.shapeSamples,
           }
         : undefined,
     }
@@ -1363,17 +1380,17 @@ export default function QuizEditor({ mode, quizId, resumeDraftId, initialData, o
               </Dialog>
 
               <Dialog open={aiModalOpen} onOpenChange={setAiModalOpen}>
-                <DialogContent className="flex max-h-[92vh] w-[min(96vw,800px)] max-w-[800px] flex-col gap-0 overflow-hidden border-[--border-dark] bg-white p-0 text-[--text-color] shadow-[6px_6px_0px_0px_var(--border-dark)] sm:rounded-lg">
-                  <DialogHeader className="shrink-0 border-b border-slate-200 px-5 py-4 text-left">
+                <DialogContent className="flex max-h-[min(92dvh,92vh)] w-[min(calc(100vw-1rem),800px)] max-w-[800px] min-w-0 flex-col gap-0 overflow-hidden border-[--border-dark] bg-white p-0 text-[--text-color] shadow-[6px_6px_0px_0px_var(--border-dark)] sm:rounded-lg">
+                  <DialogHeader className="shrink-0 border-b border-slate-200 px-4 py-3 pr-12 text-left sm:px-5 sm:py-4">
                     <DialogTitle className="flex items-center gap-2 text-lg font-bold">
-                      <Sparkles className="h-5 w-5 text-violet-600" />
+                      <Sparkles className="h-5 w-5 shrink-0 text-violet-600" />
                       AI Question Generator
                     </DialogTitle>
                     <DialogDescription className="text-sm text-slate-600">
-                      Generate and review questions here, then return to the manual editor.
+                      Choose example question shapes, then generate the full quiz.
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="min-h-0 flex-1 overflow-y-auto">
+                  <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
                     <AIGenerationForm
                       key={aiFormKey}
                       onQuestionsGenerated={handleAddQuestions}

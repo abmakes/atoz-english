@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth, isUnauthorized } from '@/lib/auth';
 import {
+  briefFromRequest,
   buildBriefSummary,
   discoveryTagsFromBrief,
   generationBriefSchema,
@@ -85,17 +86,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const brief: GenerationBrief = generationBriefSchema.parse({
-      ...input,
-      topics:
-        input.topics.length > 0
-          ? input.topics
-          : (input.tags ?? []).filter(Boolean),
-      grammarFocus:
-        input.grammarFocus.length > 0
-          ? input.grammarFocus
-          : (input.tags ?? []).filter(Boolean),
-    });
+    const brief: GenerationBrief = briefFromRequest(input);
+    const shapesSelected = (brief.selectedShapes?.length ?? 0) > 0;
 
     const posTags = vocabularyFocusToPos(brief.vocabularyFocus).map((pos) => {
       switch (pos) {
@@ -126,7 +118,9 @@ export async function POST(request: NextRequest) {
     let polished = false;
 
     // Soft polish only — never reject the batch for lexicon mismatches.
-    if (!audit.valid && audit.issues.length > 0) {
+    // Skip it once the teacher has locked shapes, so a simpler-wording
+    // rewrite cannot replace the task they just approved.
+    if (!shapesSelected && !audit.valid && audit.issues.length > 0) {
       try {
         polished = true;
         const polishPrompt = createSoftSimplifyPrompt({

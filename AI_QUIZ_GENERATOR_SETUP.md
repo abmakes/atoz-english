@@ -7,11 +7,12 @@ brief**, not from a hard vocabulary allowlist.
 
 Inputs, in priority order:
 
-1. teacher notes and optional model sentence;
-2. optional textbook / worksheet screenshot analysis;
-3. classroom discovery tags (Level, Topic, Grammar);
-4. AI-only controls (sentence form, question style, vocabulary focus);
-5. open lexicon examples used as a **soft** level assistant.
+1. the example question shapes the teacher ticks;
+2. teacher notes and an optional example sentence;
+3. optional textbook / worksheet screenshot analysis;
+4. classroom discovery tags (Level, Topic, Grammar), which guide the sample only;
+5. optional form hints (affirmative, negative, yes/no, wh-question, fill the gap, find the mistake);
+6. open lexicon examples used as a **soft** level assistant on the full-question call.
 
 Publisher book names, unit sequences, and proprietary wordlists are not
 generation inputs. Screenshot images are processed in memory and discarded.
@@ -42,21 +43,30 @@ certification. Lexicon levels remain provisional.
 
 1. Teacher completes quiz setup (title, description, tags, type) and chooses
    **Create Questions** or the premium **AI Generate** path.
-2. AI Generate opens a compact brief with setup values already filled.
+2. AI Generate opens with those setup values already filled. The teacher can add
+   notes, paste one example question, and optionally hint at forms to try.
 3. Optional image analysis returns an editable lesson summary.
-4. Teacher confirms Level / styles / question count, then reviews a plain-language
-   brief in a confirm dialog before the Gemini call.
-5. Gemini drafts questions from the full `GenerationBrief`.
-6. The lexicon adds **non-blocking** level warnings and replacement suggestions.
-7. Teacher reviews each question: edit, approve, reject, regenerate, simplify, keep words,
+4. **Show 6 examples** asks Gemini for question stems only: no answers and no
+   image keywords. About half stay close to the teacher's example. The rest are
+   other forms of the same language point. Tags do not add a second task.
+   Find-the-mistake items use four complete sentences as options, not a single
+   word to swap. Fill-the-gap items stay as a blank plus a word or short phrase.
+5. The teacher ticks the shapes to keep, can edit a stem, and chooses how many
+   questions to write (10, 15, 20, or another count from 1 to 20).
+6. Gemini writes the full multiple-choice items, with answers and image keywords,
+   split across the ticked shapes only.
+7. The lexicon adds **non-blocking** level warnings. It does not rewrite a batch
+   once shapes have been selected.
+8. Teacher reviews each question: edit, approve, reject, regenerate, simplify, keep words,
    and choose among three image suggestions (stored library first, then Pixabay).
-8. Only approved questions enter the quiz editor, replacing an empty stub if
+9. Only approved questions enter the quiz editor, replacing an empty stub if
    present, and discovery tags sync back to quiz metadata.
 
 ## API routes
 
 - `POST /api/ai/analyze-lesson-image` — multipart image upload, ephemeral analysis
-- `POST /api/ai/generate-questions` — accepts a `GenerationBrief` (+ quiz type)
+- `POST /api/ai/generate-question-shapes` — six question stems plus an answer-style line
+- `POST /api/ai/generate-questions` — accepts a `GenerationBrief` (+ quiz type). `selectedShapes` binds the batch to the stems the teacher ticked.
 
 ## Building the lexicon
 

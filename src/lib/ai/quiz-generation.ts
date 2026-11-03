@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { GenerationBrief } from '@/lib/ai/generation-brief';
 import { buildBriefSummary } from '@/lib/ai/generation-brief';
+import { QUESTION_SHAPE_RULES } from '@/lib/ai/question-shapes';
 import { profilesForTags } from '@/lib/lexicon/grammar-profiles';
 import type { LexiconSelection } from '@/lib/lexicon/types';
 import { levelLabelFromId } from '@/lib/taxonomy/quiz-taxonomy';
@@ -87,6 +88,77 @@ export function createTeacherFirstPrompt(input: {
     brief.sentencePatterns && brief.sentencePatterns.length > 0
       ? brief.sentencePatterns.join('; ')
       : patterns;
+  const selectedShapes = brief.selectedShapes ?? [];
+
+  if (selectedShapes.length > 0) {
+    const shapeList = selectedShapes
+      .map(
+        (shape, index) =>
+          `${index + 1}. [${shape.shape}] ${shape.question}\n   Answers: ${shape.answerStyle}`
+      )
+      .join('\n');
+
+    return `Act as an expert young-learner ESL item writer for classroom teachers.
+
+SELECTED QUESTION SHAPES (binding):
+The teacher chose these shapes. Create exactly ${brief.numberOfQuestions} multiple-choice questions.
+Every question must be a new instance of one selected shape.
+Split the questions as evenly as possible across the selected shapes.
+Change the people, actions, objects, and numbers. Keep the shape, the language point, and the answer style.
+Do not add a shape the teacher did not select.
+Do not copy a selected stem exactly unless the teacher asked for that fixed sentence.
+Never join two teacher examples into one question. Each selected stem is one item.
+
+${shapeList}
+
+TEACHER CONTENT (binding when it names a topic, a number range, or a grammar point):
+- Teacher notes: ${brief.teacherNotes || 'No additional notes'}
+- Example the teacher typed: ${modelSentence}
+- CEFR band: ${levelLabelFromId(brief.level)} (${brief.level})
+- Quiz title: ${brief.quizTitle || 'Untitled quiz'}
+- Quiz description: ${brief.quizDescription || 'No public description'}
+- Lesson summary: ${lessonSummary}
+- Vocabulary the teacher named: ${teacherVocabulary}
+
+GUIDES (fill only what the teacher left open):
+- Topics: ${brief.topics.join(', ') || 'General classroom theme'}
+- Grammar tags: ${brief.grammarFocus.join(', ') || 'Short classroom language'}
+- Sentence form hints: ${brief.sentenceForms.join(', ') || 'None'}
+- Question style hints: ${brief.questionStyles.join(', ') || 'None'}
+- Useful sentence patterns: ${sentencePatterns}
+Tags must not add a second task. If the teacher asked for numbers written in words, do not add color questions.
+
+${QUESTION_SHAPE_RULES}
+
+LEVEL:
+- ${levelGuidance(brief.level)}
+- Keep each question under 16 words.
+- Follow the answer style on the selected shape.
+- Find the mistake answers are complete sentences, up to 12 words. Never a single word.
+- Fill-the-gap answers are a word or short phrase for the blank.
+- A number written in words may use up to 12 words.
+- Other answers stay under 8 words.
+- Age-appropriate classroom content only.
+- Create original wording. Do not copy long passages from any book page.
+
+LEVEL WORD HINTS (not a question list):
+${selection.words.slice(0, 40).join(', ') || 'common classroom words'}
+Do not turn these hints into questions unless a selected shape is about that word.
+
+QUALITY:
+- Create exactly ${brief.numberOfQuestions} multiple-choice questions.
+- Provide exactly four answer options.
+- Exactly one answer is correct.
+- Distractors must match the answer style and be unambiguously wrong.
+- For Find the mistake, the correct option is the full corrected sentence. Swapping one word in the stem must not be required.
+- If the answer style is a short model such as "Yes, they are", copy that pattern. Do not repeat the question's noun ("Yes, there are pandas" is wrong when the teacher asked for "Yes, they are").
+- correctAnswer must exactly match one string in answers.
+- Do not include answer labels such as "A)".
+- Also include a short imageKeyword (2-4 concrete words) for each question. For a number question, use the numeral.
+
+Return only a JSON array:
+[{"question":"...","answers":["...","...","...","..."],"correctAnswer":"...","imageKeyword":"..."}]`;
+  }
 
   return `Act as an expert young-learner ESL item writer for classroom teachers.
 

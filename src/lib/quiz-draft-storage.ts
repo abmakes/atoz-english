@@ -47,6 +47,12 @@ export type DraftGenerationBrief = {
   lessonSummary?: string
   keyVocabulary?: string[]
   sentencePatterns?: string[]
+  shapeSamples?: Array<{
+    shape: string
+    question: string
+    answerStyle: string
+    selected: boolean
+  }>
 }
 
 export type QuizDraftSnapshot = {

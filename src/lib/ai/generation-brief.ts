@@ -26,7 +26,7 @@ export const generationBriefSchema = z.object({
   topics: z.array(z.string().trim().min(1)).max(8).default([]),
   grammarFocus: z.array(z.string().trim().min(1)).max(8).default([]),
   teacherNotes: z.string().trim().max(1200).default(''),
-  modelSentence: z.string().trim().max(240).default(''),
+  modelSentence: z.string().trim().max(800).default(''),
   sentenceForms: z.array(z.enum(SENTENCE_FORM_OPTIONS)).max(4).default([]),
   questionStyles: z.array(z.enum(QUESTION_STYLE_OPTIONS)).max(4).default([]),
   vocabularyFocus: z.enum(VOCABULARY_FOCUS_OPTIONS).default('Mixed'),
@@ -36,9 +36,37 @@ export const generationBriefSchema = z.object({
   lessonSummary: z.string().trim().max(600).optional(),
   keyVocabulary: z.array(z.string().trim().min(1)).max(40).optional(),
   sentencePatterns: z.array(z.string().trim().min(1)).max(12).optional(),
+  selectedShapes: z
+    .array(
+      z.object({
+        shape: z.string().trim().min(1).max(48),
+        question: z.string().trim().min(1).max(240),
+        answerStyle: z.string().trim().min(1).max(200),
+      })
+    )
+    .max(8)
+    .optional(),
 });
 
 export type GenerationBrief = z.infer<typeof generationBriefSchema>;
+export type SelectedQuestionShape = NonNullable<
+  GenerationBrief['selectedShapes']
+>[number];
+
+/** Fold legacy flat tags into topics and grammar, then validate the brief. */
+export function briefFromRequest(
+  input: GenerationBrief & { tags?: string[] }
+): GenerationBrief {
+  return generationBriefSchema.parse({
+    ...input,
+    topics:
+      input.topics.length > 0 ? input.topics : (input.tags ?? []).filter(Boolean),
+    grammarFocus:
+      input.grammarFocus.length > 0
+        ? input.grammarFocus
+        : (input.tags ?? []).filter(Boolean),
+  });
+}
 
 export const lessonImageAnalysisSchema = z.object({
   lessonSummary: z.string().trim().min(1).max(600),
