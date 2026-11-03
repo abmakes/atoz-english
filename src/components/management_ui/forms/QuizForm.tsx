@@ -136,14 +136,14 @@ const MultipleChoiceForm = memo(function MultipleChoiceForm({
   };
 
   return (
-    <div className="space-y-4 text-lg text-[--text-color] grandstander">
-      <h3 className='-mb-3 ml-4 text-xl font-bold'>Answers</h3>
-      <div className='grid grid-cols-2 gap-2'>
+    <div className="space-y-2 text-base text-[--text-color] grandstander md:space-y-4 md:text-lg">
+      <h3 className="-mb-1 ml-1 text-lg font-bold md:-mb-3 md:ml-4 md:text-xl">Answers</h3>
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {localAnswers.map((localAnswer, aIndex) => (
           <div key={`answer-container-${question.tempId}-${aIndex}`} className="relative">
             <Textarea
               rows={1}
-              className='w-full border-2 border-slate-200 bg-white py-4 pl-6 pr-12 text-base text-[--text-color]'
+              className="min-h-[44px] w-full border-2 border-slate-200 bg-white py-2 pl-3 pr-10 text-base text-[--text-color] md:min-h-[65px] md:py-4 md:pl-6 md:pr-12"
               name={`question-${question.tempId}-answer-${aIndex}`}
               value={localAnswer}
               onChange={(e) => handleLocalAnswerChange(aIndex, e.target.value)}
@@ -161,11 +161,15 @@ const MultipleChoiceForm = memo(function MultipleChoiceForm({
               variant="ghost"
               size="icon"
               onClick={() => selectCorrectAnswer(localAnswer)}
-              className={`absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 transform items-center justify-center rounded-full p-1
+              className={`absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 transform items-center justify-center rounded-full p-1 md:right-2
                           ${question.correctAnswer === localAnswer ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-slate-300 text-slate-600 hover:bg-slate-400'}`}
               title={question.correctAnswer === localAnswer ? "Marked as correct" : "Mark as correct"}
             >
-              {question.correctAnswer === localAnswer ? <Check size={20} strokeWidth={4} /> : <X size={20} strokeWidth={4} color="white"/>}
+              {question.correctAnswer === localAnswer ? (
+                <Check className="h-4 w-4 md:h-5 md:w-5" strokeWidth={4} />
+              ) : (
+                <X className="h-4 w-4 md:h-5 md:w-5" strokeWidth={4} color="white" />
+              )}
             </Button>
           </div>
         ))}
@@ -386,7 +390,7 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
 
   return (
     <>
-    <form onSubmit={handleSubmit} className={`space-y-8 border-none p-6 pt-4 shadow-none ${className}`}>
+    <form onSubmit={handleSubmit} className={`space-y-8 border-none p-3 pt-2 shadow-none md:p-6 md:pt-4 ${className}`}>
       {questions.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-4 rounded-xl bg-[var(--surface-stone)] px-6 py-16 text-center">
           <p className="text-xl font-semibold text-[--text-color]">No questions yet</p>
@@ -448,19 +452,19 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
                   }`}
                 >
                     <Button type="button" size="icon" variant="ghost" onClick={() => openImageModal(index)} title="Change question image">
-                      <Picture className="h-5 w-5 " />
+                      <Picture className="h-4 w-4 md:h-5 md:w-5" />
                     </Button>
                     <Button type="button" size="icon" variant="ghost" onClick={() => { duplicateQuestion(index); }} title="Duplicate Question">
-                      <Copy className="h-5 w-5" />
+                      <Copy className="h-4 w-4 md:h-5 md:w-5" />
                     </Button>
                     <Button type="button" size="icon" variant="ghost" onClick={() => { deleteQuestion(index); }} title="Delete Question">
-                      <Trash2 className="h-5 w-5 text-red-600" />
+                      <Trash2 className="h-4 w-4 text-red-600 md:h-5 md:w-5" />
                     </Button>
                 </div>
               </div>
-              <AccordionContent className="rounded-lg bg-[var(--surface-stone)] px-6 py-4">
-                <h3 className="ml-4 text-xl font-bold text-[--text-color] grandstander">Question {index + 1}</h3>
-                <div className="flex gap-4">
+              <AccordionContent className="rounded-lg bg-[var(--surface-stone)] px-2 py-2 md:px-6 md:py-4">
+                <h3 className="ml-1 text-lg font-bold text-[--text-color] grandstander md:ml-4 md:text-xl">Question {index + 1}</h3>
+                <div className="flex gap-2 md:gap-4">
                   <div className="relative flex basis-1/5 flex-col">
                     <div className="relative w-full">
                       <QuestionImage
@@ -469,13 +473,13 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
                         alt={`Question ${index + 1} image`}
                         width={240}
                         height={120}
-                        className="h-24 rounded-md bg-slate-200 object-cover"
+                        className="h-20 rounded-md bg-slate-200 object-cover md:h-24"
                       />
                       <Button 
                         type="button" 
                         variant="outline" 
                         onClick={() => openImageModal(index)} 
-                        className="absolute bottom-1 right-1 h-auto bg-white/80 p-1 px-2 text-xs hover:bg-white"
+                        className="absolute bottom-1 right-1 hidden h-auto bg-white/80 p-1 px-2 text-xs hover:bg-white md:inline-flex"
                       >
                         Change Image
                       </Button>
@@ -488,12 +492,12 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
                       value={question.question}
                       onChange={(e) => handleQuestionChange(index, 'question', e.target.value)}
                       placeholder="Enter your question here"
-                      className="w-full flex-grow border-2 border-slate-200 bg-white p-6 font-semibold text-[--text-color] grandstander"
+                      className="min-h-[44px] w-full flex-grow border-2 border-slate-200 bg-white p-3 text-base font-semibold text-[--text-color] grandstander md:min-h-[65px] md:p-6"
                       required
                     />
                   </div>
                 </div>
-                <div className="mt-4">
+                <div className="mt-2 md:mt-4">
                   {renderQuestionForm(index)}
                 </div>
               </AccordionContent>
