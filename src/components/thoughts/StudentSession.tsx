@@ -151,7 +151,7 @@ export default function StudentSession({
     void finishRecording()
   }
 
-  const usePhoto = async (file: File | undefined) => {
+  const applyPhoto = async (file: File | undefined) => {
     if (!file) return
     try {
       const background = await photoFileToDataUrl(file)
@@ -562,7 +562,7 @@ export default function StudentSession({
                       onChange={(event) => {
                         const file = event.target.files?.[0]
                         event.target.value = ''
-                        void usePhoto(file)
+                        void applyPhoto(file)
                       }}
                     />
                     <input
@@ -573,7 +573,7 @@ export default function StudentSession({
                       onChange={(event) => {
                         const file = event.target.files?.[0]
                         event.target.value = ''
-                        void usePhoto(file)
+                        void applyPhoto(file)
                       }}
                     />
                     <button
