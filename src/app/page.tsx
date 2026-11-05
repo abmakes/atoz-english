@@ -299,13 +299,13 @@ export default function HomePage() {
           >
             <div>
               <p className="text-xs font-black uppercase tracking-[0.16em] text-[#168CB9] grandstander">
-                Practice on your own
+                Practice
               </p>
-              <h3 className="mt-2 text-3xl font-black grandstander">Sentence Builder</h3>
+              <h3 className="mt-2 text-3xl font-black grandstander">No class quiz required</h3>
               <p className="mt-2 max-w-2xl text-[--text-light] inclusive-sans">
-                Pick one grammar structure, then build 20 picture sentences for that
-                structure only. Present simple stays present simple until you choose
-                another card.
+                Sentence Builder is one player and one grammar structure. Word Bite and
+                Sentence Swim are in beta: two to four players around one screen, with
+                the same sentences.
               </p>
             </div>
             <span className="inline-flex items-center gap-2 font-black grandstander">
