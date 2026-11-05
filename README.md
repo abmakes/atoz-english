@@ -5,7 +5,7 @@ Interactive educational quiz games built with **Next.js 15**, **React 19**, **Ty
 ## Features
 
 - **Multiple-choice** and **Splash Dash** PixiJS games (timers, scoring, power-ups, teams)
-- **Practice** tab (`/practice`): single-player games such as Sentence Builder
+- **Practice** tab (`/practice`): Sentence Builder, plus beta same-screen Word Bite and Sentence Swim
 - **Teacher Tools** (`/tools`, signed-in): Story Creator, temporary Image curator, and other classroom helpers
 - Modular engine: `EventBus`, `RuleEngine`, `ScoringManager`, `TimerManager`, `PowerUpManager`, `AssetLoader`
 - Quiz CRUD with Zod-validated REST APIs and Prisma/PostgreSQL

@@ -11,7 +11,7 @@ How to keep docs honest after changes: [project_docs/DOCUMENTATION_MAINTENANCE.m
 
 Teacher-centric quiz platform: create quizzes (form, CSV, AI), then play them as classroom games — PixiJS 2D (Team Quiz, Splash Dash, Ninja Climb) and Three.js 3D (Tug of War) — with teams, timers, scoring, themes, and power-ups.
 
-**Practice** (`/practice`, public): single-player games that do not need a teacher quiz. First game is **Sentence Builder** at `/practice/sentence-builder` — pick one grammar structure, then build picture sentences for that structure only.
+**Practice** (`/practice`, public): games that do not need a teacher quiz. **Sentence Builder** (`/practice/sentence-builder`) is single-player: pick one grammar structure, then build picture sentences for that structure only. **Word Bite** and **Sentence Swim** (`/practice/word-bite`, `/practice/sentence-swim`, both beta) are same-screen games for 2–4 players. They reuse those grammar sentences. Word Bite is a fill-in-the-blank race for a verb form or a pronoun. Sentence Swim is a minute of eating words in order to build the matching sentences.
 
 **Teacher Tools** (`/tools`, signed-in only): small classroom helpers. **Story Creator** — AI-generated 4-picture stories (Gemini text + image), a printable 2×2 worksheet, a public student link for per-picture voice recording, and a live lip-synced "movie" player (canvas virtual camera; no video files are generated). Plan/architecture: [TEACHER_TOOLS_STORY_CREATOR_PLAN.md](TEACHER_TOOLS_STORY_CREATOR_PLAN.md). **Thoughts** — a class speaking wall: students open a share link, decorate a sticker face from `public/images/thoughts/`, and record a short answer. The face talks from the amplitude envelope. Teachers approve which clips the class can watch. Student audio is stored in the public Vercel Blob store (unguessable path) and streamed through an access check. The file URL is never sent to the browser. Also includes a **temporary Image curator** (`/tools/image-curator`) that saves Pixabay photos into the quiz image library by CEFR word until a full collection exists.
 
@@ -56,7 +56,7 @@ src/app/                Pages + REST API routes
 src/components/game_ui/ React game shell (GameContainer, GameplayView, setup, HUD overlays)
 src/lib/game-engine/    Renderer-neutral session, runtime, quiz source, mode registry
 src/lib/pixi-engine/    Shared 2D engine (PixiEngine, BaseGame, managers)
-src/lib/pixi-games/     2D game implementations (multiple-choice, splash-dash, ninja-climb, sentence-builder)
+src/lib/pixi-games/     2D game implementations (multiple-choice, splash-dash, ninja-climb, sentence-builder, word-chompers)
 src/lib/three-engine/   Three.js world + runtime + ThreeGame contract
 src/lib/three-games/    3D game implementations (quiz-room, tug-of-war)
 src/lib/schemas.ts      Zod schemas
@@ -95,6 +95,7 @@ CONTEXT.md              This hub
 | **Ninja Climb integration** | [src/lib/pixi-games/ninja-climb/README.md](src/lib/pixi-games/ninja-climb/README.md) | NC wiring checklist |
 | **Multiple-choice flow** | [src/lib/pixi-games/multiple-choice/MultipleChoiceFlow.md](src/lib/pixi-games/multiple-choice/MultipleChoiceFlow.md) | MC-specific deep dive |
 | **Sentence Builder** | [src/lib/pixi-games/sentence-builder/README.md](src/lib/pixi-games/sentence-builder/README.md) | Built-in picture sentence practice |
+| **Word Bite / Sentence Swim** | [src/lib/pixi-games/word-chompers/README.md](src/lib/pixi-games/word-chompers/README.md) | Beta same-screen grammar practice |
 | **API / Zod conventions** | [src/lib/README.md](src/lib/README.md) | API routes, schemas, responses |
 | **Assets contract** | [public/ASSETS.md](public/ASSETS.md) | public/ files, CI verify |
 | **AI quiz + lexicon setup** | [AI_QUIZ_GENERATOR_SETUP.md](AI_QUIZ_GENERATOR_SETUP.md) | Teacher brief, screenshot analysis, soft lexicon audit, review step |
@@ -132,7 +133,7 @@ Official Pixi v8 API reference: https://pixijs.download/release/docs/index.html
 1. Extend `BaseGame` under `src/lib/pixi-games/<slug>/`.
 2. Register in `src/lib/game-engine/modes/builtinGameModes.ts` (`renderer: 'pixi'`, `PixiRuntimeAdapter`).
 3. Follow GAME_STARTUP_FLOW + [game-development-guide.md](project_docs/game-development-guide.md).
-4. A fixed practice set (Sentence Builder) can own one `PIXI.Application` in its screen component.
+4. A fixed practice set (Sentence Builder, Word Bite, Sentence Swim) can own one `PIXI.Application` in its screen component.
 
 **3D (Three):**
 1. Implement `ThreeGame` under `src/lib/three-games/<slug>/`.
