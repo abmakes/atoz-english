@@ -224,6 +224,7 @@ export const HUD_EVENTS = {
   QUESTION_SHOWN: 'hud:questionShown',
   ANSWER_SELECTED: 'hud:answerSelected',
   READY: 'hud:ready',
+  QUESTION_IMAGE_FALLBACK: 'hud:questionImageFallback',
 } as const;
 
 export interface HudQuestionShownPayload {
@@ -239,6 +240,17 @@ export interface HudQuestionShownPayload {
 
 export interface HudAnswerSelectedPayload {
   selectedIndex: number
+}
+
+/** HTML <img> overlay when Pixi cannot show a question GIF (tablet / iOS fetch). */
+export interface HudQuestionImageFallbackPayload {
+  imageUrl: string | null
+  slot: {
+    top: number
+    left: number
+    width: number
+    height: number
+  } | null
 }
 
 export const TUG_EVENTS = {
@@ -344,6 +356,7 @@ export interface EngineEvents {
   [HUD_EVENTS.QUESTION_SHOWN]: (payload: HudQuestionShownPayload) => void;
   [HUD_EVENTS.ANSWER_SELECTED]: (payload: HudAnswerSelectedPayload) => void;
   [HUD_EVENTS.READY]: () => void;
+  [HUD_EVENTS.QUESTION_IMAGE_FALLBACK]: (payload: HudQuestionImageFallbackPayload) => void;
   [TUG_EVENTS.OFFSET_CHANGED]: (payload: TugOffsetChangedPayload) => void;
   [TUG_EVENTS.ROUND_WON]: (payload: TugRoundWonPayload) => void;
   [TUG_EVENTS.MATCH_ENDED]: (payload: TugMatchEndedPayload) => void;

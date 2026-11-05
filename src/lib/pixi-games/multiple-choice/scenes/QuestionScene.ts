@@ -9,6 +9,7 @@ import { PixiApplication } from '@/lib/pixi-engine/core/PixiApplication'; // Imp
 // Import the theme config type
 import type { PixiSpecificConfig } from '../../../themes'; // Use correct relative path
 import type { LayoutProfile } from '../managers/MultipleChoiceLayoutManager';
+import { questionMediaPixelSize } from '@/lib/pixi-engine/game/questionImageFallback';
 // Remove ImageOptimizerCache import if not needed
 // import { ImageOptimizerCache } from 'next/dist/server/image-optimizer';
 
@@ -199,8 +200,8 @@ export class QuestionScene extends PIXI.Container {
             // ... (get dimensions, check dimensions > 0, calculate scale, check scale, set scale/position) ...
             // (All the logic currently inside the main 'if (this.questionMedia && mediaBounds ...)' block)
 
-             const mediaOrigWidth = this.questionMedia.texture?.orig.width ?? this.questionMedia.width;
-             const mediaOrigHeight = this.questionMedia.texture?.orig.height ?? this.questionMedia.height;
+             const { width: mediaOrigWidth, height: mediaOrigHeight } =
+                 questionMediaPixelSize(this.questionMedia);
 
              if (mediaOrigWidth <= 0 || mediaOrigHeight <= 0) { /* ... hide and return ... */ return;}
 
@@ -255,8 +256,8 @@ export class QuestionScene extends PIXI.Container {
         
         // Position media in the available space
         if (this.questionMedia && mediaBounds && mediaBounds.width > 0 && mediaBounds.height > 0) {
-            const mediaOrigWidth = this.questionMedia.texture?.orig.width ?? this.questionMedia.width;
-            const mediaOrigHeight = this.questionMedia.texture?.orig.height ?? this.questionMedia.height;
+            const { width: mediaOrigWidth, height: mediaOrigHeight } =
+                questionMediaPixelSize(this.questionMedia);
 
             if (mediaOrigWidth > 0 && mediaOrigHeight > 0) {
                 // Calculate scale to fit within media bounds
