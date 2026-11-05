@@ -208,6 +208,9 @@ export class WordChompersGame {
   private pendingSkip = false
   private immuneUntil = 0
   private stretch = 150
+  private compact = false
+  private joyRadius = 50
+  private playInset = 36
   private lastW = 0
   private lastH = 0
   private resolution = 1
@@ -237,6 +240,11 @@ export class WordChompersGame {
   private clueBottomBg!: Graphics
   private clueTopShadow!: Graphics
   private clueBottomShadow!: Graphics
+  private clueRight!: Container
+  private clueRightText!: Text
+  private clueRightHint!: Text
+  private clueRightBg!: Graphics
+  private clueRightShadow!: Graphics
   private dots!: Graphics
   private timerView!: Container
   private timerTrack!: Graphics
@@ -326,6 +334,14 @@ export class WordChompersGame {
     this.clueBottomHint.visible = false
     this.clueBottom = new Container()
     this.clueBottom.addChild(this.clueBottomShadow, this.clueBottomBg, this.clueBottomText, this.clueBottomHint)
+    this.clueRightShadow = new Graphics()
+    this.clueRightBg = new Graphics()
+    this.clueRightText = this.makeLabel('', 30)
+    this.clueRightHint = this.makeLabel('', 16)
+    this.clueRightHint.visible = false
+    this.clueRight = new Container()
+    this.clueRight.visible = false
+    this.clueRight.addChild(this.clueRightShadow, this.clueRightBg, this.clueRightText, this.clueRightHint)
 
     this.dots = new Graphics()
     this.timerTrack = new Graphics()
@@ -343,7 +359,7 @@ export class WordChompersGame {
     this.banner.visible = false
     this.finalView = new Container()
     this.finalView.visible = false
-    this.hud.addChild(this.clueTop, this.clueBottom, this.dots, this.timerView, this.banner, this.finalView)
+    this.hud.addChild(this.clueTop, this.clueBottom, this.clueRight, this.dots, this.timerView, this.banner, this.finalView)
   }
 
   private buildPlayers() {
@@ -441,6 +457,7 @@ export class WordChompersGame {
     const width = this.app.screen.width
     const height = this.app.screen.height
     if (width < 10 || height < 10) return
+    this.compact = this.options.mode === 'swim' && (Math.min(width, height) < 560 || width < 500)
     this.stretch = Math.max(120, Math.min(190, Math.min(width, height) * 0.34))
     this.app.stage.hitArea = new Rectangle(0, 0, width, height)
     const seats = SEATS[this.options.players]
@@ -467,6 +484,9 @@ export class WordChompersGame {
     this.drawBackground()
     this.layoutClues()
     this.layoutTimer()
+    if (this.options.mode === 'swim') {
+      for (const word of this.words) this.paintWord(word)
+    }
     if (this.phase === 'bite') this.updateBiteWords(0)
     if (this.phase === 'final') this.drawFinal()
     this.lastW = width
@@ -540,8 +560,237 @@ export class WordChompersGame {
   }
 
   private layoutClues() {
+    if (this.options.mode === 'swim' && this.options.players === 2) {
+      this.clueRight.visible = false
+      this.placeDocks()
+      return
+    }
+    if (this.options.mode === 'swim' && this.options.players === 3) {
+      this.placeTrio()
+      return
+    }
+    this.clueRight.visible = false
     this.placeClue(this.clueTop, this.clueTopShadow, this.clueTopBg, this.clueTopText, this.clueTopHint, true)
     this.placeClue(this.clueBottom, this.clueBottomShadow, this.clueBottomBg, this.clueBottomText, this.clueBottomHint, false)
+  }
+
+  private drawClueCard(
+    shadow: Graphics,
+    bg: Graphics,
+    title: Text,
+    hint: Text,
+    maxWidth: number,
+    pad: number
+  ) {
+    const swim = hint.visible
+    title.style.wordWrap = true
+    title.style.wordWrapWidth = maxWidth - 24
+    hint.style.wordWrap = true
+    hint.style.wordWrapWidth = maxWidth - 24
+    const gap = swim ? 4 : 0
+    const stackH = swim ? title.height + gap + hint.height : title.height
+    const cardW = Math.min(maxWidth, Math.max(96, Math.max(title.width, swim ? hint.width : 0) + 24))
+    const cardH = stackH + pad
+    shadow.clear()
+    shadow.roundRect(-cardW / 2 + 3, -cardH / 2 + 3, cardW, cardH, 16).fill(INK)
+    bg.clear()
+    bg.roundRect(-cardW / 2, -cardH / 2, cardW, cardH, 16).fill(0xffffff).stroke({ width: 3, color: INK })
+    if (swim) {
+      title.position.set(0, -stackH / 2 + title.height / 2)
+      hint.position.set(0, stackH / 2 - hint.height / 2)
+    } else {
+      title.position.set(0, 0)
+    }
+    return { cardW, cardH }
+  }
+
+  /** Two-player docks: joystick, sentence, and prompt share one centerline. */
+  private placeDocks() {
+    const width = this.app.screen.width
+    const height = this.app.screen.height
+    const compact = this.compact
+    const inset = compact ? 6 : 12
+    const joyR = compact ? 30 : 46
+    const gap = compact ? 8 : 14
+    this.joyRadius = joyR
+    this.clueTopText.style.fontSize = compact ? 14 : 18
+    this.clueBottomText.style.fontSize = compact ? 14 : 18
+    this.clueTopHint.style.fontSize = compact ? 11 : 13
+    this.clueBottomHint.style.fontSize = compact ? 11 : 13
+
+    const specs = [
+      { top: false, card: this.clueBottom, shadow: this.clueBottomShadow, bg: this.clueBottomBg, title: this.clueBottomText, hint: this.clueBottomHint },
+      { top: true, card: this.clueTop, shadow: this.clueTopShadow, bg: this.clueTopBg, title: this.clueTopText, hint: this.clueTopHint },
+    ]
+    const measured = specs.map((spec) => {
+      const player = this.players[spec.top ? 1 : 0]
+      const naturalW = player ? player.slots.width / (player.slots.scale.x || 1) : 80
+      const room = width - inset * 2 - joyR * 2 - gap * 2
+      const clueMax = Math.min(compact ? 156 : 230, Math.max(108, room - naturalW * 0.62))
+      const card = this.drawClueCard(spec.shadow, spec.bg, spec.title, spec.hint, clueMax, compact ? 12 : 16)
+      const slotScale = Math.min(1, Math.max(0.5, (room - card.cardW) / Math.max(48, naturalW)))
+      return { ...spec, ...card, slotScale, naturalW }
+    })
+    const band = Math.max(joyR * 2, ...measured.map((item) => Math.max(item.cardH, 28)))
+    this.playInset = inset + band
+
+    for (const item of measured) {
+      const player = this.players[item.top ? 1 : 0]
+      if (!player) continue
+      const y = item.top ? inset + band / 2 : height - inset - band / 2
+      const joyX = item.top ? width - inset - joyR : inset + joyR
+      const clueX = item.top ? inset + item.cardW / 2 : width - inset - item.cardW / 2
+      const left = item.top ? clueX + item.cardW / 2 + gap : joyX + joyR + gap
+      const right = item.top ? joyX - joyR - gap : clueX - item.cardW / 2 - gap
+      const slotsHalf = (item.naturalW * item.slotScale) / 2
+      const mid = width / 2
+      const slotsX = mid - slotsHalf >= left && mid + slotsHalf <= right ? mid : (left + right) / 2
+      this.paintJoy(player, joyR)
+      player.joy.position.set(joyX, y)
+      player.slots.scale.set(item.slotScale)
+      player.slots.position.set(slotsX, y)
+      player.slots.rotation = item.top ? Math.PI : 0
+      item.card.position.set(clueX, y)
+      item.card.rotation = item.top ? Math.PI : 0
+      const homeX = item.top ? width - this.playInset - 8 : this.playInset + 8
+      const homeY = item.top ? this.playInset + (compact ? 34 : 46) : height - this.playInset - (compact ? 34 : 46)
+      player.anchorX = homeX
+      player.anchorY = homeY
+      if (!(this.phase === 'swim' && this.lastW > 0)) {
+        player.x = homeX
+        player.y = homeY
+      }
+    }
+  }
+
+  /** Three-player docks. Each edge keeps the stick, sentence, and prompt on one line. */
+  private placeTrio() {
+    const width = this.app.screen.width
+    const height = this.app.screen.height
+    const compact = this.compact
+    const inset = compact ? 6 : 12
+    const joyR = compact ? 30 : 46
+    const gap = compact ? 8 : 14
+    this.joyRadius = joyR
+    const titleSize = compact ? 14 : 18
+    const hintSize = compact ? 11 : 13
+    this.clueTopText.style.fontSize = titleSize
+    this.clueBottomText.style.fontSize = titleSize
+    this.clueRightText.style.fontSize = titleSize
+    this.clueTopHint.style.fontSize = hintSize
+    this.clueBottomHint.style.fontSize = hintSize
+    this.clueRightHint.style.fontSize = hintSize
+    this.clueRight.visible = true
+
+    const bottom = this.players[0]
+    const right = this.players[1]
+    const top = this.players[2]
+    if (!bottom || !right || !top) return
+    const natural = (player: Chomper) => player.slots.width / (player.slots.scale.x || 1)
+    const pad = compact ? 12 : 16
+    const horizontalRoom = width - inset * 2 - joyR * 2 - gap * 2
+    const verticalRoom = height - inset * 2 - joyR * 2 - gap * 2
+    const bottomCard = this.drawClueCard(
+      this.clueBottomShadow,
+      this.clueBottomBg,
+      this.clueBottomText,
+      this.clueBottomHint,
+      Math.min(compact ? 150 : 210, Math.max(100, horizontalRoom - natural(bottom) * 0.5)),
+      pad
+    )
+    const topCard = this.drawClueCard(
+      this.clueTopShadow,
+      this.clueTopBg,
+      this.clueTopText,
+      this.clueTopHint,
+      Math.min(compact ? 150 : 210, Math.max(100, horizontalRoom - natural(top) * 0.5)),
+      pad
+    )
+    const rightCard = this.drawClueCard(
+      this.clueRightShadow,
+      this.clueRightBg,
+      this.clueRightText,
+      this.clueRightHint,
+      Math.min(compact ? 140 : 190, Math.max(100, verticalRoom * 0.38)),
+      pad
+    )
+    const band = Math.max(joyR * 2, bottomCard.cardH, topCard.cardH, rightCard.cardH)
+    this.playInset = inset + band
+    const bottomY = height - inset - band / 2
+    const topY = inset + band / 2
+    const rightX = width - inset - band / 2
+    const leftX = inset + band / 2
+
+    const placeRow = (
+      player: Chomper,
+      card: Container,
+      cardW: number,
+      y: number,
+      rotation: number,
+      stickX: number
+    ) => {
+      const innerLeft = leftX + joyR + gap
+      const innerRight = rightX - joyR - gap
+      const promptX = innerRight - cardW / 2
+      const slotScale = Math.min(1, Math.max(0.5, (promptX - cardW / 2 - gap - innerLeft) / Math.max(48, natural(player))))
+      const slotsHalf = (natural(player) * slotScale) / 2
+      const slotLeft = innerLeft
+      const slotRight = promptX - cardW / 2 - gap
+      const slotsX = slotLeft + slotsHalf <= slotRight - slotsHalf ? (slotLeft + slotRight) / 2 : slotLeft + slotsHalf
+      this.paintJoy(player, joyR)
+      player.joy.position.set(stickX, y)
+      player.slots.scale.set(slotScale)
+      player.slots.position.set(Math.min(slotsX, slotRight - slotsHalf), y)
+      player.slots.rotation = rotation
+      card.position.set(promptX, y)
+      card.rotation = rotation
+    }
+
+    placeRow(bottom, this.clueBottom, bottomCard.cardW, bottomY, 0, leftX)
+    placeRow(top, this.clueTop, topCard.cardW, topY, Math.PI, leftX)
+
+    const colTop = topY + band / 2 + gap
+    const colBottom = bottomY - joyR - gap
+    const promptY = colTop + rightCard.cardW / 2
+    const slotScale = Math.min(
+      1,
+      Math.max(0.5, (colBottom - (promptY + rightCard.cardW / 2 + gap)) / Math.max(48, natural(right)))
+    )
+    const slotsHalf = (natural(right) * slotScale) / 2
+    const slotTop = promptY + rightCard.cardW / 2 + gap
+    const slotBottom = colBottom
+    const slotsY = slotTop + slotsHalf <= slotBottom - slotsHalf ? (slotTop + slotBottom) / 2 : slotTop + slotsHalf
+    this.paintJoy(right, joyR)
+    right.joy.position.set(rightX, bottomY)
+    right.slots.scale.set(slotScale)
+    right.slots.position.set(rightX, Math.min(slotsY, slotBottom - slotsHalf))
+    right.slots.rotation = -Math.PI / 2
+    this.clueRight.position.set(rightX, promptY)
+    this.clueRight.rotation = -Math.PI / 2
+
+    const park = compact ? 36 : 48
+    const homes = [
+      { player: bottom, x: leftX + joyR + 12, y: bottomY - band / 2 - park },
+      { player: right, x: rightX - band / 2 - park, y: bottomY - joyR - 16 },
+      { player: top, x: leftX + joyR + 12, y: topY + band / 2 + park },
+    ]
+    for (const home of homes) {
+      home.player.anchorX = Math.max(36, Math.min(width - this.playInset - 20, home.x))
+      home.player.anchorY = Math.max(this.playInset + 20, Math.min(height - this.playInset - 20, home.y))
+      if (!(this.phase === 'swim' && this.lastW > 0)) {
+        home.player.x = home.player.anchorX
+        home.player.y = home.player.anchorY
+      }
+    }
+  }
+
+  private paintJoy(player: Chomper, radius: number) {
+    const bg = player.joy.children[0] as Graphics
+    bg.clear()
+    bg.circle(0, 0, radius).fill({ color: 0xffffff, alpha: 0.82 }).stroke({ width: 3, color: player.color })
+    player.knob.clear()
+    player.knob.circle(0, 0, Math.max(10, radius * 0.36)).fill(player.color)
+    player.joy.hitArea = new Circle(0, 0, radius + 6)
   }
 
   private placeClue(card: Container, shadow: Graphics, bg: Graphics, title: Text, hint: Text, top: boolean) {
@@ -579,10 +828,13 @@ export class WordChompersGame {
   private setClue(text: string) {
     this.clueTopText.style.fontSize = 30
     this.clueBottomText.style.fontSize = 30
+    this.clueRightText.style.fontSize = 30
     this.clueTopHint.visible = false
     this.clueBottomHint.visible = false
+    this.clueRightHint.visible = false
     this.clueTopText.text = text
     this.clueBottomText.text = text
+    this.clueRightText.text = text
     this.layoutClues()
   }
 
@@ -591,14 +843,19 @@ export class WordChompersGame {
     if (!frame) return
     this.clueTopText.style.fontSize = 20
     this.clueBottomText.style.fontSize = 20
+    this.clueRightText.style.fontSize = 20
     this.clueTopHint.style.fontSize = 13
     this.clueBottomHint.style.fontSize = 13
+    this.clueRightHint.style.fontSize = 13
     this.clueTopText.text = frame.title
     this.clueBottomText.text = frame.title
+    this.clueRightText.text = frame.title
     this.clueTopHint.text = frame.hint
     this.clueBottomHint.text = frame.hint
+    this.clueRightHint.text = frame.hint
     this.clueTopHint.visible = true
     this.clueBottomHint.visible = true
+    this.clueRightHint.visible = true
     this.layoutClues()
   }
 
@@ -617,6 +874,7 @@ export class WordChompersGame {
     this.finalView.visible = false
     this.clueTop.visible = true
     this.clueBottom.visible = true
+    this.clueRight.visible = this.options.mode === 'swim' && this.options.players === 3
     this.dots.visible = true
     this.timerView.visible = false
     for (const player of this.players) {
@@ -721,7 +979,7 @@ export class WordChompersGame {
   }
 
   private spawnFish() {
-    const count = Math.min(12, this.vocab.length)
+    const count = Math.min(this.compact ? 8 : 12, this.vocab.length)
     for (let index = 0; index < count; index += 1) {
       const token = this.makeToken('', false, null)
       token.heading = Math.random() * Math.PI * 2
@@ -743,10 +1001,16 @@ export class WordChompersGame {
     token.view.visible = true
     token.goneUntil = 0
     this.paintWord(token)
+    const docked = this.options.players === 2 || this.options.players === 3
+    const fieldTop = docked ? this.playInset + 12 : height * 0.2
+    const fieldBottom = docked ? height - this.playInset - 12 : height * 0.8
+    const fieldRight = this.options.players === 3 ? width - this.playInset - 12 : width * 0.88
+    const span = Math.max(24, fieldBottom - fieldTop)
+    const clearance = this.compact ? 72 : 110
     for (let attempt = 0; attempt < 12; attempt += 1) {
-      token.x = width * 0.12 + Math.random() * width * 0.76
-      token.y = height * 0.2 + Math.random() * height * 0.6
-      const clear = this.players.every((player) => Math.hypot(player.x - token.x, player.y - token.y) > 110)
+      token.x = width * 0.12 + Math.random() * Math.max(24, fieldRight - width * 0.12)
+      token.y = fieldTop + Math.random() * span
+      const clear = this.players.every((player) => Math.hypot(player.x - token.x, player.y - token.y) > clearance)
       if (clear) break
     }
     token.view.position.set(token.x, token.y)
@@ -793,7 +1057,9 @@ export class WordChompersGame {
     }
     const swim = this.options.mode === 'swim'
     if (swim) {
-      const radius = Math.max(30, token.label.width / 2 + 18, token.label.height / 2 + 16)
+      token.label.style.fontSize = this.compact ? 15 : 22
+      const pad = this.compact ? 10 : 18
+      const radius = Math.max(this.compact ? 20 : 30, token.label.width / 2 + pad, token.label.height / 2 + pad)
       token.hw = radius
       token.hh = radius
       const border = token.good ? GOOD_INK : 0x8ec4e4
@@ -893,10 +1159,14 @@ export class WordChompersGame {
           player.x += player.jx * speed * dt
           player.y += player.jy * speed * dt
         }
-        player.x = Math.max(36, Math.min(width - 36, player.x))
-        player.y = Math.max(36, Math.min(height - 36, player.y))
+        const edge = this.options.players === 2 || this.options.players === 3 ? this.playInset : 36
+        const left = this.options.players === 3 ? 36 : edge
+        const rightEdge = this.options.players === 3 ? this.playInset : edge
+        player.x = Math.max(left, Math.min(width - rightEdge, player.x))
+        player.y = Math.max(edge, Math.min(height - edge, player.y))
       }
       const bob = Math.sin(this.now / 280 + player.index) * 3
+      player.view.scale.set(this.compact ? 0.72 : 1)
       player.view.position.set(player.x, player.y + bob)
       if (!player.lunge) {
         player.facing.rotation = player.dir
@@ -909,7 +1179,8 @@ export class WordChompersGame {
         this.paintChomper(player)
       }
       const back = player.dir + Math.PI
-      player.badge.position.set(player.view.x + Math.cos(back) * 50, player.view.y + Math.sin(back) * 50)
+      const badgeGap = this.compact ? 34 : 50
+      player.badge.position.set(player.view.x + Math.cos(back) * badgeGap, player.view.y + Math.sin(back) * badgeGap)
       player.badge.rotation = player.y < height * 0.5 ? Math.PI : 0
       if (player.lockUntil > 0 && this.now >= player.lockUntil) {
         player.seq = []
@@ -1072,8 +1343,14 @@ export class WordChompersGame {
     if (!frame) return
     const width = this.app.screen.width
     const height = this.app.screen.height
-    const minY = height * 0.14
-    const maxY = height * 0.86
+    const docked = this.options.players === 2 || this.options.players === 3
+    let minY = docked ? this.playInset + 8 : height * 0.14
+    let maxY = docked ? height - this.playInset - 8 : height * 0.86
+    const maxX = this.options.players === 3 ? width - this.playInset - 8 : width - 50
+    if (maxY - minY < 80) {
+      minY = height * 0.22
+      maxY = height * 0.78
+    }
     for (const word of this.words) {
       if (word.hidden) {
         if (this.now >= word.goneUntil) this.placeFish(word)
@@ -1082,9 +1359,9 @@ export class WordChompersGame {
       word.heading += (Math.random() - 0.5) * dt * 3
       word.x += Math.cos(word.heading) * word.speed * dt
       word.y += Math.sin(word.heading) * word.speed * dt
-      if (word.x < 50 || word.x > width - 50) {
+      if (word.x < 50 || word.x > maxX) {
         word.heading = Math.PI - word.heading
-        word.x = Math.max(50, Math.min(width - 50, word.x))
+        word.x = Math.max(50, Math.min(maxX, word.x))
       }
       if (word.y < minY || word.y > maxY) {
         word.heading = -word.heading
@@ -1160,13 +1437,15 @@ export class WordChompersGame {
     if (!frame) return
     const length = Math.max(0, ...frame.sentences.map((sentence) => sentence.length))
     let cursor = 0
-    const height = 34
+    const compact = this.compact && (this.options.players === 2 || this.options.players === 3)
+    const height = compact ? 26 : 34
+    const cellFont = compact ? 13 : 16
     for (let index = 0; index < length; index += 1) {
       const word = player.seq[index] ?? ''
       const filled = index < player.seq.length
-      const label = this.makeLabel(word, 16)
+      const label = this.makeLabel(word, cellFont)
       if (filled) label.style.fill = 0xffffff
-      const width = Math.max(42, label.width + 14)
+      const width = Math.max(compact ? 26 : 42, label.width + (compact ? 10 : 14))
       const cell = new Container()
       const plate = new Graphics()
       plate
@@ -1179,11 +1458,14 @@ export class WordChompersGame {
       player.slots.addChild(cell)
       cursor += width + 6
     }
-    const tally = this.makeLabel(String(player.built), 20)
+    const tally = this.makeLabel(String(player.built), compact ? 14 : 20)
     tally.style.fill = player.color
-    tally.position.set(cursor + tally.width / 2 + 8, height / 2)
+    tally.position.set(cursor + tally.width / 2 + 4, height / 2)
     player.slots.addChild(tally)
-    player.slots.pivot.set(Math.max(0, cursor - 6) / 2, height / 2)
+    const rowWidth = cursor + tally.width + 4
+    player.slots.pivot.set(rowWidth / 2, height / 2)
+    if (this.options.mode === 'swim' && this.options.players === 2) this.placeDocks()
+    if (this.options.mode === 'swim' && this.options.players === 3) this.placeTrio()
   }
 
   private stun(player: Chomper, losePoint: boolean) {
@@ -1264,7 +1546,7 @@ export class WordChompersGame {
     let dx = event.globalX - center.x
     let dy = event.globalY - center.y
     const distance = Math.hypot(dx, dy)
-    const radius = 40
+    const radius = this.joyRadius * 0.82
     if (distance > radius) {
       dx = (dx / distance) * radius
       dy = (dy / distance) * radius
@@ -1309,8 +1591,9 @@ export class WordChompersGame {
     const progress = Math.min(0.99999, remaining / SWIM_ROUND_MS)
     const seconds = Math.max(0, Math.ceil(remaining / 1000))
     if (this.timerText.text !== String(seconds)) this.timerText.text = String(seconds)
-    const radius = 40
-    const bar = 7
+    this.timerText.style.fontSize = this.compact ? 18 : 26
+    const radius = this.compact ? 28 : 40
+    const bar = this.compact ? 5 : 7
     this.timerTrack.clear()
     this.timerTrack.circle(0, 0, radius - bar).fill({ color: 0xffffff, alpha: 0.94 })
     this.timerTrack.arc(0, 0, radius - bar / 2, 0, Math.PI * 2).stroke({ width: bar, color: 0xd7e8f2 })
@@ -1342,6 +1625,7 @@ export class WordChompersGame {
     this.timerView.visible = false
     this.clueTop.visible = false
     this.clueBottom.visible = false
+    this.clueRight.visible = false
     for (const player of this.players) {
       player.view.visible = false
       player.badge.visible = false
