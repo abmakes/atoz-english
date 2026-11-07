@@ -24,9 +24,11 @@ import {
   BITE_ROUND_MS,
   BITE_ROUNDS,
   STUN_MS,
+  WORD_RETURN_MS,
   SWIM_ROUND_MS,
   SWIM_ROUNDS,
   swimMatch,
+  swimStock,
   takeRoundQueue,
 } from './round'
 
@@ -255,6 +257,7 @@ export class WordChompersGame {
   private bannerShadow!: Graphics
   private bannerTop!: Text
   private bannerBottom!: Text
+  private scoreBoard!: Container
   private finalView!: Container
 
   constructor(
@@ -357,9 +360,11 @@ export class WordChompersGame {
     this.banner = new Container()
     this.banner.addChild(this.bannerShadow, this.bannerBg, this.bannerTop, this.bannerBottom)
     this.banner.visible = false
+    this.scoreBoard = new Container()
+    this.scoreBoard.visible = false
     this.finalView = new Container()
     this.finalView.visible = false
-    this.hud.addChild(this.clueTop, this.clueBottom, this.clueRight, this.dots, this.timerView, this.banner, this.finalView)
+    this.hud.addChild(this.clueTop, this.clueBottom, this.clueRight, this.dots, this.timerView, this.banner, this.scoreBoard, this.finalView)
   }
 
   private buildPlayers() {
@@ -767,6 +772,7 @@ export class WordChompersGame {
     right.slots.rotation = -Math.PI / 2
     this.clueRight.position.set(rightX, promptY)
     this.clueRight.rotation = -Math.PI / 2
+    this.applyClueVisibility()
 
     const park = compact ? 36 : 48
     const homes = [
@@ -782,6 +788,7 @@ export class WordChompersGame {
         home.player.y = home.player.anchorY
       }
     }
+    this.applyClueVisibility()
   }
 
   private paintJoy(player: Chomper, radius: number) {
@@ -857,6 +864,13 @@ export class WordChompersGame {
     this.clueBottomHint.visible = true
     this.clueRightHint.visible = true
     this.layoutClues()
+    this.applyClueVisibility()
+  }
+
+  private applyClueVisibility() {
+    this.clueTop.visible = true
+    this.clueBottom.visible = true
+    this.clueRight.visible = this.options.mode === 'swim' && this.options.players === 3
   }
 
   private beginRound() {
@@ -868,13 +882,12 @@ export class WordChompersGame {
     }
     this.clearTokens()
     this.banner.visible = false
+    this.scoreBoard.visible = false
     this.bannerUntil = null
     this.globalDir = 1
     this.immuneUntil = 0
     this.finalView.visible = false
-    this.clueTop.visible = true
-    this.clueBottom.visible = true
-    this.clueRight.visible = this.options.mode === 'swim' && this.options.players === 3
+    this.applyClueVisibility()
     this.dots.visible = true
     this.timerView.visible = false
     for (const player of this.players) {
@@ -903,14 +916,12 @@ export class WordChompersGame {
       this.setClue(this.question.clue)
       this.aim = this.pickAim()
       this.hooks.onStatus?.(`Round ${this.roundIndex + 1}. ${this.question.clue.split('___').join('blank')}`)
-      this.speak(this.question.clue)
     } else {
       this.swimFrame = this.swimQueue[this.roundIndex]
       this.vocab = swimVocabulary(this.swimFrame)
       this.setSwimClue()
       for (const player of this.players) this.syncSlots(player)
       this.hooks.onStatus?.(`${this.swimFrame.title}. ${this.swimFrame.hint}`)
-      this.speak(`${this.swimFrame.title}. ${this.swimFrame.hint}`)
     }
     this.phase = 'countdown'
     this.countdownStep = 0
@@ -979,9 +990,10 @@ export class WordChompersGame {
   }
 
   private spawnFish() {
-    const count = Math.min(this.compact ? 8 : 12, this.vocab.length)
-    for (let index = 0; index < count; index += 1) {
-      const token = this.makeToken('', false, null)
+    const frame = this.swimFrame
+    if (!frame) return
+    for (const text of swimStock(frame.sentences, this.vocab, this.options.players)) {
+      const token = this.makeToken(text, false, null)
       token.heading = Math.random() * Math.PI * 2
       token.speed = 26 + Math.random() * 18
       this.words.push(token)
@@ -992,10 +1004,6 @@ export class WordChompersGame {
   private placeFish(token: Token) {
     const width = this.app.screen.width
     const height = this.app.screen.height
-    const used = new Set(this.words.filter((other) => other !== token && !other.hidden).map((other) => other.text))
-    const free = this.vocab.filter((word) => !used.has(word))
-    const pool = free.length > 0 ? free : this.vocab
-    token.text = pool[Math.floor(Math.random() * pool.length)] ?? this.vocab[0]
     token.label.text = token.text
     token.hidden = false
     token.view.visible = true
@@ -1057,9 +1065,9 @@ export class WordChompersGame {
     }
     const swim = this.options.mode === 'swim'
     if (swim) {
-      token.label.style.fontSize = this.compact ? 15 : 22
-      const pad = this.compact ? 10 : 18
-      const radius = Math.max(this.compact ? 20 : 30, token.label.width / 2 + pad, token.label.height / 2 + pad)
+      token.label.style.fontSize = this.compact ? 15 : 16
+      const pad = this.compact ? 10 : 12
+      const radius = Math.max(this.compact ? 20 : 22, token.label.width / 2 + pad, token.label.height / 2 + pad)
       token.hw = radius
       token.hh = radius
       const border = token.good ? GOOD_INK : 0x8ec4e4
@@ -1155,7 +1163,7 @@ export class WordChompersGame {
         const moving = !stunned && Math.hypot(player.jx, player.jy) > 0.12
         if (moving) {
           player.dir = Math.atan2(player.jy, player.jx)
-          const speed = Math.min(width, height) * 0.5
+          const speed = Math.min(width, height) * 0.28
           player.x += player.jx * speed * dt
           player.y += player.jy * speed * dt
         }
@@ -1166,7 +1174,8 @@ export class WordChompersGame {
         player.y = Math.max(edge, Math.min(height - edge, player.y))
       }
       const bob = Math.sin(this.now / 280 + player.index) * 3
-      player.view.scale.set(this.compact ? 0.72 : 1)
+      const actor = this.options.mode === 'swim' ? (this.compact ? 0.72 : 0.64) : 1
+      player.view.scale.set(actor)
       player.view.position.set(player.x, player.y + bob)
       if (!player.lunge) {
         player.facing.rotation = player.dir
@@ -1179,7 +1188,7 @@ export class WordChompersGame {
         this.paintChomper(player)
       }
       const back = player.dir + Math.PI
-      const badgeGap = this.compact ? 34 : 50
+      const badgeGap = this.compact ? 34 : 36
       player.badge.position.set(player.view.x + Math.cos(back) * badgeGap, player.view.y + Math.sin(back) * badgeGap)
       player.badge.rotation = player.y < height * 0.5 ? Math.PI : 0
       if (player.lockUntil > 0 && this.now >= player.lockUntil) {
@@ -1324,7 +1333,6 @@ export class WordChompersGame {
       player.score += 1
       this.paintBadge(player)
       this.showMessage(`${player.name} got it!\n${this.question.example}`, null)
-      this.speak(this.question.example)
       this.beep(660, 0.16)
     } else {
       this.missed.push(this.question.answer)
@@ -1334,7 +1342,6 @@ export class WordChompersGame {
         this.paintWord(correct)
       }
       this.showMessage(`Time is up!\n${this.question.example}`, null)
-      this.speak(this.question.example)
     }
   }
 
@@ -1396,9 +1403,7 @@ export class WordChompersGame {
       return
     }
     player.seq = next
-    fish.hidden = true
-    fish.view.visible = false
-    fish.goneUntil = this.now + 3000
+    this.holdWord(fish)
     this.beep(660, 0.08)
     if (match === 'complete') {
       const key = next.join('\u0001')
@@ -1414,6 +1419,15 @@ export class WordChompersGame {
     this.syncSlots(player)
   }
 
+  /** Hide an eaten word. A new copy appears two seconds after the last one is taken. */
+  private holdWord(fish: Token) {
+    fish.hidden = true
+    fish.view.visible = false
+    fish.goneUntil = Number.POSITIVE_INFINITY
+    const another = this.words.some((word) => word !== fish && word.text === fish.text && !word.hidden)
+    if (!another) fish.goneUntil = this.now + WORD_RETURN_MS
+  }
+
   private endSwim() {
     if (this.phase !== 'swim') return
     this.phase = 'toast'
@@ -1426,8 +1440,8 @@ export class WordChompersGame {
       this.paintBadge(winner)
     }
     const title = winners.length > 0 ? `${winners.map((player) => player.name).join(' & ')} wins the round` : 'No sentences this round'
-    const detail = this.players.map((player) => `${player.index + 1}: ${player.built}`).join('   ')
-    this.showMessage(`${title}\n${detail}`, null)
+    this.showRoundScores()
+    this.hooks.onStatus?.(title)
     this.beep(660, 0.16)
   }
 
@@ -1556,6 +1570,30 @@ export class WordChompersGame {
     player.knob.position.set(dx, dy)
   }
 
+  private scoreChip(player: Chomper, value: number) {
+    const chip = new Container()
+    const name = this.makeLabel(`Player ${player.index + 1}`, 16)
+    name.position.set(0, -46)
+    const circle = new Graphics()
+    circle.circle(0, 0, 28).fill(player.color).stroke({ width: 3, color: INK })
+    const score = this.makeLabel(String(value), 22)
+    chip.addChild(name, circle, score)
+    return chip
+  }
+
+  private showRoundScores() {
+    this.banner.visible = false
+    this.scoreBoard.removeChildren().forEach((child) => child.destroy({ children: true }))
+    const chips = this.players.map((player) => this.scoreChip(player, player.built))
+    const step = 96
+    chips.forEach((chip, index) => {
+      chip.position.set((index - (chips.length - 1) / 2) * step, 8)
+      this.scoreBoard.addChild(chip)
+    })
+    this.scoreBoard.position.set(this.app.screen.width / 2, this.app.screen.height / 2)
+    this.scoreBoard.visible = true
+  }
+
   private showMessage(text: string, until: number | null) {
     this.bannerTop.text = text
     this.bannerBottom.text = text
@@ -1621,6 +1659,7 @@ export class WordChompersGame {
     this.over = true
     this.clearTokens()
     this.banner.visible = false
+    this.scoreBoard.visible = false
     this.dots.visible = false
     this.timerView.visible = false
     this.clueTop.visible = false
@@ -1641,11 +1680,10 @@ export class WordChompersGame {
     this.finalView.removeChildren().forEach((child) => child.destroy({ children: true }))
     const width = this.app.screen.width
     const height = this.app.screen.height
-    this.finalView.addChild(this.scoreColumn(width / 2, height * 0.27, Math.PI))
-    this.finalView.addChild(this.scoreColumn(width / 2, height * 0.73, 0))
+    this.finalView.addChild(this.scoreColumn(width / 2, height / 2))
   }
 
-  private scoreColumn(x: number, y: number, rotation: number) {
+  private scoreColumn(x: number, y: number) {
     const column = new Container()
     const sorted = [...this.players].sort((a, b) => b.score - a.score)
     const best = sorted[0]?.score ?? 0
@@ -1688,7 +1726,6 @@ export class WordChompersGame {
     column.addChild(button)
     column.pivot.set(0, cursor / 2)
     column.position.set(x, y)
-    column.rotation = rotation
     return column
   }
 
@@ -1726,16 +1763,6 @@ export class WordChompersGame {
   private clearTokens() {
     for (const word of this.words) word.view.destroy({ children: true })
     this.words = []
-  }
-
-  private speak(text: string) {
-    if (!this.sounds || typeof window === 'undefined' || !window.speechSynthesis) return
-    const spoken = text.split('___').join('blank').replace(/[^\x20-\x7E\n]/g, ' ')
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(spoken)
-    utterance.lang = 'en-US'
-    utterance.rate = 0.9
-    window.speechSynthesis.speak(utterance)
   }
 
   private beep(frequency: number, duration: number) {

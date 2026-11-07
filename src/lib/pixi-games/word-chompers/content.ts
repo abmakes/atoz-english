@@ -41,7 +41,7 @@ const VERB_SLOTS: Record<GrammarFocus, readonly number[]> = {
 }
 
 const SWIM_HINTS: Record<GrammarFocus, string> = {
-  'present-simple': 'Match the person to the verb.',
+  'present-simple': 'Match the person to the verb, then any object.',
   'present-continuous': 'Use am, is, or are, then the -ing verb.',
   'wh-question': 'Build the question in order.',
   'be-present': 'Choose am, is, are, or the negative.',
@@ -148,45 +148,8 @@ function frame(
   }
 }
 
-function isPrefix(shorter: readonly string[], longer: readonly string[]): boolean {
-  return shorter.length < longer.length && shorter.every((word, index) => longer[index] === word)
-}
-
-function conflicts(candidate: readonly string[], chosen: readonly (readonly string[])[]): boolean {
-  return chosen.some(
-    (sentence) =>
-      sentence.join('\u0001') === candidate.join('\u0001') ||
-      isPrefix(candidate, sentence) ||
-      isPrefix(sentence, candidate)
-  )
-}
-
-function tailOf(sentence: readonly string[]): string {
-  return sentence.slice(1).join('\u0001')
-}
-
-/** One sentence from each picture, with a new starter and a different verb phrase. */
-function chooseSentence(options: readonly string[][], chosen: readonly (readonly string[])[], preference: number): string[] | null {
-  const ordered = [...options.slice(preference), ...options.slice(0, preference)]
-  const fresh = ordered.find(
-    (sentence) =>
-      !chosen.some((other) => other[0] === sentence[0] || tailOf(other) === tailOf(sentence)) &&
-      !conflicts(sentence, chosen)
-  )
-  if (fresh) return fresh
-  const differentTail = ordered.find(
-    (sentence) => !chosen.some((other) => tailOf(other) === tailOf(sentence)) && !conflicts(sentence, chosen)
-  )
-  if (differentTail) return differentTail
-  return ordered.find((sentence) => !conflicts(sentence, chosen)) ?? null
-}
-
 function mixRound(focus: GrammarFocus, scenes: readonly SwimFrame[], index: number): SwimFrame {
-  const sentences: string[][] = []
-  scenes.forEach((scene, sceneIndex) => {
-    const sentence = chooseSentence(scene.sentences, sentences, sceneIndex % scene.sentences.length)
-    if (sentence) sentences.push(sentence)
-  })
+  const sentences = combinePool(scenes)
   if (sentences.length < 3) throw new Error(`${focus} round ${index} needs at least three sentences`)
   return {
     id: `${focus}-swim-${index}`,
@@ -199,6 +162,65 @@ function mixRound(focus: GrammarFocus, scenes: readonly SwimFrame[], index: numb
       sentences
     ),
   }
+}
+
+type SubjectPool = {
+  agreements: Set<string>
+  lexicals: Set<string>
+  bare: Set<string>
+}
+
+/** Any subject can take any agreeing verb and any object from the round. */
+function combinePool(scenes: readonly SwimFrame[]): string[][] {
+  const subjects = new Map<string, SubjectPool>()
+  const objects = new Set<string>()
+  for (const scene of scenes) {
+    if (scene.sentences.length === 0) continue
+    const tails = scene.sentences.map((sentence) => sentence.slice(1))
+    const width = tails[0]?.length ?? 0
+    const last = tails[0]?.[width - 1]
+    const sharesObject = width > 1 && tails.every((tail) => tail[tail.length - 1] === last)
+    const stemLength = sharesObject ? width - 1 : width
+    const differs = Array.from({ length: stemLength }, (_, slot) => new Set(tails.map((tail) => tail[slot])).size > 1)
+    for (const sentence of scene.sentences) {
+      const pool = subjects.get(sentence[0]) ?? { agreements: new Set(), lexicals: new Set(), bare: new Set() }
+      subjects.set(sentence[0], pool)
+      const stem = sharesObject ? sentence.slice(1, -1) : sentence.slice(1)
+      const agreement = stem.filter((_, slot) => differs[slot]).join('\u0001')
+      const lexical = stem.filter((_, slot) => !differs[slot]).join('\u0001')
+      if (sharesObject && last) {
+        objects.add(last)
+        pool.agreements.add(agreement)
+        pool.lexicals.add(lexical)
+      } else {
+        pool.bare.add([...stem].join('\u0001'))
+      }
+    }
+  }
+  const sentences: string[][] = []
+  const seen = new Set<string>()
+  for (const [starter, pool] of subjects) {
+    const lexicals = pool.lexicals.size > 0 ? pool.lexicals : new Set([''])
+    for (const agreement of pool.agreements) {
+      for (const lexical of lexicals) {
+        for (const object of objects) {
+          const words = [starter, ...agreement.split('\u0001'), ...lexical.split('\u0001'), object].filter((word) => word.length > 0)
+          const key = words.join('\u0001')
+          if (seen.has(key)) continue
+          seen.add(key)
+          sentences.push(words)
+        }
+      }
+    }
+    for (const bare of pool.bare) {
+      const words = [starter, ...bare.split('\u0001')].filter((word) => word.length > 0)
+      const key = words.join('\u0001')
+      if (seen.has(key)) continue
+      seen.add(key)
+      sentences.push(words)
+    }
+  }
+  return sentences
 }
 
 function presentSimpleFrame(prompt: SentencePrompt): SwimFrame {

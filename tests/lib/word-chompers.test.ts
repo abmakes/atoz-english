@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { GRAMMAR_FOCUSES, promptsForFocus } from '@/lib/pixi-games/sentence-builder/content'
 import { biteQuestions, swimFrames, swimVocabulary } from '@/lib/pixi-games/word-chompers/content'
-import { shuffle, swimMatch, takeRoundQueue } from '@/lib/pixi-games/word-chompers/round'
+import { buildSlots, shuffle, swimMatch, swimStock, takeRoundQueue } from '@/lib/pixi-games/word-chompers/round'
 
 function roundWith(focus: Parameters<typeof swimFrames>[0], sentence: readonly string[]) {
   const found = swimFrames(focus).find((frame) =>
@@ -52,19 +52,40 @@ describe('word chomper grammar', () => {
     expect(question).toMatchObject({ clue: 'What is ___ eating?', answer: 'she' })
   })
 
-  it('puts four different sentences in each swim round', () => {
+  it('lets any agreeing verb take any object in the round', () => {
     const apple = roundWith('present-simple', ['She', 'eats', 'an apple'])
-    expect(apple.sentences).toEqual([
-      ['She', 'eats', 'an apple'],
-      ['He', 'rides', 'a bike'],
-      ['They', 'read', 'a book'],
-      ['I', 'cook', 'some soup'],
-    ])
+    expect(apple.sentences).toContainEqual(['She', 'eats', 'an apple'])
+    expect(apple.sentences).toContainEqual(['She', 'eats', 'some soup'])
+    expect(apple.sentences).toContainEqual(['He', 'rides', 'a book'])
+    expect(apple.sentences).toContainEqual(['They', 'read', 'an apple'])
+    expect(apple.sentences).toContainEqual(['I', 'cook', 'a bike'])
+    expect(apple.sentences).not.toContainEqual(['She', 'read', 'some soup'])
+    expect(apple.sentences).not.toContainEqual(['They', 'eats', 'an apple'])
+    expect(swimMatch(apple.sentences, ['She', 'eats'])).toBe('prefix')
+    expect(swimMatch(apple.sentences, ['She', 'eats', 'some soup'])).toBe('complete')
+    expect(swimMatch(apple.sentences, ['She', 'cook'])).toBe('reject')
+    expect(buildSlots(apple.sentences, apple.focus)).toEqual(['person', 'verb', 'object'])
+    const people = ['She', 'He', 'They', 'I']
+    const stock = swimStock(apple.sentences, swimVocabulary(apple), 2, () => 0.2)
+    for (const person of people) expect(stock.filter((word) => word === person)).toHaveLength(1)
+    expect(stock.some((word) => !people.includes(word))).toBe(true)
+    const trio = swimStock(apple.sentences, swimVocabulary(apple), 3, () => 0.2)
+    for (const person of people) expect(trio.filter((word) => word === person)).toHaveLength(2)
+    expect(trio.filter((word) => word === 'eats')).toHaveLength(2)
+    expect(trio.filter((word) => word === 'eat')).toHaveLength(2)
+    const quad = swimStock(apple.sentences, swimVocabulary(apple), 4, () => 0.2)
+    for (const person of people) expect(quad.filter((word) => word === person)).toHaveLength(3)
+
     const soccer = roundWith('present-simple', ['She', 'plays', 'soccer'])
     expect(soccer).not.toBe(apple)
-    expect(soccer.sentences).toHaveLength(4)
+    expect(soccer.sentences.length).toBeGreaterThan(4)
 
-    expect(roundWith('present-continuous', ['She', 'is', 'eating', 'an apple']).sentences.length).toBeGreaterThan(1)
+    expect(roundWith('present-continuous', ['She', 'is', 'eating', 'an apple']).sentences).toContainEqual([
+      'She',
+      'is',
+      'eating',
+      'an apple',
+    ])
     expect(roundWith('has-have', ['She', 'has', 'an apple']).sentences.length).toBeGreaterThan(1)
     expect(roundWith('be-past', ['She', "wasn't", 'sad']).sentences.length).toBeGreaterThan(1)
     expect(roundWith('wh-question', ['What', 'is', 'she', 'eating']).sentences.length).toBeGreaterThan(1)
@@ -74,9 +95,6 @@ describe('word chomper grammar', () => {
       expect(frames).toHaveLength(5)
       for (const frame of frames) {
         expect(frame.sentences.length).toBeGreaterThanOrEqual(3)
-        expect(frame.sentences.length).toBeLessThanOrEqual(4)
-        const tails = new Set(frame.sentences.map((sentence) => sentence.slice(1).join(' ')))
-        expect(tails.size).toBe(frame.sentences.length)
         const used = new Set(frame.sentences.flat())
         expect(frame.decoys.length).toBeGreaterThanOrEqual(2)
         for (const decoy of frame.decoys) expect(used.has(decoy)).toBe(false)
