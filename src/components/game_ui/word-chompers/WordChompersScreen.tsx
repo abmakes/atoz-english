@@ -37,7 +37,7 @@ const COPY = {
   swim: {
     kicker: 'Same screen · 2 to 4 players',
     title: 'Sentence Swim',
-    body: 'Each round has four different sentences in the pool. Eat the words in order. She eats an apple counts. They eats an apple does not. Most sentences in one minute wins the round.',
+    body: 'Each round has four pictures in the pool. Match the person to the verb, then eat any object. She eats some soup counts. She eat an apple does not. Most sentences in one minute wins the round.',
     otherHref: '/practice/word-bite',
     otherLabel: 'Try Word Bite',
   },
@@ -294,7 +294,7 @@ function HowTo({ mode }: { mode: ChomperMode }) {
         ]
       : [
           'Drag the joystick on your corner to swim.',
-          'Eat the next word of a real sentence. The slots above you fill in.',
+          'Build the sentence in your slots from the pool: person, matching verb, then any object.',
           'A wrong word knocks you back for 2 seconds. Your sentence stays.',
           'You have one minute. The most finished sentences wins the round.',
         ]
