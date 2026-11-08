@@ -95,10 +95,10 @@ export default function PasteQuestionImageButton({
         type="button"
         disabled={saving}
         onClick={() => void arm()}
-        className={`flex w-full flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed px-4 py-4 text-center transition-colors ${
+        className={`flex w-full flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed px-4 py-4 text-center outline-none transition-colors ${
           listening
-            ? 'border-violet-500 bg-violet-100 ring-2 ring-violet-300'
-            : 'border-violet-300 bg-violet-50 hover:border-violet-500 hover:bg-violet-100'
+            ? 'border-violet-500 bg-violet-100/80 ring-2 ring-violet-300'
+            : 'border-violet-300 bg-violet-50/60 hover:border-violet-400'
         } ${className ?? ''}`}
       >
         {saving ? (
@@ -106,11 +106,11 @@ export default function PasteQuestionImageButton({
         ) : (
           <ClipboardPaste className="h-7 w-7 text-violet-700" />
         )}
-        <span className="text-base font-semibold text-[--text-color]">
-          {listening ? 'Press Ctrl + V to paste' : 'Paste an image'}
+        <span className="text-base font-medium text-violet-800">
+          {listening ? 'Press Ctrl + V to paste an image' : 'Click here to paste'}
         </span>
-        <span className="text-sm text-slate-600">
-          Click here, then paste. It is saved as WebP for this question.
+        <span className="text-xs text-slate-500">
+          Saved as WebP for this question.
         </span>
       </button>
     )
@@ -124,12 +124,16 @@ export default function PasteQuestionImageButton({
       title="Paste an image from the clipboard"
       disabled={saving}
       onClick={() => void arm()}
-      className={className}
+      className={`border-2 border-dashed text-violet-800 hover:text-violet-800 ${
+        listening
+          ? 'border-violet-500 bg-violet-100/80 ring-2 ring-violet-300'
+          : 'border-violet-300 bg-violet-50/60 hover:border-violet-400 hover:bg-violet-50'
+      } ${className ?? ''}`}
     >
       {saving ? (
-        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin text-violet-700" />
       ) : (
-        <ClipboardPaste className="mr-1 h-3.5 w-3.5" />
+        <ClipboardPaste className="mr-1 h-3.5 w-3.5 text-violet-600" />
       )}
       {listening ? 'Press Ctrl+V' : label}
     </Button>
