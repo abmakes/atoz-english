@@ -419,9 +419,9 @@ export default function ImageSelectModal({
             </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-4">
+          <div className="mx-auto mt-4 max-w-xl space-y-3">
             <PasteQuestionImageButton
-              className="h-8"
+              appearance="zone"
               onSaved={({ imageUrl, imageFile }) => {
                 onImageSelect(imageUrl, undefined, imageFile);
                 onClose();
@@ -430,7 +430,7 @@ export default function ImageSelectModal({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-2 text-sm text-[#114257] hover:underline"
+              className="mx-auto flex items-center gap-2 text-sm text-[#114257] hover:underline"
             >
               <UploadCloud className="h-4 w-4" />
               Or upload from your device

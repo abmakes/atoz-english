@@ -13,12 +13,15 @@ import {
 interface PasteQuestionImageButtonProps {
   searchTerm?: string
   className?: string
+  /** `zone` is the large paste target inside the image picker. */
+  appearance?: 'button' | 'zone'
   onSaved: (image: SavedQuestionImage) => void
 }
 
 export default function PasteQuestionImageButton({
   searchTerm,
   className,
+  appearance = 'button',
   onSaved,
 }: PasteQuestionImageButtonProps) {
   const { addToast } = useCustomToast()
@@ -81,6 +84,33 @@ export default function PasteQuestionImageButton({
       variant: 'info',
       position: 'top-center',
     })
+  }
+
+  if (appearance === 'zone') {
+    return (
+      <button
+        type="button"
+        disabled={saving}
+        onClick={() => void arm()}
+        className={`flex w-full flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed px-4 py-4 text-center transition-colors ${
+          listening
+            ? 'border-violet-500 bg-violet-100 ring-2 ring-violet-300'
+            : 'border-violet-300 bg-violet-50 hover:border-violet-500 hover:bg-violet-100'
+        } ${className ?? ''}`}
+      >
+        {saving ? (
+          <Loader2 className="h-7 w-7 animate-spin text-violet-700" />
+        ) : (
+          <ClipboardPaste className="h-7 w-7 text-violet-700" />
+        )}
+        <span className="text-base font-semibold text-[--text-color]">
+          {listening ? 'Press Ctrl + V to paste' : 'Paste an image'}
+        </span>
+        <span className="text-sm text-slate-600">
+          Click here, then paste. It is saved as WebP for this question.
+        </span>
+      </button>
+    )
   }
 
   return (
