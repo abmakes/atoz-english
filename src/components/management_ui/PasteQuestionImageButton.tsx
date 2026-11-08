@@ -15,6 +15,8 @@ interface PasteQuestionImageButtonProps {
   className?: string
   /** `zone` is the large paste target inside the image picker. */
   appearance?: 'button' | 'zone'
+  /** Resting label for the compact button. */
+  label?: string
   onSaved: (image: SavedQuestionImage) => void
 }
 
@@ -22,6 +24,7 @@ export default function PasteQuestionImageButton({
   searchTerm,
   className,
   appearance = 'button',
+  label = 'Paste image',
   onSaved,
 }: PasteQuestionImageButtonProps) {
   const { addToast } = useCustomToast()
@@ -128,7 +131,7 @@ export default function PasteQuestionImageButton({
       ) : (
         <ClipboardPaste className="mr-1 h-3.5 w-3.5" />
       )}
-      {listening ? 'Press Ctrl+V' : 'Paste image'}
+      {listening ? 'Press Ctrl+V' : label}
     </Button>
   )
 }

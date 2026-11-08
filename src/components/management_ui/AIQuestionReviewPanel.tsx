@@ -409,7 +409,8 @@ export default function AIQuestionReviewPanel({
                     type="button"
                     size="sm"
                     variant="outline"
-                    className="h-8"
+                    title="New images"
+                    className="h-8 px-2"
                     onClick={() =>
                       void loadSuggestions(
                         index,
@@ -418,21 +419,23 @@ export default function AIQuestionReviewPanel({
                     }
                   >
                     <RefreshCw className="mr-1 h-3.5 w-3.5" />
-                    New images
+                    New
                   </Button>
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
-                    className="h-8"
+                    title="Search images"
+                    className="h-8 px-2"
                     onClick={() => setImageModalIndex(index)}
                   >
                     <Search className="mr-1 h-3.5 w-3.5" />
-                    Search images
+                    Search
                   </Button>
                   <PasteQuestionImageButton
                     searchTerm={item.question}
-                    className="h-8"
+                    label="Paste"
+                    className="h-8 px-2"
                     onSaved={({ imageUrl, imageFile }) =>
                       updateItem(index, {
                         imageUrl,
@@ -466,7 +469,7 @@ export default function AIQuestionReviewPanel({
                   </div>
                 ) : suggestions.length === 0 ? (
                   <p className="col-span-3 text-sm text-gray-500">
-                    No suggestions yet. Use Search images to pick an image.
+                    No suggestions yet. Use Search to pick an image.
                   </p>
                 ) : (
                   suggestions.map((suggestion) => {
