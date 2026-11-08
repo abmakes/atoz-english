@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { useCustomToast } from '@/components/ui/CustomToast'
 import ImageSelectModal from '@/components/management_ui/ImageSelectModal'
+import PasteQuestionImageButton from '@/components/management_ui/PasteQuestionImageButton'
 import type { Question } from '@/components/management_ui/QuizEditor'
 import type { LanguageAuditIssue } from '@/lib/lexicon/types'
 import { Check, Loader2, RefreshCw, Search, Trash2 } from 'lucide-react'
@@ -429,10 +430,35 @@ export default function AIQuestionReviewPanel({
                     <Search className="mr-1 h-3.5 w-3.5" />
                     Search images
                   </Button>
+                  <PasteQuestionImageButton
+                    searchTerm={item.question}
+                    className="h-8"
+                    onSaved={({ imageUrl, imageFile }) =>
+                      updateItem(index, {
+                        imageUrl,
+                        imageFile,
+                        imageMetadata: undefined,
+                        status: 'approved',
+                      })
+                    }
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-2">
+                {item.imageUrl &&
+                !item.imageUrl.endsWith('/placeholder.webp') &&
+                !suggestions.some((suggestion) => suggestion.url === item.imageUrl) ? (
+                  <div className="overflow-hidden rounded-lg border-2 border-emerald-500">
+                    {/* Pasted previews can be a local blob URL before storage finishes. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.imageUrl}
+                      alt="Pasted question image"
+                      className="h-24 w-full object-cover"
+                    />
+                  </div>
+                ) : null}
                 {loadingImages[index] && suggestions.length === 0 ? (
                   <div className="col-span-3 flex items-center gap-2 text-sm text-gray-500">
                     <Loader2 className="h-4 w-4 animate-spin" />

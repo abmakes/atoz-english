@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { UploadCloud, Search, Loader2, ChevronDown, ChevronUp, X } from 'lucide-react';
+import PasteQuestionImageButton from '@/components/management_ui/PasteQuestionImageButton';
 import Image from 'next/image';
 import { useCustomToast } from '@/components/ui/CustomToast';
 import { GiphyFetch } from '@giphy/js-fetch-api';
@@ -418,7 +419,14 @@ export default function ImageSelectModal({
             </div>
           </div>
 
-          <div className="mt-5 flex justify-center">
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-4">
+            <PasteQuestionImageButton
+              className="h-8"
+              onSaved={({ imageUrl, imageFile }) => {
+                onImageSelect(imageUrl, undefined, imageFile);
+                onClose();
+              }}
+            />
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}

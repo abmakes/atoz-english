@@ -6133,7 +6133,7 @@ export namespace Prisma {
     height: number
     searchTerm: string | null
     tags: string[]
-    pixabayId: number
+    pixabayId: number | null
     pixabayUser: string | null
     usageCount: number
     lastUsedAt: Date | null
@@ -6232,7 +6232,7 @@ export namespace Prisma {
       height: number
       searchTerm: string | null
       tags: string[]
-      pixabayId: number
+      pixabayId: number | null
       pixabayUser: string | null
       usageCount: number
       lastUsedAt: Date | null
@@ -13145,7 +13145,7 @@ export namespace Prisma {
       character: Prisma.JsonValue
       voiceEffect: string
       /**
-       * Private Blob URL. Never send this to the browser; stream it from an API route.
+       * Blob URL. Never send this to the browser; stream it from an API route.
        */
       audioPath: string
       mimeType: string
@@ -14549,7 +14549,7 @@ export namespace Prisma {
     height?: IntFilter<"StoredImage"> | number
     searchTerm?: StringNullableFilter<"StoredImage"> | string | null
     tags?: StringNullableListFilter<"StoredImage">
-    pixabayId?: IntFilter<"StoredImage"> | number
+    pixabayId?: IntNullableFilter<"StoredImage"> | number | null
     pixabayUser?: StringNullableFilter<"StoredImage"> | string | null
     usageCount?: IntFilter<"StoredImage"> | number
     lastUsedAt?: DateTimeNullableFilter<"StoredImage"> | Date | string | null
@@ -14568,7 +14568,7 @@ export namespace Prisma {
     height?: SortOrder
     searchTerm?: SortOrderInput | SortOrder
     tags?: SortOrder
-    pixabayId?: SortOrder
+    pixabayId?: SortOrderInput | SortOrder
     pixabayUser?: SortOrderInput | SortOrder
     usageCount?: SortOrder
     lastUsedAt?: SortOrderInput | SortOrder
@@ -14609,7 +14609,7 @@ export namespace Prisma {
     height?: SortOrder
     searchTerm?: SortOrderInput | SortOrder
     tags?: SortOrder
-    pixabayId?: SortOrder
+    pixabayId?: SortOrderInput | SortOrder
     pixabayUser?: SortOrderInput | SortOrder
     usageCount?: SortOrder
     lastUsedAt?: SortOrderInput | SortOrder
@@ -14636,7 +14636,7 @@ export namespace Prisma {
     height?: IntWithAggregatesFilter<"StoredImage"> | number
     searchTerm?: StringNullableWithAggregatesFilter<"StoredImage"> | string | null
     tags?: StringNullableListFilter<"StoredImage">
-    pixabayId?: IntWithAggregatesFilter<"StoredImage"> | number
+    pixabayId?: IntNullableWithAggregatesFilter<"StoredImage"> | number | null
     pixabayUser?: StringNullableWithAggregatesFilter<"StoredImage"> | string | null
     usageCount?: IntWithAggregatesFilter<"StoredImage"> | number
     lastUsedAt?: DateTimeNullableWithAggregatesFilter<"StoredImage"> | Date | string | null
@@ -15457,7 +15457,7 @@ export namespace Prisma {
     height: number
     searchTerm?: string | null
     tags?: StoredImageCreatetagsInput | string[]
-    pixabayId: number
+    pixabayId?: number | null
     pixabayUser?: string | null
     usageCount?: number
     lastUsedAt?: Date | string | null
@@ -15476,7 +15476,7 @@ export namespace Prisma {
     height: number
     searchTerm?: string | null
     tags?: StoredImageCreatetagsInput | string[]
-    pixabayId: number
+    pixabayId?: number | null
     pixabayUser?: string | null
     usageCount?: number
     lastUsedAt?: Date | string | null
@@ -15495,7 +15495,7 @@ export namespace Prisma {
     height?: IntFieldUpdateOperationsInput | number
     searchTerm?: NullableStringFieldUpdateOperationsInput | string | null
     tags?: StoredImageUpdatetagsInput | string[]
-    pixabayId?: IntFieldUpdateOperationsInput | number
+    pixabayId?: NullableIntFieldUpdateOperationsInput | number | null
     pixabayUser?: NullableStringFieldUpdateOperationsInput | string | null
     usageCount?: IntFieldUpdateOperationsInput | number
     lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -15514,7 +15514,7 @@ export namespace Prisma {
     height?: IntFieldUpdateOperationsInput | number
     searchTerm?: NullableStringFieldUpdateOperationsInput | string | null
     tags?: StoredImageUpdatetagsInput | string[]
-    pixabayId?: IntFieldUpdateOperationsInput | number
+    pixabayId?: NullableIntFieldUpdateOperationsInput | number | null
     pixabayUser?: NullableStringFieldUpdateOperationsInput | string | null
     usageCount?: IntFieldUpdateOperationsInput | number
     lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -15533,7 +15533,7 @@ export namespace Prisma {
     height: number
     searchTerm?: string | null
     tags?: StoredImageCreatetagsInput | string[]
-    pixabayId: number
+    pixabayId?: number | null
     pixabayUser?: string | null
     usageCount?: number
     lastUsedAt?: Date | string | null
@@ -15552,7 +15552,7 @@ export namespace Prisma {
     height?: IntFieldUpdateOperationsInput | number
     searchTerm?: NullableStringFieldUpdateOperationsInput | string | null
     tags?: StoredImageUpdatetagsInput | string[]
-    pixabayId?: IntFieldUpdateOperationsInput | number
+    pixabayId?: NullableIntFieldUpdateOperationsInput | number | null
     pixabayUser?: NullableStringFieldUpdateOperationsInput | string | null
     usageCount?: IntFieldUpdateOperationsInput | number
     lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -15571,7 +15571,7 @@ export namespace Prisma {
     height?: IntFieldUpdateOperationsInput | number
     searchTerm?: NullableStringFieldUpdateOperationsInput | string | null
     tags?: StoredImageUpdatetagsInput | string[]
-    pixabayId?: IntFieldUpdateOperationsInput | number
+    pixabayId?: NullableIntFieldUpdateOperationsInput | number | null
     pixabayUser?: NullableStringFieldUpdateOperationsInput | string | null
     usageCount?: IntFieldUpdateOperationsInput | number
     lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -16500,6 +16500,17 @@ export namespace Prisma {
     not?: NestedIntFilter<$PrismaModel> | number
   }
 
+  export type IntNullableFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntNullableFilter<$PrismaModel> | number | null
+  }
+
   export type DateTimeNullableFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
     in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
@@ -16596,6 +16607,22 @@ export namespace Prisma {
     _sum?: NestedIntFilter<$PrismaModel>
     _min?: NestedIntFilter<$PrismaModel>
     _max?: NestedIntFilter<$PrismaModel>
+  }
+
+  export type IntNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedIntNullableFilter<$PrismaModel>
+    _max?: NestedIntNullableFilter<$PrismaModel>
   }
 
   export type DateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -17293,6 +17320,14 @@ export namespace Prisma {
     push?: string | string[]
   }
 
+  export type NullableIntFieldUpdateOperationsInput = {
+    set?: number | null
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
   export type NullableDateTimeFieldUpdateOperationsInput = {
     set?: Date | string | null
   }
@@ -17734,6 +17769,33 @@ export namespace Prisma {
     gt?: number | FloatFieldRefInput<$PrismaModel>
     gte?: number | FloatFieldRefInput<$PrismaModel>
     not?: NestedFloatFilter<$PrismaModel> | number
+  }
+
+  export type NestedIntNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedIntNullableFilter<$PrismaModel>
+    _max?: NestedIntNullableFilter<$PrismaModel>
+  }
+
+  export type NestedFloatNullableFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
   }
 
   export type NestedDateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
