@@ -100,7 +100,7 @@ model StoredImage {
   // Metadata for search and organization
   searchTerm    String?  // Original search term used to find this image
   tags          String[] // Tags associated with this image
-  pixabayId     Int      @unique // Original Pixabay image ID (unique to prevent duplicates)
+  pixabayId     Int?     @unique // Pixabay id when the photo came from Pixabay. Empty for pasted images.
   pixabayUser   String?  // Original Pixabay user who uploaded
   
   // Usage tracking

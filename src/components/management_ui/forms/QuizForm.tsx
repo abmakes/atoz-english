@@ -4,6 +4,7 @@ import { useState, useEffect, forwardRef, useImperativeHandle, memo } from 'reac
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 import ImageSelectModal from '@/components/management_ui/ImageSelectModal'
+import PasteQuestionImageButton from '@/components/management_ui/PasteQuestionImageButton'
 import { QuestionFormMatching, MatchingPair } from './QuestionFormMatching'
 import { QuestionFormSorting } from './QuestionFormSorting'
 import { QuestionType } from '@/types/question_types'
@@ -483,6 +484,28 @@ const QuizForm = forwardRef<QuizFormHandle, QuizFormProps>(({
                       >
                         Change Image
                       </Button>
+                    </div>
+                    <div className="mt-1 flex flex-col gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openImageModal(index)}
+                        className="h-7 px-2 text-[11px] md:hidden"
+                      >
+                        Change image
+                      </Button>
+                      <PasteQuestionImageButton
+                        searchTerm={question.question}
+                        className="h-7 px-2 text-[11px]"
+                        onSaved={({ imageUrl, imageFile }) =>
+                          updateQuestion(index, {
+                            imageUrl,
+                            imageFile,
+                            imageMetadata: undefined,
+                          })
+                        }
+                      />
                     </div>
                   </div>
                   <div className="flex basis-4/5 flex-col space-y-1 text-base">

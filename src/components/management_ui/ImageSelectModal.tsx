@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { UploadCloud, Search, Loader2, ChevronDown, ChevronUp, X } from 'lucide-react';
+import PasteQuestionImageButton from '@/components/management_ui/PasteQuestionImageButton';
 import Image from 'next/image';
 import { useCustomToast } from '@/components/ui/CustomToast';
 import { GiphyFetch } from '@giphy/js-fetch-api';
@@ -418,11 +419,18 @@ export default function ImageSelectModal({
             </div>
           </div>
 
-          <div className="mt-5 flex justify-center">
+          <div className="mx-auto mt-4 max-w-xl space-y-3">
+            <PasteQuestionImageButton
+              appearance="zone"
+              onSaved={({ imageUrl, imageFile }) => {
+                onImageSelect(imageUrl, undefined, imageFile);
+                onClose();
+              }}
+            />
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-2 text-sm text-[#114257] hover:underline"
+              className="mx-auto flex items-center gap-2 text-sm text-[#114257] hover:underline"
             >
               <UploadCloud className="h-4 w-4" />
               Or upload from your device
