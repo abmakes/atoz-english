@@ -85,9 +85,12 @@ export default function LessonKitScreen({
       setError('')
       try {
         const response = await fetch(`/api/quizzes/${quizId}/lesson`, { cache: 'no-store' })
-        const payload = (await response.json()) as {
-          error?: string
-          data?: { quiz: LessonQuiz; lesson: LessonRecord }
+        const text = await response.text()
+        let payload: { error?: string; data?: { quiz: LessonQuiz; lesson: LessonRecord } }
+        try {
+          payload = JSON.parse(text) as typeof payload
+        } catch {
+          throw new Error('Could not open this lesson.')
         }
         if (!response.ok || !payload.data) {
           throw new Error(payload.error || 'Could not open this lesson.')
