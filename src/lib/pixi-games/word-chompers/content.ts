@@ -82,6 +82,13 @@ function slotAt(prompt: SentencePrompt, index: number): WordSlot {
   return slot
 }
 
+function slotForms(slot: WordSlot): readonly [string, string, string, string] {
+  if (!slot.options) {
+    throw new Error(`"${slot.correct}" has no choices`)
+  }
+  return slot.options
+}
+
 function clueFor(prompt: SentencePrompt, index: number): string {
   const words = prompt.slots.map((slot, slotIndex) => (slotIndex === index ? '___' : slot.correct))
   return `${words.join(' ')}${prompt.punctuation}`
@@ -89,7 +96,7 @@ function clueFor(prompt: SentencePrompt, index: number): string {
 
 function biteFrom(prompt: SentencePrompt, index: number, kind: BiteKind): BiteQuestion {
   const slot = slotAt(prompt, index)
-  const decoys = slot.options.filter((option) => option !== slot.correct)
+  const decoys = slotForms(slot).filter((option) => option !== slot.correct)
   if (decoys.length !== 3) {
     throw new Error(`${prompt.id} slot ${index} needs three distractors`)
   }
@@ -236,7 +243,7 @@ function combinePool(scenes: readonly SwimFrame[]): string[][] {
 function presentSimpleFrame(prompt: SentencePrompt): SwimFrame {
   const subject = slotAt(prompt, 0).correct
   const verb = slotAt(prompt, 1)
-  const [correct, other, ...rest] = verb.options
+  const [correct, other, ...rest] = slotForms(verb)
   const sheHe = subject === 'They' ? other : correct
   const they = subject === 'They' ? correct : other
   if (sheHe === they) throw new Error(`${prompt.id} lost person agreement`)
@@ -245,8 +252,8 @@ function presentSimpleFrame(prompt: SentencePrompt): SwimFrame {
 
 function continuousFrame(prompt: SentencePrompt): SwimFrame {
   const ing = slotAt(prompt, 2).correct
-  const verbDecoys = slotAt(prompt, 2).options.filter((option) => option !== ing)
-  const auxDecoys = slotAt(prompt, 1).options.filter((option) => !['is', 'are', 'am'].includes(option))
+  const verbDecoys = slotForms(slotAt(prompt, 2)).filter((option) => option !== ing)
+  const auxDecoys = slotForms(slotAt(prompt, 1)).filter((option) => !['is', 'are', 'am'].includes(option))
   const rows = [
     ['She', 'is', ing],
     ['He', 'is', ing],
@@ -267,15 +274,16 @@ function pastFrame(prompt: SentencePrompt): SwimFrame {
   return frame(
     prompt,
     peopleSentences(correct, correct, prompt.slots[2]?.correct),
-    verb.options.filter((option) => option !== correct)
+    slotForms(verb).filter((option) => option !== correct)
   )
 }
 
 function haveFrame(prompt: SentencePrompt): SwimFrame {
   const subject = slotAt(prompt, 0).correct
   const verb = slotAt(prompt, 1)
-  const has = subject === 'They' ? verb.options[1] : verb.correct
-  const have = subject === 'They' ? verb.correct : verb.options[1]
+  const verbForms = slotForms(verb)
+  const has = subject === 'They' ? verbForms[1] : verb.correct
+  const have = subject === 'They' ? verb.correct : verbForms[1]
   if (has === have) throw new Error(`${prompt.id} lost has/have agreement`)
   return frame(prompt, peopleSentences(has, have, slotAt(prompt, 2).correct), ['having', 'haves'])
 }
@@ -293,8 +301,8 @@ function beFrame(prompt: SentencePrompt, when: 'present' | 'past'): SwimFrame {
     ['I', forms.i, adjective],
   ]
   const extras = [
-    ...slotAt(prompt, 1).options,
-    ...slotAt(prompt, 2).options.filter((option) => option !== adjective),
+    ...slotForms(slotAt(prompt, 1)),
+    ...slotForms(slotAt(prompt, 2)).filter((option) => option !== adjective),
   ]
   return frame(prompt, sentences, extras)
 }
@@ -307,7 +315,7 @@ function questionFrame(prompt: SentencePrompt): SwimFrame {
     [wh, 'is', 'he', verb.correct],
     [wh, 'are', 'they', verb.correct],
   ]
-  const verbDecoys = verb.options.filter((option) => option !== verb.correct)
+  const verbDecoys = slotForms(verb).filter((option) => option !== verb.correct)
   return frame(prompt, sentences, [
     verbDecoys[0],
     'her',

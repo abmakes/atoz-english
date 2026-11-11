@@ -14,6 +14,7 @@ import { getPixiThemeConfig } from '@/lib/themes'
 import {
   getScene,
   GRAMMAR_LABELS,
+  nextChoiceIndex,
   promptsForFocus,
   SCENES,
   type GrammarFocus,
@@ -62,6 +63,9 @@ interface LaunchOptions {
   focus: GrammarFocus
   sounds: boolean
   random?: () => number
+  /** When set, this list is the bank. The built-in scenes stay in use when it is absent. */
+  prompts?: readonly SentencePrompt[]
+  structureLabel?: string
 }
 
 class ChoiceButton {
@@ -150,6 +154,8 @@ export class SentenceBuilderGame {
   private readonly focus: GrammarFocus
   private readonly random: () => number
   private readonly hooks: SentenceBuilderHooks
+  private readonly customPrompts: readonly SentencePrompt[] | null
+  private readonly structureLabel: string | null
   private readonly root = new Container()
   private readonly skyTexture = createSkyTexture()
   private readonly sky = new Sprite(this.skyTexture)
@@ -260,6 +266,8 @@ export class SentenceBuilderGame {
     this.sounds = options.sounds
     this.random = options.random ?? Math.random
     this.hooks = hooks
+    this.customPrompts = options.prompts && options.prompts.length > 0 ? options.prompts : null
+    this.structureLabel = options.structureLabel?.trim() || null
   }
 
   async init(): Promise<void> {
@@ -316,7 +324,9 @@ export class SentenceBuilderGame {
     this.app.renderer.on('resize', this.onResize)
     this.layout()
 
-    const urls = SCENES.map((item) => item.image)
+    const urls = this.customPrompts
+      ? [...new Set(this.customPrompts.map((item) => item.image).filter((url): url is string => Boolean(url)))]
+      : SCENES.map((item) => item.image)
     await Promise.all(
       urls.map(async (url) => {
         try {
@@ -335,7 +345,7 @@ export class SentenceBuilderGame {
     )
     if (this.destroyed) return
 
-    this.bank = promptsForFocus(this.focus)
+    this.bank = this.customPrompts ? [...this.customPrompts] : promptsForFocus(this.focus)
     this.queue =
       this.mode === 'score-run' ? buildScoreRun(this.bank, this.random) : buildSurvivalQueue(this.bank, this.random)
     this.loadingText.visible = false
@@ -368,7 +378,8 @@ export class SentenceBuilderGame {
     this.animatePop()
     this.animateShake()
     if (this.paused || this.phase !== 'choose') return
-    const delta = ticker.deltaMS
+    // A hidden tab can deliver one huge frame and burn the whole timer.
+    const delta = Math.min(ticker.deltaMS, 100)
     this.remainingMs -= delta
     this.questionElapsedMs += delta
     if (this.remainingMs <= 0) {
@@ -415,13 +426,17 @@ export class SentenceBuilderGame {
       this.complete('finished')
       return
     }
-    this.slotIndex = 0
-    this.built = []
     this.remainingMs = QUESTION_TIME_MS
     this.questionElapsedMs = 0
     this.eliminated.clear()
     this.questionsSeen += 1
     this.phase = 'choose'
+    if (!this.placeAtFirstChoice(current)) {
+      this.questionsSeen -= 1
+      this.queueIndex += 1
+      this.beginQuestion()
+      return
+    }
     this.dealOptions()
     this.renderPrompt(current)
     this.drawTimer()
@@ -452,6 +467,7 @@ export class SentenceBuilderGame {
     const prompt = this.queue[this.queueIndex]
     const slot = prompt?.slots[this.slotIndex]
     if (!prompt || !slot) return
+    if (slot.fixed || !slot.options) return
     const optionIndex = this.optionOrder[index]
     const word = optionIndex === undefined ? undefined : slot.options[optionIndex]
     if (!word) return
@@ -461,13 +477,14 @@ export class SentenceBuilderGame {
       this.built.push(word)
       this.phase = 'locked'
       this.shouldPop = true
-      this.renderSentence(prompt, this.slotIndex >= prompt.slots.length - 1)
+      const next = nextChoiceIndex(prompt.slots, this.slotIndex + 1)
+      this.renderSentence(prompt, next >= prompt.slots.length)
       this.renderChoices(prompt, index, 'good')
-      if (this.slotIndex >= prompt.slots.length - 1) {
+      if (next >= prompt.slots.length) {
         this.finishSentence()
       } else {
         this.schedule(280, () => {
-          this.slotIndex += 1
+          this.slotIndex = next
           this.dealOptions()
           this.phase = 'choose'
           this.renderSentence(prompt, false)
@@ -538,9 +555,10 @@ export class SentenceBuilderGame {
     this.hooks.onNotice?.(`Time's up. ${prompt.answer}`, 'bad')
     this.renderSentence(prompt, true, true)
     const correctIndex = prompt.slots[this.slotIndex]
-    if (correctIndex) {
+    const choiceOptions = correctIndex?.options
+    if (correctIndex && choiceOptions) {
       const visual = this.optionOrder.findIndex(
-        (optionIndex) => prompt.slots[this.slotIndex]?.options[optionIndex] === correctIndex.correct
+        (optionIndex) => choiceOptions[optionIndex] === correctIndex.correct
       )
       if (visual >= 0) this.renderChoices(prompt, visual, 'good')
     }
@@ -574,10 +592,30 @@ export class SentenceBuilderGame {
     })
   }
 
+  private placeAtFirstChoice(prompt: SentencePrompt): boolean {
+    this.built = []
+    const first = nextChoiceIndex(prompt.slots, 0)
+    for (let index = 0; index < first; index += 1) {
+      this.built.push(prompt.slots[index]!.correct)
+    }
+    this.slotIndex = first
+    return first < prompt.slots.length
+  }
+
+  private sceneFor(prompt: SentencePrompt): Scene {
+    if (prompt.image) {
+      return { id: prompt.sceneId, image: prompt.image, alt: prompt.alt ?? prompt.answer }
+    }
+    return getScene(prompt.sceneId)
+  }
+
+  private structureName(): string {
+    return this.structureLabel ?? GRAMMAR_LABELS[this.focus]
+  }
+
   private renderPrompt(prompt: SentencePrompt): void {
-    const scene = getScene(prompt.sceneId)
-    this.showPicture(scene)
-    this.instructionText.text = GRAMMAR_LABELS[this.focus]
+    this.showPicture(this.sceneFor(prompt))
+    this.instructionText.text = this.structureName()
     this.teacherText.text = prompt.teacherPrompt ? `“${prompt.teacherPrompt}”` : ''
     this.scoreText.text = String(this.score)
     this.progressText.text =
@@ -619,9 +657,14 @@ export class SentenceBuilderGame {
     const height = TILE_H
     let x = 0
     prompt.slots.forEach((slot, index) => {
-      const filled = reveal || completed || index < this.built.length
+      const fixed = Boolean(slot.fixed)
+      const filled = fixed || reveal || completed || index < this.built.length
       const current = !filled && index === this.built.length
-      const word = filled ? (index < this.built.length && !reveal ? this.built[index]! : slot.correct) : slot.correct
+      const word = filled
+        ? index < this.built.length && !reveal && !fixed
+          ? this.built[index]!
+          : slot.correct
+        : slot.correct
       const measure = new Text({
         text: word,
         style: { fontFamily: 'Grandstander', fontSize: 36, fontWeight: '800', fill: INK },
@@ -643,7 +686,7 @@ export class SentenceBuilderGame {
       } else {
         measure.destroy()
       }
-      const pop = this.shouldPop && filled && index === this.built.length - 1
+      const pop = this.shouldPop && filled && !fixed && index === this.built.length - 1
       if (pop) {
         holder.pivot.set(slotWidth / 2, height / 2)
         holder.position.set(x + slotWidth / 2, height / 2)
@@ -678,8 +721,8 @@ export class SentenceBuilderGame {
 
   private announce(prompt: SentencePrompt): void {
     const slot = prompt.slots[this.slotIndex]
-    const options = this.optionOrder.map((index) => slot?.options[index]).filter(Boolean)
-    this.hooks.onStatus?.(`${GRAMMAR_LABELS[this.focus]} Choices: ${options.join(', ')}`)
+    const options = this.optionOrder.map((index) => slot?.options?.[index]).filter(Boolean)
+    this.hooks.onStatus?.(`${this.structureName()} Choices: ${options.join(', ')}`)
   }
 
   private drawTimer(): void {
@@ -827,7 +870,7 @@ export class SentenceBuilderGame {
       const prompt = this.queue[this.queueIndex]
       const slot = prompt?.slots[this.slotIndex]
       const optionIndex = this.optionOrder[index] ?? 0
-      const word = slot?.options[optionIndex] ?? ''
+      const word = slot?.options?.[optionIndex] ?? ''
       button.draw(word, index, this.buttonStates[index] ?? 'idle', buttonWidth, choiceHeight)
       button.homeX = gridLeft + col * (buttonWidth + choiceGap)
       button.view.position.set(button.homeX, choiceTop + row * (choiceHeight + choiceGap))

@@ -28,7 +28,17 @@ export const GRAMMAR_FOCUSES: readonly GrammarFocus[] = [
 
 export interface WordSlot {
   correct: string
-  options: readonly [string, string, string, string]
+  /** Four forms when the player must choose this word. Omitted on a fixed tile. */
+  options?: readonly [string, string, string, string]
+  /** Fixed tiles are already filled. The player is not asked for this word. */
+  fixed?: boolean
+}
+
+/** Index of the next word the player must choose, or slots.length when none remain. */
+export function nextChoiceIndex(slots: readonly WordSlot[], from: number): number {
+  let index = from
+  while (index < slots.length && slots[index]?.fixed) index += 1
+  return index
 }
 
 export interface SentencePrompt {
@@ -41,6 +51,9 @@ export interface SentencePrompt {
   punctuation: '.' | '?'
   slots: WordSlot[]
   answer: string
+  /** Set when the prompt comes from a quiz picture instead of a built-in scene. */
+  image?: string
+  alt?: string
 }
 
 export interface Scene {

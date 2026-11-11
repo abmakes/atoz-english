@@ -34,6 +34,12 @@ export type QuizFavorite = $Result.DefaultSelection<Prisma.$QuizFavoritePayload>
  */
 export type Question = $Result.DefaultSelection<Prisma.$QuestionPayload>
 /**
+ * Model LessonKit
+ * Approved worksheet lines and sentence-builder sentences for one quiz.
+ * Classroom games keep reading Question. This row does not store them.
+ */
+export type LessonKit = $Result.DefaultSelection<Prisma.$LessonKitPayload>
+/**
  * Model StoredImage
  * 
  */
@@ -310,6 +316,16 @@ export class PrismaClient<
     * ```
     */
   get question(): Prisma.QuestionDelegate<ExtArgs>;
+
+  /**
+   * `prisma.lessonKit`: Exposes CRUD operations for the **LessonKit** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more LessonKits
+    * const lessonKits = await prisma.lessonKit.findMany()
+    * ```
+    */
+  get lessonKit(): Prisma.LessonKitDelegate<ExtArgs>;
 
   /**
    * `prisma.storedImage`: Exposes CRUD operations for the **StoredImage** model.
@@ -835,6 +851,7 @@ export namespace Prisma {
     QuizLike: 'QuizLike',
     QuizFavorite: 'QuizFavorite',
     Question: 'Question',
+    LessonKit: 'LessonKit',
     StoredImage: 'StoredImage',
     Tag: 'Tag',
     Story: 'Story',
@@ -858,7 +875,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "quiz" | "quizLike" | "quizFavorite" | "question" | "storedImage" | "tag" | "story" | "storyPanel" | "storySubmission" | "storyRecording" | "thoughtChallenge" | "thoughtSubmission"
+      modelProps: "quiz" | "quizLike" | "quizFavorite" | "question" | "lessonKit" | "storedImage" | "tag" | "story" | "storyPanel" | "storySubmission" | "storyRecording" | "thoughtChallenge" | "thoughtSubmission"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1139,6 +1156,76 @@ export namespace Prisma {
           count: {
             args: Prisma.QuestionCountArgs<ExtArgs>
             result: $Utils.Optional<QuestionCountAggregateOutputType> | number
+          }
+        }
+      }
+      LessonKit: {
+        payload: Prisma.$LessonKitPayload<ExtArgs>
+        fields: Prisma.LessonKitFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.LessonKitFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LessonKitPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.LessonKitFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LessonKitPayload>
+          }
+          findFirst: {
+            args: Prisma.LessonKitFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LessonKitPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.LessonKitFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LessonKitPayload>
+          }
+          findMany: {
+            args: Prisma.LessonKitFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LessonKitPayload>[]
+          }
+          create: {
+            args: Prisma.LessonKitCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LessonKitPayload>
+          }
+          createMany: {
+            args: Prisma.LessonKitCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.LessonKitCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LessonKitPayload>[]
+          }
+          delete: {
+            args: Prisma.LessonKitDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LessonKitPayload>
+          }
+          update: {
+            args: Prisma.LessonKitUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LessonKitPayload>
+          }
+          deleteMany: {
+            args: Prisma.LessonKitDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.LessonKitUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.LessonKitUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LessonKitPayload>
+          }
+          aggregate: {
+            args: Prisma.LessonKitAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateLessonKit>
+          }
+          groupBy: {
+            args: Prisma.LessonKitGroupByArgs<ExtArgs>
+            result: $Utils.Optional<LessonKitGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.LessonKitCountArgs<ExtArgs>
+            result: $Utils.Optional<LessonKitCountAggregateOutputType> | number
           }
         }
       }
@@ -2216,6 +2303,7 @@ export namespace Prisma {
     questions?: boolean | Quiz$questionsArgs<ExtArgs>
     likes?: boolean | Quiz$likesArgs<ExtArgs>
     favorites?: boolean | Quiz$favoritesArgs<ExtArgs>
+    lessonKit?: boolean | Quiz$lessonKitArgs<ExtArgs>
     _count?: boolean | QuizCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["quiz"]>
 
@@ -2251,6 +2339,7 @@ export namespace Prisma {
     questions?: boolean | Quiz$questionsArgs<ExtArgs>
     likes?: boolean | Quiz$likesArgs<ExtArgs>
     favorites?: boolean | Quiz$favoritesArgs<ExtArgs>
+    lessonKit?: boolean | Quiz$lessonKitArgs<ExtArgs>
     _count?: boolean | QuizCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type QuizIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -2261,6 +2350,7 @@ export namespace Prisma {
       questions: Prisma.$QuestionPayload<ExtArgs>[]
       likes: Prisma.$QuizLikePayload<ExtArgs>[]
       favorites: Prisma.$QuizFavoritePayload<ExtArgs>[]
+      lessonKit: Prisma.$LessonKitPayload<ExtArgs> | null
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -2641,6 +2731,7 @@ export namespace Prisma {
     questions<T extends Quiz$questionsArgs<ExtArgs> = {}>(args?: Subset<T, Quiz$questionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$QuestionPayload<ExtArgs>, T, "findMany"> | Null>
     likes<T extends Quiz$likesArgs<ExtArgs> = {}>(args?: Subset<T, Quiz$likesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$QuizLikePayload<ExtArgs>, T, "findMany"> | Null>
     favorites<T extends Quiz$favoritesArgs<ExtArgs> = {}>(args?: Subset<T, Quiz$favoritesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$QuizFavoritePayload<ExtArgs>, T, "findMany"> | Null>
+    lessonKit<T extends Quiz$lessonKitArgs<ExtArgs> = {}>(args?: Subset<T, Quiz$lessonKitArgs<ExtArgs>>): Prisma__LessonKitClient<$Result.GetResult<Prisma.$LessonKitPayload<ExtArgs>, T, "findUniqueOrThrow"> | null, null, ExtArgs>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3052,6 +3143,21 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: QuizFavoriteScalarFieldEnum | QuizFavoriteScalarFieldEnum[]
+  }
+
+  /**
+   * Quiz.lessonKit
+   */
+  export type Quiz$lessonKitArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LessonKit
+     */
+    select?: LessonKitSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LessonKitInclude<ExtArgs> | null
+    where?: LessonKitWhereInput
   }
 
   /**
@@ -5876,6 +5982,967 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: QuestionInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model LessonKit
+   */
+
+  export type AggregateLessonKit = {
+    _count: LessonKitCountAggregateOutputType | null
+    _min: LessonKitMinAggregateOutputType | null
+    _max: LessonKitMaxAggregateOutputType | null
+  }
+
+  export type LessonKitMinAggregateOutputType = {
+    id: string | null
+    authorId: string | null
+    quizId: string | null
+    title: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type LessonKitMaxAggregateOutputType = {
+    id: string | null
+    authorId: string | null
+    quizId: string | null
+    title: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type LessonKitCountAggregateOutputType = {
+    id: number
+    authorId: number
+    quizId: number
+    title: number
+    worksheetItems: number
+    sentences: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type LessonKitMinAggregateInputType = {
+    id?: true
+    authorId?: true
+    quizId?: true
+    title?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type LessonKitMaxAggregateInputType = {
+    id?: true
+    authorId?: true
+    quizId?: true
+    title?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type LessonKitCountAggregateInputType = {
+    id?: true
+    authorId?: true
+    quizId?: true
+    title?: true
+    worksheetItems?: true
+    sentences?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type LessonKitAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which LessonKit to aggregate.
+     */
+    where?: LessonKitWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of LessonKits to fetch.
+     */
+    orderBy?: LessonKitOrderByWithRelationInput | LessonKitOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: LessonKitWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` LessonKits from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` LessonKits.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned LessonKits
+    **/
+    _count?: true | LessonKitCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: LessonKitMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: LessonKitMaxAggregateInputType
+  }
+
+  export type GetLessonKitAggregateType<T extends LessonKitAggregateArgs> = {
+        [P in keyof T & keyof AggregateLessonKit]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateLessonKit[P]>
+      : GetScalarType<T[P], AggregateLessonKit[P]>
+  }
+
+
+
+
+  export type LessonKitGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: LessonKitWhereInput
+    orderBy?: LessonKitOrderByWithAggregationInput | LessonKitOrderByWithAggregationInput[]
+    by: LessonKitScalarFieldEnum[] | LessonKitScalarFieldEnum
+    having?: LessonKitScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: LessonKitCountAggregateInputType | true
+    _min?: LessonKitMinAggregateInputType
+    _max?: LessonKitMaxAggregateInputType
+  }
+
+  export type LessonKitGroupByOutputType = {
+    id: string
+    authorId: string
+    quizId: string
+    title: string
+    worksheetItems: JsonValue
+    sentences: JsonValue
+    createdAt: Date
+    updatedAt: Date
+    _count: LessonKitCountAggregateOutputType | null
+    _min: LessonKitMinAggregateOutputType | null
+    _max: LessonKitMaxAggregateOutputType | null
+  }
+
+  type GetLessonKitGroupByPayload<T extends LessonKitGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<LessonKitGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof LessonKitGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], LessonKitGroupByOutputType[P]>
+            : GetScalarType<T[P], LessonKitGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type LessonKitSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    authorId?: boolean
+    quizId?: boolean
+    title?: boolean
+    worksheetItems?: boolean
+    sentences?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    quiz?: boolean | QuizDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["lessonKit"]>
+
+  export type LessonKitSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    authorId?: boolean
+    quizId?: boolean
+    title?: boolean
+    worksheetItems?: boolean
+    sentences?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    quiz?: boolean | QuizDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["lessonKit"]>
+
+  export type LessonKitSelectScalar = {
+    id?: boolean
+    authorId?: boolean
+    quizId?: boolean
+    title?: boolean
+    worksheetItems?: boolean
+    sentences?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type LessonKitInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    quiz?: boolean | QuizDefaultArgs<ExtArgs>
+  }
+  export type LessonKitIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    quiz?: boolean | QuizDefaultArgs<ExtArgs>
+  }
+
+  export type $LessonKitPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "LessonKit"
+    objects: {
+      quiz: Prisma.$QuizPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      authorId: string
+      quizId: string
+      title: string
+      worksheetItems: Prisma.JsonValue
+      sentences: Prisma.JsonValue
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["lessonKit"]>
+    composites: {}
+  }
+
+  type LessonKitGetPayload<S extends boolean | null | undefined | LessonKitDefaultArgs> = $Result.GetResult<Prisma.$LessonKitPayload, S>
+
+  type LessonKitCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<LessonKitFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: LessonKitCountAggregateInputType | true
+    }
+
+  export interface LessonKitDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['LessonKit'], meta: { name: 'LessonKit' } }
+    /**
+     * Find zero or one LessonKit that matches the filter.
+     * @param {LessonKitFindUniqueArgs} args - Arguments to find a LessonKit
+     * @example
+     * // Get one LessonKit
+     * const lessonKit = await prisma.lessonKit.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends LessonKitFindUniqueArgs>(args: SelectSubset<T, LessonKitFindUniqueArgs<ExtArgs>>): Prisma__LessonKitClient<$Result.GetResult<Prisma.$LessonKitPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one LessonKit that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {LessonKitFindUniqueOrThrowArgs} args - Arguments to find a LessonKit
+     * @example
+     * // Get one LessonKit
+     * const lessonKit = await prisma.lessonKit.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends LessonKitFindUniqueOrThrowArgs>(args: SelectSubset<T, LessonKitFindUniqueOrThrowArgs<ExtArgs>>): Prisma__LessonKitClient<$Result.GetResult<Prisma.$LessonKitPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first LessonKit that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LessonKitFindFirstArgs} args - Arguments to find a LessonKit
+     * @example
+     * // Get one LessonKit
+     * const lessonKit = await prisma.lessonKit.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends LessonKitFindFirstArgs>(args?: SelectSubset<T, LessonKitFindFirstArgs<ExtArgs>>): Prisma__LessonKitClient<$Result.GetResult<Prisma.$LessonKitPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first LessonKit that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LessonKitFindFirstOrThrowArgs} args - Arguments to find a LessonKit
+     * @example
+     * // Get one LessonKit
+     * const lessonKit = await prisma.lessonKit.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends LessonKitFindFirstOrThrowArgs>(args?: SelectSubset<T, LessonKitFindFirstOrThrowArgs<ExtArgs>>): Prisma__LessonKitClient<$Result.GetResult<Prisma.$LessonKitPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more LessonKits that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LessonKitFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all LessonKits
+     * const lessonKits = await prisma.lessonKit.findMany()
+     * 
+     * // Get first 10 LessonKits
+     * const lessonKits = await prisma.lessonKit.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const lessonKitWithIdOnly = await prisma.lessonKit.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends LessonKitFindManyArgs>(args?: SelectSubset<T, LessonKitFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$LessonKitPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a LessonKit.
+     * @param {LessonKitCreateArgs} args - Arguments to create a LessonKit.
+     * @example
+     * // Create one LessonKit
+     * const LessonKit = await prisma.lessonKit.create({
+     *   data: {
+     *     // ... data to create a LessonKit
+     *   }
+     * })
+     * 
+     */
+    create<T extends LessonKitCreateArgs>(args: SelectSubset<T, LessonKitCreateArgs<ExtArgs>>): Prisma__LessonKitClient<$Result.GetResult<Prisma.$LessonKitPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many LessonKits.
+     * @param {LessonKitCreateManyArgs} args - Arguments to create many LessonKits.
+     * @example
+     * // Create many LessonKits
+     * const lessonKit = await prisma.lessonKit.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends LessonKitCreateManyArgs>(args?: SelectSubset<T, LessonKitCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many LessonKits and returns the data saved in the database.
+     * @param {LessonKitCreateManyAndReturnArgs} args - Arguments to create many LessonKits.
+     * @example
+     * // Create many LessonKits
+     * const lessonKit = await prisma.lessonKit.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many LessonKits and only return the `id`
+     * const lessonKitWithIdOnly = await prisma.lessonKit.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends LessonKitCreateManyAndReturnArgs>(args?: SelectSubset<T, LessonKitCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$LessonKitPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a LessonKit.
+     * @param {LessonKitDeleteArgs} args - Arguments to delete one LessonKit.
+     * @example
+     * // Delete one LessonKit
+     * const LessonKit = await prisma.lessonKit.delete({
+     *   where: {
+     *     // ... filter to delete one LessonKit
+     *   }
+     * })
+     * 
+     */
+    delete<T extends LessonKitDeleteArgs>(args: SelectSubset<T, LessonKitDeleteArgs<ExtArgs>>): Prisma__LessonKitClient<$Result.GetResult<Prisma.$LessonKitPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one LessonKit.
+     * @param {LessonKitUpdateArgs} args - Arguments to update one LessonKit.
+     * @example
+     * // Update one LessonKit
+     * const lessonKit = await prisma.lessonKit.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends LessonKitUpdateArgs>(args: SelectSubset<T, LessonKitUpdateArgs<ExtArgs>>): Prisma__LessonKitClient<$Result.GetResult<Prisma.$LessonKitPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more LessonKits.
+     * @param {LessonKitDeleteManyArgs} args - Arguments to filter LessonKits to delete.
+     * @example
+     * // Delete a few LessonKits
+     * const { count } = await prisma.lessonKit.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends LessonKitDeleteManyArgs>(args?: SelectSubset<T, LessonKitDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more LessonKits.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LessonKitUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many LessonKits
+     * const lessonKit = await prisma.lessonKit.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends LessonKitUpdateManyArgs>(args: SelectSubset<T, LessonKitUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one LessonKit.
+     * @param {LessonKitUpsertArgs} args - Arguments to update or create a LessonKit.
+     * @example
+     * // Update or create a LessonKit
+     * const lessonKit = await prisma.lessonKit.upsert({
+     *   create: {
+     *     // ... data to create a LessonKit
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the LessonKit we want to update
+     *   }
+     * })
+     */
+    upsert<T extends LessonKitUpsertArgs>(args: SelectSubset<T, LessonKitUpsertArgs<ExtArgs>>): Prisma__LessonKitClient<$Result.GetResult<Prisma.$LessonKitPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of LessonKits.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LessonKitCountArgs} args - Arguments to filter LessonKits to count.
+     * @example
+     * // Count the number of LessonKits
+     * const count = await prisma.lessonKit.count({
+     *   where: {
+     *     // ... the filter for the LessonKits we want to count
+     *   }
+     * })
+    **/
+    count<T extends LessonKitCountArgs>(
+      args?: Subset<T, LessonKitCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], LessonKitCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a LessonKit.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LessonKitAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends LessonKitAggregateArgs>(args: Subset<T, LessonKitAggregateArgs>): Prisma.PrismaPromise<GetLessonKitAggregateType<T>>
+
+    /**
+     * Group by LessonKit.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LessonKitGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends LessonKitGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: LessonKitGroupByArgs['orderBy'] }
+        : { orderBy?: LessonKitGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, LessonKitGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetLessonKitGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the LessonKit model
+   */
+  readonly fields: LessonKitFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for LessonKit.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__LessonKitClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    quiz<T extends QuizDefaultArgs<ExtArgs> = {}>(args?: Subset<T, QuizDefaultArgs<ExtArgs>>): Prisma__QuizClient<$Result.GetResult<Prisma.$QuizPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the LessonKit model
+   */ 
+  interface LessonKitFieldRefs {
+    readonly id: FieldRef<"LessonKit", 'String'>
+    readonly authorId: FieldRef<"LessonKit", 'String'>
+    readonly quizId: FieldRef<"LessonKit", 'String'>
+    readonly title: FieldRef<"LessonKit", 'String'>
+    readonly worksheetItems: FieldRef<"LessonKit", 'Json'>
+    readonly sentences: FieldRef<"LessonKit", 'Json'>
+    readonly createdAt: FieldRef<"LessonKit", 'DateTime'>
+    readonly updatedAt: FieldRef<"LessonKit", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * LessonKit findUnique
+   */
+  export type LessonKitFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LessonKit
+     */
+    select?: LessonKitSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LessonKitInclude<ExtArgs> | null
+    /**
+     * Filter, which LessonKit to fetch.
+     */
+    where: LessonKitWhereUniqueInput
+  }
+
+  /**
+   * LessonKit findUniqueOrThrow
+   */
+  export type LessonKitFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LessonKit
+     */
+    select?: LessonKitSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LessonKitInclude<ExtArgs> | null
+    /**
+     * Filter, which LessonKit to fetch.
+     */
+    where: LessonKitWhereUniqueInput
+  }
+
+  /**
+   * LessonKit findFirst
+   */
+  export type LessonKitFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LessonKit
+     */
+    select?: LessonKitSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LessonKitInclude<ExtArgs> | null
+    /**
+     * Filter, which LessonKit to fetch.
+     */
+    where?: LessonKitWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of LessonKits to fetch.
+     */
+    orderBy?: LessonKitOrderByWithRelationInput | LessonKitOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for LessonKits.
+     */
+    cursor?: LessonKitWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` LessonKits from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` LessonKits.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of LessonKits.
+     */
+    distinct?: LessonKitScalarFieldEnum | LessonKitScalarFieldEnum[]
+  }
+
+  /**
+   * LessonKit findFirstOrThrow
+   */
+  export type LessonKitFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LessonKit
+     */
+    select?: LessonKitSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LessonKitInclude<ExtArgs> | null
+    /**
+     * Filter, which LessonKit to fetch.
+     */
+    where?: LessonKitWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of LessonKits to fetch.
+     */
+    orderBy?: LessonKitOrderByWithRelationInput | LessonKitOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for LessonKits.
+     */
+    cursor?: LessonKitWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` LessonKits from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` LessonKits.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of LessonKits.
+     */
+    distinct?: LessonKitScalarFieldEnum | LessonKitScalarFieldEnum[]
+  }
+
+  /**
+   * LessonKit findMany
+   */
+  export type LessonKitFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LessonKit
+     */
+    select?: LessonKitSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LessonKitInclude<ExtArgs> | null
+    /**
+     * Filter, which LessonKits to fetch.
+     */
+    where?: LessonKitWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of LessonKits to fetch.
+     */
+    orderBy?: LessonKitOrderByWithRelationInput | LessonKitOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing LessonKits.
+     */
+    cursor?: LessonKitWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` LessonKits from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` LessonKits.
+     */
+    skip?: number
+    distinct?: LessonKitScalarFieldEnum | LessonKitScalarFieldEnum[]
+  }
+
+  /**
+   * LessonKit create
+   */
+  export type LessonKitCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LessonKit
+     */
+    select?: LessonKitSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LessonKitInclude<ExtArgs> | null
+    /**
+     * The data needed to create a LessonKit.
+     */
+    data: XOR<LessonKitCreateInput, LessonKitUncheckedCreateInput>
+  }
+
+  /**
+   * LessonKit createMany
+   */
+  export type LessonKitCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many LessonKits.
+     */
+    data: LessonKitCreateManyInput | LessonKitCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * LessonKit createManyAndReturn
+   */
+  export type LessonKitCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LessonKit
+     */
+    select?: LessonKitSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many LessonKits.
+     */
+    data: LessonKitCreateManyInput | LessonKitCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LessonKitIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * LessonKit update
+   */
+  export type LessonKitUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LessonKit
+     */
+    select?: LessonKitSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LessonKitInclude<ExtArgs> | null
+    /**
+     * The data needed to update a LessonKit.
+     */
+    data: XOR<LessonKitUpdateInput, LessonKitUncheckedUpdateInput>
+    /**
+     * Choose, which LessonKit to update.
+     */
+    where: LessonKitWhereUniqueInput
+  }
+
+  /**
+   * LessonKit updateMany
+   */
+  export type LessonKitUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update LessonKits.
+     */
+    data: XOR<LessonKitUpdateManyMutationInput, LessonKitUncheckedUpdateManyInput>
+    /**
+     * Filter which LessonKits to update
+     */
+    where?: LessonKitWhereInput
+  }
+
+  /**
+   * LessonKit upsert
+   */
+  export type LessonKitUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LessonKit
+     */
+    select?: LessonKitSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LessonKitInclude<ExtArgs> | null
+    /**
+     * The filter to search for the LessonKit to update in case it exists.
+     */
+    where: LessonKitWhereUniqueInput
+    /**
+     * In case the LessonKit found by the `where` argument doesn't exist, create a new LessonKit with this data.
+     */
+    create: XOR<LessonKitCreateInput, LessonKitUncheckedCreateInput>
+    /**
+     * In case the LessonKit was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<LessonKitUpdateInput, LessonKitUncheckedUpdateInput>
+  }
+
+  /**
+   * LessonKit delete
+   */
+  export type LessonKitDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LessonKit
+     */
+    select?: LessonKitSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LessonKitInclude<ExtArgs> | null
+    /**
+     * Filter which LessonKit to delete.
+     */
+    where: LessonKitWhereUniqueInput
+  }
+
+  /**
+   * LessonKit deleteMany
+   */
+  export type LessonKitDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which LessonKits to delete
+     */
+    where?: LessonKitWhereInput
+  }
+
+  /**
+   * LessonKit without action
+   */
+  export type LessonKitDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LessonKit
+     */
+    select?: LessonKitSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LessonKitInclude<ExtArgs> | null
   }
 
 
@@ -13956,6 +15023,20 @@ export namespace Prisma {
   export type QuestionScalarFieldEnum = (typeof QuestionScalarFieldEnum)[keyof typeof QuestionScalarFieldEnum]
 
 
+  export const LessonKitScalarFieldEnum: {
+    id: 'id',
+    authorId: 'authorId',
+    quizId: 'quizId',
+    title: 'title',
+    worksheetItems: 'worksheetItems',
+    sentences: 'sentences',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type LessonKitScalarFieldEnum = (typeof LessonKitScalarFieldEnum)[keyof typeof LessonKitScalarFieldEnum]
+
+
   export const StoredImageScalarFieldEnum: {
     id: 'id',
     filename: 'filename',
@@ -14295,6 +15376,7 @@ export namespace Prisma {
     questions?: QuestionListRelationFilter
     likes?: QuizLikeListRelationFilter
     favorites?: QuizFavoriteListRelationFilter
+    lessonKit?: XOR<LessonKitNullableRelationFilter, LessonKitWhereInput> | null
   }
 
   export type QuizOrderByWithRelationInput = {
@@ -14312,6 +15394,7 @@ export namespace Prisma {
     questions?: QuestionOrderByRelationAggregateInput
     likes?: QuizLikeOrderByRelationAggregateInput
     favorites?: QuizFavoriteOrderByRelationAggregateInput
+    lessonKit?: LessonKitOrderByWithRelationInput
   }
 
   export type QuizWhereUniqueInput = Prisma.AtLeast<{
@@ -14332,6 +15415,7 @@ export namespace Prisma {
     questions?: QuestionListRelationFilter
     likes?: QuizLikeListRelationFilter
     favorites?: QuizFavoriteListRelationFilter
+    lessonKit?: XOR<LessonKitNullableRelationFilter, LessonKitWhereInput> | null
   }, "id">
 
   export type QuizOrderByWithAggregationInput = {
@@ -14533,6 +15617,76 @@ export namespace Prisma {
     correctAnswer?: StringWithAggregatesFilter<"Question"> | string
     type?: EnumQuestionTypeWithAggregatesFilter<"Question"> | $Enums.QuestionType
     quizId?: StringNullableWithAggregatesFilter<"Question"> | string | null
+  }
+
+  export type LessonKitWhereInput = {
+    AND?: LessonKitWhereInput | LessonKitWhereInput[]
+    OR?: LessonKitWhereInput[]
+    NOT?: LessonKitWhereInput | LessonKitWhereInput[]
+    id?: StringFilter<"LessonKit"> | string
+    authorId?: StringFilter<"LessonKit"> | string
+    quizId?: StringFilter<"LessonKit"> | string
+    title?: StringFilter<"LessonKit"> | string
+    worksheetItems?: JsonFilter<"LessonKit">
+    sentences?: JsonFilter<"LessonKit">
+    createdAt?: DateTimeFilter<"LessonKit"> | Date | string
+    updatedAt?: DateTimeFilter<"LessonKit"> | Date | string
+    quiz?: XOR<QuizRelationFilter, QuizWhereInput>
+  }
+
+  export type LessonKitOrderByWithRelationInput = {
+    id?: SortOrder
+    authorId?: SortOrder
+    quizId?: SortOrder
+    title?: SortOrder
+    worksheetItems?: SortOrder
+    sentences?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    quiz?: QuizOrderByWithRelationInput
+  }
+
+  export type LessonKitWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    quizId?: string
+    AND?: LessonKitWhereInput | LessonKitWhereInput[]
+    OR?: LessonKitWhereInput[]
+    NOT?: LessonKitWhereInput | LessonKitWhereInput[]
+    authorId?: StringFilter<"LessonKit"> | string
+    title?: StringFilter<"LessonKit"> | string
+    worksheetItems?: JsonFilter<"LessonKit">
+    sentences?: JsonFilter<"LessonKit">
+    createdAt?: DateTimeFilter<"LessonKit"> | Date | string
+    updatedAt?: DateTimeFilter<"LessonKit"> | Date | string
+    quiz?: XOR<QuizRelationFilter, QuizWhereInput>
+  }, "id" | "quizId">
+
+  export type LessonKitOrderByWithAggregationInput = {
+    id?: SortOrder
+    authorId?: SortOrder
+    quizId?: SortOrder
+    title?: SortOrder
+    worksheetItems?: SortOrder
+    sentences?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: LessonKitCountOrderByAggregateInput
+    _max?: LessonKitMaxOrderByAggregateInput
+    _min?: LessonKitMinOrderByAggregateInput
+  }
+
+  export type LessonKitScalarWhereWithAggregatesInput = {
+    AND?: LessonKitScalarWhereWithAggregatesInput | LessonKitScalarWhereWithAggregatesInput[]
+    OR?: LessonKitScalarWhereWithAggregatesInput[]
+    NOT?: LessonKitScalarWhereWithAggregatesInput | LessonKitScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"LessonKit"> | string
+    authorId?: StringWithAggregatesFilter<"LessonKit"> | string
+    quizId?: StringWithAggregatesFilter<"LessonKit"> | string
+    title?: StringWithAggregatesFilter<"LessonKit"> | string
+    worksheetItems?: JsonWithAggregatesFilter<"LessonKit">
+    sentences?: JsonWithAggregatesFilter<"LessonKit">
+    createdAt?: DateTimeWithAggregatesFilter<"LessonKit"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"LessonKit"> | Date | string
   }
 
   export type StoredImageWhereInput = {
@@ -15186,6 +16340,7 @@ export namespace Prisma {
     questions?: QuestionCreateNestedManyWithoutQuizInput
     likes?: QuizLikeCreateNestedManyWithoutQuizInput
     favorites?: QuizFavoriteCreateNestedManyWithoutQuizInput
+    lessonKit?: LessonKitCreateNestedOneWithoutQuizInput
   }
 
   export type QuizUncheckedCreateInput = {
@@ -15203,6 +16358,7 @@ export namespace Prisma {
     questions?: QuestionUncheckedCreateNestedManyWithoutQuizInput
     likes?: QuizLikeUncheckedCreateNestedManyWithoutQuizInput
     favorites?: QuizFavoriteUncheckedCreateNestedManyWithoutQuizInput
+    lessonKit?: LessonKitUncheckedCreateNestedOneWithoutQuizInput
   }
 
   export type QuizUpdateInput = {
@@ -15220,6 +16376,7 @@ export namespace Prisma {
     questions?: QuestionUpdateManyWithoutQuizNestedInput
     likes?: QuizLikeUpdateManyWithoutQuizNestedInput
     favorites?: QuizFavoriteUpdateManyWithoutQuizNestedInput
+    lessonKit?: LessonKitUpdateOneWithoutQuizNestedInput
   }
 
   export type QuizUncheckedUpdateInput = {
@@ -15237,6 +16394,7 @@ export namespace Prisma {
     questions?: QuestionUncheckedUpdateManyWithoutQuizNestedInput
     likes?: QuizLikeUncheckedUpdateManyWithoutQuizNestedInput
     favorites?: QuizFavoriteUncheckedUpdateManyWithoutQuizNestedInput
+    lessonKit?: LessonKitUncheckedUpdateOneWithoutQuizNestedInput
   }
 
   export type QuizCreateManyInput = {
@@ -15444,6 +16602,82 @@ export namespace Prisma {
     correctAnswer?: StringFieldUpdateOperationsInput | string
     type?: EnumQuestionTypeFieldUpdateOperationsInput | $Enums.QuestionType
     quizId?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type LessonKitCreateInput = {
+    id?: string
+    authorId?: string
+    title: string
+    worksheetItems: JsonNullValueInput | InputJsonValue
+    sentences: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    quiz: QuizCreateNestedOneWithoutLessonKitInput
+  }
+
+  export type LessonKitUncheckedCreateInput = {
+    id?: string
+    authorId?: string
+    quizId: string
+    title: string
+    worksheetItems: JsonNullValueInput | InputJsonValue
+    sentences: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type LessonKitUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    worksheetItems?: JsonNullValueInput | InputJsonValue
+    sentences?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    quiz?: QuizUpdateOneRequiredWithoutLessonKitNestedInput
+  }
+
+  export type LessonKitUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    quizId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    worksheetItems?: JsonNullValueInput | InputJsonValue
+    sentences?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type LessonKitCreateManyInput = {
+    id?: string
+    authorId?: string
+    quizId: string
+    title: string
+    worksheetItems: JsonNullValueInput | InputJsonValue
+    sentences: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type LessonKitUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    worksheetItems?: JsonNullValueInput | InputJsonValue
+    sentences?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type LessonKitUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    quizId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    worksheetItems?: JsonNullValueInput | InputJsonValue
+    sentences?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type StoredImageCreateInput = {
@@ -16261,6 +17495,11 @@ export namespace Prisma {
     none?: QuizFavoriteWhereInput
   }
 
+  export type LessonKitNullableRelationFilter = {
+    is?: LessonKitWhereInput | null
+    isNot?: LessonKitWhereInput | null
+  }
+
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
@@ -16487,6 +17726,82 @@ export namespace Prisma {
     correctAnswer?: SortOrder
     type?: SortOrder
     quizId?: SortOrder
+  }
+  export type JsonFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<JsonFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type LessonKitCountOrderByAggregateInput = {
+    id?: SortOrder
+    authorId?: SortOrder
+    quizId?: SortOrder
+    title?: SortOrder
+    worksheetItems?: SortOrder
+    sentences?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type LessonKitMaxOrderByAggregateInput = {
+    id?: SortOrder
+    authorId?: SortOrder
+    quizId?: SortOrder
+    title?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type LessonKitMinOrderByAggregateInput = {
+    id?: SortOrder
+    authorId?: SortOrder
+    quizId?: SortOrder
+    title?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+  export type JsonWithAggregatesFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedJsonFilter<$PrismaModel>
+    _max?: NestedJsonFilter<$PrismaModel>
   }
 
   export type IntFilter<$PrismaModel = never> = {
@@ -16975,28 +18290,6 @@ export namespace Prisma {
     _min?: NestedEnumThoughtChallengeStatusFilter<$PrismaModel>
     _max?: NestedEnumThoughtChallengeStatusFilter<$PrismaModel>
   }
-  export type JsonFilter<$PrismaModel = never> = 
-    | PatchUndefined<
-        Either<Required<JsonFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonFilterBase<$PrismaModel>>, 'path'>>,
-        Required<JsonFilterBase<$PrismaModel>>
-      >
-    | OptionalFlat<Omit<Required<JsonFilterBase<$PrismaModel>>, 'path'>>
-
-  export type JsonFilterBase<$PrismaModel = never> = {
-    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
-    string_contains?: string | StringFieldRefInput<$PrismaModel>
-    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
-    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
-    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-  }
 
   export type EnumThoughtSubmissionStatusFilter<$PrismaModel = never> = {
     equals?: $Enums.ThoughtSubmissionStatus | EnumThoughtSubmissionStatusFieldRefInput<$PrismaModel>
@@ -17063,31 +18356,6 @@ export namespace Prisma {
   export type ThoughtSubmissionSumOrderByAggregateInput = {
     durationMs?: SortOrder
   }
-  export type JsonWithAggregatesFilter<$PrismaModel = never> = 
-    | PatchUndefined<
-        Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
-        Required<JsonWithAggregatesFilterBase<$PrismaModel>>
-      >
-    | OptionalFlat<Omit<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
-
-  export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
-    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
-    string_contains?: string | StringFieldRefInput<$PrismaModel>
-    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
-    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
-    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedJsonFilter<$PrismaModel>
-    _max?: NestedJsonFilter<$PrismaModel>
-  }
 
   export type EnumThoughtSubmissionStatusWithAggregatesFilter<$PrismaModel = never> = {
     equals?: $Enums.ThoughtSubmissionStatus | EnumThoughtSubmissionStatusFieldRefInput<$PrismaModel>
@@ -17124,6 +18392,12 @@ export namespace Prisma {
     connect?: QuizFavoriteWhereUniqueInput | QuizFavoriteWhereUniqueInput[]
   }
 
+  export type LessonKitCreateNestedOneWithoutQuizInput = {
+    create?: XOR<LessonKitCreateWithoutQuizInput, LessonKitUncheckedCreateWithoutQuizInput>
+    connectOrCreate?: LessonKitCreateOrConnectWithoutQuizInput
+    connect?: LessonKitWhereUniqueInput
+  }
+
   export type QuestionUncheckedCreateNestedManyWithoutQuizInput = {
     create?: XOR<QuestionCreateWithoutQuizInput, QuestionUncheckedCreateWithoutQuizInput> | QuestionCreateWithoutQuizInput[] | QuestionUncheckedCreateWithoutQuizInput[]
     connectOrCreate?: QuestionCreateOrConnectWithoutQuizInput | QuestionCreateOrConnectWithoutQuizInput[]
@@ -17143,6 +18417,12 @@ export namespace Prisma {
     connectOrCreate?: QuizFavoriteCreateOrConnectWithoutQuizInput | QuizFavoriteCreateOrConnectWithoutQuizInput[]
     createMany?: QuizFavoriteCreateManyQuizInputEnvelope
     connect?: QuizFavoriteWhereUniqueInput | QuizFavoriteWhereUniqueInput[]
+  }
+
+  export type LessonKitUncheckedCreateNestedOneWithoutQuizInput = {
+    create?: XOR<LessonKitCreateWithoutQuizInput, LessonKitUncheckedCreateWithoutQuizInput>
+    connectOrCreate?: LessonKitCreateOrConnectWithoutQuizInput
+    connect?: LessonKitWhereUniqueInput
   }
 
   export type StringFieldUpdateOperationsInput = {
@@ -17208,6 +18488,16 @@ export namespace Prisma {
     deleteMany?: QuizFavoriteScalarWhereInput | QuizFavoriteScalarWhereInput[]
   }
 
+  export type LessonKitUpdateOneWithoutQuizNestedInput = {
+    create?: XOR<LessonKitCreateWithoutQuizInput, LessonKitUncheckedCreateWithoutQuizInput>
+    connectOrCreate?: LessonKitCreateOrConnectWithoutQuizInput
+    upsert?: LessonKitUpsertWithoutQuizInput
+    disconnect?: LessonKitWhereInput | boolean
+    delete?: LessonKitWhereInput | boolean
+    connect?: LessonKitWhereUniqueInput
+    update?: XOR<XOR<LessonKitUpdateToOneWithWhereWithoutQuizInput, LessonKitUpdateWithoutQuizInput>, LessonKitUncheckedUpdateWithoutQuizInput>
+  }
+
   export type QuestionUncheckedUpdateManyWithoutQuizNestedInput = {
     create?: XOR<QuestionCreateWithoutQuizInput, QuestionUncheckedCreateWithoutQuizInput> | QuestionCreateWithoutQuizInput[] | QuestionUncheckedCreateWithoutQuizInput[]
     connectOrCreate?: QuestionCreateOrConnectWithoutQuizInput | QuestionCreateOrConnectWithoutQuizInput[]
@@ -17248,6 +18538,16 @@ export namespace Prisma {
     update?: QuizFavoriteUpdateWithWhereUniqueWithoutQuizInput | QuizFavoriteUpdateWithWhereUniqueWithoutQuizInput[]
     updateMany?: QuizFavoriteUpdateManyWithWhereWithoutQuizInput | QuizFavoriteUpdateManyWithWhereWithoutQuizInput[]
     deleteMany?: QuizFavoriteScalarWhereInput | QuizFavoriteScalarWhereInput[]
+  }
+
+  export type LessonKitUncheckedUpdateOneWithoutQuizNestedInput = {
+    create?: XOR<LessonKitCreateWithoutQuizInput, LessonKitUncheckedCreateWithoutQuizInput>
+    connectOrCreate?: LessonKitCreateOrConnectWithoutQuizInput
+    upsert?: LessonKitUpsertWithoutQuizInput
+    disconnect?: LessonKitWhereInput | boolean
+    delete?: LessonKitWhereInput | boolean
+    connect?: LessonKitWhereUniqueInput
+    update?: XOR<XOR<LessonKitUpdateToOneWithWhereWithoutQuizInput, LessonKitUpdateWithoutQuizInput>, LessonKitUncheckedUpdateWithoutQuizInput>
   }
 
   export type QuizCreateNestedOneWithoutLikesInput = {
@@ -17301,6 +18601,20 @@ export namespace Prisma {
     delete?: QuizWhereInput | boolean
     connect?: QuizWhereUniqueInput
     update?: XOR<XOR<QuizUpdateToOneWithWhereWithoutQuestionsInput, QuizUpdateWithoutQuestionsInput>, QuizUncheckedUpdateWithoutQuestionsInput>
+  }
+
+  export type QuizCreateNestedOneWithoutLessonKitInput = {
+    create?: XOR<QuizCreateWithoutLessonKitInput, QuizUncheckedCreateWithoutLessonKitInput>
+    connectOrCreate?: QuizCreateOrConnectWithoutLessonKitInput
+    connect?: QuizWhereUniqueInput
+  }
+
+  export type QuizUpdateOneRequiredWithoutLessonKitNestedInput = {
+    create?: XOR<QuizCreateWithoutLessonKitInput, QuizUncheckedCreateWithoutLessonKitInput>
+    connectOrCreate?: QuizCreateOrConnectWithoutLessonKitInput
+    upsert?: QuizUpsertWithoutLessonKitInput
+    connect?: QuizWhereUniqueInput
+    update?: XOR<XOR<QuizUpdateToOneWithWhereWithoutLessonKitInput, QuizUpdateWithoutLessonKitInput>, QuizUncheckedUpdateWithoutLessonKitInput>
   }
 
   export type StoredImageCreatetagsInput = {
@@ -17732,6 +19046,28 @@ export namespace Prisma {
     _min?: NestedDateTimeFilter<$PrismaModel>
     _max?: NestedDateTimeFilter<$PrismaModel>
   }
+  export type NestedJsonFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<NestedJsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type NestedJsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
 
   export type NestedDateTimeNullableFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
@@ -17882,28 +19218,6 @@ export namespace Prisma {
     notIn?: $Enums.ThoughtSubmissionStatus[] | ListEnumThoughtSubmissionStatusFieldRefInput<$PrismaModel>
     not?: NestedEnumThoughtSubmissionStatusFilter<$PrismaModel> | $Enums.ThoughtSubmissionStatus
   }
-  export type NestedJsonFilter<$PrismaModel = never> = 
-    | PatchUndefined<
-        Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
-        Required<NestedJsonFilterBase<$PrismaModel>>
-      >
-    | OptionalFlat<Omit<Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>
-
-  export type NestedJsonFilterBase<$PrismaModel = never> = {
-    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
-    string_contains?: string | StringFieldRefInput<$PrismaModel>
-    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
-    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
-    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-  }
 
   export type NestedEnumThoughtSubmissionStatusWithAggregatesFilter<$PrismaModel = never> = {
     equals?: $Enums.ThoughtSubmissionStatus | EnumThoughtSubmissionStatusFieldRefInput<$PrismaModel>
@@ -17987,6 +19301,31 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type LessonKitCreateWithoutQuizInput = {
+    id?: string
+    authorId?: string
+    title: string
+    worksheetItems: JsonNullValueInput | InputJsonValue
+    sentences: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type LessonKitUncheckedCreateWithoutQuizInput = {
+    id?: string
+    authorId?: string
+    title: string
+    worksheetItems: JsonNullValueInput | InputJsonValue
+    sentences: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type LessonKitCreateOrConnectWithoutQuizInput = {
+    where: LessonKitWhereUniqueInput
+    create: XOR<LessonKitCreateWithoutQuizInput, LessonKitUncheckedCreateWithoutQuizInput>
+  }
+
   export type QuestionUpsertWithWhereUniqueWithoutQuizInput = {
     where: QuestionWhereUniqueInput
     update: XOR<QuestionUpdateWithoutQuizInput, QuestionUncheckedUpdateWithoutQuizInput>
@@ -18068,6 +19407,37 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"QuizFavorite"> | Date | string
   }
 
+  export type LessonKitUpsertWithoutQuizInput = {
+    update: XOR<LessonKitUpdateWithoutQuizInput, LessonKitUncheckedUpdateWithoutQuizInput>
+    create: XOR<LessonKitCreateWithoutQuizInput, LessonKitUncheckedCreateWithoutQuizInput>
+    where?: LessonKitWhereInput
+  }
+
+  export type LessonKitUpdateToOneWithWhereWithoutQuizInput = {
+    where?: LessonKitWhereInput
+    data: XOR<LessonKitUpdateWithoutQuizInput, LessonKitUncheckedUpdateWithoutQuizInput>
+  }
+
+  export type LessonKitUpdateWithoutQuizInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    worksheetItems?: JsonNullValueInput | InputJsonValue
+    sentences?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type LessonKitUncheckedUpdateWithoutQuizInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    worksheetItems?: JsonNullValueInput | InputJsonValue
+    sentences?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type QuizCreateWithoutLikesInput = {
     id?: string
     title: string
@@ -18082,6 +19452,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     questions?: QuestionCreateNestedManyWithoutQuizInput
     favorites?: QuizFavoriteCreateNestedManyWithoutQuizInput
+    lessonKit?: LessonKitCreateNestedOneWithoutQuizInput
   }
 
   export type QuizUncheckedCreateWithoutLikesInput = {
@@ -18098,6 +19469,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     questions?: QuestionUncheckedCreateNestedManyWithoutQuizInput
     favorites?: QuizFavoriteUncheckedCreateNestedManyWithoutQuizInput
+    lessonKit?: LessonKitUncheckedCreateNestedOneWithoutQuizInput
   }
 
   export type QuizCreateOrConnectWithoutLikesInput = {
@@ -18130,6 +19502,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     questions?: QuestionUpdateManyWithoutQuizNestedInput
     favorites?: QuizFavoriteUpdateManyWithoutQuizNestedInput
+    lessonKit?: LessonKitUpdateOneWithoutQuizNestedInput
   }
 
   export type QuizUncheckedUpdateWithoutLikesInput = {
@@ -18146,6 +19519,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     questions?: QuestionUncheckedUpdateManyWithoutQuizNestedInput
     favorites?: QuizFavoriteUncheckedUpdateManyWithoutQuizNestedInput
+    lessonKit?: LessonKitUncheckedUpdateOneWithoutQuizNestedInput
   }
 
   export type QuizCreateWithoutFavoritesInput = {
@@ -18162,6 +19536,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     questions?: QuestionCreateNestedManyWithoutQuizInput
     likes?: QuizLikeCreateNestedManyWithoutQuizInput
+    lessonKit?: LessonKitCreateNestedOneWithoutQuizInput
   }
 
   export type QuizUncheckedCreateWithoutFavoritesInput = {
@@ -18178,6 +19553,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     questions?: QuestionUncheckedCreateNestedManyWithoutQuizInput
     likes?: QuizLikeUncheckedCreateNestedManyWithoutQuizInput
+    lessonKit?: LessonKitUncheckedCreateNestedOneWithoutQuizInput
   }
 
   export type QuizCreateOrConnectWithoutFavoritesInput = {
@@ -18210,6 +19586,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     questions?: QuestionUpdateManyWithoutQuizNestedInput
     likes?: QuizLikeUpdateManyWithoutQuizNestedInput
+    lessonKit?: LessonKitUpdateOneWithoutQuizNestedInput
   }
 
   export type QuizUncheckedUpdateWithoutFavoritesInput = {
@@ -18226,6 +19603,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     questions?: QuestionUncheckedUpdateManyWithoutQuizNestedInput
     likes?: QuizLikeUncheckedUpdateManyWithoutQuizNestedInput
+    lessonKit?: LessonKitUncheckedUpdateOneWithoutQuizNestedInput
   }
 
   export type QuizCreateWithoutQuestionsInput = {
@@ -18242,6 +19620,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     likes?: QuizLikeCreateNestedManyWithoutQuizInput
     favorites?: QuizFavoriteCreateNestedManyWithoutQuizInput
+    lessonKit?: LessonKitCreateNestedOneWithoutQuizInput
   }
 
   export type QuizUncheckedCreateWithoutQuestionsInput = {
@@ -18258,6 +19637,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     likes?: QuizLikeUncheckedCreateNestedManyWithoutQuizInput
     favorites?: QuizFavoriteUncheckedCreateNestedManyWithoutQuizInput
+    lessonKit?: LessonKitUncheckedCreateNestedOneWithoutQuizInput
   }
 
   export type QuizCreateOrConnectWithoutQuestionsInput = {
@@ -18290,6 +19670,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     likes?: QuizLikeUpdateManyWithoutQuizNestedInput
     favorites?: QuizFavoriteUpdateManyWithoutQuizNestedInput
+    lessonKit?: LessonKitUpdateOneWithoutQuizNestedInput
   }
 
   export type QuizUncheckedUpdateWithoutQuestionsInput = {
@@ -18304,6 +19685,91 @@ export namespace Prisma {
     authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    likes?: QuizLikeUncheckedUpdateManyWithoutQuizNestedInput
+    favorites?: QuizFavoriteUncheckedUpdateManyWithoutQuizNestedInput
+    lessonKit?: LessonKitUncheckedUpdateOneWithoutQuizNestedInput
+  }
+
+  export type QuizCreateWithoutLessonKitInput = {
+    id?: string
+    title: string
+    description?: string | null
+    imageUrl?: string | null
+    quizType?: $Enums.QuestionType
+    tags?: QuizCreatetagsInput | string[]
+    statistics?: NullableJsonNullValueInput | InputJsonValue
+    defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    authorId?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    questions?: QuestionCreateNestedManyWithoutQuizInput
+    likes?: QuizLikeCreateNestedManyWithoutQuizInput
+    favorites?: QuizFavoriteCreateNestedManyWithoutQuizInput
+  }
+
+  export type QuizUncheckedCreateWithoutLessonKitInput = {
+    id?: string
+    title: string
+    description?: string | null
+    imageUrl?: string | null
+    quizType?: $Enums.QuestionType
+    tags?: QuizCreatetagsInput | string[]
+    statistics?: NullableJsonNullValueInput | InputJsonValue
+    defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    authorId?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    questions?: QuestionUncheckedCreateNestedManyWithoutQuizInput
+    likes?: QuizLikeUncheckedCreateNestedManyWithoutQuizInput
+    favorites?: QuizFavoriteUncheckedCreateNestedManyWithoutQuizInput
+  }
+
+  export type QuizCreateOrConnectWithoutLessonKitInput = {
+    where: QuizWhereUniqueInput
+    create: XOR<QuizCreateWithoutLessonKitInput, QuizUncheckedCreateWithoutLessonKitInput>
+  }
+
+  export type QuizUpsertWithoutLessonKitInput = {
+    update: XOR<QuizUpdateWithoutLessonKitInput, QuizUncheckedUpdateWithoutLessonKitInput>
+    create: XOR<QuizCreateWithoutLessonKitInput, QuizUncheckedCreateWithoutLessonKitInput>
+    where?: QuizWhereInput
+  }
+
+  export type QuizUpdateToOneWithWhereWithoutLessonKitInput = {
+    where?: QuizWhereInput
+    data: XOR<QuizUpdateWithoutLessonKitInput, QuizUncheckedUpdateWithoutLessonKitInput>
+  }
+
+  export type QuizUpdateWithoutLessonKitInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    quizType?: EnumQuestionTypeFieldUpdateOperationsInput | $Enums.QuestionType
+    tags?: QuizUpdatetagsInput | string[]
+    statistics?: NullableJsonNullValueInput | InputJsonValue
+    defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    authorId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    questions?: QuestionUpdateManyWithoutQuizNestedInput
+    likes?: QuizLikeUpdateManyWithoutQuizNestedInput
+    favorites?: QuizFavoriteUpdateManyWithoutQuizNestedInput
+  }
+
+  export type QuizUncheckedUpdateWithoutLessonKitInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    quizType?: EnumQuestionTypeFieldUpdateOperationsInput | $Enums.QuestionType
+    tags?: QuizUpdatetagsInput | string[]
+    statistics?: NullableJsonNullValueInput | InputJsonValue
+    defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    authorId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    questions?: QuestionUncheckedUpdateManyWithoutQuizNestedInput
     likes?: QuizLikeUncheckedUpdateManyWithoutQuizNestedInput
     favorites?: QuizFavoriteUncheckedUpdateManyWithoutQuizNestedInput
   }
@@ -19129,6 +20595,10 @@ export namespace Prisma {
      * @deprecated Use QuestionDefaultArgs instead
      */
     export type QuestionArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = QuestionDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use LessonKitDefaultArgs instead
+     */
+    export type LessonKitArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = LessonKitDefaultArgs<ExtArgs>
     /**
      * @deprecated Use StoredImageDefaultArgs instead
      */

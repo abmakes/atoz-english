@@ -80,11 +80,13 @@ describe('sentence builder content', () => {
       expect(item.answer).toBe(built)
       expect(item.slots.length).toBeGreaterThanOrEqual(2)
       for (const slot of item.slots) {
-        expect(slot.options).toHaveLength(4)
-        expect(new Set(slot.options).size).toBe(4)
-        expect(slot.options).toContain(slot.correct)
+        const options = slot.options
+        if (!options) throw new Error(`${item.id} is missing choices for ${slot.correct}`)
+        expect(options).toHaveLength(4)
+        expect(new Set(options).size).toBe(4)
+        expect(options).toContain(slot.correct)
         expect(slot.correct).not.toMatch(/^(a|an|the|some)$/i)
-        expect(slot.options.filter((option) => grammaticalArticlePhrase(option)).length).toBeLessThanOrEqual(1)
+        expect(options.filter((option) => grammaticalArticlePhrase(option)).length).toBeLessThanOrEqual(1)
         expect(rivalQuestionWords(slot)).toBe(false)
       }
     }
@@ -123,7 +125,7 @@ describe('sentence builder content', () => {
 
 function rivalQuestionWords(slot: WordSlot): boolean {
   const correct = slot.correct.toLowerCase()
-  if (!QUESTION_WORDS.has(correct)) return false
+  if (!QUESTION_WORDS.has(correct) || !slot.options) return false
   return slot.options.some((option) => option !== slot.correct && QUESTION_WORDS.has(option.toLowerCase()))
 }
 
