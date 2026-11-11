@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { GRAMMAR_FOCUSES, promptsForFocus } from '@/lib/pixi-games/sentence-builder/content'
 import { biteQuestions, swimFrames, swimVocabulary } from '@/lib/pixi-games/word-chompers/content'
-import { buildSlots, shuffle, swimMatch, swimStock, takeRoundQueue } from '@/lib/pixi-games/word-chompers/round'
+import {
+  buildSlots,
+  keysForPlayers,
+  rejectReason,
+  shuffle,
+  swimMatch,
+  swimRoster,
+  swimStock,
+  takeRoundQueue,
+} from '@/lib/pixi-games/word-chompers/round'
 
 function roundWith(focus: Parameters<typeof swimFrames>[0], sentence: readonly string[]) {
   const found = swimFrames(focus).find((frame) =>
@@ -65,6 +74,8 @@ describe('word chomper grammar', () => {
     expect(swimMatch(apple.sentences, ['She', 'eats', 'some soup'])).toBe('complete')
     expect(swimMatch(apple.sentences, ['She', 'cook'])).toBe('reject')
     expect(buildSlots(apple.sentences, apple.focus)).toEqual(['person', 'verb', 'object'])
+    expect(rejectReason(apple.sentences, ['She'], 'cook', apple.focus)).toBe('verb')
+    expect(rejectReason(apple.sentences, ['She', 'eats'], 'soccer', apple.focus)).toBe('object')
     const people = ['She', 'He', 'They', 'I']
     const stock = swimStock(apple.sentences, swimVocabulary(apple), 2, () => 0.2)
     for (const person of people) expect(stock.filter((word) => word === person)).toHaveLength(1)
@@ -73,8 +84,29 @@ describe('word chomper grammar', () => {
     for (const person of people) expect(trio.filter((word) => word === person)).toHaveLength(2)
     expect(trio.filter((word) => word === 'eats')).toHaveLength(2)
     expect(trio.filter((word) => word === 'eat')).toHaveLength(2)
+    const shown = swimRoster(apple.sentences, swimVocabulary(apple), 3, () => 0.2)
+    const shownFamilies = new Set(shown.active.filter((item) => item.kind === 'verb').map((item) => item.family))
+    expect(shownFamilies.size).toBeLessThanOrEqual(2)
+    if (shown.active.some((item) => item.text === 'eats')) {
+      expect(shown.active.some((item) => item.text === 'eat')).toBe(true)
+    }
+    expect(shown.reserve.some((item) => item.kind === 'verb')).toBe(true)
+
+    const continuous = roundWith('present-continuous', ['She', 'is', 'eating', 'an apple'])
+    const continuousRoster = swimRoster(continuous.sentences, swimVocabulary(continuous), 3, () => 0.2)
+    const continuousActive = continuousRoster.active.map((item) => item.text)
+    expect(continuousActive).toEqual(expect.arrayContaining(['I', 'They', 'am', 'are', 'is']))
+    expect(continuousRoster.active.filter((item) => item.text === 'am')).toHaveLength(2)
+    expect(continuousRoster.active.filter((item) => item.text === 'are')).toHaveLength(2)
+    expect(continuousRoster.active.filter((item) => item.text === 'is')).toHaveLength(2)
+    const shownIng = [...new Set(continuousRoster.active.filter((item) => item.kind === 'verb').map((item) => item.text))]
+    expect(shownIng.length).toBeLessThanOrEqual(2)
     const quad = swimStock(apple.sentences, swimVocabulary(apple), 4, () => 0.2)
     for (const person of people) expect(quad.filter((word) => word === person)).toHaveLength(3)
+    expect(apple.title.includes('/')).toBe(false)
+    expect(keysForPlayers(2)).toEqual({ bottom: 'Space', top: 'CapsLock' })
+    expect(keysForPlayers(3)).toMatchObject({ bottom: 'Space', right: 'Digit6', top: 'CapsLock' })
+    expect(keysForPlayers(4)).toMatchObject({ left: 'ShiftLeft' })
 
     const soccer = roundWith('present-simple', ['She', 'plays', 'soccer'])
     expect(soccer).not.toBe(apple)
