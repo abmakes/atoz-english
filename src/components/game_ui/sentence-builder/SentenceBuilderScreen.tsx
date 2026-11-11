@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Application } from 'pixi.js'
 import { SentenceBuilderGame } from '@/lib/pixi-games/sentence-builder/SentenceBuilderGame'
 import {
@@ -9,6 +10,7 @@ import {
   GRAMMAR_FOCUSES,
   GRAMMAR_LABELS,
   type GrammarFocus,
+  type SentencePrompt,
 } from '@/lib/pixi-games/sentence-builder/content'
 import {
   formatSeconds,
@@ -94,8 +96,21 @@ function rememberBest(previous: Bests, next: SentenceBuilderResult): Bests {
   return { ...previous, [next.focus]: updatedFocus }
 }
 
-export default function SentenceBuilderScreen() {
-  const [phase, setPhase] = useState<'setup' | 'play' | 'results'>('setup')
+export default function SentenceBuilderScreen({
+  prompts,
+  homeHref = '/practice',
+  homeLabel = 'Practice',
+  structureLabel,
+}: {
+  prompts?: readonly SentencePrompt[]
+  homeHref?: string
+  homeLabel?: string
+  structureLabel?: string
+} = {}) {
+  const quizSentences = Boolean(prompts && prompts.length > 0)
+  const runLength = quizSentences ? prompts!.length : SCORE_RUN_LENGTH
+  const router = useRouter()
+  const [phase, setPhase] = useState<'setup' | 'play' | 'results'>(quizSentences ? 'play' : 'setup')
   const [mode, setMode] = useState<PlayMode>('score-run')
   const [focus, setFocus] = useState<GrammarFocus>('present-simple')
   const [sounds, setSounds] = useState(true)
@@ -125,9 +140,13 @@ export default function SentenceBuilderScreen() {
     gameRef.current = null
     setConfirmLeave(false)
     setNotice(null)
-    setPhase('setup')
     setStatus('')
-  }, [])
+    if (quizSentences) {
+      router.push(homeHref)
+      return
+    }
+    setPhase('setup')
+  }, [homeHref, quizSentences, router])
 
   useEffect(() => {
     if (phase !== 'play' || !mountRef.current) return
@@ -158,17 +177,25 @@ export default function SentenceBuilderScreen() {
       mount.appendChild(app.canvas)
       game = new SentenceBuilderGame(
         app,
-        { mode, focus, sounds: soundsRef.current },
+        {
+          mode,
+          focus,
+          sounds: soundsRef.current,
+          prompts: quizSentences ? prompts : undefined,
+          structureLabel: quizSentences ? structureLabel || 'Quiz sentences' : undefined,
+        },
         {
           onStatus: setStatus,
           onNotice: showNotice,
           onComplete: (next) => {
             setResult(next)
-            setBests((previous) => {
-              const updated = rememberBest(previous, next)
-              writeBests(updated)
-              return updated
-            })
+            if (!quizSentences) {
+              setBests((previous) => {
+                const updated = rememberBest(previous, next)
+                writeBests(updated)
+                return updated
+              })
+            }
             setPhase('results')
           },
         }
@@ -193,7 +220,7 @@ export default function SentenceBuilderScreen() {
       gameRef.current = null
       destroyApp()
     }
-  }, [phase, mode, focus, showNotice])
+  }, [phase, mode, focus, showNotice, quizSentences, prompts, structureLabel])
 
   useEffect(() => {
     if (gameRef.current) gameRef.current.sounds = sounds
@@ -227,7 +254,17 @@ export default function SentenceBuilderScreen() {
       <p className="sr-only" aria-live="polite">
         {status}
       </p>
-      {phase === 'setup' && (
+      {phase === 'setup' && quizSentences && (
+        <div className="mx-auto flex min-h-[50vh] w-full max-w-xl flex-col justify-center gap-4 px-4">
+          <p role="alert" className="rounded-2xl border-2 border-[#1E5167] bg-white p-4 inclusive-sans">
+            {startError || 'Sentence Builder could not start. Try again.'}
+          </p>
+          <Link href={homeHref} className="grandstander font-bold underline">
+            {homeLabel}
+          </Link>
+        </div>
+      )}
+      {phase === 'setup' && !quizSentences && (
         <Setup
           mode={mode}
           focus={focus}
@@ -245,7 +282,7 @@ export default function SentenceBuilderScreen() {
         />
       )}
       {phase === 'play' && (
-        <div className="relative flex h-[100dvh] flex-col">
+        <div className={`relative flex flex-col ${quizSentences ? 'h-[calc(100dvh-3.5rem)]' : 'h-[100dvh]'}`}>
           <div className="relative flex h-14 shrink-0 items-center justify-between px-4">
             <button type="button" onClick={() => setConfirmLeave(true)} className="grandstander font-bold underline">
               Back
@@ -297,6 +334,10 @@ export default function SentenceBuilderScreen() {
         <Results
           result={result}
           bests={bests}
+          runLength={runLength}
+          structureLabel={quizSentences ? structureLabel || 'Quiz sentences' : undefined}
+          showBests={!quizSentences}
+          exitLabel={quizSentences ? homeLabel : 'Change structure'}
           onAgain={() => {
             setResult(null)
             setPhase('play')
@@ -503,11 +544,19 @@ function GrammarCard({
 function Results({
   result,
   bests,
+  runLength,
+  structureLabel,
+  showBests,
+  exitLabel,
   onAgain,
   onSetup,
 }: {
   result: SentenceBuilderResult
   bests: Bests
+  runLength: number
+  structureLabel?: string
+  showBests: boolean
+  exitLabel: string
   onAgain: () => void
   onSetup: () => void
 }) {
@@ -521,16 +570,16 @@ function Results({
         : 'Survival ended'
   const focusBest = bests[result.focus]
   const percent =
-    result.mode === 'score-run' ? Math.round((result.sentencesBuilt / SCORE_RUN_LENGTH) * 100) : null
+    result.mode === 'score-run' ? Math.round((result.sentencesBuilt / runLength) * 100) : null
   const best =
     result.mode === 'score-run'
-      ? `Best ${focusBest.scoreRunBuilt}/${SCORE_RUN_LENGTH}`
+      ? `Best ${focusBest.scoreRunBuilt}/${runLength}`
       : `Best ${focusBest.survivalSentences} sentences`
 
   return (
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col justify-center gap-5 px-4 py-10">
       <p className="text-sm font-black uppercase tracking-[0.16em] text-[#168CB9] grandstander">
-        {GRAMMAR_LABELS[result.focus]}
+        {structureLabel ?? GRAMMAR_LABELS[result.focus]}
       </p>
       <h1 className="text-4xl font-black grandstander md:text-5xl">{title}</h1>
       {percent !== null ? (
@@ -541,7 +590,7 @@ function Results({
       <ul className="space-y-2 text-lg inclusive-sans">
         <li>
           Sentences built: <strong className="grandstander">{result.sentencesBuilt}</strong>
-          {result.mode === 'score-run' ? ` of ${SCORE_RUN_LENGTH}` : ''}
+          {result.mode === 'score-run' ? ` of ${runLength}` : ''}
         </li>
         <li>
           Score: <strong className="grandstander">{result.score}</strong>
@@ -556,7 +605,7 @@ function Results({
             Fastest sentence: <strong className="grandstander">{formatSeconds(result.fastestMs)}</strong>
           </li>
         )}
-        {(result.mode === 'score-run' ? focusBest.scoreRunBuilt : focusBest.survivalSentences) > 0 && (
+        {showBests && (result.mode === 'score-run' ? focusBest.scoreRunBuilt : focusBest.survivalSentences) > 0 && (
           <li>{best}</li>
         )}
       </ul>
@@ -575,7 +624,7 @@ function Results({
           Play again
         </button>
         <button type="button" onClick={onSetup} className="neo-button bg-white">
-          Change structure
+          {exitLabel}
         </button>
       </div>
     </div>

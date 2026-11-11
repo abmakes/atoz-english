@@ -160,6 +160,17 @@ exports.Prisma.QuestionScalarFieldEnum = {
   quizId: 'quizId'
 };
 
+exports.Prisma.LessonKitScalarFieldEnum = {
+  id: 'id',
+  authorId: 'authorId',
+  quizId: 'quizId',
+  title: 'title',
+  worksheetItems: 'worksheetItems',
+  sentences: 'sentences',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.StoredImageScalarFieldEnum = {
   id: 'id',
   filename: 'filename',
@@ -329,6 +340,7 @@ exports.Prisma.ModelName = {
   QuizLike: 'QuizLike',
   QuizFavorite: 'QuizFavorite',
   Question: 'Question',
+  LessonKit: 'LessonKit',
   StoredImage: 'StoredImage',
   Tag: 'Tag',
   Story: 'Story',

@@ -24,6 +24,10 @@ export interface ReviewableQuestion extends Question {
   languageWarnings?: LanguageAuditIssue[]
   keptWords?: string[]
   status?: 'pending' | 'approved' | 'rejected'
+  /** Original quiz stem, shown when this panel checks a lesson piece. */
+  sourceQuestion?: string
+  sourceAnswers?: string[]
+  assessmentReason?: string
 }
 
 interface ImageSuggestion {
@@ -36,12 +40,16 @@ interface ImageSuggestion {
 
 interface AIQuestionReviewPanelProps {
   questions: ReviewableQuestion[]
-  onCommit: (approved: Question[]) => void
+  onCommit: (approved: Question[], reviewed?: ReviewableQuestion[]) => void
   onCancel: () => void
   onRegenerateOne?: (
     index: number,
     question: ReviewableQuestion
   ) => Promise<ReviewableQuestion | null>
+  /** Quiz generation keeps images. A lesson check hides them and approves with the check button. */
+  purpose?: 'quiz' | 'lesson'
+  /** Worksheet lines keep the choice row. Sentence lines edit the sentence only. */
+  showChoices?: boolean
 }
 
 const TOKEN_PATTERN = /[A-Za-z]+(?:['’][A-Za-z]+)?/g
@@ -185,7 +193,10 @@ export default function AIQuestionReviewPanel({
   onCommit,
   onCancel,
   onRegenerateOne,
+  purpose = 'quiz',
+  showChoices = true,
 }: AIQuestionReviewPanelProps) {
+  const lessonCheck = purpose === 'lesson'
   const [items, setItems] = useState<ReviewableQuestion[]>(
     initialQuestions.map((question) => ({
       ...question,
@@ -223,6 +234,7 @@ export default function AIQuestionReviewPanel({
   }, [])
 
   useEffect(() => {
+    if (lessonCheck) return
     items.forEach((item, index) => {
       if (item.status === 'rejected') return
       if (suggestionsByIndex[index]) return
@@ -231,7 +243,7 @@ export default function AIQuestionReviewPanel({
         item.imageKeyword || item.correctAnswer || 'classroom'
       )
     })
-  }, [items, loadSuggestions, suggestionsByIndex])
+  }, [items, lessonCheck, loadSuggestions, suggestionsByIndex])
 
   const approvedCount = useMemo(
     () => items.filter((item) => item.status === 'approved').length,
@@ -259,7 +271,7 @@ export default function AIQuestionReviewPanel({
   }
 
   const commitApproved = () => {
-    onCommit(toPlainQuestions(items))
+    onCommit(toPlainQuestions(items), items)
     setWarningsOpen(false)
   }
 
@@ -267,10 +279,15 @@ export default function AIQuestionReviewPanel({
     const approved = toPlainQuestions(items)
 
     if (approved.length === 0) {
-      addToast('Approve at least one question before adding to the quiz.', {
-        variant: 'warning',
-        position: 'top-center',
-      })
+      addToast(
+        lessonCheck
+          ? 'Approve at least one item before continuing.'
+          : 'Approve at least one question before adding to the quiz.',
+        {
+          variant: 'warning',
+          position: 'top-center',
+        }
+      )
       return
     }
 
@@ -286,9 +303,13 @@ export default function AIQuestionReviewPanel({
     <div className="grandstander space-y-3 pt-2 text-[--text-color] md:pt-4">
       <div className="flex flex-wrap items-center justify-between gap-3 px-1 pb-1">
         <div>
-          <h3 className="text-lg font-semibold">Review generated questions</h3>
+          <h3 className="text-lg font-semibold">
+            {lessonCheck ? 'Review these items' : 'Review generated questions'}
+          </h3>
           <p className="text-sm text-slate-600">
-            Pick an image to approve, or use the buttons below each question.
+            {lessonCheck
+              ? 'Edit a line if you need to. The check button approves it. Rejected rows stay out.'
+              : 'Pick an image to approve, or use the buttons below each question.'}
           </p>
         </div>
         <Badge className="bg-emerald-700 text-white">
@@ -334,10 +355,17 @@ export default function AIQuestionReviewPanel({
           >
             <div className="min-w-0 space-y-1.5">
               <p className="text-sm font-bold text-slate-700">
-                Question {index + 1}
+                {lessonCheck ? `Item ${index + 1}` : `Question ${index + 1}`}
               </p>
+              {lessonCheck && item.sourceQuestion ? (
+                <p className="text-xs text-slate-500">From: {item.sourceQuestion}</p>
+              ) : null}
+              {lessonCheck && item.assessmentReason ? (
+                <p className="text-sm text-slate-600">{item.assessmentReason}</p>
+              ) : null}
               <input
                 value={item.question}
+                aria-label={lessonCheck ? `Line ${index + 1}` : `Question ${index + 1}`}
                 onChange={(event) =>
                   updateItem(index, { question: event.target.value })
                 }
@@ -345,7 +373,7 @@ export default function AIQuestionReviewPanel({
               />
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            {showChoices ? <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               {item.answers.map((answer, answerIndex) => {
                 const isCorrect = item.correctAnswer === answer
                 return (
@@ -384,9 +412,9 @@ export default function AIQuestionReviewPanel({
                   </button>
                 )
               })}
-            </div>
+            </div> : null}
 
-            <div className="space-y-2 rounded-lg border-2 border-slate-200 bg-white p-3">
+            {!lessonCheck ? <div className="space-y-2 rounded-lg border-2 border-slate-200 bg-white p-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm font-semibold">Keywords:</span>
                 <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
@@ -505,7 +533,7 @@ export default function AIQuestionReviewPanel({
                   })
                 )}
               </div>
-            </div>
+            </div> : null}
 
             <div className="flex items-center justify-end gap-2">
               <button
@@ -568,15 +596,16 @@ export default function AIQuestionReviewPanel({
 
       <div className="flex flex-wrap justify-end gap-3 pt-1">
         <Button type="button" variant="outline" onClick={onCancel}>
-          Back to brief
+          {lessonCheck ? 'Back to pieces' : 'Back to brief'}
         </Button>
         <Button
           type="button"
           onClick={handleCommit}
           className="bg-[--primary-accent] text-white hover:bg-[--primary-accent-hover]"
         >
-          Add {approvedCount} approved question
-          {approvedCount === 1 ? '' : 's'} to quiz
+          {lessonCheck
+            ? `Use ${approvedCount} approved item${approvedCount === 1 ? '' : 's'}`
+            : `Add ${approvedCount} approved question${approvedCount === 1 ? '' : 's'} to quiz`}
         </Button>
       </div>
 
@@ -620,13 +649,13 @@ export default function AIQuestionReviewPanel({
               onClick={commitApproved}
               className="bg-[--primary-accent] text-white hover:bg-[--primary-accent-hover]"
             >
-              Add anyway
+              {lessonCheck ? 'Use anyway' : 'Add anyway'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <ImageSelectModal
+      {!lessonCheck ? <ImageSelectModal
         isOpen={imageModalIndex !== null}
         onClose={() => setImageModalIndex(null)}
         onImageSelect={(imageUrl, metadata, localFile) => {
@@ -639,7 +668,7 @@ export default function AIQuestionReviewPanel({
           })
           setImageModalIndex(null)
         }}
-      />
+      /> : null}
     </div>
   )
 }

@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import Image from 'next/image'
-import { Edit, Play, Trash, Heart, Bookmark } from 'lucide-react'
+import { Edit, Play, Trash, Heart, Bookmark, BookOpen } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Question, Quiz } from '@/types'
 import { useCustomToast } from '@/components/ui/CustomToast'
@@ -63,6 +63,10 @@ export default function QuizList({
 
   const handlePlay = (id: string) => {
     router.push(`/games/${id}`)
+  }
+
+  const handleLesson = (id: string) => {
+    router.push(`/quizzes/${id}/lesson`)
   }
 
   const handleUnfavorite = async (id: string) => {
@@ -191,6 +195,16 @@ export default function QuizList({
                       <Play className="h-5 w-5 stroke-green-700 fill-green-700" />
                       Play
                     </button>
+                    {mode === 'owned' && (
+                      <button
+                        type="button"
+                        className="text-sm grandstander flex items-center gap-1 font-semibold text-[#114257]"
+                        onClick={() => handleLesson(quiz.id)}
+                      >
+                        <BookOpen className="h-5 w-5 stroke-[#114257]" />
+                        Lesson
+                      </button>
+                    )}
                     {mode === 'owned' && (
                       <>
                         <button

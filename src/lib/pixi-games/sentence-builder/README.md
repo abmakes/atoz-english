@@ -1,6 +1,6 @@
 # Sentence Builder
 
-Built-in ESL practice game. It does not load a teacher quiz. Pictures, grammar targets, and word choices live in [`content.ts`](content.ts).
+Built-in ESL practice game. The practice route does not load a teacher quiz. Pictures, grammar targets, and word choices live in [`content.ts`](content.ts). A saved quiz can also pass approved sentences into the same screen from `/quizzes/[id]/sentence-builder`. That list replaces the built-in bank for that play only. Word Bite and Sentence Swim keep reading the built-in pack.
 
 ## Play
 
@@ -23,7 +23,7 @@ The play canvas stays opaque, with `#f7fbff` as its base color, and the pale was
 |------|------|
 | `content.ts` | 20 scenes and eight 20-prompt grammar banks |
 | `round.ts` | Scoring, penalties, score-run and survival queues |
-| `SentenceBuilderGame.ts` | PixiJS v8 view. One `Application` is created in `SentenceBuilderScreen` and destroyed on unmount |
+| `SentenceBuilderGame.ts` | PixiJS v8 view. One `Application` is created in `SentenceBuilderScreen` and destroyed on unmount. Optional `prompts` replaces `promptsForFocus` |
 | `src/app/practice/sentence-builder/page.tsx` | Play route |
 | `src/app/practice/page.tsx` | Practice hub |
 | `src/app/games/sentence-builder/page.tsx` | Redirects to `/practice/sentence-builder` |

@@ -25,6 +25,7 @@ model Quiz {
   questions       Question[]
   likes           QuizLike[]
   favorites       QuizFavorite[]
+  lessonKit       LessonKit?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 }
@@ -62,6 +63,22 @@ model Question {
   type          QuestionType @default(MULTIPLE_CHOICE)
   quiz          Quiz?        @relation(fields: [quizId], references: [id])
   quizId        String?
+}
+
+/// Approved worksheet lines and sentence-builder sentences for one quiz.
+/// Classroom games keep reading Question. This row does not store them.
+model LessonKit {
+  id             String   @id @default(cuid())
+  authorId       String   @default("admin")
+  quizId         String   @unique
+  title          String
+  worksheetItems Json
+  sentences      Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  quiz           Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
 }
 
 enum QuestionType {

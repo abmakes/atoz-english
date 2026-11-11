@@ -41,9 +41,11 @@ export default function QuizSetupForm({
   const [coverImageUrlPreview, setCoverImageUrlPreview] = useState(initialData.coverImageUrl || PLACEHOLDER_IMAGE_CLIENT);
   const [quizType, setQuizType] = useState<QuestionType>(initialData.quizType as QuestionType);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [coverBroken, setCoverBroken] = useState(false);
   const { addToast } = useCustomToast()
 
   useEffect(() => {
+    setCoverBroken(false);
     if (coverImageFile) {
       const objectUrl = URL.createObjectURL(coverImageFile);
       setCoverImageUrlPreview(objectUrl);
@@ -57,6 +59,7 @@ export default function QuizSetupForm({
   }, [coverImageFile, initialData.coverImageUrl]);
 
   const handleImageSelect = (imageUrl: string, _metadata?: unknown, localFile?: File | null) => {
+    setCoverBroken(false);
     setCoverImageUrlPreview(imageUrl);
     setCoverImageFile(localFile ?? null);
     setIsImageModalOpen(false);
@@ -147,13 +150,20 @@ export default function QuizSetupForm({
           <div className='flex flex-1 flex-col items-center lg:basis-1/3'>
             <div className="mt-2 flex w-full flex-col items-start gap-2">
               <div className="relative w-full">
+                {coverBroken ? (
+                  <div className="flex h-40 w-full items-center justify-center rounded-md border bg-slate-100 px-3 text-center text-sm font-semibold text-slate-600">
+                    Couldn&apos;t load this preview.
+                  </div>
+                ) : (
                 <Image 
                   src={coverImageUrlPreview} 
                   alt="Quiz Cover Preview" 
                   width={160} 
                   height={90} 
                   className="h-40 w-full rounded-md border bg-slate-100 object-cover"
+                  onError={() => setCoverBroken(true)}
                 />
+                )}
                 
                 <div className="absolute bottom-2 right-2">
                   <Button

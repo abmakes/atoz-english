@@ -81,8 +81,13 @@ function isStalePrismaClient(client: PrismaClient | undefined): boolean {
   const c = client as PrismaClient & {
     quizLike?: unknown
     quizFavorite?: unknown
+    lessonKit?: unknown
   }
-  return typeof c.quizLike === 'undefined' || typeof c.quizFavorite === 'undefined'
+  return (
+    typeof c.quizLike === 'undefined' ||
+    typeof c.quizFavorite === 'undefined' ||
+    typeof c.lessonKit === 'undefined'
+  )
 }
 
 const cached = global.prisma

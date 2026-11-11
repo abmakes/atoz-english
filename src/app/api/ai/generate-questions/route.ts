@@ -1,5 +1,5 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
+import { generateText } from '@/lib/ai/gemini-text';
 import { z } from 'zod';
 import { requireAuth, isUnauthorized } from '@/lib/auth';
 import {
@@ -21,24 +21,12 @@ import { auditQuestion, auditQuestions } from '@/lib/lexicon/validator';
 import type { CefrLevelId } from '@/lib/taxonomy/quiz-taxonomy';
 import { QuestionType } from '@/types/question_types';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_QUIZ_API_KEY ?? '');
-
 const requestSchema = generationBriefSchema.extend({
   questionType: z.nativeEnum(QuestionType),
   language: z.literal('English').optional(),
   /** Legacy clients may still send flat tags; fold them into the brief. */
   tags: z.array(z.string().trim().min(1)).max(12).optional(),
 });
-
-async function generateText(prompt: string): Promise<string> {
-  if (!process.env.GEMINI_QUIZ_API_KEY) {
-    throw new Error('GEMINI_QUIZ_API_KEY is not configured');
-  }
-
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
-  const result = await model.generateContent(prompt);
-  return (await result.response).text();
-}
 
 function formatQuestions(
   questions: GeneratedQuestionText[],
