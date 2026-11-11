@@ -205,6 +205,7 @@ export class PixiApplication {
                 // Force a specific style for the canvas to make sure it's visible
                 const canvas = this.app.canvas;
                 canvas.style.display = 'block';
+                canvas.style.touchAction = 'none';
                 canvas.style.position = 'absolute';
                 canvas.style.top = '0';
                 canvas.style.left = '0';

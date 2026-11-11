@@ -37,6 +37,7 @@ export default function FaceStage({
   const getLevelRef = useRef(getLevel)
   const dragRef = useRef<{ instanceId: string; offsetX: number; offsetY: number } | null>(null)
   const bobRef = useRef(0)
+  const backgroundRef = useRef<HTMLImageElement | null>(null)
   characterRef.current = character
   selectedRef.current = selectedId
   getLevelRef.current = getLevel
@@ -77,6 +78,28 @@ export default function FaceStage({
   }, [sheetKey])
 
   useEffect(() => {
+    const src = character.background
+    if (!src) {
+      backgroundRef.current = null
+      setImageTick((tick) => tick + 1)
+      return
+    }
+    let cancelled = false
+    void loadSheet(src)
+      .then((image) => {
+        if (cancelled) return
+        backgroundRef.current = image
+        setImageTick((tick) => tick + 1)
+      })
+      .catch(() => {
+        if (!cancelled) backgroundRef.current = null
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [character.background])
+
+  useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -101,6 +124,7 @@ export default function FaceStage({
         nowMs: now,
         reducedMotion: reduced,
         selectedId: interactive ? selectedRef.current : null,
+        background: backgroundRef.current,
       })
       if (loop) raf = requestAnimationFrame(() => draw(true))
     }
@@ -126,7 +150,7 @@ export default function FaceStage({
   return (
     <canvas
       ref={canvasRef}
-      className={`aspect-square w-full touch-none rounded-3xl bg-[#efe4ff] ${className ?? ''}`}
+      className={`aspect-square w-full touch-none rounded-3xl bg-white ${className ?? ''}`}
       aria-label="Talking face"
       onPointerDown={(event) => {
         if (!interactive) return

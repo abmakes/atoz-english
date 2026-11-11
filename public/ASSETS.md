@@ -59,7 +59,7 @@ Game and UI assets live under `public/` and are served statically by Next.js.
 ## Ninja Climb notes
 
 - Character strips: `ninja_{blue|red}_idle.webp` / `idle_b.webp` (2 frames each), `ninja_{blue|red}_climb.png` (4 frames), `ninja_{blue|red}_rope.webp` (action).
-- Mountain scene is `images/ninja-climb/v2/`: `background.png` (screen vista), `base.png` (start), `mid.png` tiled for the climb, `top.png` (finish line), plus screen-fixed `clouds.png` and `bush.png`. Hop points are the measured grass pads in `mountainPath.ts`, so feet land on the painted ledges. Legacy `cliff_*.webp` tiles remain on disk but are not used by the climb.
+- Mountain scene is `images/ninja-climb/v2/`: `background.png` (screen vista), `base.png` (start), `mid.png` tiled for the climb, `top.png` (finish line), plus screen-fixed `clouds.png`. `bush.png` is in the pack but not drawn. Hop points are the measured grass pads in `mountainPath.ts`, so feet land on the painted ledges. Legacy `cliff_*.webp` tiles remain on disk but are not used by the climb.
 - UI: procedural `AnswerCloudShape` for sky answers; `deco_{tree|bush|hut}.webp` for sparse ledge props.
 - Shared rope VFX: `images/shared/kunai_tip.png`, `images/shared/rope_segment.png` (used by `RopeProjectile`).
 - Mode picker thumb: `public/images/marketing/ninjaclimb_thumb.png`.

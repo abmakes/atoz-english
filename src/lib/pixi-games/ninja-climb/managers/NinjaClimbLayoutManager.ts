@@ -38,7 +38,7 @@ export class NinjaClimbLayoutManager {
     trayPadding: 10,
     sidePadding: 16,
     topPadding: 10,
-    ninjaDisplaySize: 64,
+    ninjaDisplaySize: 168,
     timerRadius: 52,
     timerNavClearance: 88,
     questionImageMaxWidth: 200,

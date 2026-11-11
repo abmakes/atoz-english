@@ -29,12 +29,13 @@ const TugMeter: React.FC<TugMeterProps> = ({ eventBus }) => {
   }, [eventBus])
 
   const markerPercent = ((tugNormalizedOffset(offset) + 1) / 2) * 100
+  const meterMin = -TUG_ROUND_THRESHOLD
 
   return (
     <div
       className="pointer-events-none mx-auto flex w-[min(520px,92vw)] items-center gap-1"
       role="meter"
-      aria-valuemin={-TUG_ROUND_THRESHOLD}
+      aria-valuemin={meterMin}
       aria-valuemax={TUG_ROUND_THRESHOLD}
       aria-valuenow={Number(offset.toFixed(2))}
       aria-label="Tug of war marker"

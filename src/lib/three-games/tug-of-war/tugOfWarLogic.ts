@@ -347,14 +347,30 @@ export function resolveTugQuestionImageUrl(
   return trimmed
 }
 
+/** Fisher-Yates copy so the correct choice is not stuck in its stored slot. */
+export function shuffleAnswers(
+  answers: readonly string[],
+  random: () => number = Math.random
+): string[] {
+  const next = [...answers]
+  for (let i = next.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1))
+    const swap = next[i]
+    next[i] = next[j]
+    next[j] = swap
+  }
+  return next
+}
+
 export function createTugAnswerPayload(
   question: QuestionData,
   selectedIndex: number | null,
   teamId: string | number,
-  remainingTimeMs: number
+  remainingTimeMs: number,
+  displayedAnswers: readonly string[] = question.answers
 ): AnswerSelectedPayload {
   const selectedAnswer =
-    selectedIndex === null ? null : question.answers[selectedIndex] ?? null
+    selectedIndex === null ? null : displayedAnswers[selectedIndex] ?? null
 
   return {
     questionId: question.id,

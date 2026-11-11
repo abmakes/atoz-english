@@ -12,6 +12,7 @@ import {
   clampTugOffset,
   computePullImpulse,
   createTugAnswerPayload,
+  shuffleAnswers,
   createTugMatchState,
   isTugOfWarQuestionEligible,
   pullSignForTeam,
@@ -298,6 +299,20 @@ describe('tugOfWarLogic payloads and eligibility', () => {
     expect(isTugOfWarQuestionEligible({ ...mc, correctAnswer: 'Z' })).toBe(
       false
     )
+  })
+
+  it('shuffles answer order without losing the correct choice', () => {
+    const shuffled = shuffleAnswers(['Cat', 'Dog', 'Rabbit', 'Horse'], () => 0)
+    expect(shuffled).toEqual(['Dog', 'Rabbit', 'Horse', 'Cat'])
+    expect(shuffled).toContain(mc.correctAnswer)
+    expect(
+      createTugAnswerPayload(mc, 0, 't1', 1000, ['Dog', 'Cat', 'Rabbit', 'Horse'])
+        .isCorrect
+    ).toBe(true)
+    expect(
+      createTugAnswerPayload(mc, 1, 't1', 1000, ['Dog', 'Cat', 'Rabbit', 'Horse'])
+        .isCorrect
+    ).toBe(false)
   })
 
   it('builds AnswerSelectedPayload for a correct pick, wrong pick, and timeout', () => {

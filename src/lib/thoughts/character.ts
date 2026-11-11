@@ -1,3 +1,4 @@
+import { sanitizeBackdrop, sanitizeFaceMask, type FaceMask } from '@/lib/thoughts/backdrop'
 import {
   PAIR_CATEGORIES,
   PART_CAPS,
@@ -17,17 +18,36 @@ export interface PlacedPart {
   mirror: boolean
 }
 
+/** background: the sticker face sits on the photo. face: the photo replaces the sticker head. */
+export type PhotoMode = 'background' | 'face'
+
 export interface Character {
   version: 1
   parts: PlacedPart[]
+  /** Resized photo. Omitted when the student has not added one. */
+  background?: string
+  photoMode?: PhotoMode
+  /** Stage fill behind the stickers. Omitted when the fill is plain white. */
+  backdrop?: string
+  /** How a photo used as the face is cropped. Omitted for the circle. */
+  faceMask?: FaceMask
 }
 
 export type PartPatch = Partial<
   Pick<PlacedPart, 'x' | 'y' | 'scale' | 'rotation' | 'mirror'>
 >
 
-const FACE_KEY = 'playtoz-thoughts-face-v1'
+const FACE_KEY = 'playtoz-thoughts-face-v2'
 const NAME_KEY = 'playtoz-thoughts-name-v1'
+/** Hair frames include a wide empty margin, so the default 0.25 scale looks tiny on the head. */
+const HAIR_SCALE = 0.85
+
+export function sanitizeBackground(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  if (value.length > 450_000) return undefined
+  if (!/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(value)) return undefined
+  return value
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -55,6 +75,10 @@ function place(
     placed.mirror = false
   }
   if (!part.mirrorable) placed.mirror = false
+  if (part.category === 'hair') {
+    placed.scale = Math.max(placed.scale, HAIR_SCALE)
+    placed.y = Math.max(placed.y, 0.34)
+  }
   return placed
 }
 
@@ -62,22 +86,43 @@ function countCategory(character: Character, category: ThoughtCategory): number 
   return character.parts.filter((part) => getPart(part.partId)?.category === category).length
 }
 
+/**
+ * Source eyes and ears have their distinctive side on the right of the sticker
+ * (lashes, ear opening). The unmirrored sticker belongs on the viewer's right.
+ */
 function pairOffsets(category: ThoughtCategory): Array<{ x: number; mirror: boolean }> {
   if (category === 'ears') {
     return [
-      { x: 0.18, mirror: false },
-      { x: 0.82, mirror: true },
+      { x: 0.18, mirror: true },
+      { x: 0.82, mirror: false },
     ]
   }
   return [
-    { x: 0.38, mirror: false },
-    { x: 0.62, mirror: true },
+    { x: 0.38, mirror: true },
+    { x: 0.62, mirror: false },
   ]
+}
+
+function keptPhoto(
+  character: Character
+): Pick<Character, 'background' | 'photoMode' | 'backdrop' | 'faceMask'> {
+  const background = sanitizeBackground(character.background)
+  const backdrop = sanitizeBackdrop(character.backdrop)
+  const faceMask =
+    background && character.photoMode === 'face' ? sanitizeFaceMask(character.faceMask) : undefined
+  return {
+    ...(background
+      ? { background, ...(character.photoMode === 'face' ? { photoMode: 'face' as const } : {}) }
+      : {}),
+    ...(backdrop ? { backdrop } : {}),
+    ...(faceMask ? { faceMask } : {}),
+  }
 }
 
 export function normalizeCharacter(character: Character): Character {
   return {
     version: 1,
+    ...keptPhoto(character),
     parts: character.parts.map((part) => {
       const definition = getPart(part.partId)
       if (definition?.category !== 'head') {
@@ -94,21 +139,13 @@ export function assembleRandomFace(
 ): Character {
   const pick = <T,>(items: T[]): T => items[Math.floor(random() * items.length)]
   const head = pick(partsIn('head'))
-  const hair = pick(partsIn('hair', 'cartoon'))
   const eyes = pick(partsIn('eyes', 'cartoon'))
-  const ears = pick(partsIn('ears', 'cartoon'))
-  const nose = pick(partsIn('nose', 'cartoon'))
   const mouth = pick(partsIn('mouth', 'cartoon'))
   const parts: PlacedPart[] = [
     place(head, createId),
-    place(hair, createId),
     ...pairOffsets('eyes').map((side) =>
       place(eyes, createId, { x: side.x, mirror: side.mirror })
     ),
-    ...pairOffsets('ears').map((side) =>
-      place(ears, createId, { x: side.x, mirror: side.mirror })
-    ),
-    place(nose, createId),
     place(mouth, createId),
   ]
   return { version: 1, parts }
@@ -125,10 +162,11 @@ export function addCatalogPart(
   if (definition.category === 'head') {
     const next = character.parts.filter((part) => getPart(part.partId)?.category !== 'head')
     return {
-      character: {
+      character: normalizeCharacter({
         version: 1,
+        ...keptPhoto(character),
         parts: [place(definition, createId), ...next],
-      },
+      }),
     }
   }
 
@@ -148,7 +186,11 @@ export function addCatalogPart(
   }
 
   return {
-    character: { version: 1, parts: [...character.parts, ...additions] },
+    character: normalizeCharacter({
+      version: 1,
+      ...keptPhoto(character),
+      parts: [...character.parts, ...additions],
+    }),
   }
 }
 
@@ -159,6 +201,7 @@ export function updatePart(
 ): Character {
   return normalizeCharacter({
     version: 1,
+    ...keptPhoto(character),
     parts: character.parts.map((part) => {
       if (part.instanceId !== instanceId) return part
       const definition = getPart(part.partId)
@@ -181,10 +224,11 @@ export function updatePart(
 export function deletePart(character: Character, instanceId: string): Character {
   const target = character.parts.find((part) => part.instanceId === instanceId)
   if (getPart(target?.partId ?? '')?.category === 'head') return character
-  return {
+  return normalizeCharacter({
     version: 1,
+    ...keptPhoto(character),
     parts: character.parts.filter((part) => part.instanceId !== instanceId),
-  }
+  })
 }
 
 export function bringPartIntoView(character: Character, instanceId: string): Character {

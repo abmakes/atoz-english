@@ -55,6 +55,7 @@ import {
   resetRound,
   resolveMatchOnQuestionsExhausted,
   resolveTugQuestionImageUrl,
+  shuffleAnswers,
   shouldEmitOffset,
   sideForTeam,
   stepDisplayedOffset,
@@ -95,6 +96,8 @@ export class TugOfWar3DGame implements ThreeGame {
   private questions: QuestionData[] = []
   private sequencer: QuestionSequencer | null = null
   private currentQuestion: QuestionData | null = null
+  /** Answer order shown on the card. Scoring must use this, not the stored list. */
+  private shownAnswers: string[] = []
   private currentQuestionIndex = -1
   private totalQuestions = 0
   private activeTeamIndex = 0
@@ -312,6 +315,7 @@ export class TugOfWar3DGame implements ThreeGame {
     this.currentQuestionIndex =
       (this.sequencer?.getCurrentProgressIndex() ?? 1) - 1
     this.currentQuestion = question
+    this.shownAnswers = shuffleAnswers(question.answers)
     this.answerLocked = false
     this.rope?.setSlack(0)
     this._playTeamClip('blue', 'idle_hold')
@@ -321,7 +325,7 @@ export class TugOfWar3DGame implements ThreeGame {
     const payload: HudQuestionShownPayload = {
       questionId: question.id,
       question: question.question,
-      answers: question.answers,
+      answers: this.shownAnswers,
       imageUrl: resolveTugQuestionImageUrl(question.imageUrl),
       questionIndex: this.currentQuestionIndex,
       totalQuestions: this.totalQuestions,
@@ -358,7 +362,8 @@ export class TugOfWar3DGame implements ThreeGame {
       question,
       selectedIndex,
       team.id,
-      remainingTimeMs
+      remainingTimeMs,
+      this.shownAnswers
     )
 
     this.context.services.eventBus.emit(GAME_EVENTS.ANSWER_SELECTED, payload)
