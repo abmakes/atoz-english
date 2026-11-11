@@ -9,6 +9,7 @@ import {
   type ChomperMode,
   type PlayerCount,
 } from '@/lib/pixi-games/word-chompers/content'
+import { type SwimInput } from '@/lib/pixi-games/word-chompers/round'
 import {
   GRAMMAR_BLURBS,
   GRAMMAR_FOCUSES,
@@ -49,6 +50,7 @@ export default function WordChompersScreen({ mode }: { mode: ChomperMode }) {
   const [focus, setFocus] = useState<GrammarFocus>('present-simple')
   const [biteKind, setBiteKind] = useState<BiteKind>('verb')
   const [players, setPlayers] = useState<PlayerCount>(2)
+  const [swimInput, setSwimInput] = useState<SwimInput>('touch')
   const [sounds, setSounds] = useState(true)
   const [status, setStatus] = useState('')
   const [startError, setStartError] = useState('')
@@ -97,7 +99,7 @@ export default function WordChompersScreen({ mode }: { mode: ChomperMode }) {
       mount.appendChild(app.canvas)
       game = new WordChompersGame(
         app,
-        { mode, focus, biteKind, players, sounds: soundsRef.current },
+        { mode, focus, biteKind, players, sounds: soundsRef.current, swimInput },
         { onStatus: setStatus }
       )
       gameRef.current = game
@@ -120,7 +122,7 @@ export default function WordChompersScreen({ mode }: { mode: ChomperMode }) {
       gameRef.current = null
       destroyApp()
     }
-  }, [phase, mode, focus, biteKind, players])
+  }, [phase, mode, focus, biteKind, players, swimInput])
 
   useEffect(() => {
     if (gameRef.current) gameRef.current.sounds = sounds
@@ -186,6 +188,38 @@ export default function WordChompersScreen({ mode }: { mode: ChomperMode }) {
             <p className="mt-2 text-sm text-[--text-light] inclusive-sans">
               Sit around one phone or tablet. Players on the far side see the clues turned around.
             </p>
+            {mode === 'swim' ? (
+              <div className="mt-4">
+                <h2 className="text-xl font-black grandstander">Controls</h2>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    aria-pressed={swimInput === 'touch'}
+                    onClick={() => setSwimInput('touch')}
+                    className={`rounded-full border-[3px] border-[#114257] px-5 py-2 text-lg font-black grandstander ${
+                      swimInput === 'touch' ? 'bg-[#49C8FF] text-white' : 'bg-white'
+                    }`}
+                  >
+                    Touch
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={swimInput === 'keyboard'}
+                    onClick={() => setSwimInput('keyboard')}
+                    className={`rounded-full border-[3px] border-[#114257] px-5 py-2 text-lg font-black grandstander ${
+                      swimInput === 'keyboard' ? 'bg-[#49C8FF] text-white' : 'bg-white'
+                    }`}
+                  >
+                    Keyboard
+                  </button>
+                </div>
+                <p className="mt-2 text-sm text-[--text-light] inclusive-sans">
+                  {swimInput === 'touch'
+                    ? 'Hold the button on your edge. Your crocodile spins until you hold, then it swims that way.'
+                    : 'Four hands on one keyboard. Bottom Space, left Shift, right 6, top Caps Lock. Hold to swim.'}
+                </p>
+              </div>
+            ) : null}
           </div>
 
           {mode === 'bite' && (
@@ -288,13 +322,13 @@ function HowTo({ mode }: { mode: ChomperMode }) {
     mode === 'bite'
       ? [
           'Read the sentence on your side of the screen.',
-          'Tap near your chomper. It stretches and bites the word in front of it.',
+          'Tap near your crocodile. It stretches and bites the word in front of it.',
           'A wrong bite costs a point, if you have one, and you wait 2 seconds.',
           'A blue card turns the words around. A red card gives last place a head start.',
         ]
       : [
-          'Drag the joystick on your corner to swim.',
-          'Build the sentence in your slots from the pool: person, matching verb, then any object.',
+          'Hold your button. The crocodile spins, then swims the way its snout points.',
+          'Eat a person, a matching verb, then any object. The grammar card says which structure to build.',
           'A wrong word knocks you back for 2 seconds. Your sentence stays.',
           'You have one minute. The most finished sentences wins the round.',
         ]

@@ -1,5 +1,4 @@
 import {
-  GRAMMAR_LABELS,
   promptsForFocus,
   type GrammarFocus,
   type SentencePrompt,
@@ -38,6 +37,17 @@ const VERB_SLOTS: Record<GrammarFocus, readonly number[]> = {
   'has-have': [1],
   'past-simple-regular': [1],
   'past-simple-irregular': [1],
+}
+
+const SWIM_TITLES: Record<GrammarFocus, string> = {
+  'present-simple': 'Present simple',
+  'present-continuous': 'Present continuous',
+  'wh-question': 'WH questions',
+  'be-present': 'am, is, are, or isn\'t',
+  'be-past': 'was, were, wasn\'t, or weren\'t',
+  'has-have': 'has or have',
+  'past-simple-regular': 'Past simple, regular',
+  'past-simple-irregular': 'Past simple, irregular',
 }
 
 const SWIM_HINTS: Record<GrammarFocus, string> = {
@@ -141,7 +151,7 @@ function frame(
   return {
     id: `${prompt.id}-swim`,
     focus: prompt.focus,
-    title: GRAMMAR_LABELS[prompt.focus],
+    title: SWIM_TITLES[prompt.focus],
     hint: SWIM_HINTS[prompt.focus],
     sentences,
     decoys: decoysFor(candidates, sentences),
@@ -154,7 +164,7 @@ function mixRound(focus: GrammarFocus, scenes: readonly SwimFrame[], index: numb
   return {
     id: `${focus}-swim-${index}`,
     focus,
-    title: GRAMMAR_LABELS[focus],
+    title: SWIM_TITLES[focus],
     hint: SWIM_HINTS[focus],
     sentences,
     decoys: decoysFor(
