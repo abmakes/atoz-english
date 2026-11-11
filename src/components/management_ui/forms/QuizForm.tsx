@@ -76,6 +76,17 @@ function QuestionImage({
   className?: string;
 }) {
   const src = useObjectUrl(file, imageUrl);
+  const [broken, setBroken] = useState(false);
+  useEffect(() => {
+    setBroken(false);
+  }, [src]);
+  if (broken) {
+    return (
+      <div className={`flex items-center justify-center bg-slate-200 px-1 text-center text-[10px] font-semibold text-slate-600 ${className ?? ''}`}>
+        Couldn&apos;t load this preview.
+      </div>
+    );
+  }
   return (
     <Image
       src={src}
@@ -83,6 +94,7 @@ function QuestionImage({
       width={width}
       height={height}
       className={className}
+      onError={() => setBroken(true)}
     />
   );
 }

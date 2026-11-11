@@ -127,6 +127,8 @@ export default function ImageSelectModal({
   const [pixabayPage, setPixabayPage] = useState(1);
   const [pixabayHasMore, setPixabayHasMore] = useState(false);
   const [isLoadingPixabay, setIsLoadingPixabay] = useState(false);
+  const [pixabayError, setPixabayError] = useState('');
+  const [brokenPixabayIds, setBrokenPixabayIds] = useState<Record<number, boolean>>({});
 
   const [expanded, setExpanded] = useState<Record<SectionKey, boolean>>({
     stored: false,
@@ -238,9 +240,12 @@ export default function ImageSelectModal({
     if (!pixabayApiKey) {
       setPixabayResults([]);
       setPixabayHasMore(false);
+      setPixabayError('Pixabay API key is not configured');
       return;
     }
     setIsLoadingPixabay(true);
+    setPixabayError('');
+    if (!append) setBrokenPixabayIds({});
     try {
       const url =
         `https://pixabay.com/api/?key=${pixabayApiKey}` +
@@ -248,7 +253,15 @@ export default function ImageSelectModal({
         `&image_type=photo&orientation=all&editors_choice=true&safeSearch=true` +
         `&per_page=${PAGE_SIZE}&page=${page}`;
       const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        if (!append) setPixabayResults([]);
+        setPixabayError(
+          response.status === 429
+            ? 'Pixabay is rate limiting searches. Wait a minute and try again.'
+            : 'Pixabay could not return photos. Try the search again.'
+        );
+        return;
+      }
       const data: PixabayResponse = await response.json();
       setPixabayResults((prev) => (append ? [...prev, ...data.hits] : data.hits));
       setPixabayHasMore(data.hits.length === PAGE_SIZE && page * PAGE_SIZE < data.totalHits);
@@ -256,6 +269,7 @@ export default function ImageSelectModal({
     } catch (error) {
       console.error('Error searching Pixabay:', error);
       if (!append) setPixabayResults([]);
+      setPixabayError('Pixabay could not return photos. Try the search again.');
     } finally {
       setIsLoadingPixabay(false);
     }
@@ -553,7 +567,8 @@ export default function ImageSelectModal({
                 loading={isLoadingPixabay && pixabayResults.length === 0}
                 empty={!isLoadingPixabay && (pixabayResults.length === 0 || !pixabayApiKey)}
                 emptyText={
-                  !pixabayApiKey ? 'Pixabay API key is not configured' : 'No photos found'
+                  pixabayError ||
+                  (!pixabayApiKey ? 'Pixabay API key is not configured' : 'No photos found')
                 }
                 expanded={expanded.pixabay}
                 canExpand={pixabayResults.length > PREVIEW_COUNT}
@@ -570,6 +585,11 @@ export default function ImageSelectModal({
                       className="group rounded-xl overflow-hidden border border-slate-200 hover:border-[#49c8ff] hover:shadow-md transition-all bg-white"
                       onClick={() => handlePixabaySelect(image)}
                     >
+                      {brokenPixabayIds[image.id] ? (
+                        <div className="flex aspect-square items-center justify-center bg-slate-100 px-2 text-center text-xs font-semibold text-slate-600">
+                          Couldn&apos;t load this preview.
+                        </div>
+                      ) : (
                       <div className="aspect-square relative">
                         <Image
                           src={image.webformatURL}
@@ -578,8 +598,12 @@ export default function ImageSelectModal({
                           className="object-cover group-hover:scale-105 transition-transform duration-200"
                           sizes="160px"
                           unoptimized
+                          onError={() =>
+                            setBrokenPixabayIds((prev) => ({ ...prev, [image.id]: true }))
+                          }
                         />
                       </div>
+                      )}
                     </button>
                   ))}
                 </div>

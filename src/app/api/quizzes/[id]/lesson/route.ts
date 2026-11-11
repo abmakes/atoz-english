@@ -84,6 +84,82 @@ async function ownedQuiz(quizId: string, userId: string) {
   return { quiz }
 }
 
+function missingLessonTable(error: unknown): boolean {
+  const code =
+    typeof error === 'object' && error && 'code' in error ? String((error as { code: unknown }).code) : ''
+  const message = error instanceof Error ? error.message : String(error)
+  return code === 'P2021' || (/lessonkit/i.test(message) && /does not exist/i.test(message))
+}
+
+/** Preview deploys do not run migrations, so the first lesson open creates the table. */
+async function ensureLessonKitTable(): Promise<void> {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "LessonKit" (
+      "id" TEXT NOT NULL,
+      "authorId" TEXT NOT NULL DEFAULT 'admin',
+      "quizId" TEXT NOT NULL,
+      "title" TEXT NOT NULL,
+      "worksheetItems" JSONB NOT NULL,
+      "sentences" JSONB NOT NULL,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL,
+      CONSTRAINT "LessonKit_pkey" PRIMARY KEY ("id")
+    )
+  `)
+  await prisma.$executeRawUnsafe(
+    `CREATE UNIQUE INDEX IF NOT EXISTS "LessonKit_quizId_key" ON "LessonKit"("quizId")`
+  )
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "LessonKit_authorId_idx" ON "LessonKit"("authorId")`
+  )
+  await prisma.$executeRawUnsafe(`
+    DO $$ BEGIN
+      ALTER TABLE "LessonKit"
+        ADD CONSTRAINT "LessonKit_quizId_fkey"
+        FOREIGN KEY ("quizId") REFERENCES "Quiz"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+    END $$;
+  `)
+}
+
+async function upsertLesson(input: {
+  userId: string
+  quizId: string
+  title: string
+  worksheetItems?: Prisma.InputJsonValue
+  sentences?: Prisma.InputJsonValue
+}) {
+  const create = {
+    authorId: input.userId,
+    quizId: input.quizId,
+    title: input.title,
+    worksheetItems: input.worksheetItems ?? [],
+    sentences: input.sentences ?? [],
+  }
+  const update =
+    input.worksheetItems !== undefined
+      ? { worksheetItems: input.worksheetItems }
+      : input.sentences !== undefined
+        ? { sentences: input.sentences }
+        : {}
+  try {
+    return await prisma.lessonKit.upsert({
+      where: { quizId: input.quizId },
+      create,
+      update,
+    })
+  } catch (error) {
+    if (!missingLessonTable(error)) throw error
+    await ensureLessonKitTable()
+    return prisma.lessonKit.upsert({
+      where: { quizId: input.quizId },
+      create,
+      update,
+    })
+  }
+}
+
 function quizPayload(quiz: {
   id: string
   title: string
@@ -129,16 +205,10 @@ export async function GET(
     if (owned.error) return owned.error
     const quiz = owned.quiz
 
-    const lesson = await prisma.lessonKit.upsert({
-      where: { quizId: quiz.id },
-      create: {
-        authorId: authResult.userId,
-        quizId: quiz.id,
-        title: quiz.title,
-        worksheetItems: [],
-        sentences: [],
-      },
-      update: {},
+    const lesson = await upsertLesson({
+      userId: authResult.userId,
+      quizId: quiz.id,
+      title: quiz.title,
     })
 
     return NextResponse.json({
@@ -183,16 +253,12 @@ export async function POST(
         ? (parsed.data.items as unknown as Prisma.InputJsonValue)
         : undefined
 
-    const lesson = await prisma.lessonKit.upsert({
-      where: { quizId: quiz.id },
-      create: {
-        authorId: authResult.userId,
-        quizId: quiz.id,
-        title: quiz.title,
-        worksheetItems: worksheetItems ?? [],
-        sentences: sentences ?? [],
-      },
-      update: worksheetItems !== undefined ? { worksheetItems } : { sentences: sentences ?? [] },
+    const lesson = await upsertLesson({
+      userId: authResult.userId,
+      quizId: quiz.id,
+      title: quiz.title,
+      worksheetItems,
+      sentences,
     })
 
     return NextResponse.json({
