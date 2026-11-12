@@ -3,12 +3,11 @@ import { auditQuestion } from '@/lib/lexicon/validator'
 import type { LanguageAuditIssue } from '@/lib/lexicon/types'
 import type { CefrLevelId } from '@/lib/taxonomy/quiz-taxonomy'
 import { QuestionType } from '@/types/question_types'
+import { generateWorksheetWithQuizApi } from '@/lib/lesson/worksheet-from-quiz-api'
 import {
   finishDraft,
   finishWorksheetSentence,
   grammarPracticeDrafts,
-  parseWorksheetPractice,
-  worksheetPracticePrompt,
   type PracticeDraft,
   type WorksheetActivity,
 } from '@/lib/lesson/worksheet-practice'
@@ -322,8 +321,9 @@ function sourcePractice(question: SourceQuestion) {
 }
 
 /**
- * The worksheet check reads the unit grammar and writes a short practice set.
- * A valid model mix is kept. Otherwise the same activity mix is written here.
+ * A worksheet is written by the same generator the create form uses
+ * (/api/ai/generate-questions). The local exercise templates are only a
+ * stand-in when that generator is not called.
  */
 async function assessWorksheet(input: {
   questions: SourceQuestion[]
@@ -340,6 +340,16 @@ async function assessWorksheet(input: {
     description: input.description,
     questions: input.questions.map(sourcePractice),
   }
+  if (input.generate) {
+    const drafts = await generateWorksheetWithQuizApi({
+      ...practiceInput,
+      level: input.level,
+      generate: input.generate,
+      scope: input.scope,
+    })
+    return drafts.map((draft) => practiceItem(draft, input.level))
+  }
+
   if (input.scope === 'item') {
     const source = input.questions[0]
     const line = source ? finishWorksheetSentence(worksheetStem(source.question)) : ''
@@ -360,37 +370,6 @@ async function assessWorksheet(input: {
         input.level
       ),
     ]
-  }
-
-  if (input.generate) {
-    try {
-      const raw = await input.generate(worksheetPracticePrompt(practiceInput))
-      const parsed = parseWorksheetPractice(raw)
-      if (parsed) {
-        const byId = new Map(
-          input.questions.filter((question) => question.id).map((question) => [question.id as string, question])
-        )
-        return parsed.map((item) => {
-          const source = item.questionId ? byId.get(item.questionId) : undefined
-          return practiceItem(
-            {
-              activity: item.activity,
-              line: item.line,
-              choices: item.choices ?? [],
-              questionId: item.questionId,
-              imageUrl: source?.imageUrl,
-              correctAnswer: '',
-              reason: item.reason?.trim() || item.exercise || `Practice for ${practiceInput.title || 'this grammar'}.`,
-              sourceQuestion: source?.question || practiceInput.title || 'Grammar practice',
-              exercise: item.exercise,
-            },
-            input.level
-          )
-        })
-      }
-    } catch {
-      // The grammar set below still gives the teacher a worksheet to review.
-    }
   }
 
   return grammarPracticeDrafts(practiceInput).map((draft) => practiceItem(draft, input.level))

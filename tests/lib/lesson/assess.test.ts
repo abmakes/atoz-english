@@ -204,26 +204,39 @@ describe('lesson conversion', () => {
     expect(items.some((item) => item.line.includes('dog'))).toBe(true)
   })
 
-  it('uses a model practice mix when the check returns one', async () => {
+  it('writes the worksheet with the quiz generation API', async () => {
     const plan = planWorksheetLayout()
-    const generate = vi.fn(async () =>
-      JSON.stringify([
-        ...Array.from({ length: plan.questions }, (_, index) => ({
-          activity: 'question',
-          line: index === 0 ? 'were they at school yesterday' : `was she at home on day ${index}`,
-        })),
-        ...Array.from({ length: plan.gaps }, (_, index) => ({
-          activity: 'gap',
-          line: index === 0 ? 'they ______ at school yesterday' : `she ______ at home on day ${index}`,
-          choices: ['was', 'were'],
-        })),
-        ...Array.from({ length: plan.choices }, () => ({
-          activity: 'choice',
-          line: 'which sentence matches the picture',
-          choices: ['They were at school.', 'They was at school.'],
-        })),
-      ])
-    )
+    const generate = vi.fn(async (prompt: string) => {
+      const count = Number(prompt.match(/Create exactly (\d+) multiple-choice/)?.[1])
+      const gap = prompt.includes('______ for the missing word')
+      const picture = prompt.includes('question about a picture')
+      return JSON.stringify(
+        Array.from({ length: count }, (_, index) => {
+          if (gap) {
+            return {
+              question: `She ______ the ball on day ${index}`,
+              answers: [`kicks ${index}`, 'kick', 'kicking', 'kicked'],
+              correctAnswer: `kicks ${index}`,
+              imageKeyword: 'girl ball',
+            }
+          }
+          if (picture) {
+            return {
+              question: `Where is the ball in picture ${index}`,
+              answers: ['In the park', 'On the chair', 'In the sea', 'At school'],
+              correctAnswer: 'In the park',
+              imageKeyword: 'ball park',
+            }
+          }
+          return {
+            question: `Where did she kick the ball on day ${index}`,
+            answers: ['In the park', 'On the chair', 'In the sea', 'At school'],
+            correctAnswer: 'In the park',
+            imageKeyword: 'ball park',
+          }
+        })
+      )
+    })
     const items = await assessLessonQuestions({
       target: 'worksheet',
       scope: 'set',
@@ -232,15 +245,21 @@ describe('lesson conversion', () => {
       generate,
       questions: [kicking],
     })
-    expect(generate).toHaveBeenCalledTimes(1)
-    expect(String(generate.mock.calls)).toContain('was / were')
-    expect(items.filter((item) => item.activity === 'question')).toHaveLength(plan.questions)
-    expect(items.filter((item) => item.activity === 'gap')).toHaveLength(plan.gaps)
-    expect(items.filter((item) => item.activity === 'choice')).toHaveLength(plan.choices)
-    expect(items[0]?.line).toBe('Were they at school yesterday?')
-    expect(items[plan.questions]?.line).toBe('They ______ at school yesterday.')
-    expect(items[plan.questions + plan.gaps]?.line).toBe('Which sentence matches the picture?')
-    expect(String(generate.mock.calls)).toContain(`${plan.gaps} gaps`)
+    expect(generate).toHaveBeenCalledTimes(3)
+    expect(String(generate.mock.calls)).toContain('Past Simple')
+    expect(String(generate.mock.calls)).toContain('Create exactly')
+    const questions = items.filter((item) => item.activity === 'question')
+    const gaps = items.filter((item) => item.activity === 'gap')
+    const choices = items.filter((item) => item.activity === 'choice')
+    expect(questions).toHaveLength(plan.questions)
+    expect(gaps).toHaveLength(plan.gaps)
+    expect(choices).toHaveLength(plan.choices)
+    expect(questions.every((item) => item.line.endsWith('?'))).toBe(true)
+    expect(new Set(questions.map((item) => item.line)).size).toBe(plan.questions)
+    expect(gaps.every((item) => item.line.includes('______'))).toBe(true)
+    expect(choices.every((item) => new Set(item.choices.map((choice) => choice.toLowerCase())).size === item.choices.length)).toBe(true)
+    expect(items.some((item) => item.line.includes('giraffe'))).toBe(false)
+    expect(items[0]?.reason).toBe('Written by the quiz question generator.')
   })
 })
 

@@ -55,9 +55,21 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, items })
   } catch (error) {
+    if (error instanceof z.ZodError || error instanceof SyntaxError) {
+      console.error('Failed to parse AI worksheet:', error)
+      return NextResponse.json(
+        { error: 'The AI returned an invalid question format. Please try again.' },
+        { status: 502 }
+      )
+    }
     console.error('Error assessing lesson questions:', error)
     return NextResponse.json(
-      { error: 'Failed to check these questions. Please try again.' },
+      {
+        error:
+          error instanceof Error && error.message.includes('not configured')
+            ? error.message
+            : 'Failed to check these questions. Please try again.',
+      },
       { status: 500 }
     )
   }
