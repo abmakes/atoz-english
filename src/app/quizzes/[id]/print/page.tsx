@@ -238,7 +238,7 @@ export default function QuizWorksheetPrintPage({
         }
         .worksheet-item.is-choice {
           align-items: center;
-          min-height: 15.6mm;
+          min-height: 14.8mm;
           padding: 0.5mm 0;
         }
         .worksheet-num {

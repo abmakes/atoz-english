@@ -11,6 +11,7 @@ import {
   type SourceQuestion,
 } from '@/lib/lesson/assess'
 import { promptsFromLesson, sentencePromptFromLesson } from '@/lib/lesson/prompts'
+import { planWorksheetLayout } from '@/lib/lesson/worksheet-practice'
 import { QuestionType } from '@/types/question_types'
 
 const kicking: SourceQuestion = {
@@ -178,12 +179,16 @@ describe('lesson conversion', () => {
         },
       ],
     })
+    const plan = planWorksheetLayout()
     const questions = items.filter((item) => item.activity === 'question')
     const gaps = items.filter((item) => item.activity === 'gap')
     const choices = items.filter((item) => item.activity === 'choice')
-    expect(questions).toHaveLength(10)
-    expect(gaps).toHaveLength(5)
-    expect(choices).toHaveLength(5)
+    expect(plan).toMatchObject({ questions: 10, gaps: 8, choices: 6 })
+    expect(plan.heightMm).toBeGreaterThan(268)
+    expect(plan.heightMm).toBeLessThanOrEqual(277)
+    expect(questions).toHaveLength(plan.questions)
+    expect(gaps).toHaveLength(plan.gaps)
+    expect(choices).toHaveLength(plan.choices)
     expect(questions.every((item) => item.exercise === 'A. Answer the questions.')).toBe(true)
     expect(gaps.every((item) => item.exercise === 'B. Complete the sentences.')).toBe(true)
     expect(choices.every((item) => item.exercise === 'C. Circle the answer.')).toBe(true)
@@ -200,18 +205,19 @@ describe('lesson conversion', () => {
   })
 
   it('uses a model practice mix when the check returns one', async () => {
+    const plan = planWorksheetLayout()
     const generate = vi.fn(async () =>
       JSON.stringify([
-        ...Array.from({ length: 10 }, (_, index) => ({
+        ...Array.from({ length: plan.questions }, (_, index) => ({
           activity: 'question',
           line: index === 0 ? 'were they at school yesterday' : `was she at home on day ${index}`,
         })),
-        ...Array.from({ length: 5 }, (_, index) => ({
+        ...Array.from({ length: plan.gaps }, (_, index) => ({
           activity: 'gap',
           line: index === 0 ? 'they ______ at school yesterday' : `she ______ at home on day ${index}`,
           choices: ['was', 'were'],
         })),
-        ...Array.from({ length: 5 }, () => ({
+        ...Array.from({ length: plan.choices }, () => ({
           activity: 'choice',
           line: 'which sentence matches the picture',
           choices: ['They were at school.', 'They was at school.'],
@@ -228,12 +234,13 @@ describe('lesson conversion', () => {
     })
     expect(generate).toHaveBeenCalledTimes(1)
     expect(String(generate.mock.calls)).toContain('was / were')
-    expect(items.filter((item) => item.activity === 'question')).toHaveLength(10)
-    expect(items.filter((item) => item.activity === 'gap')).toHaveLength(5)
-    expect(items.filter((item) => item.activity === 'choice')).toHaveLength(5)
+    expect(items.filter((item) => item.activity === 'question')).toHaveLength(plan.questions)
+    expect(items.filter((item) => item.activity === 'gap')).toHaveLength(plan.gaps)
+    expect(items.filter((item) => item.activity === 'choice')).toHaveLength(plan.choices)
     expect(items[0]?.line).toBe('Were they at school yesterday?')
-    expect(items[10]?.line).toBe('They ______ at school yesterday.')
-    expect(items[15]?.line).toBe('Which sentence matches the picture?')
+    expect(items[plan.questions]?.line).toBe('They ______ at school yesterday.')
+    expect(items[plan.questions + plan.gaps]?.line).toBe('Which sentence matches the picture?')
+    expect(String(generate.mock.calls)).toContain(`${plan.gaps} gaps`)
   })
 })
 
