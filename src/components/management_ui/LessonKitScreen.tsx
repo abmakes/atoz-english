@@ -19,7 +19,7 @@ import {
   type WorksheetItem,
 } from '@/lib/lesson/assess'
 import { promptsFromLesson } from '@/lib/lesson/prompts'
-import { levelFromTags } from '@/lib/taxonomy/quiz-taxonomy'
+import { levelFromTags, resolveGrammarTags } from '@/lib/taxonomy/quiz-taxonomy'
 import { QuestionType } from '@/types/question_types'
 
 const SOURCE_CARD =
@@ -56,6 +56,7 @@ function toReviewQuestion(item: LessonAssessmentItem): ReviewableQuestion {
     sourceQuestion: item.sourceQuestion,
     sourceAnswers: item.sourceAnswers,
     assessmentReason: item.reason,
+    activity: item.activity,
   }
 }
 
@@ -139,6 +140,10 @@ export default function LessonKitScreen({
           body: JSON.stringify({
             target: nextTarget,
             level: levelFromTags(quiz.tags) ?? 'A1',
+            grammar: resolveGrammarTags(quiz.tags),
+            title: quiz.title,
+            description: quiz.description ?? '',
+            scope: 'set',
             questions: quiz.questions.map((question) => ({
               id: question.id,
               question: question.question,
@@ -185,6 +190,10 @@ export default function LessonKitScreen({
           body: JSON.stringify({
             target,
             level: levelFromTags(quiz.tags) ?? 'A1',
+            grammar: resolveGrammarTags(quiz.tags),
+            title: quiz.title,
+            description: quiz.description ?? '',
+            scope: 'item',
             questions: [
               {
                 id: previous.id,
@@ -229,6 +238,7 @@ export default function LessonKitScreen({
           choices: item.answers,
           imageUrl: item.imageUrl,
           correctAnswer: item.correctAnswer,
+          activity: item.activity,
         }))
       )
       if (!selection.ok) {
@@ -402,7 +412,7 @@ export default function LessonKitScreen({
                     </div>
                     <span className="text-base font-semibold">Add worksheet</span>
                     <span className="text-xs text-slate-600">
-                      {worksheetReady ? 'Open' : 'Print the pictures and questions'}
+                      {worksheetReady ? 'Open' : 'Grammar practice to print'}
                     </span>
                   </button>
                   <button

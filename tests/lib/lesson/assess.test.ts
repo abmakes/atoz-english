@@ -4,6 +4,7 @@ import {
   assessLessonQuestions,
   commitLessonSelection,
   fillGap,
+  finishWorksheetSentence,
   isStructuredCorrectAnswer,
   localSentenceAssessment,
   localWorksheetAssessment,
@@ -63,21 +64,28 @@ describe('lesson conversion', () => {
     ).toBeNull()
   })
 
-  it('keeps a worksheet gap blank and prints multiple choice as a line', () => {
+  it('still recognises a printable quiz line, which the worksheet check no longer copies', () => {
     const gap = localWorksheetAssessment(kicking)
     expect(gap?.line).toBe('he is ______ the ball')
-    expect(gap?.choices).toEqual(['kicking', 'kick', 'kicks', 'kicked'])
     expect(gap?.converted).toBe(false)
+    expect(
+      localWorksheetAssessment({
+        id: 'color',
+        question: 'What color is the sky?',
+        answers: ['Blue', 'Green', 'Red', 'Yellow'],
+        correctAnswer: 'Blue',
+        type: QuestionType.MULTIPLE_CHOICE,
+      })?.line
+    ).toBe('What color is the sky?')
+  })
 
-    const color = localWorksheetAssessment({
-      id: 'color',
-      question: 'What color is the sky?',
-      answers: ['Blue', 'Green', 'Red', 'Yellow'],
-      correctAnswer: 'Blue',
-      type: QuestionType.MULTIPLE_CHOICE,
-    })
-    expect(color?.line).toBe('What color is the sky?')
-    expect(color?.choices).toContain('Blue')
+  it('starts every worksheet sentence with a capital and a stop or question mark', () => {
+    expect(finishWorksheetSentence('he is ______ the ball')).toBe('He is ______ the ball.')
+    expect(finishWorksheetSentence('are there any giraffes')).toBe('Are there any giraffes?')
+    expect(finishWorksheetSentence('Was it a good film')).toBe('Was it a good film?')
+    expect(finishWorksheetSentence('What color is the sky?')).toBe('What color is the sky?')
+    expect(finishWorksheetSentence('do not run beside the pool')).toBe('Do not run beside the pool.')
+    expect(finishWorksheetSentence('He is kicking the ball.')).toBe('He is kicking the ball.')
   })
 
   it('does not treat sorting JSON as a worksheet line', () => {
@@ -127,6 +135,7 @@ describe('lesson conversion', () => {
   it('keeps a row when the lexicon warns about a word', async () => {
     const items = await assessLessonQuestions({
       target: 'worksheet',
+      scope: 'item',
       level: 'A1',
       questions: [
         {
@@ -140,7 +149,81 @@ describe('lesson conversion', () => {
     })
     expect(items).toHaveLength(1)
     expect(items[0]?.compatible).toBe(true)
+    expect(items[0]?.line).toBe('What is a flibbertigibbet?')
     expect(items[0]?.languageWarnings.some((issue) => issue.word === 'flibbertigibbet')).toBe(true)
+  })
+
+  it('writes mixed grammar practice instead of copying the quiz', async () => {
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A1',
+      grammar: ['There is / There are'],
+      title: 'Zoo animals',
+      questions: [
+        {
+          id: 'dog',
+          question: 'There ______ a dog in the park',
+          answers: ['is', 'are', 'was', 'were'],
+          correctAnswer: 'is',
+          type: QuestionType.MULTIPLE_CHOICE,
+          imageUrl: '/images/sentence-builder/sam-dog.jpg',
+        },
+        {
+          id: 'kids',
+          question: 'There ______ two children',
+          answers: ['are', 'is', 'was', 'were'],
+          correctAnswer: 'are',
+          type: QuestionType.MULTIPLE_CHOICE,
+        },
+      ],
+    })
+    expect(items.length).toBeGreaterThanOrEqual(6)
+    expect(items.length).toBeLessThanOrEqual(8)
+    const activities = new Set(items.map((item) => item.activity))
+    expect(activities).toEqual(new Set(['gap', 'question', 'rewrite', 'matching', 'practice']))
+    for (const item of items) {
+      expect(item.line).toMatch(/^[A-Z]/)
+      expect(item.line).toMatch(/[.?!]$/)
+      expect(item.line).not.toBe('There ______ a dog in the park')
+    }
+    expect(items.some((item) => item.line.endsWith('?'))).toBe(true)
+    expect(items.some((item) => item.line.includes('______'))).toBe(true)
+    expect(items.some((item) => item.line.includes('dog'))).toBe(true)
+  })
+
+  it('uses a model practice mix when the check returns one', async () => {
+    const generate = vi.fn(async () =>
+      JSON.stringify([
+        { activity: 'gap', line: 'they ______ at school yesterday', choices: ['were', 'was'] },
+        { activity: 'question', line: 'were they at school yesterday' },
+        { activity: 'rewrite', line: 'rewrite this in the past: they are at school' },
+        { activity: 'matching', line: 'match was and were', choices: ['was — I', 'were — they'] },
+        { activity: 'practice', line: 'write one sentence about yesterday' },
+        { activity: 'gap', line: 'she ______ at home', choices: ['was', 'were'] },
+      ])
+    )
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A1',
+      grammar: ['Past Simple'],
+      generate,
+      questions: [kicking],
+    })
+    expect(generate).toHaveBeenCalledTimes(1)
+    expect(String(generate.mock.calls)).toContain('was / were')
+    expect(items.map((item) => item.activity)).toEqual([
+      'gap',
+      'question',
+      'rewrite',
+      'matching',
+      'practice',
+      'gap',
+    ])
+    expect(items[0]?.line).toBe('They ______ at school yesterday.')
+    expect(items[1]?.line).toBe('Were they at school yesterday?')
+    expect(items[4]?.line).toBe('Write one sentence about yesterday.')
   })
 })
 
@@ -189,7 +272,7 @@ describe('lesson review gate', () => {
     expect(saved.worksheetItems).toEqual([
       {
         questionId: 'q-kick',
-        line: 'he is kicking the ball',
+        line: 'He is kicking the ball.',
         imageUrl: 'https://images.example/ball.jpg',
         choices: ['kicking', 'kick', 'kicks', 'kicked'],
       },

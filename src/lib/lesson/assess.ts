@@ -3,6 +3,18 @@ import { auditQuestion } from '@/lib/lexicon/validator'
 import type { LanguageAuditIssue } from '@/lib/lexicon/types'
 import type { CefrLevelId } from '@/lib/taxonomy/quiz-taxonomy'
 import { QuestionType } from '@/types/question_types'
+import {
+  finishDraft,
+  finishWorksheetSentence,
+  grammarPracticeDrafts,
+  parseWorksheetPractice,
+  worksheetPracticePrompt,
+  type PracticeDraft,
+  type WorksheetActivity,
+} from '@/lib/lesson/worksheet-practice'
+
+export { finishWorksheetSentence }
+export type { WorksheetActivity }
 
 export type LessonTarget = 'worksheet' | 'sentence-builder'
 
@@ -27,6 +39,7 @@ export interface LessonAssessmentItem {
   reason: string
   line: string
   choices: string[]
+  activity?: WorksheetActivity
   languageWarnings: LanguageAuditIssue[]
 }
 
@@ -35,6 +48,7 @@ export interface WorksheetItem {
   line: string
   imageUrl?: string
   choices: string[]
+  activity?: WorksheetActivity
 }
 
 export interface LessonSentence {
@@ -50,6 +64,7 @@ export interface LessonReviewRow {
   choices?: string[]
   imageUrl?: string | null
   correctAnswer?: string
+  activity?: WorksheetActivity
 }
 
 const BLANK = /_{3,}/
@@ -270,16 +285,131 @@ function withWarnings(item: LessonAssessmentItem, level: CefrLevelId): LessonAss
   return { ...item, languageWarnings: audit.issues }
 }
 
+function practiceItem(draft: PracticeDraft, level: CefrLevelId): LessonAssessmentItem {
+  const finished = finishDraft(draft)
+  return withWarnings(
+    {
+      questionId: finished.questionId || '',
+      sourceQuestion: finished.sourceQuestion,
+      sourceAnswers: finished.choices,
+      correctAnswer: finished.correctAnswer,
+      type: QuestionType.MULTIPLE_CHOICE,
+      imageUrl: finished.imageUrl ?? null,
+      compatible: true,
+      converted: true,
+      reason: finished.reason,
+      line: finished.line,
+      choices: finished.choices,
+      activity: finished.activity,
+      languageWarnings: [],
+    },
+    level
+  )
+}
+
+function sourcePractice(question: SourceQuestion) {
+  return {
+    id: question.id,
+    question: question.question,
+    answers: question.answers,
+    correctAnswer: question.correctAnswer,
+    imageUrl: question.imageUrl,
+  }
+}
+
 /**
- * Local rules run first. The model only sees items those rules cannot handle.
+ * The worksheet check reads the unit grammar and writes a short practice set.
+ * A valid model mix is kept. Otherwise the same activity mix is written here.
+ */
+async function assessWorksheet(input: {
+  questions: SourceQuestion[]
+  level: CefrLevelId
+  grammar?: string[]
+  title?: string
+  description?: string
+  scope?: 'set' | 'item'
+  generate?: (prompt: string) => Promise<string>
+}): Promise<LessonAssessmentItem[]> {
+  const practiceInput = {
+    grammar: input.grammar,
+    title: input.title,
+    description: input.description,
+    questions: input.questions.map(sourcePractice),
+  }
+  if (input.scope === 'item') {
+    const source = input.questions[0]
+    const line = source ? finishWorksheetSentence(worksheetStem(source.question)) : ''
+    if (!source || !line) return []
+    const gap = BLANK.test(source.question)
+    return [
+      practiceItem(
+        {
+          activity: gap ? 'gap' : line.endsWith('?') ? 'question' : 'practice',
+          line,
+          choices: gap ? usableAnswers(source.answers).slice(0, 4) : [],
+          questionId: source.id,
+          imageUrl: source.imageUrl,
+          correctAnswer: isStructuredCorrectAnswer(source.correctAnswer) ? '' : source.correctAnswer.trim(),
+          reason: 'One practice line from this question.',
+          sourceQuestion: source.question,
+        },
+        input.level
+      ),
+    ]
+  }
+
+  if (input.generate) {
+    try {
+      const raw = await input.generate(worksheetPracticePrompt(practiceInput))
+      const parsed = parseWorksheetPractice(raw)
+      if (parsed) {
+        const byId = new Map(
+          input.questions.filter((question) => question.id).map((question) => [question.id as string, question])
+        )
+        return parsed.map((item) => {
+          const source = item.questionId ? byId.get(item.questionId) : undefined
+          return practiceItem(
+            {
+              activity: item.activity,
+              line: item.line,
+              choices: item.choices ?? [],
+              questionId: item.questionId,
+              imageUrl: source?.imageUrl,
+              correctAnswer: '',
+              reason: item.reason?.trim() || `Practice for ${practiceInput.title || 'this grammar'}.`,
+              sourceQuestion: source?.question || practiceInput.title || 'Grammar practice',
+            },
+            input.level
+          )
+        })
+      }
+    } catch {
+      // The grammar set below still gives the teacher a worksheet to review.
+    }
+  }
+
+  return grammarPracticeDrafts(practiceInput).map((draft) => practiceItem(draft, input.level))
+}
+
+/**
+ * Sentence builder: local rules run first, and the model only sees the rest.
+ * Worksheet: the check writes grammar practice instead of copying the quiz.
  * Lexicon warnings are attached and never drop a row.
  */
 export async function assessLessonQuestions(input: {
   target: LessonTarget
   questions: SourceQuestion[]
   level: CefrLevelId
+  grammar?: string[]
+  title?: string
+  description?: string
+  scope?: 'set' | 'item'
   generate?: (prompt: string) => Promise<string>
 }): Promise<LessonAssessmentItem[]> {
+  if (input.target === 'worksheet') {
+    return assessWorksheet(input)
+  }
+
   const keyed = input.questions.map((question, index) => ({
     question,
     questionId: question.id?.trim() || `item-${index}`,
@@ -289,10 +419,7 @@ export async function assessLessonQuestions(input: {
   const local = new Map<string, LessonAssessmentItem>()
 
   for (const entry of keyed) {
-    const assessed =
-      input.target === 'sentence-builder'
-        ? localSentenceAssessment(entry.question)
-        : localWorksheetAssessment(entry.question)
+    const assessed = localSentenceAssessment(entry.question)
     if (assessed) {
       local.set(entry.questionId, { ...assessed, questionId: entry.questionId })
     } else {
@@ -353,9 +480,10 @@ export function commitLessonSelection(
       sentences: [],
       worksheetItems: approved.map((row) => ({
         questionId: row.questionId,
-        line: row.line.trim(),
+        line: finishWorksheetSentence(row.line),
         imageUrl: isRealPicture(row.imageUrl) ? row.imageUrl : undefined,
         choices: (row.choices ?? []).map((choice) => choice.trim()).filter(Boolean),
+        ...(row.activity ? { activity: row.activity } : {}),
       })),
     }
   }

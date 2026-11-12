@@ -9,6 +9,10 @@ import { QuestionType } from '@/types/question_types'
 const bodySchema = z.object({
   target: z.enum(['worksheet', 'sentence-builder']),
   level: z.string().optional(),
+  grammar: z.array(z.string().max(80)).max(12).optional(),
+  title: z.string().max(200).optional(),
+  description: z.string().max(500).optional(),
+  scope: z.enum(['set', 'item']).optional(),
   questions: z
     .array(
       z.object({
@@ -42,6 +46,10 @@ export async function POST(request: NextRequest) {
       target: parsed.data.target,
       questions: parsed.data.questions,
       level,
+      grammar: parsed.data.grammar,
+      title: parsed.data.title,
+      description: parsed.data.description,
+      scope: parsed.data.scope,
       generate: generateText,
     })
 

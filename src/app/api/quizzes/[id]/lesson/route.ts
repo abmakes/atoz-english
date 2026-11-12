@@ -3,12 +3,16 @@ import { z } from 'zod'
 import { Prisma, PrismaClient } from '../../../../../../prisma/app/generated/prisma/client'
 import { requireAuth, isUnauthorized } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { finishWorksheetSentence } from '@/lib/lesson/assess'
+
+const worksheetActivitySchema = z.enum(['gap', 'question', 'rewrite', 'matching', 'practice'])
 
 const worksheetItemSchema = z.object({
   questionId: z.string().optional(),
   line: z.string().trim().min(1).max(500),
   imageUrl: z.string().nullable().optional(),
   choices: z.array(z.string().max(120)).max(4),
+  activity: worksheetActivitySchema.optional(),
 })
 
 const sentenceSchema = z.object({
@@ -31,8 +35,9 @@ const commitSchema = z.discriminatedUnion('target', [
 const storedWorksheetSchema = z.object({
   questionId: z.string().optional(),
   line: z.string(),
-  imageUrl: z.string().optional(),
+  imageUrl: z.string().nullable().optional(),
   choices: z.array(z.string()).optional(),
+  activity: worksheetActivitySchema.optional(),
 })
 
 const storedSentenceSchema = z.object({
@@ -46,9 +51,10 @@ function readWorksheetItems(value: unknown) {
   if (!parsed.success) return []
   return parsed.data.map((item) => ({
     questionId: item.questionId,
-    line: item.line,
-    imageUrl: item.imageUrl,
+    line: finishWorksheetSentence(item.line),
+    imageUrl: item.imageUrl || undefined,
     choices: item.choices ?? [],
+    activity: item.activity,
   }))
 }
 
