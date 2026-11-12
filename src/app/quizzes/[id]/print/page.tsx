@@ -166,7 +166,9 @@ export default function QuizWorksheetPrintPage({
           justify-content: space-between;
           gap: 8px;
           border-bottom: 1.5px solid #0f172a;
-          padding-bottom: 2px;
+          padding-top: 2mm;
+          padding-bottom: 2.5mm;
+          margin-bottom: 3mm;
         }
         .worksheet-head h1 {
           margin: 0;
@@ -184,7 +186,7 @@ export default function QuizWorksheetPrintPage({
           white-space: nowrap;
         }
         .worksheet-note {
-          margin-top: 3px;
+          margin-top: 0;
           white-space: normal;
         }
         .worksheet-exercise + .worksheet-exercise {
@@ -302,6 +304,7 @@ export default function QuizWorksheetPrintPage({
             display: none !important;
           }
           body {
+            min-height: 0 !important;
             background: white !important;
           }
           .print-page {
