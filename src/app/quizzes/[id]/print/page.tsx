@@ -152,7 +152,10 @@ export default function QuizWorksheetPrintPage({
           white-space: normal;
         }
         .worksheet-items {
-          margin: 2px 0 0;
+          display: flex;
+          flex-direction: column;
+          gap: 2.5mm;
+          margin: 2.5mm 0 0;
           padding: 0;
           list-style: none;
         }
@@ -161,7 +164,7 @@ export default function QuizWorksheetPrintPage({
           align-items: center;
           gap: 6px;
           min-height: 30mm;
-          padding: 1.4mm 0;
+          padding: 2mm 0;
           border-bottom: 1px solid #e2e8f0;
           break-inside: avoid;
           page-break-inside: avoid;
