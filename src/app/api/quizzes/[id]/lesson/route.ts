@@ -5,7 +5,7 @@ import { requireAuth, isUnauthorized } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { finishWorksheetSentence } from '@/lib/lesson/assess'
 
-const worksheetActivitySchema = z.enum(['gap', 'question', 'rewrite', 'matching', 'practice'])
+const worksheetActivitySchema = z.enum(['gap', 'question', 'choice', 'rewrite', 'matching', 'practice'])
 
 const worksheetItemSchema = z.object({
   questionId: z.string().optional(),
@@ -13,6 +13,7 @@ const worksheetItemSchema = z.object({
   imageUrl: z.string().nullable().optional(),
   choices: z.array(z.string().max(120)).max(4),
   activity: worksheetActivitySchema.optional(),
+  exercise: z.string().max(80).optional(),
 })
 
 const sentenceSchema = z.object({
@@ -38,6 +39,7 @@ const storedWorksheetSchema = z.object({
   imageUrl: z.string().nullable().optional(),
   choices: z.array(z.string()).optional(),
   activity: worksheetActivitySchema.optional(),
+  exercise: z.string().max(80).optional(),
 })
 
 const storedSentenceSchema = z.object({
@@ -55,6 +57,7 @@ function readWorksheetItems(value: unknown) {
     imageUrl: item.imageUrl || undefined,
     choices: item.choices ?? [],
     activity: item.activity,
+    exercise: item.exercise,
   }))
 }
 

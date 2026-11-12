@@ -40,6 +40,7 @@ export interface LessonAssessmentItem {
   line: string
   choices: string[]
   activity?: WorksheetActivity
+  exercise?: string
   languageWarnings: LanguageAuditIssue[]
 }
 
@@ -49,6 +50,7 @@ export interface WorksheetItem {
   imageUrl?: string
   choices: string[]
   activity?: WorksheetActivity
+  exercise?: string
 }
 
 export interface LessonSentence {
@@ -65,6 +67,7 @@ export interface LessonReviewRow {
   imageUrl?: string | null
   correctAnswer?: string
   activity?: WorksheetActivity
+  exercise?: string
 }
 
 const BLANK = /_{3,}/
@@ -301,6 +304,7 @@ function practiceItem(draft: PracticeDraft, level: CefrLevelId): LessonAssessmen
       line: finished.line,
       choices: finished.choices,
       activity: finished.activity,
+      exercise: finished.exercise,
       languageWarnings: [],
     },
     level
@@ -376,8 +380,9 @@ async function assessWorksheet(input: {
               questionId: item.questionId,
               imageUrl: source?.imageUrl,
               correctAnswer: '',
-              reason: item.reason?.trim() || `Practice for ${practiceInput.title || 'this grammar'}.`,
+              reason: item.reason?.trim() || item.exercise || `Practice for ${practiceInput.title || 'this grammar'}.`,
               sourceQuestion: source?.question || practiceInput.title || 'Grammar practice',
+              exercise: item.exercise,
             },
             input.level
           )
@@ -484,6 +489,7 @@ export function commitLessonSelection(
         imageUrl: isRealPicture(row.imageUrl) ? row.imageUrl : undefined,
         choices: (row.choices ?? []).map((choice) => choice.trim()).filter(Boolean),
         ...(row.activity ? { activity: row.activity } : {}),
+        ...(row.exercise ? { exercise: row.exercise } : {}),
       })),
     }
   }

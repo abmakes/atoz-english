@@ -178,10 +178,17 @@ describe('lesson conversion', () => {
         },
       ],
     })
-    expect(items.length).toBeGreaterThanOrEqual(6)
-    expect(items.length).toBeLessThanOrEqual(8)
-    const activities = new Set(items.map((item) => item.activity))
-    expect(activities).toEqual(new Set(['gap', 'question', 'rewrite', 'matching', 'practice']))
+    const questions = items.filter((item) => item.activity === 'question')
+    const gaps = items.filter((item) => item.activity === 'gap')
+    const choices = items.filter((item) => item.activity === 'choice')
+    expect(questions).toHaveLength(10)
+    expect(gaps).toHaveLength(5)
+    expect(choices).toHaveLength(5)
+    expect(questions.every((item) => item.exercise === 'A. Answer the questions.')).toBe(true)
+    expect(gaps.every((item) => item.exercise === 'B. Complete the sentences.')).toBe(true)
+    expect(choices.every((item) => item.exercise === 'C. Circle the answer.')).toBe(true)
+    expect(choices.every((item) => item.imageUrl === '/images/sentence-builder/sam-dog.jpg')).toBe(true)
+    expect(choices.every((item) => item.choices.length >= 2)).toBe(true)
     for (const item of items) {
       expect(item.line).toMatch(/^[A-Z]/)
       expect(item.line).toMatch(/[.?!]$/)
@@ -195,12 +202,20 @@ describe('lesson conversion', () => {
   it('uses a model practice mix when the check returns one', async () => {
     const generate = vi.fn(async () =>
       JSON.stringify([
-        { activity: 'gap', line: 'they ______ at school yesterday', choices: ['were', 'was'] },
-        { activity: 'question', line: 'were they at school yesterday' },
-        { activity: 'rewrite', line: 'rewrite this in the past: they are at school' },
-        { activity: 'matching', line: 'match was and were', choices: ['was — I', 'were — they'] },
-        { activity: 'practice', line: 'write one sentence about yesterday' },
-        { activity: 'gap', line: 'she ______ at home', choices: ['was', 'were'] },
+        ...Array.from({ length: 10 }, (_, index) => ({
+          activity: 'question',
+          line: index === 0 ? 'were they at school yesterday' : `was she at home on day ${index}`,
+        })),
+        ...Array.from({ length: 5 }, (_, index) => ({
+          activity: 'gap',
+          line: index === 0 ? 'they ______ at school yesterday' : `she ______ at home on day ${index}`,
+          choices: ['was', 'were'],
+        })),
+        ...Array.from({ length: 5 }, () => ({
+          activity: 'choice',
+          line: 'which sentence matches the picture',
+          choices: ['They were at school.', 'They was at school.'],
+        })),
       ])
     )
     const items = await assessLessonQuestions({
@@ -213,17 +228,12 @@ describe('lesson conversion', () => {
     })
     expect(generate).toHaveBeenCalledTimes(1)
     expect(String(generate.mock.calls)).toContain('was / were')
-    expect(items.map((item) => item.activity)).toEqual([
-      'gap',
-      'question',
-      'rewrite',
-      'matching',
-      'practice',
-      'gap',
-    ])
-    expect(items[0]?.line).toBe('They ______ at school yesterday.')
-    expect(items[1]?.line).toBe('Were they at school yesterday?')
-    expect(items[4]?.line).toBe('Write one sentence about yesterday.')
+    expect(items.filter((item) => item.activity === 'question')).toHaveLength(10)
+    expect(items.filter((item) => item.activity === 'gap')).toHaveLength(5)
+    expect(items.filter((item) => item.activity === 'choice')).toHaveLength(5)
+    expect(items[0]?.line).toBe('Were they at school yesterday?')
+    expect(items[10]?.line).toBe('They ______ at school yesterday.')
+    expect(items[15]?.line).toBe('Which sentence matches the picture?')
   })
 })
 

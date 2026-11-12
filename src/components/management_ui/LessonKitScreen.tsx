@@ -57,6 +57,7 @@ function toReviewQuestion(item: LessonAssessmentItem): ReviewableQuestion {
     sourceAnswers: item.sourceAnswers,
     assessmentReason: item.reason,
     activity: item.activity,
+    exercise: item.exercise,
   }
 }
 
@@ -239,6 +240,7 @@ export default function LessonKitScreen({
           imageUrl: item.imageUrl,
           correctAnswer: item.correctAnswer,
           activity: item.activity,
+          exercise: item.exercise,
         }))
       )
       if (!selection.ok) {

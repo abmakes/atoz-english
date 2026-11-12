@@ -5,22 +5,35 @@ import Link from 'next/link'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import { Button } from '@/components/ui/button'
 import { isRealPicture, type WorksheetActivity, type WorksheetItem } from '@/lib/lesson/assess'
+import { EXERCISE_TITLE } from '@/lib/lesson/worksheet-practice'
 import { Loader2, Printer } from 'lucide-react'
 
-const ACTIVITY_LABEL: Record<WorksheetActivity, string> = {
-  gap: 'Gap',
-  question: 'Question',
-  rewrite: 'Rewrite',
-  matching: 'Match',
-  practice: 'Practice',
+const INSTRUCTION: Partial<Record<WorksheetActivity, string>> = {
+  question: 'Write the answer on the line.',
+  gap: 'Write the missing word.',
+  choice: 'Circle the answer.',
 }
 
-function activityFromLine(line: string): WorksheetActivity {
-  if (line.includes('______')) return 'gap'
-  if (line.trim().endsWith('?')) return 'question'
-  if (/^rewrite\b/i.test(line)) return 'rewrite'
-  if (/^match\b/i.test(line)) return 'matching'
+function activityOf(item: WorksheetItem): WorksheetActivity {
+  if (item.activity) return item.activity
+  if (item.line.includes('______')) return 'gap'
+  if (item.choices.length > 0) return 'choice'
+  if (item.line.trim().endsWith('?')) return 'question'
   return 'practice'
+}
+
+function groupExercises(items: WorksheetItem[]) {
+  const groups: { title: string; activity: WorksheetActivity; items: WorksheetItem[] }[] = []
+  for (const item of items) {
+    const activity = activityOf(item)
+    const title =
+      item.exercise ||
+      (activity === 'question' || activity === 'gap' || activity === 'choice' ? EXERCISE_TITLE[activity] : activity)
+    const last = groups[groups.length - 1]
+    if (last && last.title === title) last.items.push(item)
+    else groups.push({ title, activity, items: [item] })
+  }
+  return groups
 }
 
 interface PrintPayload {
@@ -106,36 +119,38 @@ export default function QuizWorksheetPrintPage({
                 Name: ________________ &nbsp; Date: __________
               </div>
             </div>
-            <p className="worksheet-note">Fill the gap, answer, rewrite, or match.</p>
-            <ol className="worksheet-items">
-              {items.map((item, index) => {
-                const activity = item.activity ?? activityFromLine(item.line)
-                const circle = activity === 'gap' || (activity === 'question' && item.choices.length > 0)
-                return (
-                  <li key={`${item.questionId ?? 'line'}-${index}`} className="worksheet-item">
-                    <span className="worksheet-num">{index + 1}</span>
-                    {isRealPicture(item.imageUrl) ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.imageUrl} alt="" className="worksheet-photo" />
-                    ) : null}
-                    <div className="worksheet-body">
-                      <p className="worksheet-kind">{ACTIVITY_LABEL[activity]}</p>
-                      <p className="worksheet-line">{item.line}</p>
-                      {item.choices.length > 0 ? (
-                        <ul className="worksheet-choices">
-                          {item.choices.map((choice, choiceIndex) => (
-                            <li key={`${choice}-${choiceIndex}`}>
-                              {circle ? <span className="worksheet-circle" /> : null}
-                              {choice}
-                            </li>
-                          ))}
-                        </ul>
+            <p className="worksheet-note">Answer the questions, complete the gaps, then circle the answer.</p>
+            {groupExercises(items).map((group) => (
+              <section key={group.title} className={`worksheet-exercise is-${group.activity}`}>
+                <h2>{group.title}</h2>
+                {INSTRUCTION[group.activity] ? <p className="worksheet-instruction">{INSTRUCTION[group.activity]}</p> : null}
+                <ol className="worksheet-items">
+                  {group.items.map((item, index) => (
+                    <li key={`${item.questionId ?? group.activity}-${index}`} className={`worksheet-item is-${group.activity}`}>
+                      <span className="worksheet-num">{index + 1}</span>
+                      {group.activity === 'choice' && isRealPicture(item.imageUrl) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={item.imageUrl} alt="" className="worksheet-photo" />
                       ) : null}
-                    </div>
-                  </li>
-                )
-              })}
-            </ol>
+                      <div className="worksheet-body">
+                        <p className="worksheet-line">{item.line}</p>
+                        {group.activity === 'question' ? <div className="worksheet-write" /> : null}
+                        {group.activity === 'choice' && item.choices.length > 0 ? (
+                          <ul className="worksheet-choices">
+                            {item.choices.map((choice, choiceIndex) => (
+                              <li key={`${choice}-${choiceIndex}`}>
+                                <span className="worksheet-circle" />
+                                {choice}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ))}
           </div>
         )}
       </div>
@@ -143,7 +158,7 @@ export default function QuizWorksheetPrintPage({
         .worksheet {
           width: 186mm;
           max-width: 100%;
-          padding: 4mm 5mm 2mm;
+          padding: 2mm 4mm 1mm;
         }
         .worksheet-head {
           display: flex;
@@ -172,23 +187,49 @@ export default function QuizWorksheetPrintPage({
           margin-top: 3px;
           white-space: normal;
         }
+        .worksheet-exercise h2 {
+          margin: 1.6mm 0 0.2mm;
+          font-size: 13px;
+          line-height: 1.15;
+          font-weight: 700;
+          color: #0f172a;
+        }
+        .worksheet-instruction {
+          margin: 0;
+          font-size: 11px;
+          line-height: 1.15;
+          color: #334155;
+        }
         .worksheet-items {
           display: flex;
           flex-direction: column;
-          gap: 2.5mm;
-          margin: 2.5mm 0 0;
+          gap: 0.5mm;
+          margin: 1mm 0 0;
           padding: 0;
           list-style: none;
         }
         .worksheet-item {
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           gap: 6px;
-          min-height: 30mm;
-          padding: 2mm 0;
-          border-bottom: 1px solid #e2e8f0;
+          padding: 0.4mm 0;
           break-inside: avoid;
           page-break-inside: avoid;
+        }
+        .worksheet-item.is-question .worksheet-body,
+        .worksheet-item.is-gap .worksheet-body {
+          display: flex;
+          align-items: baseline;
+          gap: 6px;
+        }
+        .worksheet-item.is-question .worksheet-line,
+        .worksheet-item.is-gap .worksheet-line {
+          flex: none;
+        }
+        .worksheet-item.is-choice {
+          align-items: center;
+          min-height: 16mm;
+          padding: 0.4mm 0;
         }
         .worksheet-num {
           width: 1.1rem;
@@ -199,26 +240,23 @@ export default function QuizWorksheetPrintPage({
           color: #0f172a;
         }
         .worksheet-photo {
-          width: 28mm;
-          height: 20mm;
+          width: 18mm;
+          height: 13mm;
           flex: none;
           object-fit: cover;
           border: 1px solid #cbd5e1;
           border-radius: 2px;
           background: #f8fafc;
         }
+        .worksheet-write {
+          flex: 1;
+          height: 0;
+          margin: 0;
+          border-bottom: 1px solid #0f172a;
+        }
         .worksheet-body {
           min-width: 0;
           flex: 1;
-        }
-        .worksheet-kind {
-          margin: 0;
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: 0.03em;
-          line-height: 1.1;
-          text-transform: uppercase;
-          color: #475569;
         }
         .worksheet-line {
           margin: 0;

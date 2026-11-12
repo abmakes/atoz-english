@@ -28,7 +28,8 @@ export interface ReviewableQuestion extends Question {
   sourceQuestion?: string
   sourceAnswers?: string[]
   assessmentReason?: string
-  activity?: 'gap' | 'question' | 'rewrite' | 'matching' | 'practice'
+  activity?: 'gap' | 'question' | 'choice' | 'rewrite' | 'matching' | 'practice'
+  exercise?: string
 }
 
 interface ImageSuggestion {
