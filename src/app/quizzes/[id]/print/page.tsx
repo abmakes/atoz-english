@@ -83,36 +83,35 @@ export default function QuizWorksheetPrintPage({
             </Link>
           </div>
         ) : (
-          <div className="worksheet rounded border bg-white p-8 shadow-sm">
-            <div className="flex items-end justify-between gap-6 border-b-2 border-slate-800 pb-3">
-              <h1 className="grandstander text-2xl font-bold text-slate-900">{payload?.quiz.title}</h1>
-              <div className="text-sm text-slate-700">
-                Name: ______________________ &nbsp; Date: ____________
+          <div className="worksheet rounded border bg-white shadow-sm">
+            <div className="worksheet-head">
+              <h1 className="grandstander">{payload?.quiz.title}</h1>
+              <div className="worksheet-meta">
+                Name: ________________ &nbsp; Date: __________
               </div>
             </div>
-            <p className="mt-3 text-sm text-slate-600">Circle the answer, or fill the blank.</p>
-            <ol className="mt-6 space-y-8">
+            <p className="worksheet-note">Circle the answer, or fill the blank.</p>
+            <ol className="worksheet-items">
               {items.map((item, index) => (
-                <li key={`${item.questionId ?? 'line'}-${index}`} className="break-inside-avoid">
+                <li key={`${item.questionId ?? 'line'}-${index}`} className="worksheet-item">
+                  <span className="worksheet-num">{index + 1}</span>
                   {isRealPicture(item.imageUrl) ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={item.imageUrl}
-                      alt=""
-                      className="mb-3 max-h-48 rounded border border-slate-300 object-contain"
-                    />
+                    <img src={item.imageUrl} alt="" className="worksheet-photo" />
                   ) : null}
-                  <p className="text-lg text-slate-900">{item.line}</p>
-                  {item.choices.length > 0 ? (
-                    <ul className="mt-3 space-y-2">
-                      {item.choices.map((choice, choiceIndex) => (
-                        <li key={`${choice}-${choiceIndex}`} className="flex items-center gap-3 text-base text-slate-800">
-                          <span className="inline-block h-4 w-4 shrink-0 rounded-full border-2 border-slate-800" />
-                          {choice}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
+                  <div className="worksheet-body">
+                    <p className="worksheet-line">{item.line}</p>
+                    {item.choices.length > 0 ? (
+                      <ul className="worksheet-choices">
+                        {item.choices.map((choice, choiceIndex) => (
+                          <li key={`${choice}-${choiceIndex}`}>
+                            <span className="worksheet-circle" />
+                            {choice}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
                 </li>
               ))}
             </ol>
@@ -120,6 +119,104 @@ export default function QuizWorksheetPrintPage({
         )}
       </div>
       <style jsx global>{`
+        .worksheet {
+          width: 186mm;
+          max-width: 100%;
+          padding: 4mm 5mm 2mm;
+        }
+        .worksheet-head {
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+          gap: 8px;
+          border-bottom: 1.5px solid #0f172a;
+          padding-bottom: 2px;
+        }
+        .worksheet-head h1 {
+          margin: 0;
+          font-size: 16px;
+          line-height: 1.15;
+          font-weight: 700;
+          color: #0f172a;
+        }
+        .worksheet-meta,
+        .worksheet-note {
+          margin: 0;
+          font-size: 11px;
+          line-height: 1.2;
+          color: #334155;
+          white-space: nowrap;
+        }
+        .worksheet-note {
+          margin-top: 3px;
+          white-space: normal;
+        }
+        .worksheet-items {
+          margin: 2px 0 0;
+          padding: 0;
+          list-style: none;
+        }
+        .worksheet-item {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          min-height: 30mm;
+          padding: 1.4mm 0;
+          border-bottom: 1px solid #e2e8f0;
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        .worksheet-num {
+          width: 1.1rem;
+          flex: none;
+          font-size: 12px;
+          font-weight: 700;
+          line-height: 1;
+          color: #0f172a;
+        }
+        .worksheet-photo {
+          width: 28mm;
+          height: 20mm;
+          flex: none;
+          object-fit: cover;
+          border: 1px solid #cbd5e1;
+          border-radius: 2px;
+          background: #f8fafc;
+        }
+        .worksheet-body {
+          min-width: 0;
+          flex: 1;
+        }
+        .worksheet-line {
+          margin: 0;
+          font-size: 13px;
+          line-height: 1.2;
+          color: #0f172a;
+        }
+        .worksheet-choices {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1px 10px;
+          margin: 2px 0 0;
+          padding: 0;
+          list-style: none;
+        }
+        .worksheet-choices li {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          min-width: 0;
+          font-size: 12px;
+          line-height: 1.2;
+          color: #1e293b;
+        }
+        .worksheet-circle {
+          width: 11px;
+          height: 11px;
+          flex: none;
+          border: 1.5px solid #0f172a;
+          border-radius: 999px;
+        }
         @media print {
           nav,
           .no-print {
@@ -134,13 +231,14 @@ export default function QuizWorksheetPrintPage({
             margin: 0 !important;
           }
           .worksheet {
+            width: auto;
             border: none !important;
             box-shadow: none !important;
             padding: 0 !important;
           }
           @page {
             size: A4 portrait;
-            margin: 14mm;
+            margin: 10mm;
           }
         }
       `}</style>
