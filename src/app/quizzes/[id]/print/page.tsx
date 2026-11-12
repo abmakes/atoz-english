@@ -187,24 +187,32 @@ export default function QuizWorksheetPrintPage({
           margin-top: 3px;
           white-space: normal;
         }
+        .worksheet-exercise + .worksheet-exercise {
+          margin-top: 4mm;
+          padding-top: 2.4mm;
+          border-top: 1px solid #94a3b8;
+        }
         .worksheet-exercise h2 {
-          margin: 1.6mm 0 0.2mm;
+          margin: 1.2mm 0 0.4mm;
           font-size: 13px;
-          line-height: 1.15;
+          line-height: 1.2;
           font-weight: 700;
           color: #0f172a;
+        }
+        .worksheet-exercise + .worksheet-exercise h2 {
+          margin-top: 0;
         }
         .worksheet-instruction {
           margin: 0;
           font-size: 11px;
-          line-height: 1.15;
+          line-height: 1.3;
           color: #334155;
         }
         .worksheet-items {
           display: flex;
           flex-direction: column;
-          gap: 0.5mm;
-          margin: 1mm 0 0;
+          gap: 1.3mm;
+          margin: 1.2mm 0 0;
           padding: 0;
           list-style: none;
         }
@@ -212,7 +220,7 @@ export default function QuizWorksheetPrintPage({
           display: flex;
           align-items: flex-start;
           gap: 6px;
-          padding: 0.4mm 0;
+          padding: 0.45mm 0;
           break-inside: avoid;
           page-break-inside: avoid;
         }
@@ -228,8 +236,8 @@ export default function QuizWorksheetPrintPage({
         }
         .worksheet-item.is-choice {
           align-items: center;
-          min-height: 16mm;
-          padding: 0.4mm 0;
+          min-height: 15.6mm;
+          padding: 0.5mm 0;
         }
         .worksheet-num {
           width: 1.1rem;
@@ -261,7 +269,7 @@ export default function QuizWorksheetPrintPage({
         .worksheet-line {
           margin: 0;
           font-size: 13px;
-          line-height: 1.2;
+          line-height: 1.35;
           color: #0f172a;
         }
         .worksheet-choices {
@@ -278,7 +286,7 @@ export default function QuizWorksheetPrintPage({
           gap: 4px;
           min-width: 0;
           font-size: 12px;
-          line-height: 1.2;
+          line-height: 1.35;
           color: #1e293b;
         }
         .worksheet-circle {
