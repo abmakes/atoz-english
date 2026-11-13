@@ -31,7 +31,7 @@ const sentenceSchema = z.object({
 const commitSchema = z.discriminatedUnion('target', [
   z.object({
     target: z.literal('worksheet'),
-    items: z.array(worksheetItemSchema).max(40),
+    items: z.array(worksheetItemSchema).max(60),
   }),
   z.object({
     target: z.literal('sentence-builder'),

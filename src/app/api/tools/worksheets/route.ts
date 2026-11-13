@@ -20,7 +20,8 @@ const bodySchema = z.object({
   level: z.string().optional(),
   grammar: z.string().max(500).optional(),
   source: z.string().max(4000).optional(),
-  sections: z.array(z.enum(['choice', 'gap', 'circle', 'rewrite'])).max(4).optional(),
+  sections: z.array(z.enum(['choice', 'gap', 'circle', 'rewrite', 'unjumble', 'write', 'long'])).max(6).optional(),
+  pages: z.union([z.literal(1), z.literal(2)]).optional(),
   pictures: z.array(pictureSchema).max(6).optional(),
 })
 
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
       description: parsed.data.grammar,
       sourceText: parsed.data.source,
       sections: parsed.data.sections ?? (pictures.length > 0 ? ['choice', 'gap', 'rewrite'] : ['gap', 'circle', 'rewrite']),
+      pages: parsed.data.pages,
       solve: process.env.WORKSHEET_SOLVER !== '0',
       onReport: (next) => {
         report = next

@@ -10,8 +10,10 @@ import { useCustomToast } from '@/components/ui/CustomToast'
 import AIQuestionReviewPanel, {
   type ReviewableQuestion,
 } from '@/components/management_ui/AIQuestionReviewPanel'
+import WorksheetSetup, { type WorksheetPick } from '@/components/lesson/WorksheetSetup'
 import {
   commitLessonSelection,
+  isRealPicture,
   type LessonAssessmentItem,
   type LessonSentence,
   type LessonTarget,
@@ -76,7 +78,7 @@ export default function LessonKitScreen({
   const [lesson, setLesson] = useState<LessonRecord | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [view, setView] = useState<'pieces' | 'checking' | 'review'>('pieces')
+  const [view, setView] = useState<'pieces' | 'options' | 'checking' | 'review'>('pieces')
   const [target, setTarget] = useState<LessonTarget>('worksheet')
   const [reviewQuestions, setReviewQuestions] = useState<ReviewableQuestion[]>([])
   const [notice, setNotice] = useState('')
@@ -127,7 +129,7 @@ export default function LessonKitScreen({
   }, [lesson, quiz])
 
   const runCheck = useCallback(
-    async (nextTarget: LessonTarget) => {
+    async (nextTarget: LessonTarget, setup?: { sections: WorksheetPick[]; pages: 1 | 2 }) => {
       if (!quiz) return
       if (quiz.questions.length === 0) {
         setNotice('This quiz has no questions yet.')
@@ -148,6 +150,8 @@ export default function LessonKitScreen({
             description: quiz.description ?? '',
             scope: 'set',
             quizId: quiz.id,
+            sections: setup?.sections,
+            pages: setup?.pages,
             questions: quiz.questions.map((question) => ({
               id: question.id,
               question: question.question,
@@ -212,6 +216,10 @@ export default function LessonKitScreen({
   useEffect(() => {
     if (!quiz || !initialCheck || startedCheck) return
     setStartedCheck(true)
+    if (initialCheck === 'worksheet') {
+      setView('options')
+      return
+    }
     void runCheck(initialCheck)
   }, [initialCheck, quiz, runCheck, startedCheck])
 
@@ -399,7 +407,17 @@ export default function LessonKitScreen({
 
         <div className="mt-2 flex h-full basis-3/4 flex-col items-center gap-4 align-middle grandstander text-[--text-color] lg:mt-0">
           <div className="flex h-full w-full max-w-screen-2xl flex-col rounded-lg border border-[--border-dark] bg-white shadow-[4px_4px_0px_0px_var(--border-dark)]">
-            {view === 'review' ? (
+            {view === 'options' ? (
+              <div className="px-4 py-6">
+                <WorksheetSetup
+                  level={levelFromTags(quiz.tags) ?? 'A1'}
+                  hasPictures={quiz.questions.some((question) => isRealPicture(question.imageUrl))}
+                  busy={false}
+                  onBack={() => setView('pieces')}
+                  onWrite={(choice) => void runCheck('worksheet', choice)}
+                />
+              </div>
+            ) : view === 'review' ? (
               <div className="px-4 py-4">
                 <AIQuestionReviewPanel
                   purpose="lesson"
@@ -442,7 +460,7 @@ export default function LessonKitScreen({
                         router.push(`/quizzes/${quiz.id}/print`)
                         return
                       }
-                      void runCheck('worksheet')
+                      setView('options')
                     }}
                   >
                     <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-[--border-dark] bg-[--background]">
@@ -511,7 +529,7 @@ export default function LessonKitScreen({
                       <button
                         type="button"
                         className="font-semibold underline"
-                        onClick={() => void runCheck('worksheet')}
+                        onClick={() => setView('options')}
                       >
                         Check the worksheet again
                       </button>

@@ -5,8 +5,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import ImageSelectModal from '@/components/management_ui/ImageSelectModal'
+import WorksheetSetup, { type WorksheetPick } from '@/components/lesson/WorksheetSetup'
 import { Button } from '@/components/ui/button'
-import { Loader2 } from 'lucide-react'
 
 interface PictureDraft {
   imageUrl: string
@@ -29,9 +29,7 @@ export default function WorksheetToolPage() {
   const [level, setLevel] = useState<(typeof LEVELS)[number]>('A1')
   const [grammar, setGrammar] = useState('')
   const [source, setSource] = useState('')
-  const [gap, setGap] = useState(true)
-  const [circle, setCircle] = useState(true)
-  const [rewrite, setRewrite] = useState(true)
+  const [step, setStep] = useState<'details' | 'options'>('details')
   const [pictures, setPictures] = useState<PictureDraft[]>([])
   const [picking, setPicking] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -45,24 +43,19 @@ export default function WorksheetToolPage() {
       .catch(() => setSheets([]))
   }, [])
 
-  const generate = async () => {
+  const generate = async (choice: { pages: 1 | 2; sections: WorksheetPick[] }) => {
     if (pictures.some((picture) => !picture.question.trim() || picture.answers.some((answer) => !answer.trim()) || !picture.correctAnswer.trim())) {
       setError('Each picture needs its question and answers.')
+      setStep('details')
       return
     }
     setBusy(true)
     setError('')
-    const sections = [
-      ...(pictures.length > 0 ? (['choice'] as const) : []),
-      ...(gap ? (['gap'] as const) : []),
-      ...(circle ? (['circle'] as const) : []),
-      ...(rewrite ? (['rewrite'] as const) : []),
-    ]
     try {
       const response = await fetch('/api/tools/worksheets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, level, grammar, source, sections, pictures }),
+        body: JSON.stringify({ title, level, grammar, source, sections: choice.sections, pages: choice.pages, pictures }),
       })
       const body = (await response.json()) as { id?: string; error?: string }
       if (!response.ok || !body.id) throw new Error(body.error || 'Could not write the worksheet.')
@@ -83,7 +76,19 @@ export default function WorksheetToolPage() {
         <p className="mt-2 text-slate-600">
           Paste the grammar, or paste the text of a page. Picture questions are left out unless you add a photo and the question that goes with it.
         </p>
-        <div className="mt-6 flex flex-col gap-4">
+        {step === 'options' ? (
+          <div className="mt-6">
+            <WorksheetSetup
+              level={level}
+              hasPictures={pictures.length > 0}
+              busy={busy}
+              onBack={() => setStep('details')}
+              onWrite={(choice) => void generate(choice)}
+            />
+            {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
+          </div>
+        ) : null}
+        <div className={`mt-6 flex flex-col gap-4 ${step === 'options' ? 'hidden' : ''}`}>
           <label className="text-sm font-semibold">
             Title
             <input className="mt-1 w-full rounded border px-3 py-2" value={title} onChange={(event) => setTitle(event.target.value)} />
@@ -104,12 +109,6 @@ export default function WorksheetToolPage() {
             Paste a page or notes
             <textarea className="mt-1 w-full rounded border px-3 py-2" rows={5} value={source} onChange={(event) => setSource(event.target.value)} />
           </label>
-          <fieldset className="text-sm">
-            <legend className="font-semibold">Sections</legend>
-            <label className="mr-4"><input type="checkbox" checked={gap} onChange={(event) => setGap(event.target.checked)} /> Word box</label>
-            <label className="mr-4"><input type="checkbox" checked={circle} onChange={(event) => setCircle(event.target.checked)} /> Circle the word</label>
-            <label><input type="checkbox" checked={rewrite} onChange={(event) => setRewrite(event.target.checked)} /> Write the sentence</label>
-          </fieldset>
           <div>
             <Button type="button" variant="outline" onClick={() => setPicking(true)} disabled={pictures.length >= 6}>
               Add a picture question
@@ -135,9 +134,20 @@ export default function WorksheetToolPage() {
             </ul>
           </div>
           {error ? <p className="text-sm text-red-700">{error}</p> : null}
-          <Button type="button" disabled={busy || !title.trim()} onClick={() => void generate()} className="bg-violet-700 text-white">
-            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Write the worksheet
+          <Button
+            type="button"
+            disabled={!title.trim()}
+            onClick={() => {
+              if (pictures.some((picture) => !picture.question.trim() || picture.answers.some((answer) => !answer.trim()) || !picture.correctAnswer.trim())) {
+                setError('Each picture needs its question and answers.')
+                return
+              }
+              setError('')
+              setStep('options')
+            }}
+            className="bg-violet-700 text-white"
+          >
+            Choose the questions
           </Button>
         </div>
         <div className="mt-10">

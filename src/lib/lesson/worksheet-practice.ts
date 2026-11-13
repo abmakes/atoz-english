@@ -9,25 +9,42 @@ export const EXERCISE_TITLE = {
   question: 'C. Answer the questions.',
 } as const
 
-export const EXERCISE_ORDER: Record<string, number> = { choice: 0, gap: 1, circle: 2, rewrite: 3, question: 3 }
+export const EXERCISE_ORDER: Record<string, number> = { choice: 0, gap: 1, circle: 2, rewrite: 3, question: 4 }
 
 const SECTION_NAME: Record<string, string> = {
   choice: 'Look and circle the answer.',
   gap: 'Complete the sentences.',
   circle: 'Circle the correct word.',
+  unjumble: 'Put the words in order.',
   rewrite: 'Write the sentences.',
   question: 'Answer the questions.',
 }
 
+/** Unjumble and "write the sentence" are both rewrite rows, with different headings. */
+export function worksheetSectionKey(item: { activity: string; task?: string }): string {
+  if (item.activity === 'rewrite' && item.task === 'jumbled') return 'unjumble'
+  return item.activity
+}
+
+/**
+ * Each exercise starts at 1. The example is number 1.
+ * A row left off the page does not take a number.
+ */
+export function worksheetLineNumbers(held: boolean[]): Array<number | null> {
+  let next = 1
+  return held.map((isHeld) => (isHeld ? null : next++))
+}
+
 /** A, B, C from the sections that are actually on the page. */
-export function labelWorksheetSections<T extends { activity: string; exercise?: string }>(items: T[]): T[] {
-  const letters = ['A', 'B', 'C', 'D']
+export function labelWorksheetSections<T extends { activity: string; task?: string; exercise?: string }>(items: T[]): T[] {
+  const letters = ['A', 'B', 'C', 'D', 'E', 'F']
   const title = new Map<string, string>()
   for (const item of items) {
-    if (title.has(item.activity) || !(item.activity in SECTION_NAME)) continue
-    title.set(item.activity, `${letters[title.size] ?? 'D'}. ${SECTION_NAME[item.activity]}`)
+    const key = worksheetSectionKey(item)
+    if (title.has(key) || !(key in SECTION_NAME)) continue
+    title.set(key, `${letters[title.size] ?? 'F'}. ${SECTION_NAME[key]}`)
   }
-  return items.map((item) => ({ ...item, exercise: title.get(item.activity) ?? item.exercise }))
+  return items.map((item) => ({ ...item, exercise: title.get(worksheetSectionKey(item)) ?? item.exercise }))
 }
 
 /**
@@ -87,7 +104,7 @@ const WORKSHEET_PAGE_MM = 277
 const WORKSHEET_PAGE_SAFETY_MM = 2
 const WORKSHEET_CHROME_MM = 54.4
 const WORKSHEET_BANK_MM = 8.42
-const WORKSHEET_ROW_MM = { sentence: 5.54, gap: 5.54, choice: 14.8 } as const
+const WORKSHEET_ROW_MM = { sentence: 5.54, gap: 5.54, choice: 14.8, long: 12 } as const
 const WORKSHEET_ROW_GAP_MM = 1.3
 
 function exerciseBlockMm(count: number, rowMm: number): number {
@@ -100,6 +117,8 @@ export interface WorksheetPlan {
   gaps: number
   circles: number
   sentences: number
+  jumbles: number
+  longs: number
 }
 
 export function worksheetSheetMm(counts: WorksheetPlan, wordBank = true): number {
@@ -109,7 +128,9 @@ export function worksheetSheetMm(counts: WorksheetPlan, wordBank = true): number
     exerciseBlockMm(counts.choices, WORKSHEET_ROW_MM.choice) +
     exerciseBlockMm(counts.gaps, WORKSHEET_ROW_MM.gap) +
     exerciseBlockMm(counts.circles, WORKSHEET_ROW_MM.gap) +
-    exerciseBlockMm(counts.sentences, WORKSHEET_ROW_MM.sentence)
+    exerciseBlockMm(counts.sentences, WORKSHEET_ROW_MM.sentence) +
+    exerciseBlockMm(counts.jumbles ?? 0, WORKSHEET_ROW_MM.sentence) +
+    exerciseBlockMm(counts.longs ?? 0, WORKSHEET_ROW_MM.long)
   )
 }
 
@@ -118,13 +139,67 @@ export interface WorksheetLayoutOptions {
   choices?: number
   gap?: boolean
   circle?: boolean
+  /** Key words the student turns into a sentence. */
   rewrite?: boolean
+  /** Mixed-up words the student puts back in order. */
+  unjumble?: boolean
+  /** A question with a line for a longer answer. */
+  long?: boolean
+  pages?: 1 | 2
+}
+
+const EMPTY_EXTRAS = { jumbles: 0, longs: 0 }
+
+/**
+ * Two pages should spill past the first sheet, without asking the model for
+ * more rows than a class can finish.
+ */
+function planTwoPages(
+  level: string | undefined,
+  options: WorksheetLayoutOptions
+): WorksheetPlan & { heightMm: number } {
+  const wordBank = worksheetScaffold(level).bank !== 'none'
+  const budget = 2 * (WORKSHEET_PAGE_MM - WORKSHEET_PAGE_SAFETY_MM)
+  const counts: WorksheetPlan = {
+    choices: Math.min(12, Math.max(0, options.choices ?? 0)),
+    gaps: options.gap === false ? 0 : 16,
+    circles: options.circle ? 10 : 0,
+    sentences: options.rewrite === false ? 0 : 16,
+    jumbles: options.unjumble ? 14 : 0,
+    longs: options.long ? 8 : 0,
+  }
+  const shrink = ['longs', 'jumbles', 'circles', 'sentences', 'gaps', 'choices'] as const
+  const height = () => worksheetSheetMm(counts, wordBank && counts.gaps > 0)
+  const total = () => counts.choices + counts.gaps + counts.circles + counts.sentences + counts.jumbles + counts.longs
+  while ((height() > budget || total() > 36) && shrink.some((key) => counts[key] > 0)) {
+    const key = shrink.find((name) => counts[name] > 0)
+    if (!key) break
+    counts[key] -= 1
+  }
+  const grow = ['gaps', 'sentences', 'jumbles', 'circles', 'longs'] as const
+  const canGrow = (key: (typeof grow)[number]) => {
+    if (key === 'gaps') return options.gap !== false && counts.gaps < 28
+    if (key === 'sentences') return options.rewrite !== false && counts.sentences < 28
+    if (key === 'jumbles') return Boolean(options.unjumble) && counts.jumbles < 24
+    if (key === 'circles') return Boolean(options.circle) && counts.circles < 16
+    return Boolean(options.long) && counts.longs < 12
+  }
+  while (height() <= WORKSHEET_PAGE_MM && total() < 36) {
+    const key = grow.find((name) => canGrow(name))
+    if (!key) break
+    counts[key] += 1
+    if (height() > budget) {
+      counts[key] -= 1
+      break
+    }
+  }
+  return { ...counts, heightMm: height() }
 }
 
 /**
  * With no options, six picture rows and eight gaps stay fixed and the sentence
  * exercise takes the rest. With options, each requested section gets as many
- * rows as still fit on the page.
+ * rows as still fit. Two pages asks for about twice the questions.
  */
 export function planWorksheetLayout(
   level?: string,
@@ -135,27 +210,42 @@ export function planWorksheetLayout(
   if (!options) {
     for (const gaps of [8, 7, 6, 5]) {
       for (let sentences = 10; sentences >= 5; sentences -= 1) {
-        const counts = { choices: 6, gaps, circles: 0, sentences }
+        const counts = { choices: 6, gaps, circles: 0, sentences, ...EMPTY_EXTRAS }
         const heightMm = worksheetSheetMm(counts, wordBank)
         if (heightMm <= budget) return { ...counts, heightMm }
       }
     }
-    const counts = { choices: 6, gaps: 5, circles: 0, sentences: 5 }
+    const counts = { choices: 6, gaps: 5, circles: 0, sentences: 5, ...EMPTY_EXTRAS }
     return { ...counts, heightMm: worksheetSheetMm(counts, wordBank) }
   }
+  if (options.pages === 2) return planTwoPages(level, options)
   const choices = Math.min(6, Math.max(0, options.choices ?? 0))
   const gapChoices = options.gap === false ? [0] : [8, 7, 6, 5, 4]
   const circleChoices = options.circle ? [6, 5, 4] : [0]
   const sentenceChoices = options.rewrite === false ? [0] : [10, 9, 8, 7, 6, 5, 4]
-  let best = { choices, gaps: gapChoices[gapChoices.length - 1], circles: 0, sentences: 0, heightMm: 0 }
+  const jumbleChoices = options.unjumble ? [8, 7, 6, 5, 4] : [0]
+  const longChoices = options.long ? [6, 5, 4, 3] : [0]
+  let best = {
+    choices,
+    gaps: gapChoices[gapChoices.length - 1],
+    circles: 0,
+    sentences: 0,
+    jumbles: 0,
+    longs: 0,
+    heightMm: 0,
+  }
   for (const gaps of gapChoices) {
     for (const circles of circleChoices) {
       for (const sentences of sentenceChoices) {
-        const counts = { choices, gaps, circles, sentences }
-        const heightMm = worksheetSheetMm(counts, wordBank && gaps > 0)
-        const rows = gaps + circles + sentences
-        const bestRows = best.gaps + best.circles + best.sentences
-        if (heightMm <= budget && rows >= bestRows) best = { ...counts, heightMm }
+        for (const jumbles of jumbleChoices) {
+          for (const longs of longChoices) {
+            const counts = { choices, gaps, circles, sentences, jumbles, longs }
+            const heightMm = worksheetSheetMm(counts, wordBank && gaps > 0)
+            const rows = gaps + circles + sentences + jumbles + longs
+            const bestRows = best.gaps + best.circles + best.sentences + best.jumbles + best.longs
+            if (heightMm <= budget && rows >= bestRows) best = { ...counts, heightMm }
+          }
+        }
       }
     }
   }
@@ -190,6 +280,8 @@ export interface PracticeDraft {
   example?: boolean
   /** Set when the student-style check disagreed with the answer key. */
   warning?: string
+  /** Jumbled rows and cue rows are both "rewrite", with different headings. */
+  task?: 'jumbled' | 'cues'
 }
 
 const QUESTION_START =

@@ -11,12 +11,15 @@ import {
   planWorksheetLayout,
   suggestWorksheetSections,
   worksheetScaffold,
+  worksheetSectionKey,
   type PracticeDraft,
   type PracticeSource,
 } from '@/lib/lesson/worksheet-practice'
 
-type Section = 'choice' | 'gap' | 'rewrite' | 'circle'
-type Counts = Record<Section, number>
+type Section = 'choice' | 'gap' | 'rewrite' | 'circle' | 'jumble' | 'long'
+type SentenceMode = 'jumbled' | 'cues' | 'split'
+type Counts = Record<Section, number> & { sentenceMode: SentenceMode }
+export type WorksheetSectionId = 'choice' | 'gap' | 'circle' | 'rewrite' | 'unjumble' | 'write' | 'long'
 
 export interface WorksheetSolverNote {
   skipped: boolean
@@ -42,7 +45,8 @@ interface GenerateInput {
   questions: PracticeSource[]
   generate: (prompt: string) => Promise<string>
   scope?: 'set' | 'item'
-  sections?: Array<'choice' | 'gap' | 'circle' | 'rewrite'>
+  sections?: WorksheetSectionId[]
+  pages?: 1 | 2
   /** A short second call answers the sheet the way a student would. */
   solve?: boolean
   onReport?: (report: WorksheetRunReport) => void | Promise<void>
@@ -71,6 +75,11 @@ const sentenceSchema = z.object({
   answer: z.string().min(3).max(160),
 })
 
+const longSchema = z.object({
+  question: z.string().min(3).max(200),
+  answer: z.string().min(3).max(160),
+})
+
 const circleSchema = z.object({
   sentence: z.string().min(3).max(200),
   options: z.array(z.string().min(1).max(40)).min(2).max(4),
@@ -93,32 +102,44 @@ const LOWER_START = new Set([
  * worksheet line has to stand alone on paper and have one answer a teacher can mark.
  */
 export async function generateWorksheet(input: GenerateInput): Promise<PracticeDraft[]> {
-  const pictures = quizPictureDrafts(input.questions)
+  const pictures = quizPictureDrafts(input.questions, input.pages === 2 ? 12 : 6)
   try {
     if (input.scope === 'item') {
       const source = input.questions[0]
-      const section = sectionForLine(source?.question ?? '')
-      const counts: Counts = { choice: 0, gap: 0, rewrite: 0, circle: 0 }
-      counts[section] = 1
+      const asked = input.sections?.[0]
+      const section = asked === 'long' ? 'long' : asked === 'unjumble' ? 'jumble' : asked === 'write' ? 'rewrite' : sectionForLine(source?.question ?? '')
+      const counts: Counts = { choice: 0, gap: 0, rewrite: 0, circle: 0, jumble: 0, long: 0, sentenceMode: section === 'jumble' ? 'jumbled' : 'cues' }
+      if (section === 'jumble') counts.jumble = 1
+      else if (section === 'long') counts.long = 1
+      else counts[section] = 1
       const note = source ? `Write one new item instead of: "${source.question.trim()}". Keep the same picture if it has one.` : ''
       const written = await writePage(input, counts, note)
       return present(written.drafts, input, written.rejected)
     }
     const sections = input.sections ?? suggestWorksheetSections(pictures.length, input.grammar)
-    const kept = sections.includes('choice') ? pictures.slice(0, 6) : []
+    const pages = input.pages === 2 ? 2 : 1
+    const kept = sections.includes('choice') ? pictures.slice(0, pages === 2 ? 12 : 6) : []
+    const sentence = sentenceRequest(sections, input.level)
+    const generateChoices = Boolean(input.sections?.includes('choice')) && kept.length === 0
     const plan = planWorksheetLayout(input.level, {
-      choices: kept.length,
+      choices: generateChoices ? (pages === 2 ? 8 : 6) : kept.length,
       gap: sections.includes('gap'),
       circle: sections.includes('circle'),
-      rewrite: sections.includes('rewrite'),
+      rewrite: sentence.rewrite,
+      unjumble: sentence.unjumble,
+      long: sections.includes('long'),
+      pages,
     })
     const counts: Counts = {
-      choice: 0,
+      choice: generateChoices ? plan.choices : 0,
       gap: sections.includes('gap') ? plan.gaps : 0,
       circle: sections.includes('circle') ? plan.circles : 0,
-      rewrite: sections.includes('rewrite') ? plan.sentences : 0,
+      rewrite: sentence.mode === 'jumbled' && sentence.unjumble && !sentence.rewrite ? plan.jumbles : plan.sentences,
+      jumble: sentence.mode === 'split' ? plan.jumbles : 0,
+      long: sections.includes('long') ? plan.longs : 0,
+      sentenceMode: sentence.mode === 'none' ? 'cues' : sentence.mode,
     }
-    if (counts.gap + counts.circle + counts.rewrite === 0) {
+    if (counts.gap + counts.circle + counts.rewrite + counts.jumble + counts.long + counts.choice === 0) {
       return present(kept, input, [])
     }
     const written = await writePage(input, counts, input.description ?? '')
@@ -138,8 +159,29 @@ export async function generateWorksheet(input: GenerateInput): Promise<PracticeD
 function sectionForLine(line: string): Section {
   if (/\([^)]+\/[^)]+\)/.test(line)) return 'circle'
   if (/_{2,}/.test(line)) return 'gap'
+  if (/ \/ [.?!]$/.test(line.trim())) return 'jumble'
   if (line.includes(' / ')) return 'rewrite'
   return 'choice'
+}
+
+function sentenceRequest(
+  sections: string[],
+  level: string
+): { rewrite: boolean; unjumble: boolean; mode: SentenceMode | 'none' } {
+  const unjumble = sections.includes('unjumble')
+  const write = sections.includes('write')
+  const legacy = sections.includes('rewrite')
+  if (unjumble && (write || legacy)) return { rewrite: true, unjumble: true, mode: 'split' }
+  if (unjumble) return { rewrite: false, unjumble: true, mode: 'jumbled' }
+  if (write) return { rewrite: true, unjumble: false, mode: 'cues' }
+  if (legacy) return { rewrite: true, unjumble: false, mode: worksheetScaffold(level).sentences }
+  return { rewrite: false, unjumble: false, mode: 'none' }
+}
+
+function sentenceBlocks(counts: Counts): { cues: number; jumbles: number; separate: boolean } {
+  if (counts.sentenceMode === 'split') return { cues: counts.rewrite, jumbles: counts.jumble, separate: true }
+  if (counts.sentenceMode === 'jumbled') return { cues: 0, jumbles: counts.rewrite || counts.jumble, separate: false }
+  return { cues: counts.rewrite, jumbles: 0, separate: false }
 }
 
 async function writePage(input: GenerateInput, counts: Counts, note: string): Promise<{ drafts: PracticeDraft[]; rejected: Rejection[] }> {
@@ -182,7 +224,6 @@ function sourceLine(source: PracticeSource): string {
 }
 
 export function worksheetPrompt(input: Omit<GenerateInput, 'generate'>, counts: Counts, feedback: string): string {
-  const scaffold = worksheetScaffold(input.level)
   const grammar = (input.grammar ?? []).join(', ') || 'the language in the quiz'
   const selection = resolveLexicon({ level: input.level, tags: input.grammar ?? [], limit: 60 })
   const pictures = input.questions
@@ -211,12 +252,22 @@ export function worksheetPrompt(input: Omit<GenerateInput, 'generate'>, counts: 
 - The sentence makes the other options wrong, such as {"sentence":"There ______ a dog.","options":["is","are","am"],"answer":"is"}.
 - Do not leave the answer open, as in "He is the ______ student".`)
   }
-  if (counts.rewrite > 0) {
+  const blocks = sentenceBlocks(counts)
+  if (blocks.jumbles > 0) {
+    const key = blocks.separate ? 'jumbles' : 'sentences'
     sections.push(
-      scaffold.sentences === 'jumbled'
-        ? `"sentences": ${counts.rewrite + 2} correct sentences that use the language point, four to eight words each. The worksheet mixes up the words for the student to put back in order. Give only "answer".`
-        : `"sentences": ${counts.rewrite + 2} correct sentences that use the language point. Also give "words": two to four key words or short phrases in dictionary form and in sentence order, which the student turns into the sentence. Example: {"words":["an elephant","big","a mouse"],"answer":"An elephant is bigger than a mouse."}`
+      `"${key}": ${blocks.jumbles + 2} correct sentences that use the language point, four to eight words each. The worksheet mixes up the words for the student to put back in order. Give only "answer".`
     )
+  }
+  if (blocks.cues > 0) {
+    sections.push(
+      `"sentences": ${blocks.cues + 2} correct sentences that use the language point. Also give "words": two to four key words or short phrases in dictionary form and in sentence order, which the student turns into the sentence. Example: {"words":["an elephant","big","a mouse"],"answer":"An elephant is bigger than a mouse."}`
+    )
+  }
+  if (counts.long > 0) {
+    sections.push(`"questions": ${counts.long + 2} short questions a student can answer in one sentence from the language point.
+- "question" ends with ?. "answer" is that one sentence.
+- The question can be marked from the words on the page. Do not ask what the student likes or owns.`)
   }
 
   return `You write one printed grammar worksheet for young learners of English, in the style of Cambridge Starters, Movers and Flyers. A student works alone with a pencil. The teacher marks it with an answer key, so every item has exactly one correct answer.
@@ -250,7 +301,14 @@ function exampleKeys(counts: Counts): Record<string, unknown> {
   }
   if (counts.gap > 0) example.gaps = [{ sentence: 'An elephant is ______ than a mouse.', answer: 'bigger', base: 'big' }]
   if (counts.circle > 0) example.circles = [{ sentence: 'There ______ a dog.', options: ['is', 'are', 'am'], answer: 'is' }]
-  if (counts.rewrite > 0) example.sentences = [{ answer: 'The bus is faster than the bike.' }]
+  const blocks = sentenceBlocks(counts)
+  if (blocks.jumbles > 0) {
+    const jumble = [{ answer: 'The bus is faster than the bike.' }]
+    if (blocks.separate) example.jumbles = jumble
+    else example.sentences = jumble
+  }
+  if (blocks.cues > 0) example.sentences = [{ words: ['the bus', 'fast', 'the bike'], answer: 'The bus is faster than the bike.' }]
+  if (counts.long > 0) example.questions = [{ question: 'Which is faster, the bus or the bike?', answer: 'The bus is faster than the bike.' }]
   return example
 }
 
@@ -378,25 +436,25 @@ function arrangePage(
     }
   }
 
-  const sentences: PracticeDraft[] = []
-  const sentenceEntries = Array.isArray(page.sentences) ? page.sentences.map(sentenceEntry) : page.sentences
-  for (const item of listOf(sentenceEntries, sentenceSchema, rejected)) {
+  const blocks = sentenceBlocks(counts)
+  const jumbledScaffold = { ...scaffold, sentences: 'jumbled' as const }
+  const cueScaffold = { ...scaffold, sentences: 'cues' as const }
+  const jumbles = collectSentences(
+    blocks.separate ? page.jumbles : blocks.jumbles > 0 ? page.sentences : [],
+    'jumbled',
+    jumbledScaffold
+  )
+  const sentences = collectSentences(blocks.cues > 0 ? page.sentences : [], 'cues', cueScaffold)
+
+  const longs: PracticeDraft[] = []
+  for (const item of listOf(page.questions, longSchema, rejected)) {
+    const line = finishWorksheetSentence(item.question)
     const answer = finishWorksheetSentence(item.answer)
-    const wordCount = answer.split(/\s+/).length
-    const cues = cueWords(answer, item.words ?? [])
-    if (!fresh(answer)) {
-      rejected.push({ reason: 'duplicate', line: answer })
-    } else if (scaffold.sentences === 'jumbled') {
-      if (wordCount < 3 || wordCount > 12) rejected.push({ reason: 'jumble-length', line: answer })
-      else {
-        const line = jumbleSentence(answer, sentences.length + 1)
-        sentences.push(draft('rewrite', line, scaffold, { correctAnswer: answer, sourceQuestion: line }))
-      }
-    } else if (cues.length < 2) {
-      rejected.push({ reason: 'sentence-without-cue-words', line: answer })
-    } else {
-      const line = cues.join(' / ')
-      sentences.push(draft('rewrite', line, scaffold, { correctAnswer: answer, sourceQuestion: line }))
+    if (!line.endsWith('?')) rejected.push({ reason: 'sentence-instead-of-question', line })
+    else if (SUBJECTIVE.test(`${line} ${answer}`)) rejected.push({ reason: 'subjective', line })
+    else if (!fresh(line)) rejected.push({ reason: 'duplicate', line })
+    else {
+      longs.push(draft('question', line, scaffold, { correctAnswer: answer, sourceQuestion: line }))
     }
   }
 
@@ -404,21 +462,54 @@ function arrangePage(
   if (choices.length < counts.choice) short.push(`Only ${choices.length} of ${counts.choice} picture questions were usable.`)
   if (gaps.length < counts.gap) short.push(`Only ${gaps.length} of ${counts.gap} gap sentences were usable.`)
   if (circles.length < counts.circle) short.push(`Only ${circles.length} of ${counts.circle} circle items were usable.`)
-  if (sentences.length < counts.rewrite) short.push(`Only ${sentences.length} of ${counts.rewrite} sentences were usable.`)
+  if (jumbles.length < blocks.jumbles) short.push(`Only ${jumbles.length} of ${blocks.jumbles} unjumble sentences were usable.`)
+  if (sentences.length < blocks.cues) short.push(`Only ${sentences.length} of ${blocks.cues} sentences were usable.`)
+  if (longs.length < counts.long) short.push(`Only ${longs.length} of ${counts.long} long answers were usable.`)
   return {
     drafts: [
       ...choices.slice(0, counts.choice),
       ...gaps.slice(0, counts.gap),
       ...circles.slice(0, counts.circle),
-      ...sentences.slice(0, counts.rewrite),
+      ...jumbles.slice(0, blocks.jumbles),
+      ...sentences.slice(0, blocks.cues),
+      ...longs.slice(0, counts.long),
     ],
     rejected,
     short,
   }
+
+  function collectSentences(
+    value: unknown,
+    mode: 'jumbled' | 'cues',
+    used: ReturnType<typeof worksheetScaffold>
+  ): PracticeDraft[] {
+    const entries = Array.isArray(value) ? value.map(sentenceEntry) : value
+    const written: PracticeDraft[] = []
+    for (const item of listOf(entries, sentenceSchema, rejected)) {
+      const answer = finishWorksheetSentence(item.answer)
+      const wordCount = answer.split(/\s+/).length
+      const cues = cueWords(answer, item.words ?? [])
+      if (!fresh(answer)) {
+        rejected.push({ reason: 'duplicate', line: answer })
+      } else if (mode === 'jumbled') {
+        if (wordCount < 3 || wordCount > 12) rejected.push({ reason: 'jumble-length', line: answer })
+        else {
+          const line = jumbleSentence(answer, written.length + 1)
+          written.push(draft('rewrite', line, used, { correctAnswer: answer, sourceQuestion: line, task: 'jumbled' }))
+        }
+      } else if (cues.length < 2) {
+        rejected.push({ reason: 'sentence-without-cue-words', line: answer })
+      } else {
+        const line = cues.join(' / ')
+        written.push(draft('rewrite', line, used, { correctAnswer: answer, sourceQuestion: line, task: 'cues' }))
+      }
+    }
+    return written
+  }
 }
 
 function draft(
-  activity: Section,
+  activity: 'choice' | 'gap' | 'circle' | 'rewrite' | 'question',
   line: string,
   scaffold: ReturnType<typeof worksheetScaffold>,
   extra: Partial<PracticeDraft>
@@ -431,10 +522,11 @@ function draft(
     reason: 'Written by the worksheet generator.',
     sourceQuestion: extra.sourceQuestion ?? line,
     exercise: EXERCISE_TITLE[activity],
-    instruction: exerciseInstruction(activity, scaffold),
+    instruction: extra.instruction ?? exerciseInstruction(activity, scaffold),
     imageUrl: extra.imageUrl,
     questionId: extra.questionId,
     bank: extra.bank,
+    task: extra.task,
   }
 }
 
@@ -488,11 +580,11 @@ function realPicture(url: string | null | undefined): url is string {
   return !path.endsWith('/placeholder.webp') && !path.endsWith('/placeholder.png')
 }
 
-function quizPictureDrafts(questions: PracticeSource[]): PracticeDraft[] {
+function quizPictureDrafts(questions: PracticeSource[], limit = 6): PracticeDraft[] {
   const scaffold = worksheetScaffold(undefined)
   return questions
     .filter((question) => realPicture(question.imageUrl))
-    .slice(0, 6)
+    .slice(0, limit)
     .map((question) => {
       const answers = uniqueAnswers(question.answers, question.correctAnswer).map(finishChoiceLabel)
       const correct = finishChoiceLabel(question.correctAnswer)
@@ -539,8 +631,9 @@ async function finishPage(drafts: PracticeDraft[], input: GenerateInput, rejecte
 function markExamples(drafts: PracticeDraft[]): PracticeDraft[] {
   const seen = new Set<string>()
   return drafts.map((draft) => {
-    if (seen.has(draft.activity)) return draft
-    seen.add(draft.activity)
+    const key = worksheetSectionKey(draft)
+    if (seen.has(key)) return draft
+    seen.add(key)
     return { ...draft, example: true }
   })
 }
@@ -555,9 +648,11 @@ export function solverPrompt(drafts: PracticeDraft[]): string {
         ? `Write the missing word: ${draft.line}`
         : draft.activity === 'rewrite'
           ? `Write the sentence: ${draft.line}`
-          : draft.activity === 'circle'
-            ? `Choose the correct word: ${draft.line}`
-            : `Choose one answer: ${draft.line} Options: ${draft.choices.join(' | ')}`
+          : draft.activity === 'question'
+            ? `Write the answer: ${draft.line}`
+            : draft.activity === 'circle'
+              ? `Choose the correct word: ${draft.line}`
+              : `Choose one answer: ${draft.line} Options: ${draft.choices.join(' | ')}`
     return [`${index + 1}. ${task}`]
   })
   return `You are a student doing this worksheet. You cannot see the answer key or any picture. Answer each numbered item. If more than one answer could be right, put that number in "ambiguous" and still give your best answer.

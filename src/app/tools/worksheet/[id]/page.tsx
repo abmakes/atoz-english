@@ -3,8 +3,10 @@
 import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
+import WorksheetPaper from '@/components/lesson/WorksheetPaper'
 import { Button } from '@/components/ui/button'
 import type { WorksheetItem } from '@/lib/lesson/assess'
+import { QuestionType } from '@/types/question_types'
 import { Loader2, Printer } from 'lucide-react'
 
 interface Sheet {
@@ -20,6 +22,7 @@ export default function WorksheetSheetPage({ params }: { params: Promise<{ id: s
   const [items, setItems] = useState<WorksheetItem[]>([])
   const [error, setError] = useState('')
   const [withKey, setWithKey] = useState(false)
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -49,6 +52,48 @@ export default function WorksheetSheetPage({ params }: { params: Promise<{ id: s
     if (!response.ok) throw new Error('Could not save.')
   }
 
+  const replace = async (index: number) => {
+    const item = items[index]
+    if (!item || !sheet) return
+    setBusy(true)
+    setError('')
+    try {
+      const response = await fetch('/api/ai/assess-lesson', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target: 'worksheet',
+          scope: 'item',
+          sections: item.activity === 'question' ? ['long'] : undefined,
+          level: sheet.level,
+          title: sheet.title,
+          questions: [
+            {
+              id: item.questionId,
+              question: item.line,
+              answers: item.choices.length > 0 ? item.choices : [item.answer || 'yes', 'no'],
+              correctAnswer: item.answer || item.choices[0] || 'yes',
+              type: QuestionType.MULTIPLE_CHOICE,
+              imageUrl: item.imageUrl ?? null,
+            },
+          ],
+        }),
+      })
+      const body = (await response.json()) as { error?: string; items?: { line: string; choices: string[]; correctAnswer: string; warning?: string }[] }
+      const fresh = body.items?.[0]
+      if (!response.ok || !fresh) throw new Error(body.error || 'Could not replace that line.')
+      await save(items.map((row, rowIndex) => (
+        rowIndex === index
+          ? { ...row, line: fresh.line, choices: fresh.choices, answer: fresh.correctAnswer, warning: fresh.warning }
+          : row
+      )))
+    } catch (replaceError) {
+      setError(replaceError instanceof Error ? replaceError.message : 'Could not replace that line.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (!sheet && !error) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
@@ -69,40 +114,20 @@ export default function WorksheetSheetPage({ params }: { params: Promise<{ id: s
             </Button>
           </div>
         </div>
-        {error ? <p className="text-sm text-red-700">{error}</p> : null}
-        <article className="rounded border bg-white p-4">
-          <h1 className="text-xl font-bold">{sheet?.title}</h1>
-          <ol className="mt-4 flex flex-col gap-3">
-            {items.map((item, index) => (
-              <li key={`${item.line}-${index}`} className={item.held ? 'is-held opacity-40' : ''}>
-                <p className="text-xs font-bold text-slate-500">{item.exercise}{item.example ? ' · Example' : ''}</p>
-                <p>{item.line}{item.example && item.answer ? <strong> {item.answer}</strong> : null}</p>
-                {item.warning ? <p className="no-print text-xs text-orange-800">{item.warning}</p> : null}
-                <div className="no-print mt-1 flex gap-3 text-xs">
-                  <button type="button" className="underline" onClick={() => save(items.map((row, rowIndex) => (rowIndex === index ? { ...row, held: !row.held } : row))).catch(() => setError('Could not save.'))}>{item.held ? 'Put back' : 'Leave off'}</button>
-                  <button type="button" className="underline" onClick={() => save(items.filter((_, rowIndex) => rowIndex !== index)).catch(() => setError('Could not save.'))}>Delete</button>
-                </div>
-              </li>
-            ))}
-          </ol>
-          {withKey ? (
-            <section className="mt-6 border-t pt-3">
-              <h2 className="font-bold">Answer key</h2>
-              <ol className="list-decimal pl-5 text-sm">
-                {items.filter((item) => !item.held && !item.example && item.answer).map((item) => (
-                  <li key={item.line}>{item.answer}</li>
-                ))}
-              </ol>
-            </section>
-          ) : null}
-        </article>
+        {error ? <p className="mb-3 text-sm text-red-700">{error}</p> : null}
+        {items.length > 0 ? (
+          <WorksheetPaper
+            title={sheet?.title || 'Worksheet'}
+            items={items}
+            withKey={withKey}
+            busy={busy}
+            onReplace={(index) => void replace(index)}
+            onChange={(next) => {
+              save(next).catch(() => setError('Could not save.'))
+            }}
+          />
+        ) : null}
       </div>
-      <style jsx global>{`
-        @media print {
-          nav, .no-print, .is-held { display: none !important; }
-          body { background: white !important; }
-        }
-      `}</style>
     </ProtectedRoute>
   )
 }

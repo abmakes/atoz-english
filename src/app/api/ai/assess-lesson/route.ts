@@ -19,7 +19,8 @@ const bodySchema = z.object({
   scope: z.enum(['set', 'item']).optional(),
   quizId: z.string().max(80).optional(),
   sourceText: z.string().max(4000).optional(),
-  sections: z.array(z.enum(['choice', 'gap', 'circle', 'rewrite'])).max(4).optional(),
+  sections: z.array(z.enum(['choice', 'gap', 'circle', 'rewrite', 'unjumble', 'write', 'long'])).max(6).optional(),
+  pages: z.union([z.literal(1), z.literal(2)]).optional(),
   questions: z
     .array(
       z.object({
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
       description: parsed.data.description,
       sourceText: parsed.data.sourceText,
       sections: parsed.data.sections,
+      pages: parsed.data.pages,
       scope: parsed.data.scope,
       solve: parsed.data.target === 'worksheet' && parsed.data.scope !== 'item' && process.env.WORKSHEET_SOLVER !== '0',
       onReport: async (next) => {

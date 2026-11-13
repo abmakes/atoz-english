@@ -11,7 +11,7 @@ import {
   type SourceQuestion,
 } from '@/lib/lesson/assess'
 import { promptsFromLesson, sentencePromptFromLesson } from '@/lib/lesson/prompts'
-import { planWorksheetLayout } from '@/lib/lesson/worksheet-practice'
+import { planWorksheetLayout, worksheetLineNumbers } from '@/lib/lesson/worksheet-practice'
 import { QuestionType } from '@/types/question_types'
 
 const kicking: SourceQuestion = {
@@ -438,6 +438,43 @@ describe('lesson review gate', () => {
         answer: 'kicking',
       },
     ])
+  })
+
+  it('numbers an exercise from 1, and skips a line left off the page', () => {
+    expect(worksheetLineNumbers([false, false, false, false, false, false])).toEqual([1, 2, 3, 4, 5, 6])
+    expect(worksheetLineNumbers([false, true, false])).toEqual([1, null, 2])
+  })
+
+  it('plans a second page with more questions than one page', () => {
+    const one = planWorksheetLayout('A1', { choices: 0, gap: true, rewrite: true, pages: 1 })
+    const two = planWorksheetLayout('A1', { choices: 0, gap: true, rewrite: true, pages: 2 })
+    expect(two.gaps + two.sentences).toBeGreaterThan(one.gaps + one.sentences)
+    expect(two.heightMm).toBeGreaterThan(277)
+    expect(two.heightMm).toBeLessThanOrEqual(550)
+  })
+
+  it('writes unjumble, sentence, and long-answer sections when those cards are chosen', async () => {
+    const plan = planWorksheetLayout('A1', { choices: 0, gap: false, rewrite: true, unjumble: true, long: true })
+    const names = ['hen', 'fox', 'cow', 'pig', 'duck', 'goat', 'lion', 'bear', 'frog', 'sheep', 'wolf', 'crab', 'deer', 'seal', 'hare', 'moth', 'ant', 'bee', 'owl', 'ram']
+    const generate = vi.fn(async () => JSON.stringify({
+      jumbles: names.slice(0, plan.jumbles + 2).map((name) => ({ answer: `The cat sees the ${name}.` })),
+      sentences: names.slice(0, plan.sentences + 2).map((name) => ({ words: ['cat', 'see', name], answer: `The cat sees the ${name} today.` })),
+      questions: names.slice(0, plan.longs + 2).map((name) => ({ question: `Where is the ${name}?`, answer: `The ${name} is in the park.` })),
+    }))
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A1',
+      sections: ['unjumble', 'write', 'long'],
+      generate,
+      questions: [kicking],
+    })
+    const prompt = String(generate.mock.calls[0])
+    expect(prompt).toContain('"jumbles"')
+    expect(prompt).toContain('"questions"')
+    expect(items.filter((item) => item.exercise?.includes('Put the words in order'))).toHaveLength(plan.jumbles)
+    expect(items.filter((item) => item.exercise?.includes('Write the sentences'))).toHaveLength(plan.sentences)
+    expect(items.filter((item) => item.activity === 'question')).toHaveLength(plan.longs)
   })
 
   it('refuses to continue when nothing is approved', () => {

@@ -355,7 +355,8 @@ async function assessWorksheet(input: {
   description?: string
   scope?: 'set' | 'item'
   sourceText?: string
-  sections?: Array<'choice' | 'gap' | 'circle' | 'rewrite'>
+  sections?: Array<'choice' | 'gap' | 'circle' | 'rewrite' | 'unjumble' | 'write' | 'long'>
+  pages?: 1 | 2
   solve?: boolean
   onReport?: (report: WorksheetRunReport) => void | Promise<void>
   generate?: (prompt: string) => Promise<string>
@@ -374,6 +375,7 @@ async function assessWorksheet(input: {
       generate: input.generate,
       scope: input.scope,
       sections: input.sections,
+      pages: input.pages,
       solve: input.solve,
       onReport: input.onReport,
     })
@@ -419,7 +421,8 @@ export async function assessLessonQuestions(input: {
   description?: string
   scope?: 'set' | 'item'
   sourceText?: string
-  sections?: Array<'choice' | 'gap' | 'circle' | 'rewrite'>
+  sections?: Array<'choice' | 'gap' | 'circle' | 'rewrite' | 'unjumble' | 'write' | 'long'>
+  pages?: 1 | 2
   solve?: boolean
   onReport?: (report: WorksheetRunReport) => void | Promise<void>
   generate?: (prompt: string) => Promise<string>
