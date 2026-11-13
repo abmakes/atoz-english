@@ -88,8 +88,21 @@ const circleSchema = z.object({
 
 /** The student cannot be marked right or wrong on their own life or opinion. */
 const SUBJECTIVE = /\b(your|yours|favou?rite|you think|you like|you prefer|you find|in your opinion|would you rather)\b/i
+/** A long question may ask about the student's life. An opinion still cannot be marked. */
+const OPINION = /\b(you think|in your opinion|would you rather)\b/i
+const ABOUT_YOU = /\b(you|your|yours|favou?rite)\b/i
+/**
+ * "What does he see?" and "Where does the bird fly?" point at someone who is
+ * not on the page. "it rains" is weather, not a missing picture.
+ */
+const NEEDS_A_SCENE = /\b(he|she|they|him|her|them|his|their|we|our|it|the girl|the boy|the man|the woman|the bird|the dog|the cat|the child|the baby|the teacher|the student|the person|the plant|someone|somebody)\b/i
 /** Without a picture, these point at something the student cannot see. */
 const NEEDS_PICTURE = /\b(this|that|these|those|picture|photo|the red one|the blue one|the green one)\b/i
+
+function questionNeedsAScene(question: string): boolean {
+  const withoutWeather = question.replace(/\bit\s+(?:rains?|snows?|is|was)\b/gi, '')
+  return NEEDS_A_SCENE.test(withoutWeather)
+}
 const LOWER_START = new Set([
   'the', 'a', 'an', 'she', 'he', 'they', 'we', 'it', 'there', 'this', 'that', 'these', 'those',
   'my', 'his', 'her', 'our', 'their', 'your', 'you', 'is', 'are', 'was', 'were', 'do', 'does',
@@ -265,9 +278,11 @@ export function worksheetPrompt(input: Omit<GenerateInput, 'generate'>, counts: 
     )
   }
   if (counts.long > 0) {
-    sections.push(`"questions": ${counts.long + 2} short questions a student can answer in one sentence from the language point.
-- "question" ends with ?. "answer" is that one sentence.
-- The question can be marked from the words on the page. Do not ask what the student likes or owns.`)
+    sections.push(`"questions": ${counts.long + 2} short questions. The student writes one full sentence. There is no picture and no story on the page, so the question itself must give the student something to answer.
+- A fact every child knows, with one right answer: "How many days are there in a week?" Answer: "There are seven days in a week."
+- A named place: "Where is Ha Long Bay?" Answer: "Ha Long Bay is in Vietnam."
+- The student's own life: "What do you drink in the morning?" The answer is one example, such as "I drink milk."
+- Never ask about a person or thing the student cannot see. Do not write "What does he see?", "What does the girl water?", "What do they clean?", "What do we buy?" or "Where does the bird fly?".`)
   }
 
   return `You write one printed grammar worksheet for young learners of English, in the style of Cambridge Starters, Movers and Flyers. A student works alone with a pencil. The teacher marks it with an answer key, so every item has exactly one correct answer.
@@ -282,8 +297,9 @@ Words the class knows: ${selection.words.slice(0, 60).join(', ') || 'Use simple 
 Useful patterns: ${selection.grammarPatterns.join('; ') || 'Short sentences at this level.'}
 
 Rules for every item:
-- The student can answer from what is printed: the picture, the words on the line, or facts every child knows.
-- Never ask about the student's own things, friends, feelings, opinions or favourites. Do not use "your", "you think" or "favourite".
+- The student can answer from what is printed, from a fact every child knows, or, on a long question, from their own life or a named place.
+- Gaps, circle items and multiple choice never ask about the student's own things or opinions. Do not use "your", "you think" or "favourite" there.
+- A long question must not use "he", "she", "they", "we" or "the girl" for someone who is not described on the page.
 - Do not say "this", "that", "the red one" or "the blue one" unless the picture shows it.
 - Every sentence starts with a capital letter and ends with a full stop or a question mark.
 - Do not repeat an item. Keep each item under 14 words. Age-appropriate content only.
@@ -499,10 +515,12 @@ function arrangePage(
     const line = finishWorksheetSentence(item.question)
     const answer = finishWorksheetSentence(item.answer)
     if (!line.endsWith('?')) rejected.push({ reason: 'sentence-instead-of-question', line })
-    else if (SUBJECTIVE.test(`${line} ${answer}`)) rejected.push({ reason: 'subjective', line })
+    else if (OPINION.test(`${line} ${answer}`)) rejected.push({ reason: 'subjective', line })
+    else if (questionNeedsAScene(line)) rejected.push({ reason: 'needs-a-reference', line })
     else if (!fresh(line)) rejected.push({ reason: 'duplicate', line })
     else {
-      longs.push(draft('question', line, scaffold, { correctAnswer: answer, sourceQuestion: line }))
+      const marked = ABOUT_YOU.test(line) ? `A full sentence about you. For example: ${answer}` : answer
+      longs.push(draft('question', line, scaffold, { correctAnswer: marked, sourceQuestion: line }))
     }
   }
 
@@ -691,6 +709,7 @@ export function solverPrompt(drafts: PracticeDraft[]): string {
   const bank = [...new Set(drafts.map((draft) => draft.bank).filter((word): word is string => Boolean(word)))]
   const lines = drafts.flatMap((draft, index) => {
     if (draft.example || (draft.activity === 'choice' && draft.imageUrl)) return []
+    if (draft.correctAnswer.startsWith('A full sentence about you.')) return []
     const task =
       draft.activity === 'gap'
         ? `Write the missing word: ${draft.line}`
@@ -715,6 +734,7 @@ async function runSolver(drafts: PracticeDraft[], generate: (prompt: string) => 
     const disagreements: WorksheetSolverNote['disagreements'] = []
     drafts.forEach((draft, index) => {
       if (draft.example || (draft.activity === 'choice' && draft.imageUrl)) return
+      if (draft.correctAnswer.startsWith('A full sentence about you.')) return
       const number = index + 1
       const got = parsed.answers[String(number)] ?? ''
       if (!got || parsed.ambiguous.includes(number)) return

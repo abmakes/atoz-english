@@ -76,7 +76,7 @@ export function exerciseInstruction(activity: string, scaffold = worksheetScaffo
       : 'Use the words in this order to write the sentence. The first one is an example.'
   }
   if (activity === 'circle') return 'Circle the correct word. The first one is an example.'
-  if (activity === 'question') return 'Write the answer on the line.'
+  if (activity === 'question') return 'Write a full sentence.'
   return ''
 }
 

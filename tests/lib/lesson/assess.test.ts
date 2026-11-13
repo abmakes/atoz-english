@@ -440,6 +440,41 @@ describe('lesson conversion', () => {
     expect(line('What month comes after June?')).toBe('What / month / comes / after / June?')
     expect(line('A horse is bigger than a mouse.')).toBe('a horse / big / a mouse')
   })
+
+  it('drops questions about a person the student cannot see', async () => {
+    const questions = [
+      { question: 'What does he see?', answer: 'He sees a bird.' },
+      { question: 'What does she drink?', answer: 'She drinks milk.' },
+      { question: 'What do they clean?', answer: 'They clean the desk.' },
+      { question: 'What do we buy?', answer: 'We buy bread.' },
+      { question: 'Where does the bird fly?', answer: 'The bird flies in the sky.' },
+      { question: 'What does the girl water?', answer: 'The girl waters the plant.' },
+      { question: 'How many days are there in a week?', answer: 'There are seven days in a week.' },
+      { question: 'Which month comes after June?', answer: 'July comes after June.' },
+      { question: 'Where is Ha Long Bay?', answer: 'Ha Long Bay is in Vietnam.' },
+      { question: 'What is the capital of France?', answer: 'The capital of France is Paris.' },
+      { question: 'What do you drink in the morning?', answer: 'I drink milk.' },
+      { question: 'Where do you live?', answer: 'I live in Hanoi.' },
+      { question: 'What colour is a banana?', answer: 'A banana is yellow.' },
+      { question: 'Which is bigger, an elephant or a mouse?', answer: 'An elephant is bigger than a mouse.' },
+    ]
+    const generate = vi.fn(async () => JSON.stringify({ questions }))
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A1',
+      sections: ['long'],
+      generate,
+      questions: [kicking],
+    })
+    const lines = items.map((item) => item.line).join(' ')
+    expect(lines).not.toMatch(/he see|she drink|they clean|we buy|the bird|the girl/i)
+    expect(items.map((item) => item.line)).toContain('How many days are there in a week?')
+    expect(items.map((item) => item.line)).toContain('Where is Ha Long Bay?')
+    expect(items.find((item) => item.line === 'What do you drink in the morning?')?.correctAnswer).toBe(
+      'A full sentence about you. For example: I drink milk.'
+    )
+  })
 })
 
 describe('lesson review gate', () => {
