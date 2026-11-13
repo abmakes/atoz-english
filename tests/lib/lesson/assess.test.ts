@@ -4,12 +4,14 @@ import {
   assessLessonQuestions,
   commitLessonSelection,
   fillGap,
+  finishWorksheetSentence,
   isStructuredCorrectAnswer,
   localSentenceAssessment,
   localWorksheetAssessment,
   type SourceQuestion,
 } from '@/lib/lesson/assess'
 import { promptsFromLesson, sentencePromptFromLesson } from '@/lib/lesson/prompts'
+import { planWorksheetLayout, worksheetLineNumbers } from '@/lib/lesson/worksheet-practice'
 import { QuestionType } from '@/types/question_types'
 
 const kicking: SourceQuestion = {
@@ -63,21 +65,28 @@ describe('lesson conversion', () => {
     ).toBeNull()
   })
 
-  it('keeps a worksheet gap blank and prints multiple choice as a line', () => {
+  it('still recognises a printable quiz line, which the worksheet check no longer copies', () => {
     const gap = localWorksheetAssessment(kicking)
     expect(gap?.line).toBe('he is ______ the ball')
-    expect(gap?.choices).toEqual(['kicking', 'kick', 'kicks', 'kicked'])
     expect(gap?.converted).toBe(false)
+    expect(
+      localWorksheetAssessment({
+        id: 'color',
+        question: 'What color is the sky?',
+        answers: ['Blue', 'Green', 'Red', 'Yellow'],
+        correctAnswer: 'Blue',
+        type: QuestionType.MULTIPLE_CHOICE,
+      })?.line
+    ).toBe('What color is the sky?')
+  })
 
-    const color = localWorksheetAssessment({
-      id: 'color',
-      question: 'What color is the sky?',
-      answers: ['Blue', 'Green', 'Red', 'Yellow'],
-      correctAnswer: 'Blue',
-      type: QuestionType.MULTIPLE_CHOICE,
-    })
-    expect(color?.line).toBe('What color is the sky?')
-    expect(color?.choices).toContain('Blue')
+  it('starts every worksheet sentence with a capital and a stop or question mark', () => {
+    expect(finishWorksheetSentence('he is ______ the ball')).toBe('He is ______ the ball.')
+    expect(finishWorksheetSentence('are there any giraffes')).toBe('Are there any giraffes?')
+    expect(finishWorksheetSentence('Was it a good film')).toBe('Was it a good film?')
+    expect(finishWorksheetSentence('What color is the sky?')).toBe('What color is the sky?')
+    expect(finishWorksheetSentence('do not run beside the pool')).toBe('Do not run beside the pool.')
+    expect(finishWorksheetSentence('He is kicking the ball.')).toBe('He is kicking the ball.')
   })
 
   it('does not treat sorting JSON as a worksheet line', () => {
@@ -127,6 +136,7 @@ describe('lesson conversion', () => {
   it('keeps a row when the lexicon warns about a word', async () => {
     const items = await assessLessonQuestions({
       target: 'worksheet',
+      scope: 'item',
       level: 'A1',
       questions: [
         {
@@ -140,7 +150,330 @@ describe('lesson conversion', () => {
     })
     expect(items).toHaveLength(1)
     expect(items[0]?.compatible).toBe(true)
+    expect(items[0]?.line).toBe('What is a flibbertigibbet?')
     expect(items[0]?.languageWarnings.some((issue) => issue.word === 'flibbertigibbet')).toBe(true)
+  })
+
+  it('writes mixed grammar practice instead of copying the quiz', async () => {
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A1',
+      grammar: ['There is / There are'],
+      title: 'Zoo animals',
+      questions: [
+        {
+          id: 'dog',
+          question: 'There ______ a dog in the park',
+          answers: ['is', 'are', 'was', 'were'],
+          correctAnswer: 'is',
+          type: QuestionType.MULTIPLE_CHOICE,
+          imageUrl: '/images/sentence-builder/sam-dog.jpg',
+        },
+        {
+          id: 'kids',
+          question: 'There ______ two children',
+          answers: ['are', 'is', 'was', 'were'],
+          correctAnswer: 'are',
+          type: QuestionType.MULTIPLE_CHOICE,
+        },
+      ],
+    })
+    const plan = planWorksheetLayout('A1')
+    const questions = items.filter((item) => item.activity === 'question')
+    const gaps = items.filter((item) => item.activity === 'gap')
+    const choices = items.filter((item) => item.activity === 'choice')
+    expect(plan).toMatchObject({ choices: 6, gaps: 8, sentences: 9 })
+    expect(plan.heightMm).toBeGreaterThan(265)
+    expect(plan.heightMm).toBeLessThanOrEqual(275)
+    expect(planWorksheetLayout('B1').sentences).toBe(10)
+    expect(items[0]?.activity).toBe('choice')
+    expect(questions).toHaveLength(plan.sentences)
+    expect(gaps).toHaveLength(plan.gaps)
+    expect(choices).toHaveLength(plan.choices)
+    expect(choices.every((item) => item.exercise === 'A. Look and circle the answer.')).toBe(true)
+    expect(gaps.every((item) => item.exercise === 'B. Complete the sentences.')).toBe(true)
+    expect(choices.every((item) => item.imageUrl === '/images/sentence-builder/sam-dog.jpg')).toBe(true)
+    expect(choices.every((item) => item.choices.length >= 2)).toBe(true)
+    for (const item of items) {
+      expect(item.line).toMatch(/^[A-Z]/)
+      expect(item.line).toMatch(/[.?!]$/)
+      expect(item.line).not.toBe('There ______ a dog in the park')
+    }
+  })
+
+  const pictured: SourceQuestion[] = [
+    { ...kicking, id: 'p1', imageUrl: '/images/sentence-builder/sam-dog.jpg', question: 'The dog is ______ than the cat.', correctAnswer: 'bigger' },
+    { ...kicking, id: 'p2', imageUrl: '/images/sentence-builder/sara-book.jpg', question: 'Sara is reading the ______ book.', correctAnswer: 'biggest' },
+  ]
+
+  function worksheetReply(overrides: { pictures?: unknown[]; gaps?: unknown[]; sentences?: unknown[] } = {}) {
+    const animals = ['a horse', 'a cat', 'a dog', 'a lion', 'a bear', 'a duck', 'a goat', 'a fox', 'a cow', 'a pig', 'a hen', 'a frog']
+    const adjectives = ['bigger', 'smaller', 'faster', 'slower', 'taller', 'shorter', 'older', 'younger', 'longer', 'stronger']
+    return JSON.stringify({
+      pictures: overrides.pictures ?? [
+        { pictureId: 'p1', question: 'Which animal is bigger in the picture?', answers: ['The dog', 'The cat', 'The bird'], correctAnswer: 'The dog' },
+        { pictureId: 'p2', question: 'Which book is Sara reading?', answers: ['The biggest book', 'The smallest book', 'No book'], correctAnswer: 'The biggest book' },
+        ...['an elephant or a mouse', 'a car or a bicycle', 'a whale or a fish', 'a giraffe or a cat', 'a plane or a bus'].map((pair) => ({
+          pictureId: null,
+          question: `Which is bigger, ${pair}?`,
+          answers: [pair.split(' or ')[0], pair.split(' or ')[1], 'They are the same'],
+          correctAnswer: pair.split(' or ')[0],
+        })),
+      ],
+      gaps: overrides.gaps ?? adjectives.map((answer, index) => ({
+        sentence: `An elephant is ______ than ${animals[index]}.`,
+        answer,
+        base: answer.replace(/er$/, '').replace(/(.)\1$/, '$1'),
+      })),
+      sentences: overrides.sentences ?? animals.map((animal, index) => ({
+        words: [animal, 'big', 'a mouse'],
+        answer: `${animal} is bigger than a mouse number ${index}.`,
+      })),
+    })
+  }
+
+  it('writes a worksheet the teacher can mark, easiest exercise first', async () => {
+    const generate = vi.fn(async () => `Here it is:\n\`\`\`json\n${worksheetReply()}\n\`\`\``)
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A1',
+      grammar: ['Comparatives & Superlatives'],
+      generate,
+      questions: pictured,
+    })
+    const used = planWorksheetLayout('A1', { choices: 2, gap: true, rewrite: true })
+    expect(generate).toHaveBeenCalledTimes(1)
+    const prompt = String(generate.mock.calls[0])
+    expect(prompt).toContain('exactly one correct answer')
+    expect(prompt).toContain('Comparatives & Superlatives')
+    expect(prompt).toContain('The dog is bigger than the cat.')
+    expect(prompt).not.toContain('"pictures"')
+    const choices = items.filter((item) => item.activity === 'choice')
+    const gaps = items.filter((item) => item.activity === 'gap')
+    const sentences = items.filter((item) => item.activity === 'rewrite')
+    expect(choices).toHaveLength(2)
+    expect(gaps).toHaveLength(used.gaps)
+    expect(sentences).toHaveLength(used.sentences)
+    expect(items[0]?.activity).toBe('choice')
+    expect(choices[0]?.line).toBe('The dog is ______ than the cat.')
+    expect(choices[0]?.imageUrl).toBe('/images/sentence-builder/sam-dog.jpg')
+    expect(choices[0]?.reason).toBe('Kept with the picture you chose.')
+    expect(choices[0]?.example).toBe(true)
+    expect(choices[0]?.choices.map((choice) => choice.toLowerCase())).toContain('bigger')
+    expect(gaps.every((item) => item.bank === item.correctAnswer)).toBe(true)
+    expect(gaps.every((item) => item.instruction?.includes('box'))).toBe(true)
+    expect(sentences.every((item) => item.line.includes(' / '))).toBe(true)
+    expect(sentences.every((item) => item.correctAnswer.endsWith('.'))).toBe(true)
+    expect(sentences[0]?.line.split(' / ').filter((word) => word !== '.').sort()).toEqual(
+      sentences[0]?.correctAnswer.replace(/\.$/, '').split(' ').map((word, index) => (index === 0 ? word.toLowerCase() : word)).sort()
+    )
+  })
+
+  it('gives base forms at A2 and brackets with no word box at B1', async () => {
+    const generate = vi.fn(async () => worksheetReply())
+    const a2 = await assessLessonQuestions({ target: 'worksheet', scope: 'set', level: 'A2', generate, questions: pictured })
+    const a2Gaps = a2.filter((item) => item.activity === 'gap')
+    expect(a2Gaps[0]?.bank).toBe('big')
+    expect(a2Gaps[0]?.correctAnswer).toBe('bigger')
+    expect(a2.filter((item) => item.activity === 'rewrite')[0]?.line).toBe('a horse / big / a mouse')
+    const b1 = await assessLessonQuestions({ target: 'worksheet', scope: 'set', level: 'B1', generate, questions: pictured })
+    const b1Gaps = b1.filter((item) => item.activity === 'gap')
+    expect(b1Gaps[0]?.line).toBe('An elephant is ______ (big) than a horse.')
+    expect(b1Gaps.every((item) => item.bank === undefined)).toBe(true)
+  })
+
+  it('logs items a student cannot answer and asks for new ones', async () => {
+    const logged: string[] = []
+    const spy = vi.spyOn(console, 'error').mockImplementation((message?: unknown) => {
+      logged.push(String(message))
+    })
+    const generate = vi.fn(async () =>
+      worksheetReply({
+        gaps: [
+          { sentence: "Your backpack is ______ than your friend's.", answer: 'heavier', base: 'heavy' },
+          { sentence: 'Which subject do you find ______?', answer: 'interesting', base: 'interest' },
+        ],
+      })
+    )
+    await expect(
+      assessLessonQuestions({ target: 'worksheet', scope: 'set', level: 'A1', generate, questions: pictured })
+    ).rejects.toThrow('gap sentences were usable')
+    expect(generate).toHaveBeenCalledTimes(2)
+    const report = logged.find((line) => line.includes('worksheet-generation')) ?? ''
+    expect(report).toContain('subjective')
+    expect(String(generate.mock.calls[1])).toContain('Your backpack')
+    spy.mockRestore()
+  })
+
+  it('flags a line when a student-style check disagrees, and skips the picture the teacher chose', async () => {
+    const generate = vi.fn(async (prompt: string) => {
+      if (prompt.includes('You are a student')) return JSON.stringify({ answers: { '4': 'tiny' }, ambiguous: [] })
+      return worksheetReply()
+    })
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A1',
+      solve: true,
+      generate,
+      questions: pictured,
+    })
+    expect(generate).toHaveBeenCalledTimes(2)
+    const gaps = items.filter((item) => item.activity === 'gap')
+    expect(gaps[1]?.warning).toContain('tiny')
+    expect(items.filter((item) => item.activity === 'choice').every((item) => !item.warning)).toBe(true)
+  })
+
+  it('keeps sentences the model returned as plain text', async () => {
+    const lines = [
+      'She helps him.',
+      'He sees her.',
+      'I help them.',
+      'We help you.',
+      'They see me.',
+      'You help us.',
+      'She gives me a toy.',
+      'He gives her a card.',
+      'I give him a book.',
+      'We give them a snack.',
+      'They give us a gift.',
+      'You give me a pen.',
+    ]
+    const generate = vi.fn(async () => JSON.stringify({ sentences: lines }))
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A1',
+      sections: ['rewrite'],
+      generate,
+      questions: [kicking],
+    })
+    const sentences = items.filter((item) => item.activity === 'rewrite')
+    expect(sentences.length).toBeGreaterThanOrEqual(10)
+    expect(sentences.some((item) => item.correctAnswer === 'She helps him.')).toBe(true)
+    expect(sentences.every((item) => item.line.includes(' / '))).toBe(true)
+  })
+
+  it('keeps a number sentence when the cue list is too long or missing', async () => {
+    const sentences = [
+      { words: ['What', 'is', 'the', 'number', '300', '+', '500'], answer: 'Three hundred plus five hundred is eight hundred.' },
+      { words: ['What', 'is', 'the', 'number', '400', '+', '400'], answer: 'Four hundred plus four hundred is eight hundred.' },
+      'The number is six hundred in words.',
+      'The number is nine hundred in words.',
+      'The number is seven hundred in words.',
+      'The number is one hundred in words.',
+      'The number is two hundred in words.',
+      'The number is five hundred in words.',
+      'The number is eight hundred in words.',
+      'The number is fifty in words.',
+      'The number is twenty in words.',
+      'The number is twelve in words.',
+    ]
+    const generate = vi.fn(async () => JSON.stringify({ sentences }))
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A2',
+      sections: ['rewrite'],
+      generate,
+      questions: [kicking],
+    })
+    const written = items.filter((item) => item.activity === 'rewrite')
+    expect(written.length).toBeGreaterThanOrEqual(10)
+    expect(written.some((item) => item.correctAnswer.startsWith('Three hundred'))).toBe(true)
+    expect(written.some((item) => item.line.toLowerCase().includes('six'))).toBe(true)
+  })
+
+  it('keeps gap sentences that differ only by the number', async () => {
+    const words = ['ten', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety', 'hundred']
+    const gaps = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((number, index) => ({
+      sentence: `The number is ${number}. What is it in words? ______.`,
+      answer: words[index],
+      base: words[index],
+    }))
+    const generate = vi.fn(async () => JSON.stringify({ gaps }))
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A1',
+      sections: ['gap'],
+      generate,
+      questions: [kicking],
+    })
+    const written = items.filter((item) => item.activity === 'gap')
+    expect(written.length).toBeGreaterThanOrEqual(8)
+    expect(written.some((item) => item.line.includes('10.'))).toBe(true)
+    expect(written.some((item) => item.line.includes('80'))).toBe(true)
+  })
+
+  it('fills in the question words when the cue list does not show the sentence', async () => {
+    const sentences = [
+      { words: ['number', '909', 'words'], answer: 'What is the number 909 in words?' },
+      { words: ['4th', 'month'], answer: 'What is the 4th month?' },
+      { words: ['number', '2000', 'words'], answer: 'The number is 2000 in words.' },
+      { words: ['6th', 'month', 'June'], answer: 'The 6th month is June.' },
+      { words: ['month', 'comes', 'after', 'June'], answer: 'What month comes after June?' },
+      { words: ['number', '600', 'words'], answer: 'The number is 600 in words.' },
+      { words: ['number', '55', 'words'], answer: 'The number is 55 in words.' },
+      { words: ['month', 'New', "Year's", 'Day'], answer: "What month is New Year's Day in?" },
+      { words: ['a horse', 'big', 'a mouse'], answer: 'A horse is bigger than a mouse.' },
+      { words: ['a cat', 'fast', 'a dog'], answer: 'A cat is faster than a dog.' },
+      { words: ['a bus', 'slow', 'a bike'], answer: 'A bus is slower than a bike.' },
+      { words: ['a lion', 'strong', 'a fox'], answer: 'A lion is stronger than a fox.' },
+    ]
+    const generate = vi.fn(async () => JSON.stringify({ sentences }))
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A2',
+      sections: ['write'],
+      generate,
+      questions: [kicking],
+    })
+    const line = (answer: string) => items.find((item) => item.correctAnswer === answer)?.line ?? ''
+    expect(line('What is the number 909 in words?')).toBe('What / is / the number / 909 / in words?')
+    expect(line('What is the 4th month?')).toBe('What / is / the 4th / month?')
+    expect(line('The number is 2000 in words.')).toBe('The number / is / 2000 / in words.')
+    expect(line('The 6th month is June.')).toBe('The 6th / month / is / June.')
+    expect(line('What month comes after June?')).toBe('What / month / comes / after / June?')
+    expect(line('A horse is bigger than a mouse.')).toBe('a horse / big / a mouse')
+  })
+
+  it('drops questions about a person the student cannot see', async () => {
+    const questions = [
+      { question: 'What does he see?', answer: 'He sees a bird.' },
+      { question: 'What does she drink?', answer: 'She drinks milk.' },
+      { question: 'What do they clean?', answer: 'They clean the desk.' },
+      { question: 'What do we buy?', answer: 'We buy bread.' },
+      { question: 'Where does the bird fly?', answer: 'The bird flies in the sky.' },
+      { question: 'What does the girl water?', answer: 'The girl waters the plant.' },
+      { question: 'How many days are there in a week?', answer: 'There are seven days in a week.' },
+      { question: 'Which month comes after June?', answer: 'July comes after June.' },
+      { question: 'Where is Ha Long Bay?', answer: 'Ha Long Bay is in Vietnam.' },
+      { question: 'What is the capital of France?', answer: 'The capital of France is Paris.' },
+      { question: 'What do you drink in the morning?', answer: 'I drink milk.' },
+      { question: 'Where do you live?', answer: 'I live in Hanoi.' },
+      { question: 'What colour is a banana?', answer: 'A banana is yellow.' },
+      { question: 'Which is bigger, an elephant or a mouse?', answer: 'An elephant is bigger than a mouse.' },
+    ]
+    const generate = vi.fn(async () => JSON.stringify({ questions }))
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A1',
+      sections: ['long'],
+      generate,
+      questions: [kicking],
+    })
+    const lines = items.map((item) => item.line).join(' ')
+    expect(lines).not.toMatch(/he see|she drink|they clean|we buy|the bird|the girl/i)
+    expect(items.map((item) => item.line)).toContain('How many days are there in a week?')
+    expect(items.map((item) => item.line)).toContain('Where is Ha Long Bay?')
+    expect(items.find((item) => item.line === 'What do you drink in the morning?')?.correctAnswer).toBe(
+      'A full sentence about you. For example: I drink milk.'
+    )
   })
 })
 
@@ -189,11 +522,66 @@ describe('lesson review gate', () => {
     expect(saved.worksheetItems).toEqual([
       {
         questionId: 'q-kick',
-        line: 'he is kicking the ball',
+        line: 'He is kicking the ball.',
         imageUrl: 'https://images.example/ball.jpg',
         choices: ['kicking', 'kick', 'kicks', 'kicked'],
+        answer: 'kicking',
       },
     ])
+  })
+
+  it('numbers an exercise from 1, and skips a line left off the page', () => {
+    expect(worksheetLineNumbers([false, false, false, false, false, false])).toEqual([1, 2, 3, 4, 5, 6])
+    expect(worksheetLineNumbers([false, true, false])).toEqual([1, null, 2])
+  })
+
+  it('plans a second page with more questions than one page', () => {
+    const one = planWorksheetLayout('A1', { choices: 0, gap: true, rewrite: true, pages: 1 })
+    const two = planWorksheetLayout('A1', { choices: 0, gap: true, rewrite: true, pages: 2 })
+    expect(two.gaps + two.sentences).toBeGreaterThan(one.gaps + one.sentences)
+    expect(two.heightMm).toBeGreaterThan(277)
+    expect(two.heightMm).toBeLessThanOrEqual(550)
+  })
+
+  it('keeps the extra question types on a two-page sheet', () => {
+    const plan = planWorksheetLayout('A2', {
+      choices: 0,
+      gap: true,
+      circle: true,
+      rewrite: true,
+      unjumble: true,
+      long: true,
+      pages: 2,
+    })
+    expect(plan.gaps).toBeGreaterThanOrEqual(4)
+    expect(plan.circles).toBeGreaterThanOrEqual(4)
+    expect(plan.sentences).toBeGreaterThanOrEqual(4)
+    expect(plan.jumbles).toBeGreaterThanOrEqual(4)
+    expect(plan.longs).toBeGreaterThanOrEqual(4)
+  })
+
+  it('writes unjumble, sentence, and long-answer sections when those cards are chosen', async () => {
+    const plan = planWorksheetLayout('A1', { choices: 0, gap: false, rewrite: true, unjumble: true, long: true })
+    const names = ['hen', 'fox', 'cow', 'pig', 'duck', 'goat', 'lion', 'bear', 'frog', 'sheep', 'wolf', 'crab', 'deer', 'seal', 'hare', 'moth', 'ant', 'bee', 'owl', 'ram']
+    const generate = vi.fn(async () => JSON.stringify({
+      jumbles: names.slice(0, plan.jumbles + 2).map((name) => ({ answer: `The cat sees the ${name}.` })),
+      sentences: names.slice(0, plan.sentences + 2).map((name) => ({ words: ['cat', 'see', name], answer: `The cat sees the ${name} today.` })),
+      questions: names.slice(0, plan.longs + 2).map((name) => ({ question: `Where is the ${name}?`, answer: `The ${name} is in the park.` })),
+    }))
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A1',
+      sections: ['unjumble', 'write', 'long'],
+      generate,
+      questions: [kicking],
+    })
+    const prompt = String(generate.mock.calls[0])
+    expect(prompt).toContain('"jumbles"')
+    expect(prompt).toContain('"questions"')
+    expect(items.filter((item) => item.exercise?.includes('Put the words in order'))).toHaveLength(plan.jumbles)
+    expect(items.filter((item) => item.exercise?.includes('Write the sentences'))).toHaveLength(plan.sentences)
+    expect(items.filter((item) => item.activity === 'question')).toHaveLength(plan.longs)
   })
 
   it('refuses to continue when nothing is approved', () => {

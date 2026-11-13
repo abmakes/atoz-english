@@ -22,7 +22,7 @@ export type GeneratedQuestionText = z.infer<typeof generatedQuestionSchema>;
 
 const generatedQuestionsSchema = z.array(generatedQuestionSchema).min(1).max(20);
 
-function levelGuidance(level: string): string {
+export function levelGuidance(level: string): string {
   switch (level) {
     case 'PRE_A1':
       return 'Use familiar concrete labels, basic actions, and very short visual prompts.';
