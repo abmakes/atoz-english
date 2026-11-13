@@ -6,6 +6,8 @@ import { assessLessonQuestions } from '@/lib/lesson/assess'
 import { normalizeCefrLevel } from '@/lib/taxonomy/quiz-taxonomy'
 import { QuestionType } from '@/types/question_types'
 
+export const maxDuration = 60
+
 const bodySchema = z.object({
   target: z.enum(['worksheet', 'sentence-builder']),
   level: z.string().optional(),
@@ -55,10 +57,19 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, items })
   } catch (error) {
-    if (error instanceof z.ZodError || error instanceof SyntaxError) {
+    if (
+      error instanceof z.ZodError ||
+      error instanceof SyntaxError ||
+      (error instanceof Error && error.message.startsWith('The AI'))
+    ) {
       console.error('Failed to parse AI worksheet:', error)
       return NextResponse.json(
-        { error: 'The AI returned an invalid question format. Please try again.' },
+        {
+          error:
+            error instanceof Error && error.message.startsWith('The AI')
+              ? error.message
+              : 'The AI returned an invalid question format. Please try again.',
+        },
         { status: 502 }
       )
     }

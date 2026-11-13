@@ -208,34 +208,31 @@ describe('lesson conversion', () => {
     const plan = planWorksheetLayout()
     const generate = vi.fn(async (prompt: string) => {
       const count = Number(prompt.match(/Create exactly (\d+) multiple-choice/)?.[1])
-      const gap = prompt.includes('______ for the missing word')
-      const picture = prompt.includes('question about a picture')
-      return JSON.stringify(
-        Array.from({ length: count }, (_, index) => {
-          if (gap) {
-            return {
-              question: `She ______ the ball on day ${index}`,
-              answers: [`kicks ${index}`, 'kick', 'kicking', 'kicked'],
-              correctAnswer: `kicks ${index}`,
-              imageKeyword: 'girl ball',
-            }
-          }
-          if (picture) {
-            return {
-              question: `Where is the ball in picture ${index}`,
-              answers: ['In the park', 'On the chair', 'In the sea', 'At school'],
-              correctAnswer: 'In the park',
-              imageKeyword: 'ball park',
-            }
-          }
+      const items = Array.from({ length: count }, (_, index) => {
+        if (index < plan.questions) {
           return {
             question: `Where did she kick the ball on day ${index}`,
             answers: ['In the park', 'On the chair', 'In the sea', 'At school'],
             correctAnswer: 'In the park',
             imageKeyword: 'ball park',
           }
-        })
-      )
+        }
+        if (index < plan.questions + plan.gaps) {
+          return {
+            question: `She ______ the ball on day ${index}`,
+            answers: [`kicks ${index}`, 'kick', 'kicking', 'kicked'],
+            correctAnswer: `Kicks ${index}`,
+            imageKeyword: 'girl ball',
+          }
+        }
+        return {
+          question: `Where is the ball in picture ${index}`,
+          answers: ['In the park', 'On the chair', 'In the sea', 'At school', 'In the park'],
+          correctAnswer: 'in the park',
+          imageKeyword: 'ball park',
+        }
+      })
+      return `Here is the worksheet:\n\`\`\`json\n${JSON.stringify(items)}\n\`\`\``
     })
     const items = await assessLessonQuestions({
       target: 'worksheet',
@@ -245,7 +242,7 @@ describe('lesson conversion', () => {
       generate,
       questions: [kicking],
     })
-    expect(generate).toHaveBeenCalledTimes(3)
+    expect(generate).toHaveBeenCalledTimes(1)
     expect(String(generate.mock.calls)).toContain('Past Simple')
     expect(String(generate.mock.calls)).toContain('Create exactly')
     const questions = items.filter((item) => item.activity === 'question')

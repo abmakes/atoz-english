@@ -1,6 +1,6 @@
 import {
   createTeacherFirstPrompt,
-  parseGeneratedQuestions,
+  generatedQuestionSchema,
   type GeneratedQuestionText,
 } from '@/lib/ai/quiz-generation'
 import type { GenerationBrief } from '@/lib/ai/generation-brief'
@@ -23,8 +23,9 @@ const QUESTION_START =
 
 /**
  * The create form posts to /api/ai/generate-questions. That route calls
- * createTeacherFirstPrompt and parseGeneratedQuestions. A worksheet uses
- * those same two functions, once for each exercise.
+ * createTeacherFirstPrompt and parses the same question object. A worksheet
+ * uses that one call for the whole page, so the preview does not time out
+ * on three separate generations.
  */
 export async function generateWorksheetWithQuizApi(input: {
   level: CefrLevelId
@@ -43,30 +44,38 @@ export async function generateWorksheetWithQuizApi(input: {
       count: 1,
       shape,
       note: 'Write one new item. Do not copy the teacher example.',
+      useShapes: true,
     })
     return [item]
   }
 
   const plan = planWorksheetLayout()
-  const questions = await writeBatch(input, {
-    activity: 'question',
-    count: plan.questions,
-    shape: 'Wh-question',
-    note: 'Each item is a real question a student can answer in writing. Do not turn a statement into a question by adding a question mark.',
-  })
-  const gaps = await writeBatch(input, {
-    activity: 'gap',
-    count: plan.gaps,
-    shape: 'Fill the gap',
-    note: 'Each question field is one sentence with ______ for the missing word. Give four different answers.',
-  })
-  const choices = await writeBatch(input, {
-    activity: 'choice',
-    count: plan.choices,
-    shape: 'Wh-question',
-    note: 'Each item is a different question about a picture. Give four different answers. Do not repeat a question.',
-  })
-  return [...questions, ...gaps, ...choices]
+  const total = plan.questions + plan.gaps + plan.choices
+  const note = [
+    `Return exactly ${total} items, in this order.`,
+    `Items 1 to ${plan.questions} are real questions and end with ?.`,
+    `Items ${plan.questions + 1} to ${plan.questions + plan.gaps} are sentences with ______ for the missing word.`,
+    `Items ${plan.questions + plan.gaps + 1} to ${total} are different picture questions and end with ?.`,
+    'Every item has four different answers. Do not repeat a question.',
+  ].join(' ')
+  let rejection = ''
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const written = await input.generate(
+      promptFor(input, { count: total, shape: 'Wh-question', note, useShapes: false }, rejection)
+    )
+    try {
+      const items = readQuestions(written, total)
+      return [
+        ...acceptBatch(items.slice(0, plan.questions), { activity: 'question' }, input.questions),
+        ...acceptBatch(items.slice(plan.questions, plan.questions + plan.gaps), { activity: 'gap' }, input.questions),
+        ...acceptBatch(items.slice(plan.questions + plan.gaps), { activity: 'choice' }, input.questions),
+      ]
+    } catch (error) {
+      rejection = error instanceof Error ? error.message : 'The draft was not usable.'
+      if (attempt === 1) throw error
+    }
+  }
+  throw new Error('The AI returned an invalid question format.')
 }
 
 function activityForShape(shape: QuestionShapeLabel): 'question' | 'gap' | 'choice' {
@@ -95,13 +104,14 @@ async function writeBatch(
     count: number
     shape: QuestionShapeLabel
     note: string
+    useShapes: boolean
   }
 ): Promise<PracticeDraft[]> {
   let rejection = ''
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const written = await input.generate(promptFor(input, batch, rejection))
     try {
-      return acceptBatch(parseGeneratedQuestions(written, batch.count), batch, input.questions)
+      return acceptBatch(readQuestions(written, batch.count), batch, input.questions)
     } catch (error) {
       rejection = error instanceof Error ? error.message : 'The draft was not usable.'
       if (attempt === 1) throw error
@@ -122,14 +132,17 @@ function promptFor(
     count: number
     shape: QuestionShapeLabel
     note: string
+    useShapes: boolean
   },
   rejection: string
 ): string {
-  const examples = input.questions.slice(0, 4).map((question) => ({
-    shape: batch.shape,
-    question: question.question.replace(/\s+/g, ' ').trim().slice(0, 240),
-    answerStyle: defaultAnswerStyleForShape(batch.shape),
-  }))
+  const examples = batch.useShapes
+    ? input.questions.slice(0, 4).map((question) => ({
+        shape: batch.shape,
+        question: question.question.replace(/\s+/g, ' ').trim().slice(0, 240),
+        answerStyle: defaultAnswerStyleForShape(batch.shape),
+      }))
+    : []
   const brief: GenerationBrief = {
     level: input.level,
     topics: [],
@@ -159,6 +172,56 @@ function promptFor(
   return createTeacherFirstPrompt({ brief, selection })
 }
 
+function readQuestions(raw: string, expected: number): GeneratedQuestionText[] {
+  const start = raw.indexOf('[')
+  const end = raw.lastIndexOf(']')
+  if (start < 0 || end <= start) {
+    throw new SyntaxError('The AI returned an invalid question format.')
+  }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw.slice(start, end + 1))
+  } catch {
+    throw new SyntaxError('The AI returned an invalid question format.')
+  }
+  if (!Array.isArray(parsed)) {
+    throw new SyntaxError('The AI returned an invalid question format.')
+  }
+  const items = parsed.map((item) => generatedQuestionSchema.parse(normalizeItem(item)))
+  if (items.length !== expected) {
+    throw new Error(`The AI returned ${items.length} questions instead of ${expected}.`)
+  }
+  return items
+}
+
+function normalizeItem(raw: unknown): GeneratedQuestionText {
+  const record = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
+  const question = String(record.question ?? record.line ?? '').trim()
+  const seen = new Set<string>()
+  const answers = (Array.isArray(record.answers) ? record.answers : [])
+    .map((answer) => String(answer).trim())
+    .filter((answer) => {
+      const key = answer.toLowerCase()
+      if (!answer || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  let correct = String(record.correctAnswer ?? '').trim()
+  const match = answers.find((answer) => answer.toLowerCase() === correct.toLowerCase())
+  if (match) correct = match
+  else if (correct) answers.unshift(correct)
+  const four = answers.includes(correct) ? [correct, ...answers.filter((answer) => answer !== correct)] : answers
+  if (four.length < 4) {
+    throw new Error('The AI returned duplicate answers.')
+  }
+  return {
+    question,
+    answers: four.slice(0, 4),
+    correctAnswer: correct,
+    imageKeyword: typeof record.imageKeyword === 'string' ? record.imageKeyword : undefined,
+  }
+}
+
 function acceptBatch(
   items: GeneratedQuestionText[],
   batch: { activity: 'question' | 'gap' | 'choice' },
@@ -167,7 +230,6 @@ function acceptBatch(
   const seen = new Set<string>()
   const pictured = sources.filter((source) => source.imageUrl)
   return items.map((item, index) => {
-    const answers = distinctAnswers(item)
     const line = lineFor(batch.activity, item)
     const key = line.toLowerCase()
     if (seen.has(key)) {
@@ -178,7 +240,7 @@ function acceptBatch(
     return {
       activity: batch.activity,
       line,
-      choices: batch.activity === 'question' ? [] : answers,
+      choices: batch.activity === 'question' ? [] : item.answers,
       correctAnswer: item.correctAnswer,
       reason: 'Written by the quiz question generator.',
       sourceQuestion: item.question,
@@ -187,18 +249,6 @@ function acceptBatch(
       questionId: picture?.id,
     }
   })
-}
-
-function distinctAnswers(item: GeneratedQuestionText): string[] {
-  const answers = item.answers.map((answer) => answer.trim()).filter(Boolean)
-  const keys = answers.map((answer) => answer.toLowerCase())
-  if (new Set(keys).size !== answers.length) {
-    throw new Error('The AI returned duplicate answers.')
-  }
-  if (!answers.some((answer) => answer === item.correctAnswer.trim())) {
-    throw new Error('The AI returned an answer key that is not one of the choices.')
-  }
-  return answers
 }
 
 function lineFor(activity: 'question' | 'gap' | 'choice', item: GeneratedQuestionText): string {
