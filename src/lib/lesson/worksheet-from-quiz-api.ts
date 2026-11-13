@@ -64,12 +64,7 @@ export async function generateWorksheetWithQuizApi(input: {
       promptFor(input, { count: total, shape: 'Wh-question', note, useShapes: false }, rejection)
     )
     try {
-      const items = readQuestions(written, total)
-      return [
-        ...acceptBatch(items.slice(0, plan.questions), { activity: 'question' }, input.questions),
-        ...acceptBatch(items.slice(plan.questions, plan.questions + plan.gaps), { activity: 'gap' }, input.questions),
-        ...acceptBatch(items.slice(plan.questions + plan.gaps), { activity: 'choice' }, input.questions),
-      ]
+      return arrangePage(readQuestions(written, total), plan, input.questions, attempt + 1)
     } catch (error) {
       rejection = error instanceof Error ? error.message : 'The draft was not usable.'
       if (attempt === 1) throw error
@@ -222,6 +217,73 @@ function normalizeItem(raw: unknown): GeneratedQuestionText {
   }
 }
 
+function reportWorksheetGeneration(entry: {
+  reason: string
+  lines: string[]
+  attempt?: number
+  kept?: { questions: number; gaps: number; choices: number }
+}) {
+  console.error(JSON.stringify({ source: 'worksheet-generation', ...entry }))
+}
+
+function arrangePage(
+  items: GeneratedQuestionText[],
+  plan: { questions: number; gaps: number; choices: number },
+  sources: PracticeSource[],
+  attempt: number
+): PracticeDraft[] {
+  const questions: GeneratedQuestionText[] = []
+  const gaps: GeneratedQuestionText[] = []
+  const rejected: string[] = []
+  const seen = new Set<string>()
+  for (const item of items) {
+    const gapLine = gapLineFor(item)
+    const asked = finishWorksheetSentence(item.question)
+    const key = (gapLine ?? asked).toLowerCase()
+    if (seen.has(key)) {
+      rejected.push(gapLine ?? asked)
+      continue
+    }
+    seen.add(key)
+    if (gapLine) gaps.push({ ...item, question: gapLine })
+    else if (asked.endsWith('?')) questions.push({ ...item, question: asked })
+    else rejected.push(asked)
+  }
+  if (rejected.length > 0) {
+    reportWorksheetGeneration({
+      reason: 'sentence-instead-of-question',
+      lines: rejected,
+      attempt,
+      kept: { questions: questions.length, gaps: gaps.length, choices: 0 },
+    })
+  }
+  if (questions.length < plan.questions + plan.choices || gaps.length < plan.gaps) {
+    const quoted = rejected.slice(0, 6).map((line) => `"${line}"`).join('; ')
+    throw new Error(
+      quoted
+        ? `The AI returned a sentence instead of a question: ${quoted}`
+        : `The AI returned ${questions.length} questions and ${gaps.length} gaps, which does not fill the page.`
+    )
+  }
+  return [
+    ...acceptBatch(questions.slice(0, plan.questions), { activity: 'question' }, sources),
+    ...acceptBatch(gaps.slice(0, plan.gaps), { activity: 'gap' }, sources),
+    ...acceptBatch(questions.slice(plan.questions, plan.questions + plan.choices), { activity: 'choice' }, sources),
+  ]
+}
+
+function gapLineFor(item: GeneratedQuestionText): string | null {
+  if (item.question.includes('______')) return finishWorksheetSentence(item.question)
+  if (finishWorksheetSentence(item.question).endsWith('?')) return null
+  const blanked = blankTheAnswer(item.question, item.correctAnswer)
+  if (!blanked.includes('______')) return null
+  reportWorksheetGeneration({
+    reason: 'sentence-used-as-gap',
+    lines: [finishWorksheetSentence(blanked)],
+  })
+  return finishWorksheetSentence(blanked)
+}
+
 function acceptBatch(
   items: GeneratedQuestionText[],
   batch: { activity: 'question' | 'gap' | 'choice' },
@@ -263,7 +325,8 @@ function lineFor(activity: 'question' | 'gap' | 'choice', item: GeneratedQuestio
   }
   const line = finishWorksheetSentence(item.question)
   if (!line.endsWith('?')) {
-    throw new Error('The AI returned a sentence instead of a question.')
+    reportWorksheetGeneration({ reason: 'sentence-instead-of-question', lines: [line] })
+    throw new Error(`The AI returned a sentence instead of a question: "${line}"`)
   }
   return line
 }

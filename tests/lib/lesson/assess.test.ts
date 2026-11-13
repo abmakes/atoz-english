@@ -258,6 +258,59 @@ describe('lesson conversion', () => {
     expect(items.some((item) => item.line.includes('giraffe'))).toBe(false)
     expect(items[0]?.reason).toBe('Written by the quiz question generator.')
   })
+
+  it('logs a sentence that was returned instead of a question', async () => {
+    const plan = planWorksheetLayout()
+    const logged: string[] = []
+    const spy = vi.spyOn(console, 'error').mockImplementation((message?: unknown) => {
+      logged.push(String(message))
+    })
+    const generate = vi.fn(async (prompt: string) => {
+      const count = Number(prompt.match(/Create exactly (\d+) multiple-choice/)?.[1])
+      const items = Array.from({ length: count }, (_, index) => {
+        if (index === 0) {
+          return {
+            question: 'The dog is in the park.',
+            answers: ['Yes', 'No', 'Maybe', 'Soon'],
+            correctAnswer: 'Yes',
+          }
+        }
+        if (index < plan.questions) {
+          return {
+            question: `Where did she kick the ball on day ${index}`,
+            answers: ['In the park', 'On the chair', 'In the sea', 'At school'],
+            correctAnswer: 'In the park',
+          }
+        }
+        if (index < plan.questions + plan.gaps) {
+          return {
+            question: `She ______ the ball on day ${index}`,
+            answers: [`kicks ${index}`, 'kick', 'kicking', 'kicked'],
+            correctAnswer: `kicks ${index}`,
+          }
+        }
+        return {
+          question: `Where is the ball in picture ${index}`,
+          answers: ['In the park', 'On the chair', 'In the sea', 'At school'],
+          correctAnswer: 'In the park',
+        }
+      })
+      return JSON.stringify(items)
+    })
+    await expect(
+      assessLessonQuestions({
+        target: 'worksheet',
+        scope: 'set',
+        level: 'A1',
+        grammar: ['Past Simple'],
+        generate,
+        questions: [kicking],
+      })
+    ).rejects.toThrow('The dog is in the park.')
+    expect(logged.some((line) => line.includes('sentence-instead-of-question') && line.includes('The dog is in the park.'))).toBe(true)
+    expect(generate.mock.calls[1]?.[0]).toContain('The dog is in the park.')
+    spy.mockRestore()
+  })
 })
 
 describe('lesson review gate', () => {
