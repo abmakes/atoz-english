@@ -5,7 +5,7 @@ import { requireAuth, isUnauthorized } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { finishWorksheetSentence } from '@/lib/lesson/assess'
 
-const worksheetActivitySchema = z.enum(['gap', 'question', 'choice', 'rewrite', 'matching', 'practice'])
+const worksheetActivitySchema = z.enum(['gap', 'question', 'choice', 'rewrite', 'circle', 'matching', 'practice'])
 
 const worksheetItemSchema = z.object({
   questionId: z.string().optional(),
@@ -14,9 +14,12 @@ const worksheetItemSchema = z.object({
   choices: z.array(z.string().max(120)).max(4),
   activity: worksheetActivitySchema.optional(),
   exercise: z.string().max(80).optional(),
-  instruction: z.string().max(160).optional(),
+  instruction: z.string().max(200).optional(),
   bank: z.string().max(60).optional(),
   answer: z.string().max(200).optional(),
+  example: z.boolean().optional(),
+  warning: z.string().max(300).optional(),
+  held: z.boolean().optional(),
 })
 
 const sentenceSchema = z.object({
@@ -28,7 +31,7 @@ const sentenceSchema = z.object({
 const commitSchema = z.discriminatedUnion('target', [
   z.object({
     target: z.literal('worksheet'),
-    items: z.array(worksheetItemSchema).min(1).max(40),
+    items: z.array(worksheetItemSchema).max(40),
   }),
   z.object({
     target: z.literal('sentence-builder'),
@@ -43,9 +46,12 @@ const storedWorksheetSchema = z.object({
   choices: z.array(z.string()).optional(),
   activity: worksheetActivitySchema.optional(),
   exercise: z.string().max(80).optional(),
-  instruction: z.string().max(160).optional(),
+  instruction: z.string().max(200).optional(),
   bank: z.string().max(60).optional(),
   answer: z.string().max(200).optional(),
+  example: z.boolean().optional(),
+  warning: z.string().max(300).optional(),
+  held: z.boolean().optional(),
 })
 
 const storedSentenceSchema = z.object({
@@ -67,6 +73,9 @@ function readWorksheetItems(value: unknown) {
     instruction: item.instruction,
     bank: item.bank,
     answer: item.answer,
+    example: item.example,
+    warning: item.warning,
+    held: item.held,
   }))
 }
 

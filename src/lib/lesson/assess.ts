@@ -3,7 +3,7 @@ import { auditQuestion } from '@/lib/lexicon/validator'
 import type { LanguageAuditIssue } from '@/lib/lexicon/types'
 import type { CefrLevelId } from '@/lib/taxonomy/quiz-taxonomy'
 import { QuestionType } from '@/types/question_types'
-import { generateWorksheet } from '@/lib/lesson/worksheet-generation'
+import { generateWorksheet, type WorksheetRunReport } from '@/lib/lesson/worksheet-generation'
 import {
   finishDraft,
   finishWorksheetSentence,
@@ -42,6 +42,8 @@ export interface LessonAssessmentItem {
   exercise?: string
   instruction?: string
   bank?: string
+  example?: boolean
+  warning?: string
   languageWarnings: LanguageAuditIssue[]
 }
 
@@ -54,6 +56,11 @@ export interface WorksheetItem {
   exercise?: string
   instruction?: string
   bank?: string
+  example?: boolean
+  /** Shown in the editor when the student-style check disagreed. Not printed. */
+  warning?: string
+  /** Left off the printed page until the teacher puts it back. */
+  held?: boolean
   /** Answer key for the teacher. Never printed on the student sheet. */
   answer?: string
 }
@@ -75,6 +82,9 @@ export interface LessonReviewRow {
   exercise?: string
   instruction?: string
   bank?: string
+  example?: boolean
+  warning?: string
+  held?: boolean
 }
 
 const BLANK = /_{3,}/
@@ -314,6 +324,8 @@ function practiceItem(draft: PracticeDraft, level: CefrLevelId): LessonAssessmen
       exercise: finished.exercise,
       instruction: finished.instruction,
       bank: finished.bank,
+      example: finished.example,
+      warning: finished.warning,
       languageWarnings: [],
     },
     level
@@ -342,12 +354,17 @@ async function assessWorksheet(input: {
   title?: string
   description?: string
   scope?: 'set' | 'item'
+  sourceText?: string
+  sections?: Array<'choice' | 'gap' | 'circle' | 'rewrite'>
+  solve?: boolean
+  onReport?: (report: WorksheetRunReport) => void | Promise<void>
   generate?: (prompt: string) => Promise<string>
 }): Promise<LessonAssessmentItem[]> {
   const practiceInput = {
     grammar: input.grammar,
     title: input.title,
     description: input.description,
+    sourceText: input.sourceText,
     questions: input.questions.map(sourcePractice),
   }
   if (input.generate) {
@@ -356,6 +373,9 @@ async function assessWorksheet(input: {
       level: input.level,
       generate: input.generate,
       scope: input.scope,
+      sections: input.sections,
+      solve: input.solve,
+      onReport: input.onReport,
     })
     return drafts.map((draft) => practiceItem(draft, input.level))
   }
@@ -398,6 +418,10 @@ export async function assessLessonQuestions(input: {
   title?: string
   description?: string
   scope?: 'set' | 'item'
+  sourceText?: string
+  sections?: Array<'choice' | 'gap' | 'circle' | 'rewrite'>
+  solve?: boolean
+  onReport?: (report: WorksheetRunReport) => void | Promise<void>
   generate?: (prompt: string) => Promise<string>
 }): Promise<LessonAssessmentItem[]> {
   if (input.target === 'worksheet') {
@@ -481,6 +505,9 @@ export function commitLessonSelection(
         ...(row.exercise ? { exercise: row.exercise } : {}),
         ...(row.instruction ? { instruction: row.instruction } : {}),
         ...(row.bank ? { bank: row.bank } : {}),
+        ...(row.example ? { example: true } : {}),
+        ...(row.warning ? { warning: row.warning } : {}),
+        ...(row.held ? { held: true } : {}),
         ...(row.correctAnswer?.trim() ? { answer: row.correctAnswer.trim() } : {}),
       })),
     }

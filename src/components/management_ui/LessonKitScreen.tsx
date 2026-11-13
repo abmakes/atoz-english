@@ -147,6 +147,7 @@ export default function LessonKitScreen({
             title: quiz.title,
             description: quiz.description ?? '',
             scope: 'set',
+            quizId: quiz.id,
             questions: quiz.questions.map((question) => ({
               id: question.id,
               question: question.question,
@@ -164,6 +165,37 @@ export default function LessonKitScreen({
         if (!response.ok || !payload.items) {
           throw new Error(payload.error || 'Failed to check these questions.')
         }
+        if (nextTarget === 'worksheet') {
+          const selection = commitLessonSelection(
+            'worksheet',
+            payload.items.map((item) => ({
+              status: 'approved' as const,
+              questionId: item.questionId,
+              line: item.line,
+              choices: item.choices,
+              imageUrl: item.imageUrl,
+              correctAnswer: item.correctAnswer,
+              activity: item.activity,
+              exercise: item.exercise,
+              instruction: item.instruction,
+              bank: item.bank,
+              example: item.example,
+              warning: item.warning,
+            }))
+          )
+          if (!selection.ok) throw new Error(selection.message)
+          const saved = await fetch(`/api/quizzes/${quiz.id}/lesson`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target: 'worksheet', items: selection.worksheetItems }),
+          })
+          if (!saved.ok) {
+            const body = (await saved.json().catch(() => ({}))) as { error?: string }
+            throw new Error(body.error || 'Failed to save the worksheet.')
+          }
+          router.push(`/quizzes/${quiz.id}/print`)
+          return
+        }
         setReviewQuestions(payload.items.map(toReviewQuestion))
         setView('review')
       } catch (checkError) {
@@ -174,7 +206,7 @@ export default function LessonKitScreen({
         })
       }
     },
-    [addToast, quiz]
+    [addToast, quiz, router]
   )
 
   useEffect(() => {

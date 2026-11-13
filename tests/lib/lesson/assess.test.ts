@@ -243,29 +243,30 @@ describe('lesson conversion', () => {
       generate,
       questions: pictured,
     })
-    const plan = planWorksheetLayout('A1')
+    const used = planWorksheetLayout('A1', { choices: 2, gap: true, rewrite: true })
     expect(generate).toHaveBeenCalledTimes(1)
     const prompt = String(generate.mock.calls[0])
     expect(prompt).toContain('exactly one correct answer')
     expect(prompt).toContain('Comparatives & Superlatives')
     expect(prompt).toContain('The dog is bigger than the cat.')
-    expect(items.map((item) => item.activity)).toEqual([
-      ...Array(plan.choices).fill('choice'),
-      ...Array(plan.gaps).fill('gap'),
-      ...Array(plan.sentences).fill('rewrite'),
-    ])
+    expect(prompt).not.toContain('"pictures"')
     const choices = items.filter((item) => item.activity === 'choice')
-    expect(choices[0]?.imageUrl).toBe('/images/sentence-builder/sam-dog.jpg')
-    expect(choices.every((item) => item.line.endsWith('?'))).toBe(true)
-    expect(choices.every((item) => item.choices.includes(item.correctAnswer))).toBe(true)
-    expect(choices.some((item) => item.choices[0] !== item.correctAnswer)).toBe(true)
     const gaps = items.filter((item) => item.activity === 'gap')
+    const sentences = items.filter((item) => item.activity === 'rewrite')
+    expect(choices).toHaveLength(2)
+    expect(gaps).toHaveLength(used.gaps)
+    expect(sentences).toHaveLength(used.sentences)
+    expect(items[0]?.activity).toBe('choice')
+    expect(choices[0]?.line).toBe('The dog is ______ than the cat.')
+    expect(choices[0]?.imageUrl).toBe('/images/sentence-builder/sam-dog.jpg')
+    expect(choices[0]?.reason).toBe('Kept with the picture you chose.')
+    expect(choices[0]?.example).toBe(true)
+    expect(choices[0]?.choices.map((choice) => choice.toLowerCase())).toContain('bigger')
     expect(gaps.every((item) => item.bank === item.correctAnswer)).toBe(true)
     expect(gaps.every((item) => item.instruction?.includes('box'))).toBe(true)
-    const sentences = items.filter((item) => item.activity === 'rewrite')
     expect(sentences.every((item) => item.line.includes(' / '))).toBe(true)
     expect(sentences.every((item) => item.correctAnswer.endsWith('.'))).toBe(true)
-    expect(sentences[0]?.line.split(' / ').sort()).toEqual(
+    expect(sentences[0]?.line.split(' / ').filter((word) => word !== '.').sort()).toEqual(
       sentences[0]?.correctAnswer.replace(/\.$/, '').split(' ').map((word, index) => (index === 0 ? word.toLowerCase() : word)).sort()
     )
   })
@@ -290,23 +291,39 @@ describe('lesson conversion', () => {
     })
     const generate = vi.fn(async () =>
       worksheetReply({
-        pictures: [
-          { pictureId: null, question: 'Which book is thicker, the red one or the blue one?', answers: ['The red one', 'The blue one', 'Both'], correctAnswer: 'The red one' },
-          { pictureId: null, question: 'Is your backpack heavier than your friend\'s?', answers: ['Yes', 'No', 'Maybe'], correctAnswer: 'Yes' },
-          { pictureId: null, question: 'The dog is in the park.', answers: ['Yes', 'No', 'Maybe'], correctAnswer: 'Yes' },
+        gaps: [
+          { sentence: "Your backpack is ______ than your friend's.", answer: 'heavier', base: 'heavy' },
+          { sentence: 'Which subject do you find ______?', answer: 'interesting', base: 'interest' },
         ],
       })
     )
     await expect(
       assessLessonQuestions({ target: 'worksheet', scope: 'set', level: 'A1', generate, questions: pictured })
-    ).rejects.toThrow('picture questions were usable')
+    ).rejects.toThrow('gap sentences were usable')
     expect(generate).toHaveBeenCalledTimes(2)
     const report = logged.find((line) => line.includes('worksheet-generation')) ?? ''
-    expect(report).toContain('needs-picture')
     expect(report).toContain('subjective')
-    expect(report).toContain('sentence-instead-of-question')
-    expect(String(generate.mock.calls[1])).toContain('the red one or the blue one')
+    expect(String(generate.mock.calls[1])).toContain('Your backpack')
     spy.mockRestore()
+  })
+
+  it('flags a line when a student-style check disagrees, and skips the picture the teacher chose', async () => {
+    const generate = vi.fn(async (prompt: string) => {
+      if (prompt.includes('You are a student')) return JSON.stringify({ answers: { '4': 'tiny' }, ambiguous: [] })
+      return worksheetReply()
+    })
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A1',
+      solve: true,
+      generate,
+      questions: pictured,
+    })
+    expect(generate).toHaveBeenCalledTimes(2)
+    const gaps = items.filter((item) => item.activity === 'gap')
+    expect(gaps[1]?.warning).toContain('tiny')
+    expect(items.filter((item) => item.activity === 'choice').every((item) => !item.warning)).toBe(true)
   })
 })
 

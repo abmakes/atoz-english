@@ -1,14 +1,34 @@
-export const WORKSHEET_ACTIVITIES = ['gap', 'question', 'choice', 'rewrite', 'matching', 'practice'] as const
+export const WORKSHEET_ACTIVITIES = ['gap', 'question', 'choice', 'rewrite', 'circle', 'matching', 'practice'] as const
 
-/** Easiest first: picture choices, then gaps with a word bank, then whole sentences. */
+/** Easiest first. Letters are assigned again once the page knows which sections it has. */
 export const EXERCISE_TITLE = {
   choice: 'A. Look and circle the answer.',
   gap: 'B. Complete the sentences.',
+  circle: 'B. Circle the correct word.',
   rewrite: 'C. Write the sentences.',
   question: 'C. Answer the questions.',
 } as const
 
-export const EXERCISE_ORDER: Record<string, number> = { choice: 0, gap: 1, rewrite: 2, question: 2 }
+export const EXERCISE_ORDER: Record<string, number> = { choice: 0, gap: 1, circle: 2, rewrite: 3, question: 3 }
+
+const SECTION_NAME: Record<string, string> = {
+  choice: 'Look and circle the answer.',
+  gap: 'Complete the sentences.',
+  circle: 'Circle the correct word.',
+  rewrite: 'Write the sentences.',
+  question: 'Answer the questions.',
+}
+
+/** A, B, C from the sections that are actually on the page. */
+export function labelWorksheetSections<T extends { activity: string; exercise?: string }>(items: T[]): T[] {
+  const letters = ['A', 'B', 'C', 'D']
+  const title = new Map<string, string>()
+  for (const item of items) {
+    if (title.has(item.activity) || !(item.activity in SECTION_NAME)) continue
+    title.set(item.activity, `${letters[title.size] ?? 'D'}. ${SECTION_NAME[item.activity]}`)
+  }
+  return items.map((item) => ({ ...item, exercise: title.get(item.activity) ?? item.exercise }))
+}
 
 /**
  * Scaffolding follows the Cambridge young learner bands. Starters and Movers
@@ -35,11 +55,26 @@ export function exerciseInstruction(activity: string, scaffold = worksheetScaffo
   }
   if (activity === 'rewrite') {
     return scaffold.sentences === 'jumbled'
-      ? 'Put the words in order to make a sentence.'
-      : 'Use the words to write a full sentence.'
+      ? 'Put the words in order to make a sentence. The first one is an example.'
+      : 'Use the words to write a full sentence. The first one is an example.'
   }
+  if (activity === 'circle') return 'Circle the correct word. The first one is an example.'
   if (activity === 'question') return 'Write the answer on the line.'
   return ''
+}
+
+/**
+ * Picture questions stay with the quiz, because the teacher already chose the
+ * photo. A sheet with no photos uses a word box, circling the word, and sentences.
+ */
+export function suggestWorksheetSections(
+  pictureCount: number,
+  grammar: string[] = []
+): Array<'choice' | 'gap' | 'circle' | 'rewrite'> {
+  const text = grammar.join(' ')
+  if (pictureCount > 0) return ['choice', 'gap', 'rewrite']
+  if (/comparative|superlative|adjective/i.test(text)) return ['gap', 'rewrite']
+  return ['gap', 'circle', 'rewrite']
 }
 
 /**
@@ -63,6 +98,7 @@ function exerciseBlockMm(count: number, rowMm: number): number {
 export interface WorksheetPlan {
   choices: number
   gaps: number
+  circles: number
   sentences: number
 }
 
@@ -72,26 +108,59 @@ export function worksheetSheetMm(counts: WorksheetPlan, wordBank = true): number
     (wordBank && counts.gaps > 0 ? WORKSHEET_BANK_MM : 0) +
     exerciseBlockMm(counts.choices, WORKSHEET_ROW_MM.choice) +
     exerciseBlockMm(counts.gaps, WORKSHEET_ROW_MM.gap) +
+    exerciseBlockMm(counts.circles, WORKSHEET_ROW_MM.gap) +
     exerciseBlockMm(counts.sentences, WORKSHEET_ROW_MM.sentence)
   )
 }
 
+export interface WorksheetLayoutOptions {
+  /** Quiz photos the teacher already matched. Zero on a sheet with no pictures. */
+  choices?: number
+  gap?: boolean
+  circle?: boolean
+  rewrite?: boolean
+}
+
 /**
- * Six picture choices and eight gaps are fixed. The sentence exercise takes
- * whatever is left on the page, up to ten lines.
+ * With no options, six picture rows and eight gaps stay fixed and the sentence
+ * exercise takes the rest. With options, each requested section gets as many
+ * rows as still fit on the page.
  */
-export function planWorksheetLayout(level?: string): WorksheetPlan & { heightMm: number } {
+export function planWorksheetLayout(
+  level?: string,
+  options?: WorksheetLayoutOptions
+): WorksheetPlan & { heightMm: number } {
   const wordBank = worksheetScaffold(level).bank !== 'none'
   const budget = WORKSHEET_PAGE_MM - WORKSHEET_PAGE_SAFETY_MM
-  for (const gaps of [8, 7, 6, 5]) {
-    for (let sentences = 10; sentences >= 5; sentences -= 1) {
-      const counts = { choices: 6, gaps, sentences }
-      const heightMm = worksheetSheetMm(counts, wordBank)
-      if (heightMm <= budget) return { ...counts, heightMm }
+  if (!options) {
+    for (const gaps of [8, 7, 6, 5]) {
+      for (let sentences = 10; sentences >= 5; sentences -= 1) {
+        const counts = { choices: 6, gaps, circles: 0, sentences }
+        const heightMm = worksheetSheetMm(counts, wordBank)
+        if (heightMm <= budget) return { ...counts, heightMm }
+      }
+    }
+    const counts = { choices: 6, gaps: 5, circles: 0, sentences: 5 }
+    return { ...counts, heightMm: worksheetSheetMm(counts, wordBank) }
+  }
+  const choices = Math.min(6, Math.max(0, options.choices ?? 0))
+  const gapChoices = options.gap === false ? [0] : [8, 7, 6, 5, 4]
+  const circleChoices = options.circle ? [6, 5, 4] : [0]
+  const sentenceChoices = options.rewrite === false ? [0] : [10, 9, 8, 7, 6, 5, 4]
+  let best = { choices, gaps: gapChoices[gapChoices.length - 1], circles: 0, sentences: 0, heightMm: 0 }
+  for (const gaps of gapChoices) {
+    for (const circles of circleChoices) {
+      for (const sentences of sentenceChoices) {
+        const counts = { choices, gaps, circles, sentences }
+        const heightMm = worksheetSheetMm(counts, wordBank && gaps > 0)
+        const rows = gaps + circles + sentences
+        const bestRows = best.gaps + best.circles + best.sentences
+        if (heightMm <= budget && rows >= bestRows) best = { ...counts, heightMm }
+      }
     }
   }
-  const counts = { choices: 6, gaps: 5, sentences: 5 }
-  return { ...counts, heightMm: worksheetSheetMm(counts, wordBank) }
+  if (best.heightMm === 0) best.heightMm = worksheetSheetMm(best, wordBank && best.gaps > 0)
+  return best
 }
 
 export type WorksheetActivity = (typeof WORKSHEET_ACTIVITIES)[number]
@@ -117,6 +186,10 @@ export interface PracticeDraft {
   instruction?: string
   /** The word this gap puts in the word bank: the answer, or its base form. */
   bank?: string
+  /** The first row of a section, with the answer shown. */
+  example?: boolean
+  /** Set when the student-style check disagreed with the answer key. */
+  warning?: string
 }
 
 const QUESTION_START =
@@ -137,6 +210,14 @@ export function finishWorksheetSentence(raw: string): string {
   if (/^(Do not|Don't|Does not|Doesn't)\b/.test(body)) return `${body}.`
   const question = end.includes('?') || QUESTION_START.test(body)
   return question ? `${body}?` : `${body}.`
+}
+
+/** A short choice keeps its capital and no full stop. A long choice is a sentence. */
+export function finishChoiceLabel(raw: string): string {
+  const trimmed = raw.replace(/[ \t]{2,}/g, ' ').trim()
+  if (!trimmed) return ''
+  if (trimmed.split(/\s+/).length > 5 || /[.?!]$/.test(trimmed)) return finishWorksheetSentence(trimmed)
+  return /^[a-z]/.test(trimmed) ? trimmed[0].toUpperCase() + trimmed.slice(1) : trimmed
 }
 
 export function isWorksheetActivity(value: string | undefined): value is WorksheetActivity {

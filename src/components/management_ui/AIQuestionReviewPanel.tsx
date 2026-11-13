@@ -28,7 +28,7 @@ export interface ReviewableQuestion extends Question {
   sourceQuestion?: string
   sourceAnswers?: string[]
   assessmentReason?: string
-  activity?: 'gap' | 'question' | 'choice' | 'rewrite' | 'matching' | 'practice'
+  activity?: 'gap' | 'question' | 'choice' | 'rewrite' | 'circle' | 'matching' | 'practice'
   exercise?: string
   instruction?: string
   bank?: string

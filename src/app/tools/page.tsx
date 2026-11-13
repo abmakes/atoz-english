@@ -2,9 +2,16 @@
 
 import Link from 'next/link'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
-import { Clapperboard, Images, Timer, Shuffle, Smile } from 'lucide-react'
+import { Clapperboard, FileText, Images, Timer, Shuffle, Smile } from 'lucide-react'
 
 const TOOLS = [
+  {
+    slug: 'worksheet',
+    title: 'Worksheet',
+    description: 'Write a one-page grammar worksheet from notes or a pasted page, with no quiz required.',
+    icon: FileText,
+    available: true,
+  },
   {
     slug: 'story-creator',
     title: 'Story Creator',

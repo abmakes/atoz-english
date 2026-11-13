@@ -5,24 +5,47 @@ import { levelLabelFromId, type CefrLevelId } from '@/lib/taxonomy/quiz-taxonomy
 import {
   EXERCISE_TITLE,
   exerciseInstruction,
+  finishChoiceLabel,
   finishWorksheetSentence,
+  labelWorksheetSections,
   planWorksheetLayout,
+  suggestWorksheetSections,
   worksheetScaffold,
   type PracticeDraft,
   type PracticeSource,
 } from '@/lib/lesson/worksheet-practice'
 
-type Section = 'choice' | 'gap' | 'rewrite'
+type Section = 'choice' | 'gap' | 'rewrite' | 'circle'
 type Counts = Record<Section, number>
+
+export interface WorksheetSolverNote {
+  skipped: boolean
+  disagreements: { number: number; line: string; expected: string; got: string }[]
+  ambiguous: number[]
+  error?: string
+}
+
+export interface WorksheetRunReport {
+  status: 'ok' | 'failed'
+  rejected: { reason: string; line: string }[]
+  solver: WorksheetSolverNote
+  error: string
+}
 
 interface GenerateInput {
   level: CefrLevelId
   grammar?: string[]
   title?: string
   description?: string
+  /** Pasted page or notes. Not fetched from a URL. */
+  sourceText?: string
   questions: PracticeSource[]
   generate: (prompt: string) => Promise<string>
   scope?: 'set' | 'item'
+  sections?: Array<'choice' | 'gap' | 'circle' | 'rewrite'>
+  /** A short second call answers the sheet the way a student would. */
+  solve?: boolean
+  onReport?: (report: WorksheetRunReport) => void | Promise<void>
 }
 
 interface Rejection {
@@ -48,6 +71,12 @@ const sentenceSchema = z.object({
   answer: z.string().min(3).max(160),
 })
 
+const circleSchema = z.object({
+  sentence: z.string().min(3).max(200),
+  options: z.array(z.string().min(1).max(40)).min(2).max(4),
+  answer: z.string().min(1).max(40),
+})
+
 /** The student cannot be marked right or wrong on their own life or opinion. */
 const SUBJECTIVE = /\b(your|yours|favou?rite|you think|you like|you prefer|you find|in your opinion|would you rather)\b/i
 /** Without a picture, these point at something the student cannot see. */
@@ -64,25 +93,56 @@ const LOWER_START = new Set([
  * worksheet line has to stand alone on paper and have one answer a teacher can mark.
  */
 export async function generateWorksheet(input: GenerateInput): Promise<PracticeDraft[]> {
-  if (input.scope === 'item') {
-    const source = input.questions[0]
-    const section = sectionForLine(source?.question ?? '')
-    const counts: Counts = { choice: 0, gap: 0, rewrite: 0 }
-    counts[section] = 1
-    const note = source ? `Write a new item instead of: "${source.question.trim()}".` : ''
-    return writePage(input, counts, note)
+  const pictures = quizPictureDrafts(input.questions)
+  try {
+    if (input.scope === 'item') {
+      const source = input.questions[0]
+      const section = sectionForLine(source?.question ?? '')
+      const counts: Counts = { choice: 0, gap: 0, rewrite: 0, circle: 0 }
+      counts[section] = 1
+      const note = source ? `Write one new item instead of: "${source.question.trim()}". Keep the same picture if it has one.` : ''
+      const written = await writePage(input, counts, note)
+      return present(written.drafts, input, written.rejected)
+    }
+    const sections = input.sections ?? suggestWorksheetSections(pictures.length, input.grammar)
+    const kept = sections.includes('choice') ? pictures.slice(0, 6) : []
+    const plan = planWorksheetLayout(input.level, {
+      choices: kept.length,
+      gap: sections.includes('gap'),
+      circle: sections.includes('circle'),
+      rewrite: sections.includes('rewrite'),
+    })
+    const counts: Counts = {
+      choice: 0,
+      gap: sections.includes('gap') ? plan.gaps : 0,
+      circle: sections.includes('circle') ? plan.circles : 0,
+      rewrite: sections.includes('rewrite') ? plan.sentences : 0,
+    }
+    if (counts.gap + counts.circle + counts.rewrite === 0) {
+      return present(kept, input, [])
+    }
+    const written = await writePage(input, counts, input.description ?? '')
+    return present([...kept, ...written.drafts], input, written.rejected)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'The worksheet could not be written.'
+    await input.onReport?.({
+      status: 'failed',
+      rejected: [],
+      solver: { skipped: true, disagreements: [], ambiguous: [] },
+      error: message,
+    })
+    throw error
   }
-  const plan = planWorksheetLayout(input.level)
-  return writePage(input, { choice: plan.choices, gap: plan.gaps, rewrite: plan.sentences }, '')
 }
 
 function sectionForLine(line: string): Section {
+  if (/\([^)]+\/[^)]+\)/.test(line)) return 'circle'
   if (/_{2,}/.test(line)) return 'gap'
   if (line.includes(' / ')) return 'rewrite'
   return 'choice'
 }
 
-async function writePage(input: GenerateInput, counts: Counts, note: string): Promise<PracticeDraft[]> {
+async function writePage(input: GenerateInput, counts: Counts, note: string): Promise<{ drafts: PracticeDraft[]; rejected: Rejection[] }> {
   let feedback = ''
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     const raw = await input.generate(worksheetPrompt(input, counts, [note, feedback].filter(Boolean).join('\n')))
@@ -90,7 +150,7 @@ async function writePage(input: GenerateInput, counts: Counts, note: string): Pr
     if (rejected.length > 0) {
       reportWorksheetGeneration({ reason: 'rejected-items', attempt, lines: rejected })
     }
-    if (short.length === 0) return drafts
+    if (short.length === 0) return { drafts, rejected }
     feedback = [
       'Your last draft could not be used. Write new items instead of these:',
       ...rejected.slice(0, 12).map((item) => `- ${item.reason}: "${item.line}"`),
@@ -107,6 +167,10 @@ async function writePage(input: GenerateInput, counts: Counts, note: string): Pr
     }
   }
   throw new Error('The AI returned an invalid question format.')
+}
+
+function present(drafts: PracticeDraft[], input: GenerateInput, rejected: Rejection[]): Promise<PracticeDraft[]> {
+  return finishPage(drafts, input, rejected)
 }
 
 function sourceLine(source: PracticeSource): string {
@@ -141,6 +205,12 @@ export function worksheetPrompt(input: Omit<GenerateInput, 'generate'>, counts: 
 - The sentence holds a clue so only the answer fits, such as "An elephant is ______ than a mouse." Never "He is the ______ student", where any word fits.
 - Every answer is different.`)
   }
+  if (counts.circle > 0) {
+    sections.push(`"circles": ${counts.circle + 2} sentences with one word that shows the language point.
+- "options" has three words and "answer" is the one correct option.
+- The sentence makes the other options wrong, such as {"sentence":"There ______ a dog.","options":["is","are","am"],"answer":"is"}.
+- Do not leave the answer open, as in "He is the ______ student".`)
+  }
   if (counts.rewrite > 0) {
     sections.push(
       scaffold.sentences === 'jumbled'
@@ -156,6 +226,7 @@ Level: ${levelLabelFromId(input.level)} (${input.level}). ${levelGuidance(input.
 Quiz title: ${input.title || 'Untitled'}
 Quiz description: ${input.description || 'None'}
 Quiz lines, with the answer filled in: ${JSON.stringify(quizLines)}
+Text the teacher pasted: ${(input.sourceText ?? '').replace(/\s+/g, ' ').trim().slice(0, 2000) || 'None'}
 Words the class knows: ${selection.words.slice(0, 60).join(', ') || 'Use simple everyday words.'}
 Useful patterns: ${selection.grammarPatterns.join('; ') || 'Short sentences at this level.'}
 
@@ -169,8 +240,18 @@ Rules for every item:
 Write these sections:
 ${sections.join('\n\n')}
 ${feedback ? `\n${feedback}\n` : ''}
-Return only one JSON object with the keys for the sections above:
-{"pictures":[{"pictureId":"q1","question":"What is the boy kicking?","answers":["A ball","A cat","A book"],"correctAnswer":"A ball"}],"gaps":[{"sentence":"An elephant is ______ than a mouse.","answer":"bigger","base":"big"}],"sentences":[{"answer":"The bus is faster than the bike."}]}`
+Return only one JSON object with these keys: ${JSON.stringify(exampleKeys(counts))}`
+}
+
+function exampleKeys(counts: Counts): Record<string, unknown> {
+  const example: Record<string, unknown> = {}
+  if (counts.choice > 0) {
+    example.pictures = [{ pictureId: 'q1', question: 'What is the boy kicking?', answers: ['A ball', 'A cat', 'A book'], correctAnswer: 'A ball' }]
+  }
+  if (counts.gap > 0) example.gaps = [{ sentence: 'An elephant is ______ than a mouse.', answer: 'bigger', base: 'big' }]
+  if (counts.circle > 0) example.circles = [{ sentence: 'There ______ a dog.', options: ['is', 'are', 'am'], answer: 'is' }]
+  if (counts.rewrite > 0) example.sentences = [{ answer: 'The bus is faster than the bike.' }]
+  return example
 }
 
 function readObject(raw: string): Record<string, unknown> {
@@ -229,8 +310,8 @@ function arrangePage(
     else {
       const turn = (choices.length + 1) % answers.length
       choices.push(draft('choice', line, scaffold, {
-        choices: [...answers.slice(turn), ...answers.slice(0, turn)].map(finishWorksheetSentence),
-        correctAnswer: finishWorksheetSentence(answers[0]),
+        choices: [...answers.slice(turn), ...answers.slice(0, turn)].map(finishChoiceLabel),
+        correctAnswer: finishChoiceLabel(answers[0]),
         imageUrl: picture?.imageUrl,
         questionId: picture?.id,
         sourceQuestion: item.question,
@@ -250,6 +331,7 @@ function arrangePage(
     const bank = scaffold.bank === 'exact' ? answer : base || answer
     if (blanks !== 1) rejected.push({ reason: 'gap-needs-one-blank', line })
     else if (scaffold.bank === 'none' && !base) rejected.push({ reason: 'gap-without-base-word', line })
+    else if (SUBJECTIVE.test(`${line} ${answer}`)) rejected.push({ reason: 'subjective', line })
     else if (bankWords.has(bank.toLowerCase()) && scaffold.bank === 'exact') {
       rejected.push({ reason: 'repeated-gap-answer', line })
     } else if (!fresh(line)) rejected.push({ reason: 'duplicate', line })
@@ -261,6 +343,20 @@ function arrangePage(
         bank: scaffold.bank === 'none' ? undefined : bank,
         sourceQuestion: item.sentence,
       }))
+    }
+  }
+
+  const circles: PracticeDraft[] = []
+  for (const item of listOf(page.circles, circleSchema, rejected)) {
+    const options = uniqueAnswers(item.options, item.answer).map(finishChoiceLabel)
+    const answer = finishChoiceLabel(item.answer)
+    const line = circleLine(item.sentence, options, answer)
+    if (!line) rejected.push({ reason: 'circle-needs-one-word', line: item.sentence })
+    else if (SUBJECTIVE.test(line)) rejected.push({ reason: 'subjective', line })
+    else if (!options.includes(answer)) rejected.push({ reason: 'circle-answer-missing', line })
+    else if (!fresh(line)) rejected.push({ reason: 'duplicate', line })
+    else {
+      circles.push(draft('circle', line, scaffold, { choices: options, correctAnswer: answer, sourceQuestion: item.sentence }))
     }
   }
 
@@ -288,11 +384,13 @@ function arrangePage(
   const short: string[] = []
   if (choices.length < counts.choice) short.push(`Only ${choices.length} of ${counts.choice} picture questions were usable.`)
   if (gaps.length < counts.gap) short.push(`Only ${gaps.length} of ${counts.gap} gap sentences were usable.`)
+  if (circles.length < counts.circle) short.push(`Only ${circles.length} of ${counts.circle} circle items were usable.`)
   if (sentences.length < counts.rewrite) short.push(`Only ${sentences.length} of ${counts.rewrite} sentences were usable.`)
   return {
     drafts: [
       ...choices.slice(0, counts.choice),
       ...gaps.slice(0, counts.gap),
+      ...circles.slice(0, counts.circle),
       ...sentences.slice(0, counts.rewrite),
     ],
     rejected,
@@ -353,7 +451,8 @@ export function jumbleSentence(sentence: string, seed: number): string {
     ;[order[index], order[swap]] = [order[swap], order[index]]
   }
   if (order.every((value, index) => value === index)) order.push(order.shift() as number)
-  return order.map((index) => words[index]).join(' / ')
+  const mark = sentence.trim().endsWith('?') ? '?' : '.'
+  return `${order.map((index) => words[index]).join(' / ')} / ${mark}`
 }
 
 /**
@@ -362,4 +461,132 @@ export function jumbleSentence(sentence: string, seed: number): string {
  */
 function reportWorksheetGeneration(entry: { reason: string; attempt: number; lines: Rejection[] }) {
   console.error(JSON.stringify({ source: 'worksheet-generation', ...entry }))
+}
+
+function realPicture(url: string | null | undefined): url is string {
+  if (!url?.trim()) return false
+  const path = url.split('?')[0]?.split('#')[0] ?? ''
+  return !path.endsWith('/placeholder.webp') && !path.endsWith('/placeholder.png')
+}
+
+function quizPictureDrafts(questions: PracticeSource[]): PracticeDraft[] {
+  const scaffold = worksheetScaffold(undefined)
+  return questions
+    .filter((question) => realPicture(question.imageUrl))
+    .slice(0, 6)
+    .map((question) => {
+      const answers = uniqueAnswers(question.answers, question.correctAnswer).map(finishChoiceLabel)
+      const correct = finishChoiceLabel(question.correctAnswer)
+      return {
+        activity: 'choice' as const,
+        line: finishWorksheetSentence(question.question.replace(/_{2,}/g, '______')),
+        choices: answers,
+        correctAnswer: answers.find((answer) => answer.toLowerCase() === correct.toLowerCase()) ?? correct,
+        reason: 'Kept with the picture you chose.',
+        sourceQuestion: question.question,
+        exercise: EXERCISE_TITLE.choice,
+        instruction: exerciseInstruction('choice', scaffold),
+        imageUrl: question.imageUrl,
+        questionId: question.id,
+      }
+    })
+}
+
+function circleLine(sentence: string, options: string[], answer: string): string {
+  const box = `(${options.join(' / ')})`
+  const blanked = /_{2,}/.test(sentence) ? sentence : blankAnswer(sentence, answer)
+  if (!/_{2,}/.test(blanked)) return ''
+  return finishWorksheetSentence(blanked.replace(/_{2,}/, box))
+}
+
+async function finishPage(drafts: PracticeDraft[], input: GenerateInput, rejected: Rejection[]): Promise<PracticeDraft[]> {
+  const withExamples = markExamples(drafts)
+  const solver = input.solve
+    ? await runSolver(withExamples, input.generate)
+    : { skipped: true, disagreements: [], ambiguous: [] as number[] }
+  const ambiguous = new Set(solver.ambiguous)
+  const warned = withExamples.map((draft, index) => {
+    const number = index + 1
+    const hit = solver.disagreements.find((item) => item.number === number)
+    if (hit) return { ...draft, warning: `A student-style check answered "${hit.got}" instead of "${hit.expected}".` }
+    if (ambiguous.has(number)) return { ...draft, warning: 'A student-style check found more than one possible answer.' }
+    return draft
+  })
+  await input.onReport?.({ status: 'ok', rejected, solver, error: '' })
+  console.error(JSON.stringify({ source: 'worksheet-generation', status: 'ok', rejected: rejected.length, disagreements: solver.disagreements.length }))
+  return labelWorksheetSections(warned)
+}
+
+function markExamples(drafts: PracticeDraft[]): PracticeDraft[] {
+  const seen = new Set<string>()
+  return drafts.map((draft) => {
+    if (seen.has(draft.activity)) return draft
+    seen.add(draft.activity)
+    return { ...draft, example: true }
+  })
+}
+
+/** The check sees the printed lines and no answer key. Picture rows are skipped: the teacher chose those. */
+export function solverPrompt(drafts: PracticeDraft[]): string {
+  const bank = [...new Set(drafts.map((draft) => draft.bank).filter((word): word is string => Boolean(word)))]
+  const lines = drafts.flatMap((draft, index) => {
+    if (draft.example || (draft.activity === 'choice' && draft.imageUrl)) return []
+    const task =
+      draft.activity === 'gap'
+        ? `Write the missing word: ${draft.line}`
+        : draft.activity === 'rewrite'
+          ? `Write the sentence: ${draft.line}`
+          : draft.activity === 'circle'
+            ? `Choose the correct word: ${draft.line}`
+            : `Choose one answer: ${draft.line} Options: ${draft.choices.join(' | ')}`
+    return [`${index + 1}. ${task}`]
+  })
+  return `You are a student doing this worksheet. You cannot see the answer key or any picture. Answer each numbered item. If more than one answer could be right, put that number in "ambiguous" and still give your best answer.
+Word box: ${bank.join(', ') || 'none'}
+${lines.join('\n')}
+Return only JSON, like {"answers":{"2":"bigger"},"ambiguous":[4]}`
+}
+
+async function runSolver(drafts: PracticeDraft[], generate: (prompt: string) => Promise<string>): Promise<WorksheetSolverNote> {
+  try {
+    const parsed = readSolver(await generate(solverPrompt(drafts)))
+    const disagreements: WorksheetSolverNote['disagreements'] = []
+    drafts.forEach((draft, index) => {
+      if (draft.example || (draft.activity === 'choice' && draft.imageUrl)) return
+      const number = index + 1
+      const got = parsed.answers[String(number)] ?? ''
+      if (!got || parsed.ambiguous.includes(number)) return
+      if (!sameAnswer(draft.correctAnswer, got)) {
+        disagreements.push({ number, line: draft.line, expected: draft.correctAnswer, got })
+      }
+    })
+    return { skipped: false, disagreements, ambiguous: parsed.ambiguous }
+  } catch (error) {
+    return {
+      skipped: false,
+      disagreements: [],
+      ambiguous: [],
+      error: error instanceof Error ? error.message : 'The check could not read the sheet.',
+    }
+  }
+}
+
+function readSolver(raw: string): { answers: Record<string, string>; ambiguous: number[] } {
+  const page = readObject(raw)
+  const answers: Record<string, string> = {}
+  if (page.answers && typeof page.answers === 'object' && !Array.isArray(page.answers)) {
+    for (const [key, value] of Object.entries(page.answers as Record<string, unknown>)) answers[key] = String(value ?? '')
+  }
+  const ambiguous = Array.isArray(page.ambiguous) ? page.ambiguous.map(Number).filter((number) => number > 0) : []
+  return { answers, ambiguous }
+}
+
+function sameAnswer(expected: string, got: string): boolean {
+  const norm = (value: string) => value.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim()
+  const answer = norm(expected)
+  const given = norm(got)
+  if (!answer || !given) return false
+  if (answer === given) return true
+  const escaped = answer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`\\b${escaped}\\b`).test(given)
 }
