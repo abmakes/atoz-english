@@ -364,7 +364,8 @@ function arrangePage(
   const rejected: Rejection[] = []
   const seen = new Set<string>()
   const fresh = (line: string) => {
-    const key = line.toLowerCase().replace(/[^a-z]/g, '')
+    // Keep digits. "The number is 100" and "The number is 66" are different items.
+    const key = line.toLowerCase().replace(/[^a-z0-9]/g, '')
     if (seen.has(key)) return false
     seen.add(key)
     return true

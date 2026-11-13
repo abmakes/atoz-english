@@ -385,6 +385,28 @@ describe('lesson conversion', () => {
     expect(written.some((item) => item.correctAnswer.startsWith('Three hundred'))).toBe(true)
     expect(written.some((item) => item.line.toLowerCase().includes('six'))).toBe(true)
   })
+
+  it('keeps gap sentences that differ only by the number', async () => {
+    const words = ['ten', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety', 'hundred']
+    const gaps = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((number, index) => ({
+      sentence: `The number is ${number}. What is it in words? ______.`,
+      answer: words[index],
+      base: words[index],
+    }))
+    const generate = vi.fn(async () => JSON.stringify({ gaps }))
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A1',
+      sections: ['gap'],
+      generate,
+      questions: [kicking],
+    })
+    const written = items.filter((item) => item.activity === 'gap')
+    expect(written.length).toBeGreaterThanOrEqual(8)
+    expect(written.some((item) => item.line.includes('10.'))).toBe(true)
+    expect(written.some((item) => item.line.includes('80'))).toBe(true)
+  })
 })
 
 describe('lesson review gate', () => {
