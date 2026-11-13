@@ -3,7 +3,7 @@ import { auditQuestion } from '@/lib/lexicon/validator'
 import type { LanguageAuditIssue } from '@/lib/lexicon/types'
 import type { CefrLevelId } from '@/lib/taxonomy/quiz-taxonomy'
 import { QuestionType } from '@/types/question_types'
-import { generateWorksheetWithQuizApi } from '@/lib/lesson/worksheet-from-quiz-api'
+import { generateWorksheet } from '@/lib/lesson/worksheet-generation'
 import {
   finishDraft,
   finishWorksheetSentence,
@@ -40,6 +40,8 @@ export interface LessonAssessmentItem {
   choices: string[]
   activity?: WorksheetActivity
   exercise?: string
+  instruction?: string
+  bank?: string
   languageWarnings: LanguageAuditIssue[]
 }
 
@@ -50,6 +52,10 @@ export interface WorksheetItem {
   choices: string[]
   activity?: WorksheetActivity
   exercise?: string
+  instruction?: string
+  bank?: string
+  /** Answer key for the teacher. Never printed on the student sheet. */
+  answer?: string
 }
 
 export interface LessonSentence {
@@ -67,6 +73,8 @@ export interface LessonReviewRow {
   correctAnswer?: string
   activity?: WorksheetActivity
   exercise?: string
+  instruction?: string
+  bank?: string
 }
 
 const BLANK = /_{3,}/
@@ -304,6 +312,8 @@ function practiceItem(draft: PracticeDraft, level: CefrLevelId): LessonAssessmen
       choices: finished.choices,
       activity: finished.activity,
       exercise: finished.exercise,
+      instruction: finished.instruction,
+      bank: finished.bank,
       languageWarnings: [],
     },
     level
@@ -321,9 +331,9 @@ function sourcePractice(question: SourceQuestion) {
 }
 
 /**
- * A worksheet is written by the same generator the create form uses
- * (/api/ai/generate-questions). The local exercise templates are only a
- * stand-in when that generator is not called.
+ * A worksheet is written with the same Gemini text call the create form uses,
+ * with a worksheet prompt. The local exercise templates are only a stand-in
+ * when that generator is not called.
  */
 async function assessWorksheet(input: {
   questions: SourceQuestion[]
@@ -341,7 +351,7 @@ async function assessWorksheet(input: {
     questions: input.questions.map(sourcePractice),
   }
   if (input.generate) {
-    const drafts = await generateWorksheetWithQuizApi({
+    const drafts = await generateWorksheet({
       ...practiceInput,
       level: input.level,
       generate: input.generate,
@@ -469,6 +479,9 @@ export function commitLessonSelection(
         choices: (row.choices ?? []).map((choice) => choice.trim()).filter(Boolean),
         ...(row.activity ? { activity: row.activity } : {}),
         ...(row.exercise ? { exercise: row.exercise } : {}),
+        ...(row.instruction ? { instruction: row.instruction } : {}),
+        ...(row.bank ? { bank: row.bank } : {}),
+        ...(row.correctAnswer?.trim() ? { answer: row.correctAnswer.trim() } : {}),
       })),
     }
   }

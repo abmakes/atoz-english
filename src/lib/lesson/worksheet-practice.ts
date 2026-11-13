@@ -1,22 +1,58 @@
-import { z } from 'zod'
-
 export const WORKSHEET_ACTIVITIES = ['gap', 'question', 'choice', 'rewrite', 'matching', 'practice'] as const
 
+/** Easiest first: picture choices, then gaps with a word bank, then whole sentences. */
 export const EXERCISE_TITLE = {
-  question: 'A. Answer the questions.',
+  choice: 'A. Look and circle the answer.',
   gap: 'B. Complete the sentences.',
-  choice: 'C. Circle the answer.',
+  rewrite: 'C. Write the sentences.',
+  question: 'C. Answer the questions.',
 } as const
+
+export const EXERCISE_ORDER: Record<string, number> = { choice: 0, gap: 1, rewrite: 2, question: 2 }
+
+/**
+ * Scaffolding follows the Cambridge young learner bands. Starters and Movers
+ * get the exact words in a box and mixed-up sentences. Flyers get base forms
+ * to change. B1 gets the base form beside the gap and no box.
+ */
+export type WordBank = 'exact' | 'base' | 'none'
+
+export function worksheetScaffold(level: string | undefined): {
+  bank: WordBank
+  sentences: 'jumbled' | 'cues'
+} {
+  if (level === 'A2') return { bank: 'base', sentences: 'cues' }
+  if (level === 'B1') return { bank: 'none', sentences: 'cues' }
+  return { bank: 'exact', sentences: 'jumbled' }
+}
+
+export function exerciseInstruction(activity: string, scaffold = worksheetScaffold(undefined)): string {
+  if (activity === 'choice') return 'Look at the picture and read the question.'
+  if (activity === 'gap') {
+    if (scaffold.bank === 'exact') return 'Choose a word from the box and write it on the line.'
+    if (scaffold.bank === 'base') return 'Use a word from the box. Change it to the correct form.'
+    return 'Write the word in brackets in the correct form.'
+  }
+  if (activity === 'rewrite') {
+    return scaffold.sentences === 'jumbled'
+      ? 'Put the words in order to make a sentence.'
+      : 'Use the words to write a full sentence.'
+  }
+  if (activity === 'question') return 'Write the answer on the line.'
+  return ''
+}
 
 /**
  * One printed A4 page, in millimetres. The row sizes match the print stylesheet:
  * a write-in or gap line is 5.54mm, a picture choice is 14.8mm, and the gap
- * between rows is 1.3mm. Chrome around the three exercises was measured at 59.09mm.
+ * between rows is 1.3mm. Chrome around the three exercises and the word bank
+ * box were measured in print.
  */
 const WORKSHEET_PAGE_MM = 277
 const WORKSHEET_PAGE_SAFETY_MM = 2
-const WORKSHEET_CHROME_MM = 59.09
-const WORKSHEET_ROW_MM = { question: 5.54, gap: 5.54, choice: 14.8 } as const
+const WORKSHEET_CHROME_MM = 54.4
+const WORKSHEET_BANK_MM = 8.42
+const WORKSHEET_ROW_MM = { sentence: 5.54, gap: 5.54, choice: 14.8 } as const
 const WORKSHEET_ROW_GAP_MM = 1.3
 
 function exerciseBlockMm(count: number, rowMm: number): number {
@@ -24,36 +60,38 @@ function exerciseBlockMm(count: number, rowMm: number): number {
   return count * rowMm + (count - 1) * WORKSHEET_ROW_GAP_MM
 }
 
-export function worksheetSheetMm(counts: { questions: number; gaps: number; choices: number }): number {
+export interface WorksheetPlan {
+  choices: number
+  gaps: number
+  sentences: number
+}
+
+export function worksheetSheetMm(counts: WorksheetPlan, wordBank = true): number {
   return (
     WORKSHEET_CHROME_MM +
-    exerciseBlockMm(counts.questions, WORKSHEET_ROW_MM.question) +
+    (wordBank && counts.gaps > 0 ? WORKSHEET_BANK_MM : 0) +
+    exerciseBlockMm(counts.choices, WORKSHEET_ROW_MM.choice) +
     exerciseBlockMm(counts.gaps, WORKSHEET_ROW_MM.gap) +
-    exerciseBlockMm(counts.choices, WORKSHEET_ROW_MM.choice)
+    exerciseBlockMm(counts.sentences, WORKSHEET_ROW_MM.sentence)
   )
 }
 
 /**
- * Exercise A stays ten write-in questions. Picture choices and gap lines then
- * take whatever is left on the page, preferring the fullest mix that still fits.
+ * Six picture choices and eight gaps are fixed. The sentence exercise takes
+ * whatever is left on the page, up to ten lines.
  */
-export function planWorksheetLayout(): {
-  questions: number
-  gaps: number
-  choices: number
-  heightMm: number
-} {
+export function planWorksheetLayout(level?: string): WorksheetPlan & { heightMm: number } {
+  const wordBank = worksheetScaffold(level).bank !== 'none'
   const budget = WORKSHEET_PAGE_MM - WORKSHEET_PAGE_SAFETY_MM
-  const questions = 10
-  let best = { questions, gaps: 5, choices: 5, heightMm: 0 }
-  best.heightMm = worksheetSheetMm(best)
-  for (const choices of [6, 5, 7, 8]) {
-    for (let gaps = 5; gaps <= 12; gaps += 1) {
-      const heightMm = worksheetSheetMm({ questions, gaps, choices })
-      if (heightMm <= budget && heightMm > best.heightMm) best = { questions, gaps, choices, heightMm }
+  for (const gaps of [8, 7, 6, 5]) {
+    for (let sentences = 10; sentences >= 5; sentences -= 1) {
+      const counts = { choices: 6, gaps, sentences }
+      const heightMm = worksheetSheetMm(counts, wordBank)
+      if (heightMm <= budget) return { ...counts, heightMm }
     }
   }
-  return best
+  const counts = { choices: 6, gaps: 5, sentences: 5 }
+  return { ...counts, heightMm: worksheetSheetMm(counts, wordBank) }
 }
 
 export type WorksheetActivity = (typeof WORKSHEET_ACTIVITIES)[number]
@@ -76,6 +114,9 @@ export interface PracticeDraft {
   reason: string
   sourceQuestion: string
   exercise?: string
+  instruction?: string
+  /** The word this gap puts in the word bank: the answer, or its base form. */
+  bank?: string
 }
 
 const QUESTION_START =
@@ -88,6 +129,7 @@ const QUESTION_START =
 export function finishWorksheetSentence(raw: string): string {
   const trimmed = raw.replace(/[ \t]{2,}/g, ' ').trim()
   if (!trimmed) return ''
+  if (trimmed.includes(' / ')) return trimmed
   const end = trimmed.match(/[.?!]+$/)?.[0] ?? ''
   const core = (end ? trimmed.slice(0, -end.length) : trimmed).trim()
   if (!core) return trimmed
@@ -99,37 +141,6 @@ export function finishWorksheetSentence(raw: string): string {
 
 export function isWorksheetActivity(value: string | undefined): value is WorksheetActivity {
   return WORKSHEET_ACTIVITIES.some((activity) => activity === value)
-}
-
-const practiceItemSchema = z.object({
-  activity: z.enum(WORKSHEET_ACTIVITIES),
-  line: z.string().min(1).max(500),
-  choices: z.array(z.string().max(120)).max(4).optional(),
-  questionId: z.string().optional(),
-  reason: z.string().max(200).optional(),
-  exercise: z.string().max(80).optional(),
-})
-
-export function parseWorksheetPractice(raw: string): z.infer<typeof practiceItemSchema>[] | null {
-  const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim()
-  const start = cleaned.indexOf('[')
-  const end = cleaned.lastIndexOf(']')
-  if (start < 0 || end <= start) return null
-  try {
-    const parsed: unknown = JSON.parse(cleaned.slice(start, end + 1))
-    const items = z.array(practiceItemSchema).parse(parsed)
-    const plan = planWorksheetLayout()
-    const count = (activity: WorksheetActivity) => items.filter((item) => item.activity === activity).length
-    if (count('question') !== plan.questions) return null
-    if (count('gap') !== plan.gaps) return null
-    if (count('choice') !== plan.choices) return null
-    const order: Record<string, number> = { question: 0, gap: 1, choice: 2 }
-    return items
-      .filter((item) => item.activity === 'question' || item.activity === 'gap' || item.activity === 'choice')
-      .sort((a, b) => (order[a.activity] ?? 9) - (order[b.activity] ?? 9))
-  } catch {
-    return null
-  }
 }
 
 type Family =
@@ -327,7 +338,7 @@ function thereExercises(questions: PracticeSource[]): PracticeDraft[] {
   }
   const plan = planWorksheetLayout()
   questionsLines.push('What is there in the picture', 'What is not in the picture')
-  while (questionsLines.length < plan.questions) {
+  while (questionsLines.length < plan.sentences) {
     questionsLines.push(questionsLines[questionsLines.length % questionsLines.length])
   }
   const extras = ['a giraffe', 'two snakes', 'a bear', 'a lion', 'some milk', 'a cat']
@@ -342,7 +353,7 @@ function thereExercises(questions: PracticeSource[]): PracticeDraft[] {
   const pictured = questions.filter((question) => question.imageUrl)
   const pictures = pictured.length > 0 ? pictured : questions
   return [
-    ...questionsLines.slice(0, plan.questions).map((line) => exerciseDraft('question', line)),
+    ...questionsLines.slice(0, plan.sentences).map((line) => exerciseDraft('question', line)),
     ...Array.from({ length: plan.gaps }, (_, index) => {
       const phrase = gapPhrases[index % gapPhrases.length]
       const correct = /^(a|an|some|any)\s/i.test(phrase) ? 'is' : 'are'
@@ -377,7 +388,7 @@ function bankExercises(
   const take = <T,>(items: T[], count: number): T[] =>
     Array.from({ length: count }, (_, index) => items[index % items.length])
   return [
-    ...take(familyQuestions, plan.questions).map((line) => exerciseDraft('question', line)),
+    ...take(familyQuestions, plan.sentences).map((line) => exerciseDraft('question', line)),
     ...take(familyGaps, plan.gaps).map((gap) =>
       exerciseDraft('gap', gap.line, { choices: gap.choices, correctAnswer: gap.correct })
     ),
@@ -442,9 +453,9 @@ function exercisesFor(family: Family, questions: PracticeSource[]): PracticeDraf
       ]
     })
     const plan = planWorksheetLayout()
-    while (questionsLines.length < plan.questions) questionsLines.push(questionsLines[questionsLines.length % Math.max(questionsLines.length, 1)] ?? 'What is she doing')
+    while (questionsLines.length < plan.sentences) questionsLines.push(questionsLines[questionsLines.length % Math.max(questionsLines.length, 1)] ?? 'What is she doing')
     return [
-      ...questionsLines.slice(0, plan.questions).map((line) => exerciseDraft('question', line)),
+      ...questionsLines.slice(0, plan.sentences).map((line) => exerciseDraft('question', line)),
       ...Array.from({ length: plan.gaps }, (_, index) => {
         const scene = scenes[index % scenes.length]
         return exerciseDraft('gap', `${scene.subject} ${scene.auxiliary} ______ ${scene.rest}`, {
@@ -584,46 +595,9 @@ export function grammarPracticeDrafts(input: {
   questions: PracticeSource[]
 }): PracticeDraft[] {
   const decided = decideWorksheetGrammar(input)
-  return exercisesFor(decided.family, input.questions)
-}
-
-export function worksheetPracticePrompt(input: {
-  grammar?: string[]
-  title?: string
-  description?: string
-  questions: PracticeSource[]
-}): string {
-  const decided = decideWorksheetGrammar(input)
-  const plan = planWorksheetLayout()
-  return `You write a printed grammar worksheet for English learners. It is grammar practice, not a copy of the picture quiz.
-
-Read the unit grammar, the title, and the quiz questions. The structure to practise is ${decided.label}. Use the quiz words and pictures. Do not print the same question again.
-
-Break the worksheet into three exercises. The counts fill one printed page: ${plan.questions} questions, ${plan.gaps} gaps, and ${plan.choices} picture choices.
-1. activity "question": ${plan.questions} questions. No choices. The student writes the answer on a blank line.
-2. activity "gap": ${plan.gaps} sentences with the missing word written as ______.
-3. activity "choice": ${plan.choices} multiple-choice questions. Each has 2 to 4 choices and a questionId for its picture.
-
-Every sentence starts with a capital letter and ends with a full stop. A question ends with a question mark. Always.
-
-Return only a JSON array of those ${plan.questions + plan.gaps + plan.choices} objects, questions first, then gaps, then choices:
-{"activity":"question","line":"Are there any dogs?","exercise":"A. Answer the questions."}
-{"activity":"gap","line":"There ______ a dog.","choices":["is","are"],"exercise":"B. Complete the sentences."}
-{"activity":"choice","line":"Which sentence is correct?","choices":["There is a dog.","There are a dog."],"exercise":"C. Circle the answer."}
-
-Unit grammar: ${(input.grammar ?? []).join(', ') || decided.label}
-Title: ${input.title ?? ''}
-Description: ${input.description ?? ''}
-Questions:
-${JSON.stringify(
-  input.questions.map((question) => ({
-    id: question.id ?? '',
-    question: question.question,
-    answers: question.answers,
-    correctAnswer: question.correctAnswer,
-    imageUrl: question.imageUrl ?? null,
-  }))
-)}`
+  return exercisesFor(decided.family, input.questions).sort(
+    (a, b) => (EXERCISE_ORDER[a.activity] ?? 9) - (EXERCISE_ORDER[b.activity] ?? 9)
+  )
 }
 
 export function finishDraft(draft: PracticeDraft): PracticeDraft {

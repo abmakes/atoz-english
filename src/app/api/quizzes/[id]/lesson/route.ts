@@ -14,6 +14,9 @@ const worksheetItemSchema = z.object({
   choices: z.array(z.string().max(120)).max(4),
   activity: worksheetActivitySchema.optional(),
   exercise: z.string().max(80).optional(),
+  instruction: z.string().max(160).optional(),
+  bank: z.string().max(60).optional(),
+  answer: z.string().max(200).optional(),
 })
 
 const sentenceSchema = z.object({
@@ -40,6 +43,9 @@ const storedWorksheetSchema = z.object({
   choices: z.array(z.string()).optional(),
   activity: worksheetActivitySchema.optional(),
   exercise: z.string().max(80).optional(),
+  instruction: z.string().max(160).optional(),
+  bank: z.string().max(60).optional(),
+  answer: z.string().max(200).optional(),
 })
 
 const storedSentenceSchema = z.object({
@@ -58,6 +64,9 @@ function readWorksheetItems(value: unknown) {
     choices: item.choices ?? [],
     activity: item.activity,
     exercise: item.exercise,
+    instruction: item.instruction,
+    bank: item.bank,
+    answer: item.answer,
   }))
 }
 

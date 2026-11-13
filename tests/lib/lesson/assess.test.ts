@@ -179,19 +179,20 @@ describe('lesson conversion', () => {
         },
       ],
     })
-    const plan = planWorksheetLayout()
+    const plan = planWorksheetLayout('A1')
     const questions = items.filter((item) => item.activity === 'question')
     const gaps = items.filter((item) => item.activity === 'gap')
     const choices = items.filter((item) => item.activity === 'choice')
-    expect(plan).toMatchObject({ questions: 10, gaps: 8, choices: 6 })
-    expect(plan.heightMm).toBeGreaterThan(268)
-    expect(plan.heightMm).toBeLessThanOrEqual(277)
-    expect(questions).toHaveLength(plan.questions)
+    expect(plan).toMatchObject({ choices: 6, gaps: 8, sentences: 9 })
+    expect(plan.heightMm).toBeGreaterThan(265)
+    expect(plan.heightMm).toBeLessThanOrEqual(275)
+    expect(planWorksheetLayout('B1').sentences).toBe(10)
+    expect(items[0]?.activity).toBe('choice')
+    expect(questions).toHaveLength(plan.sentences)
     expect(gaps).toHaveLength(plan.gaps)
     expect(choices).toHaveLength(plan.choices)
-    expect(questions.every((item) => item.exercise === 'A. Answer the questions.')).toBe(true)
+    expect(choices.every((item) => item.exercise === 'A. Look and circle the answer.')).toBe(true)
     expect(gaps.every((item) => item.exercise === 'B. Complete the sentences.')).toBe(true)
-    expect(choices.every((item) => item.exercise === 'C. Circle the answer.')).toBe(true)
     expect(choices.every((item) => item.imageUrl === '/images/sentence-builder/sam-dog.jpg')).toBe(true)
     expect(choices.every((item) => item.choices.length >= 2)).toBe(true)
     for (const item of items) {
@@ -199,116 +200,112 @@ describe('lesson conversion', () => {
       expect(item.line).toMatch(/[.?!]$/)
       expect(item.line).not.toBe('There ______ a dog in the park')
     }
-    expect(items.some((item) => item.line.endsWith('?'))).toBe(true)
-    expect(items.some((item) => item.line.includes('______'))).toBe(true)
-    expect(items.some((item) => item.line.includes('dog'))).toBe(true)
   })
 
-  it('writes the worksheet with the quiz generation API', async () => {
-    const plan = planWorksheetLayout()
-    const generate = vi.fn(async (prompt: string) => {
-      const count = Number(prompt.match(/Create exactly (\d+) multiple-choice/)?.[1])
-      const items = Array.from({ length: count }, (_, index) => {
-        if (index < plan.questions) {
-          return {
-            question: `Where did she kick the ball on day ${index}`,
-            answers: ['In the park', 'On the chair', 'In the sea', 'At school'],
-            correctAnswer: 'In the park',
-            imageKeyword: 'ball park',
-          }
-        }
-        if (index < plan.questions + plan.gaps) {
-          return {
-            question: `She ______ the ball on day ${index}`,
-            answers: [`kicks ${index}`, 'kick', 'kicking', 'kicked'],
-            correctAnswer: `Kicks ${index}`,
-            imageKeyword: 'girl ball',
-          }
-        }
-        return {
-          question: `Where is the ball in picture ${index}`,
-          answers: ['In the park', 'On the chair', 'In the sea', 'At school', 'In the park'],
-          correctAnswer: 'in the park',
-          imageKeyword: 'ball park',
-        }
-      })
-      return `Here is the worksheet:\n\`\`\`json\n${JSON.stringify(items)}\n\`\`\``
+  const pictured: SourceQuestion[] = [
+    { ...kicking, id: 'p1', imageUrl: '/images/sentence-builder/sam-dog.jpg', question: 'The dog is ______ than the cat.', correctAnswer: 'bigger' },
+    { ...kicking, id: 'p2', imageUrl: '/images/sentence-builder/sara-book.jpg', question: 'Sara is reading the ______ book.', correctAnswer: 'biggest' },
+  ]
+
+  function worksheetReply(overrides: { pictures?: unknown[]; gaps?: unknown[]; sentences?: unknown[] } = {}) {
+    const animals = ['a horse', 'a cat', 'a dog', 'a lion', 'a bear', 'a duck', 'a goat', 'a fox', 'a cow', 'a pig', 'a hen', 'a frog']
+    const adjectives = ['bigger', 'smaller', 'faster', 'slower', 'taller', 'shorter', 'older', 'younger', 'longer', 'stronger']
+    return JSON.stringify({
+      pictures: overrides.pictures ?? [
+        { pictureId: 'p1', question: 'Which animal is bigger in the picture?', answers: ['The dog', 'The cat', 'The bird'], correctAnswer: 'The dog' },
+        { pictureId: 'p2', question: 'Which book is Sara reading?', answers: ['The biggest book', 'The smallest book', 'No book'], correctAnswer: 'The biggest book' },
+        ...['an elephant or a mouse', 'a car or a bicycle', 'a whale or a fish', 'a giraffe or a cat', 'a plane or a bus'].map((pair) => ({
+          pictureId: null,
+          question: `Which is bigger, ${pair}?`,
+          answers: [pair.split(' or ')[0], pair.split(' or ')[1], 'They are the same'],
+          correctAnswer: pair.split(' or ')[0],
+        })),
+      ],
+      gaps: overrides.gaps ?? adjectives.map((answer, index) => ({
+        sentence: `An elephant is ______ than ${animals[index]}.`,
+        answer,
+        base: answer.replace(/er$/, '').replace(/(.)\1$/, '$1'),
+      })),
+      sentences: overrides.sentences ?? animals.map((animal, index) => ({
+        words: [animal, 'big', 'a mouse'],
+        answer: `${animal} is bigger than a mouse number ${index}.`,
+      })),
     })
+  }
+
+  it('writes a worksheet the teacher can mark, easiest exercise first', async () => {
+    const generate = vi.fn(async () => `Here it is:\n\`\`\`json\n${worksheetReply()}\n\`\`\``)
     const items = await assessLessonQuestions({
       target: 'worksheet',
       scope: 'set',
       level: 'A1',
-      grammar: ['Past Simple'],
+      grammar: ['Comparatives & Superlatives'],
       generate,
-      questions: [kicking],
+      questions: pictured,
     })
+    const plan = planWorksheetLayout('A1')
     expect(generate).toHaveBeenCalledTimes(1)
-    expect(String(generate.mock.calls)).toContain('Past Simple')
-    expect(String(generate.mock.calls)).toContain('Create exactly')
-    const questions = items.filter((item) => item.activity === 'question')
-    const gaps = items.filter((item) => item.activity === 'gap')
+    const prompt = String(generate.mock.calls[0])
+    expect(prompt).toContain('exactly one correct answer')
+    expect(prompt).toContain('Comparatives & Superlatives')
+    expect(prompt).toContain('The dog is bigger than the cat.')
+    expect(items.map((item) => item.activity)).toEqual([
+      ...Array(plan.choices).fill('choice'),
+      ...Array(plan.gaps).fill('gap'),
+      ...Array(plan.sentences).fill('rewrite'),
+    ])
     const choices = items.filter((item) => item.activity === 'choice')
-    expect(questions).toHaveLength(plan.questions)
-    expect(gaps).toHaveLength(plan.gaps)
-    expect(choices).toHaveLength(plan.choices)
-    expect(questions.every((item) => item.line.endsWith('?'))).toBe(true)
-    expect(new Set(questions.map((item) => item.line)).size).toBe(plan.questions)
-    expect(gaps.every((item) => item.line.includes('______'))).toBe(true)
-    expect(choices.every((item) => new Set(item.choices.map((choice) => choice.toLowerCase())).size === item.choices.length)).toBe(true)
-    expect(items.some((item) => item.line.includes('giraffe'))).toBe(false)
-    expect(items[0]?.reason).toBe('Written by the quiz question generator.')
+    expect(choices[0]?.imageUrl).toBe('/images/sentence-builder/sam-dog.jpg')
+    expect(choices.every((item) => item.line.endsWith('?'))).toBe(true)
+    expect(choices.every((item) => item.choices.includes(item.correctAnswer))).toBe(true)
+    expect(choices.some((item) => item.choices[0] !== item.correctAnswer)).toBe(true)
+    const gaps = items.filter((item) => item.activity === 'gap')
+    expect(gaps.every((item) => item.bank === item.correctAnswer)).toBe(true)
+    expect(gaps.every((item) => item.instruction?.includes('box'))).toBe(true)
+    const sentences = items.filter((item) => item.activity === 'rewrite')
+    expect(sentences.every((item) => item.line.includes(' / '))).toBe(true)
+    expect(sentences.every((item) => item.correctAnswer.endsWith('.'))).toBe(true)
+    expect(sentences[0]?.line.split(' / ').sort()).toEqual(
+      sentences[0]?.correctAnswer.replace(/\.$/, '').split(' ').map((word, index) => (index === 0 ? word.toLowerCase() : word)).sort()
+    )
   })
 
-  it('logs a sentence that was returned instead of a question', async () => {
-    const plan = planWorksheetLayout()
+  it('gives base forms at A2 and brackets with no word box at B1', async () => {
+    const generate = vi.fn(async () => worksheetReply())
+    const a2 = await assessLessonQuestions({ target: 'worksheet', scope: 'set', level: 'A2', generate, questions: pictured })
+    const a2Gaps = a2.filter((item) => item.activity === 'gap')
+    expect(a2Gaps[0]?.bank).toBe('big')
+    expect(a2Gaps[0]?.correctAnswer).toBe('bigger')
+    expect(a2.filter((item) => item.activity === 'rewrite')[0]?.line).toBe('a horse / big / a mouse')
+    const b1 = await assessLessonQuestions({ target: 'worksheet', scope: 'set', level: 'B1', generate, questions: pictured })
+    const b1Gaps = b1.filter((item) => item.activity === 'gap')
+    expect(b1Gaps[0]?.line).toBe('An elephant is ______ (big) than a horse.')
+    expect(b1Gaps.every((item) => item.bank === undefined)).toBe(true)
+  })
+
+  it('logs items a student cannot answer and asks for new ones', async () => {
     const logged: string[] = []
     const spy = vi.spyOn(console, 'error').mockImplementation((message?: unknown) => {
       logged.push(String(message))
     })
-    const generate = vi.fn(async (prompt: string) => {
-      const count = Number(prompt.match(/Create exactly (\d+) multiple-choice/)?.[1])
-      const items = Array.from({ length: count }, (_, index) => {
-        if (index === 0) {
-          return {
-            question: 'The dog is in the park.',
-            answers: ['Yes', 'No', 'Maybe', 'Soon'],
-            correctAnswer: 'Yes',
-          }
-        }
-        if (index < plan.questions) {
-          return {
-            question: `Where did she kick the ball on day ${index}`,
-            answers: ['In the park', 'On the chair', 'In the sea', 'At school'],
-            correctAnswer: 'In the park',
-          }
-        }
-        if (index < plan.questions + plan.gaps) {
-          return {
-            question: `She ______ the ball on day ${index}`,
-            answers: [`kicks ${index}`, 'kick', 'kicking', 'kicked'],
-            correctAnswer: `kicks ${index}`,
-          }
-        }
-        return {
-          question: `Where is the ball in picture ${index}`,
-          answers: ['In the park', 'On the chair', 'In the sea', 'At school'],
-          correctAnswer: 'In the park',
-        }
+    const generate = vi.fn(async () =>
+      worksheetReply({
+        pictures: [
+          { pictureId: null, question: 'Which book is thicker, the red one or the blue one?', answers: ['The red one', 'The blue one', 'Both'], correctAnswer: 'The red one' },
+          { pictureId: null, question: 'Is your backpack heavier than your friend\'s?', answers: ['Yes', 'No', 'Maybe'], correctAnswer: 'Yes' },
+          { pictureId: null, question: 'The dog is in the park.', answers: ['Yes', 'No', 'Maybe'], correctAnswer: 'Yes' },
+        ],
       })
-      return JSON.stringify(items)
-    })
+    )
     await expect(
-      assessLessonQuestions({
-        target: 'worksheet',
-        scope: 'set',
-        level: 'A1',
-        grammar: ['Past Simple'],
-        generate,
-        questions: [kicking],
-      })
-    ).rejects.toThrow('The dog is in the park.')
-    expect(logged.some((line) => line.includes('sentence-instead-of-question') && line.includes('The dog is in the park.'))).toBe(true)
-    expect(generate.mock.calls[1]?.[0]).toContain('The dog is in the park.')
+      assessLessonQuestions({ target: 'worksheet', scope: 'set', level: 'A1', generate, questions: pictured })
+    ).rejects.toThrow('picture questions were usable')
+    expect(generate).toHaveBeenCalledTimes(2)
+    const report = logged.find((line) => line.includes('worksheet-generation')) ?? ''
+    expect(report).toContain('needs-picture')
+    expect(report).toContain('subjective')
+    expect(report).toContain('sentence-instead-of-question')
+    expect(String(generate.mock.calls[1])).toContain('the red one or the blue one')
     spy.mockRestore()
   })
 })
@@ -361,6 +358,7 @@ describe('lesson review gate', () => {
         line: 'He is kicking the ball.',
         imageUrl: 'https://images.example/ball.jpg',
         choices: ['kicking', 'kick', 'kicks', 'kicked'],
+        answer: 'kicking',
       },
     ])
   })

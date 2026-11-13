@@ -5,14 +5,10 @@ import Link from 'next/link'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import { Button } from '@/components/ui/button'
 import { isRealPicture, type WorksheetActivity, type WorksheetItem } from '@/lib/lesson/assess'
-import { EXERCISE_TITLE } from '@/lib/lesson/worksheet-practice'
+import { EXERCISE_ORDER, EXERCISE_TITLE, exerciseInstruction } from '@/lib/lesson/worksheet-practice'
 import { Loader2, Printer } from 'lucide-react'
 
-const INSTRUCTION: Partial<Record<WorksheetActivity, string>> = {
-  question: 'Write the answer on the line.',
-  gap: 'Write the missing word.',
-  choice: 'Circle the answer.',
-}
+const WRITE_ON_LINE = new Set<WorksheetActivity>(['question', 'rewrite'])
 
 function activityOf(item: WorksheetItem): WorksheetActivity {
   if (item.activity) return item.activity
@@ -23,17 +19,25 @@ function activityOf(item: WorksheetItem): WorksheetActivity {
 }
 
 function groupExercises(items: WorksheetItem[]) {
-  const groups: { title: string; activity: WorksheetActivity; items: WorksheetItem[] }[] = []
-  for (const item of items) {
+  const groups: { title: string; activity: WorksheetActivity; instruction: string; items: WorksheetItem[] }[] = []
+  const ordered = [...items].sort(
+    (a, b) => (EXERCISE_ORDER[activityOf(a)] ?? 9) - (EXERCISE_ORDER[activityOf(b)] ?? 9)
+  )
+  for (const item of ordered) {
     const activity = activityOf(item)
-    const title =
-      item.exercise ||
-      (activity === 'question' || activity === 'gap' || activity === 'choice' ? EXERCISE_TITLE[activity] : activity)
+    const title = item.exercise || (activity in EXERCISE_TITLE ? EXERCISE_TITLE[activity as keyof typeof EXERCISE_TITLE] : activity)
     const last = groups[groups.length - 1]
     if (last && last.title === title) last.items.push(item)
-    else groups.push({ title, activity, items: [item] })
+    else groups.push({ title, activity, instruction: item.instruction || exerciseInstruction(activity), items: [item] })
   }
   return groups
+}
+
+function wordBank(items: WorksheetItem[]): string[] {
+  return items
+    .map((item) => item.bank?.trim() ?? '')
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b))
 }
 
 interface PrintPayload {
@@ -119,11 +123,17 @@ export default function QuizWorksheetPrintPage({
                 Name: ________________ &nbsp; Date: __________
               </div>
             </div>
-            <p className="worksheet-note">Answer the questions, complete the gaps, then circle the answer.</p>
             {groupExercises(items).map((group) => (
               <section key={group.title} className={`worksheet-exercise is-${group.activity}`}>
                 <h2>{group.title}</h2>
-                {INSTRUCTION[group.activity] ? <p className="worksheet-instruction">{INSTRUCTION[group.activity]}</p> : null}
+                {group.instruction ? <p className="worksheet-instruction">{group.instruction}</p> : null}
+                {group.activity === 'gap' && wordBank(group.items).length > 0 ? (
+                  <ul className="worksheet-bank">
+                    {wordBank(group.items).map((word, index) => (
+                      <li key={`${word}-${index}`}>{word}</li>
+                    ))}
+                  </ul>
+                ) : null}
                 <ol className="worksheet-items">
                   {group.items.map((item, index) => (
                     <li key={`${item.questionId ?? group.activity}-${index}`} className={`worksheet-item is-${group.activity}`}>
@@ -134,9 +144,9 @@ export default function QuizWorksheetPrintPage({
                       ) : null}
                       <div className="worksheet-body">
                         <p className="worksheet-line">{item.line}</p>
-                        {group.activity === 'question' ? <div className="worksheet-write" /> : null}
+                        {WRITE_ON_LINE.has(group.activity) ? <div className="worksheet-write" /> : null}
                         {group.activity === 'choice' && item.choices.length > 0 ? (
-                          <ul className="worksheet-choices">
+                          <ul className={`worksheet-choices${item.choices.length === 3 ? ' is-three' : ''}`}>
                             {item.choices.map((choice, choiceIndex) => (
                               <li key={`${choice}-${choiceIndex}`}>
                                 <span className="worksheet-circle" />
@@ -177,17 +187,27 @@ export default function QuizWorksheetPrintPage({
           font-weight: 700;
           color: #0f172a;
         }
-        .worksheet-meta,
-        .worksheet-note {
+        .worksheet-meta {
           margin: 0;
           font-size: 11px;
           line-height: 1.2;
           color: #334155;
           white-space: nowrap;
         }
-        .worksheet-note {
-          margin-top: 0;
-          white-space: normal;
+        .worksheet-bank {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 1mm 6mm;
+          margin: 1.2mm 0 0;
+          padding: 1.2mm 3mm;
+          list-style: none;
+          border: 1px solid #0f172a;
+          border-radius: 2px;
+          font-size: 12px;
+          line-height: 1.35;
+          font-weight: 600;
+          color: #0f172a;
         }
         .worksheet-exercise + .worksheet-exercise {
           margin-top: 4mm;
@@ -227,14 +247,17 @@ export default function QuizWorksheetPrintPage({
           page-break-inside: avoid;
         }
         .worksheet-item.is-question .worksheet-body,
+        .worksheet-item.is-rewrite .worksheet-body,
         .worksheet-item.is-gap .worksheet-body {
           display: flex;
           align-items: baseline;
           gap: 6px;
         }
         .worksheet-item.is-question .worksheet-line,
+        .worksheet-item.is-rewrite .worksheet-line,
         .worksheet-item.is-gap .worksheet-line {
           flex: none;
+          max-width: 62%;
         }
         .worksheet-item.is-choice {
           align-items: center;
@@ -260,6 +283,7 @@ export default function QuizWorksheetPrintPage({
         }
         .worksheet-write {
           flex: 1;
+          min-width: 45mm;
           height: 0;
           margin: 0;
           border-bottom: 1px solid #0f172a;
@@ -281,6 +305,9 @@ export default function QuizWorksheetPrintPage({
           margin: 2px 0 0;
           padding: 0;
           list-style: none;
+        }
+        .worksheet-choices.is-three {
+          grid-template-columns: 1fr 1fr 1fr;
         }
         .worksheet-choices li {
           display: flex;
