@@ -407,6 +407,39 @@ describe('lesson conversion', () => {
     expect(written.some((item) => item.line.includes('10.'))).toBe(true)
     expect(written.some((item) => item.line.includes('80'))).toBe(true)
   })
+
+  it('fills in the question words when the cue list does not show the sentence', async () => {
+    const sentences = [
+      { words: ['number', '909', 'words'], answer: 'What is the number 909 in words?' },
+      { words: ['4th', 'month'], answer: 'What is the 4th month?' },
+      { words: ['number', '2000', 'words'], answer: 'The number is 2000 in words.' },
+      { words: ['6th', 'month', 'June'], answer: 'The 6th month is June.' },
+      { words: ['month', 'comes', 'after', 'June'], answer: 'What month comes after June?' },
+      { words: ['number', '600', 'words'], answer: 'The number is 600 in words.' },
+      { words: ['number', '55', 'words'], answer: 'The number is 55 in words.' },
+      { words: ['month', 'New', "Year's", 'Day'], answer: "What month is New Year's Day in?" },
+      { words: ['a horse', 'big', 'a mouse'], answer: 'A horse is bigger than a mouse.' },
+      { words: ['a cat', 'fast', 'a dog'], answer: 'A cat is faster than a dog.' },
+      { words: ['a bus', 'slow', 'a bike'], answer: 'A bus is slower than a bike.' },
+      { words: ['a lion', 'strong', 'a fox'], answer: 'A lion is stronger than a fox.' },
+    ]
+    const generate = vi.fn(async () => JSON.stringify({ sentences }))
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A2',
+      sections: ['write'],
+      generate,
+      questions: [kicking],
+    })
+    const line = (answer: string) => items.find((item) => item.correctAnswer === answer)?.line ?? ''
+    expect(line('What is the number 909 in words?')).toBe('What / is / the number / 909 / in words?')
+    expect(line('What is the 4th month?')).toBe('What / is / the 4th / month?')
+    expect(line('The number is 2000 in words.')).toBe('The number / is / 2000 / in words.')
+    expect(line('The 6th month is June.')).toBe('The 6th / month / is / June.')
+    expect(line('What month comes after June?')).toBe('What / month / comes / after / June?')
+    expect(line('A horse is bigger than a mouse.')).toBe('a horse / big / a mouse')
+  })
 })
 
 describe('lesson review gate', () => {
@@ -473,6 +506,23 @@ describe('lesson review gate', () => {
     expect(two.gaps + two.sentences).toBeGreaterThan(one.gaps + one.sentences)
     expect(two.heightMm).toBeGreaterThan(277)
     expect(two.heightMm).toBeLessThanOrEqual(550)
+  })
+
+  it('keeps the extra question types on a two-page sheet', () => {
+    const plan = planWorksheetLayout('A2', {
+      choices: 0,
+      gap: true,
+      circle: true,
+      rewrite: true,
+      unjumble: true,
+      long: true,
+      pages: 2,
+    })
+    expect(plan.gaps).toBeGreaterThanOrEqual(4)
+    expect(plan.circles).toBeGreaterThanOrEqual(4)
+    expect(plan.sentences).toBeGreaterThanOrEqual(4)
+    expect(plan.jumbles).toBeGreaterThanOrEqual(4)
+    expect(plan.longs).toBeGreaterThanOrEqual(4)
   })
 
   it('writes unjumble, sentence, and long-answer sections when those cards are chosen', async () => {

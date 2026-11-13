@@ -73,7 +73,7 @@ export function exerciseInstruction(activity: string, scaffold = worksheetScaffo
   if (activity === 'rewrite') {
     return scaffold.sentences === 'jumbled'
       ? 'Put the words in order to make a sentence. The first one is an example.'
-      : 'Use the words to write a full sentence. The first one is an example.'
+      : 'Use the words in this order to write the sentence. The first one is an example.'
   }
   if (activity === 'circle') return 'Circle the correct word. The first one is an example.'
   if (activity === 'question') return 'Write the answer on the line.'
@@ -162,36 +162,45 @@ function planTwoPages(
   const budget = 2 * (WORKSHEET_PAGE_MM - WORKSHEET_PAGE_SAFETY_MM)
   const counts: WorksheetPlan = {
     choices: Math.min(12, Math.max(0, options.choices ?? 0)),
-    gaps: options.gap === false ? 0 : 16,
-    circles: options.circle ? 10 : 0,
-    sentences: options.rewrite === false ? 0 : 16,
-    jumbles: options.unjumble ? 14 : 0,
-    longs: options.long ? 8 : 0,
+    gaps: options.gap === false ? 0 : 4,
+    circles: options.circle ? 4 : 0,
+    sentences: options.rewrite === false ? 0 : 4,
+    jumbles: options.unjumble ? 4 : 0,
+    longs: options.long ? 4 : 0,
   }
-  const shrink = ['longs', 'jumbles', 'circles', 'sentences', 'gaps', 'choices'] as const
+  const ceiling: WorksheetPlan = {
+    choices: counts.choices,
+    gaps: options.gap === false ? 0 : 16,
+    circles: options.circle ? 12 : 0,
+    sentences: options.rewrite === false ? 0 : 16,
+    jumbles: options.unjumble ? 12 : 0,
+    longs: options.long ? 10 : 0,
+  }
   const height = () => worksheetSheetMm(counts, wordBank && counts.gaps > 0)
   const total = () => counts.choices + counts.gaps + counts.circles + counts.sentences + counts.jumbles + counts.longs
-  while ((height() > budget || total() > 36) && shrink.some((key) => counts[key] > 0)) {
-    const key = shrink.find((name) => counts[name] > 0)
+  const shrink = ['longs', 'jumbles', 'circles', 'sentences', 'gaps'] as const
+  while (height() > budget && shrink.some((key) => counts[key] > 2)) {
+    const key = shrink.find((name) => counts[name] > 2)
     if (!key) break
     counts[key] -= 1
   }
-  const grow = ['gaps', 'sentences', 'jumbles', 'circles', 'longs'] as const
-  const canGrow = (key: (typeof grow)[number]) => {
-    if (key === 'gaps') return options.gap !== false && counts.gaps < 28
-    if (key === 'sentences') return options.rewrite !== false && counts.sentences < 28
-    if (key === 'jumbles') return Boolean(options.unjumble) && counts.jumbles < 24
-    if (key === 'circles') return Boolean(options.circle) && counts.circles < 16
-    return Boolean(options.long) && counts.longs < 12
-  }
-  while (height() <= WORKSHEET_PAGE_MM && total() < 36) {
-    const key = grow.find((name) => canGrow(name))
-    if (!key) break
-    counts[key] += 1
-    if (height() > budget) {
-      counts[key] -= 1
+  const order = ['gaps', 'sentences', 'jumbles', 'circles', 'longs'] as const
+  let cursor = 0
+  while (total() < 36) {
+    let grew = false
+    for (let step = 0; step < order.length; step += 1) {
+      const key = order[(cursor + step) % order.length]
+      if (counts[key] >= ceiling[key]) continue
+      counts[key] += 1
+      if (height() > budget || total() > 36) {
+        counts[key] -= 1
+        continue
+      }
+      grew = true
+      cursor = (cursor + step + 1) % order.length
       break
     }
+    if (!grew) break
   }
   return { ...counts, heightMm: height() }
 }

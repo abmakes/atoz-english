@@ -261,7 +261,7 @@ export function worksheetPrompt(input: Omit<GenerateInput, 'generate'>, counts: 
   }
   if (blocks.cues > 0) {
     sections.push(
-      `"sentences": ${blocks.cues + 2} correct sentences that use the language point. Also give "words": two to four key words or short phrases in dictionary form and in sentence order, which the student turns into the sentence. Example: {"words":["an elephant","big","a mouse"],"answer":"An elephant is bigger than a mouse."}`
+      `"sentences": ${blocks.cues + 2} correct sentences that use the language point. Also give "words": the words of that sentence, in order, including the question word and "is" or "are". Leave out only a word the student must change, such as "big" for "bigger". A student who sees only those words must be able to write that one sentence and no other. Example: {"words":["What","is","the number","909","in words"],"answer":"What is the number 909 in words?"}. Do not give {"words":["number","909","words"]} for that sentence.`
     )
   }
   if (counts.long > 0) {
@@ -331,16 +331,63 @@ function sentenceEntry(entry: unknown): unknown {
   return entry
 }
 
-/** Two to four words the student is given. Extra tokens such as "+" are dropped. */
+const QUESTION_WORD = /^(what|which|where|who|when|how|whose|why)$/i
+const GLUE_WORD = new Set(['the', 'a', 'an', 'in', 'on', 'of', 'to'])
+const COPULA = new Set(['is', 'are', 'was', 'were'])
+
+function answerTokens(answer: string): string[] {
+  return answer.replace(/[.?!]+/g, '').split(/\s+/).map((word) => word.trim()).filter(Boolean)
+}
+
+/** "big" counts as the word the student must turn into "bigger". */
+function isStemOf(cue: string, word: string): boolean {
+  const given = cue.toLowerCase().replace(/[^a-z]/g, '')
+  const target = word.toLowerCase().replace(/[^a-z]/g, '')
+  return given.length >= 3 && target.startsWith(given) && target.length > given.length
+}
+
+/**
+ * "number / 909 / words" does not tell the student to write
+ * "What is the number 909 in words?". A usable cue list includes the
+ * question word and "is" or "are", unless one word is there to be changed.
+ */
+function modelCuesAreGuided(answer: string, cues: string[]): boolean {
+  if (cues.length < 3) return false
+  const tokens = answerTokens(answer)
+  const blob = cues.join(' ').toLowerCase()
+  const first = tokens[0]?.toLowerCase() ?? ''
+  if (QUESTION_WORD.test(first) && !blob.includes(first)) return false
+  const inflected = tokens.some((word) => cues.some((cue) => isStemOf(cue, word)))
+  const showsCopula = cues.some((cue) => COPULA.has(cue.toLowerCase().replace(/[^a-z]/g, '')))
+  if (tokens.some((word) => COPULA.has(word.toLowerCase())) && !showsCopula && !inflected) return false
+  return true
+}
+
+/** The sentence, in order, with little words joined to the next word. */
+function frameCues(answer: string): string[] {
+  const end = answer.trim().match(/[.?!]$/)?.[0] ?? ''
+  const tokens = answerTokens(answer)
+  const chunks: string[] = []
+  for (let index = 0; index < tokens.length; index += 1) {
+    const word = tokens[index]
+    const next = tokens[index + 1]
+    if (next && GLUE_WORD.has(word.toLowerCase())) {
+      chunks.push(`${word} ${next}`)
+      index += 1
+    } else {
+      chunks.push(word)
+    }
+  }
+  const limited = chunks.length > 8 ? [...chunks.slice(0, 7), chunks[chunks.length - 1]] : chunks
+  if (end && limited.length > 0) limited[limited.length - 1] = `${limited[limited.length - 1]}${end}`
+  return limited.filter(Boolean)
+}
+
 function cueWords(answer: string, given: string[]): string[] {
-  const token = (word: string) => word.replace(/^[^\w]+|[^\w]+$/g, '').trim()
-  const skip = new Set(['the', 'a', 'an', 'is', 'are', 'was', 'were', 'to', 'of', 'in', 'on', 'and', 'what', 'it'])
-  const useful = (words: string[]) => words.map(token).filter((word) => word.length > 0 && !skip.has(word.toLowerCase()))
-  const fromModel = useful(given)
-  const fromAnswer = useful(answer.replace(/[.?!]/g, '').split(/\s+/))
-  const picked = (fromModel.length >= 2 ? fromModel : fromAnswer).slice(0, 4)
-  if (picked.length >= 2) return picked
-  return answer.replace(/[.?!]/g, '').split(/\s+/).map(token).filter(Boolean).slice(0, 4)
+  const cleaned = given.map((word) => word.trim()).filter(Boolean)
+  if (modelCuesAreGuided(answer, cleaned)) return cleaned.slice(0, 7)
+  const framed = frameCues(answer)
+  return framed.length >= 2 ? framed : cleaned.slice(0, 4)
 }
 
 function listOf<T>(value: unknown, schema: z.ZodType<T>, rejected: Rejection[]): T[] {
