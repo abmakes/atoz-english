@@ -67,7 +67,7 @@ const gapSchema = z.object({
 })
 
 const sentenceSchema = z.object({
-  words: z.array(z.string().min(1).max(40)).max(6).nullish(),
+  words: z.array(z.string().min(1).max(40)).max(12).nullish(),
   answer: z.string().min(3).max(160),
 })
 
@@ -267,6 +267,24 @@ function readObject(raw: string): Record<string, unknown> {
   }
 }
 
+/** The model sometimes returns "She helps him." instead of {"answer":"She helps him."}. */
+function sentenceEntry(entry: unknown): unknown {
+  if (typeof entry === 'string') return { answer: entry.trim() }
+  return entry
+}
+
+/** Two to four words the student is given. Extra tokens such as "+" are dropped. */
+function cueWords(answer: string, given: string[]): string[] {
+  const token = (word: string) => word.replace(/^[^\w]+|[^\w]+$/g, '').trim()
+  const skip = new Set(['the', 'a', 'an', 'is', 'are', 'was', 'were', 'to', 'of', 'in', 'on', 'and', 'what', 'it'])
+  const useful = (words: string[]) => words.map(token).filter((word) => word.length > 0 && !skip.has(word.toLowerCase()))
+  const fromModel = useful(given)
+  const fromAnswer = useful(answer.replace(/[.?!]/g, '').split(/\s+/))
+  const picked = (fromModel.length >= 2 ? fromModel : fromAnswer).slice(0, 4)
+  if (picked.length >= 2) return picked
+  return answer.replace(/[.?!]/g, '').split(/\s+/).map(token).filter(Boolean).slice(0, 4)
+}
+
 function listOf<T>(value: unknown, schema: z.ZodType<T>, rejected: Rejection[]): T[] {
   if (!Array.isArray(value)) return []
   const items: T[] = []
@@ -361,19 +379,20 @@ function arrangePage(
   }
 
   const sentences: PracticeDraft[] = []
-  for (const item of listOf(page.sentences, sentenceSchema, rejected)) {
+  const sentenceEntries = Array.isArray(page.sentences) ? page.sentences.map(sentenceEntry) : page.sentences
+  for (const item of listOf(sentenceEntries, sentenceSchema, rejected)) {
     const answer = finishWorksheetSentence(item.answer)
     const wordCount = answer.split(/\s+/).length
-    const cues = (item.words ?? []).map((word) => word.trim()).filter(Boolean)
+    const cues = cueWords(answer, item.words ?? [])
     if (!fresh(answer)) {
       rejected.push({ reason: 'duplicate', line: answer })
     } else if (scaffold.sentences === 'jumbled') {
-      if (wordCount < 3 || wordCount > 10) rejected.push({ reason: 'jumble-length', line: answer })
+      if (wordCount < 3 || wordCount > 12) rejected.push({ reason: 'jumble-length', line: answer })
       else {
         const line = jumbleSentence(answer, sentences.length + 1)
         sentences.push(draft('rewrite', line, scaffold, { correctAnswer: answer, sourceQuestion: line }))
       }
-    } else if (cues.length < 2 || cues.length > 5) {
+    } else if (cues.length < 2) {
       rejected.push({ reason: 'sentence-without-cue-words', line: answer })
     } else {
       const line = cues.join(' / ')

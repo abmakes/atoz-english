@@ -325,6 +325,66 @@ describe('lesson conversion', () => {
     expect(gaps[1]?.warning).toContain('tiny')
     expect(items.filter((item) => item.activity === 'choice').every((item) => !item.warning)).toBe(true)
   })
+
+  it('keeps sentences the model returned as plain text', async () => {
+    const lines = [
+      'She helps him.',
+      'He sees her.',
+      'I help them.',
+      'We help you.',
+      'They see me.',
+      'You help us.',
+      'She gives me a toy.',
+      'He gives her a card.',
+      'I give him a book.',
+      'We give them a snack.',
+      'They give us a gift.',
+      'You give me a pen.',
+    ]
+    const generate = vi.fn(async () => JSON.stringify({ sentences: lines }))
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A1',
+      sections: ['rewrite'],
+      generate,
+      questions: [kicking],
+    })
+    const sentences = items.filter((item) => item.activity === 'rewrite')
+    expect(sentences.length).toBeGreaterThanOrEqual(10)
+    expect(sentences.some((item) => item.correctAnswer === 'She helps him.')).toBe(true)
+    expect(sentences.every((item) => item.line.includes(' / '))).toBe(true)
+  })
+
+  it('keeps a number sentence when the cue list is too long or missing', async () => {
+    const sentences = [
+      { words: ['What', 'is', 'the', 'number', '300', '+', '500'], answer: 'Three hundred plus five hundred is eight hundred.' },
+      { words: ['What', 'is', 'the', 'number', '400', '+', '400'], answer: 'Four hundred plus four hundred is eight hundred.' },
+      'The number is six hundred in words.',
+      'The number is nine hundred in words.',
+      'The number is seven hundred in words.',
+      'The number is one hundred in words.',
+      'The number is two hundred in words.',
+      'The number is five hundred in words.',
+      'The number is eight hundred in words.',
+      'The number is fifty in words.',
+      'The number is twenty in words.',
+      'The number is twelve in words.',
+    ]
+    const generate = vi.fn(async () => JSON.stringify({ sentences }))
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A2',
+      sections: ['rewrite'],
+      generate,
+      questions: [kicking],
+    })
+    const written = items.filter((item) => item.activity === 'rewrite')
+    expect(written.length).toBeGreaterThanOrEqual(10)
+    expect(written.some((item) => item.correctAnswer.startsWith('Three hundred'))).toBe(true)
+    expect(written.some((item) => item.line.toLowerCase().includes('six'))).toBe(true)
+  })
 })
 
 describe('lesson review gate', () => {
