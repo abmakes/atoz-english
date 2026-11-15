@@ -21,6 +21,8 @@ model Quiz {
   tags      String[]
   statistics Json?     // { likes, favoritesCount, playsCount }
   defaultSettings Json? // Added: To store default game settings for this quiz
+  questionCount Int      @default(0)
+  playability Json?    // { splashDash, ninjaClimb, tugOfWar } eligible flags + block reasons
   authorId  String     @default("admin")
   questions Question[]
   likes     QuizLike[]

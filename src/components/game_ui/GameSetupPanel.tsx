@@ -25,7 +25,7 @@ import {
   NINJA_POWERUP_DEFINITIONS,
   type NinjaPowerupsConfig,
 } from '@/lib/pixi-games/ninja-climb/ninjaPowerups';
-import type { SplashPowerupsData, NinjaPowerupsData } from '@/types/gameTypes';
+import type { SplashPowerupsData, NinjaPowerupsData, QuizDefaultSettings as SharedQuizDefaultSettings } from '@/types/gameTypes';
 
 // Define props explicitly, using imported types
 /**
@@ -40,6 +40,10 @@ interface GameSetupPanelProps {
     initialGameSlug: string; // Already receives initial slug
     /** The quiz ID for constructing URLs. */
     quizId: string;
+    /** Title from the Quiz row so the form does not wait on question bodies. */
+    quizTitle?: string;
+    /** Default timers/theme from the Quiz row. */
+    defaultSettings?: SharedQuizDefaultSettings;
     /** True while the parent is loading the game module after Play. */
     isStartingPlay?: boolean;
 }
@@ -56,19 +60,7 @@ type LocalPowerups = PowerupsData;
 // Define the type for the config object created locally
 type LocalConfig = Omit<GameSetupData, 'quizId' | 'gameSlug'>;
 
-// Define types for quiz settings (matching schema)
-interface QuizDefaultSettings {
-  theme?: string;
-  powerUps?: string[];
-  gameMode?: 'basic' | 'boosted';
-  guessOptions?: 'zero' | 'one' | 'three' | 'five';
-  timeLimit?: 'ten' | 'fifteen' | 'twenty';
-  music?: boolean;
-  soundEffects?: boolean;
-}
-
-// Mapping functions to convert between different naming conventions
-const mapQuizSettingsToGameSetup = (quizSettings: QuizDefaultSettings) => {
+const mapQuizSettingsToGameSetup = (quizSettings: Partial<SharedQuizDefaultSettings>) => {
   const mapped = {
     theme: quizSettings.theme || 'basic',
     gameFeatures: quizSettings.gameMode || 'basic',
@@ -131,10 +123,13 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
   onGoBack,
   initialGameSlug,
   quizId,
+  quizTitle,
+  defaultSettings,
   isStartingPlay = false,
 }) => {
-  // Remove Zustand usage
   const selectedQuiz = useGameStore((state) => state.selectedQuiz);
+  const resolvedTitle = quizTitle || selectedQuiz?.title;
+  const resolvedDefaults = defaultSettings ?? selectedQuiz?.defaultSettings;
   const isSplashDash = initialGameSlug === 'splash-dash';
   const isNinjaClimb = initialGameSlug === 'ninja-climb';
   const isTugOfWar = initialGameSlug === 'tug-of-war-3d';
@@ -149,16 +144,30 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
     { id: 't2', name: initialGameSlug === 'tug-of-war-3d' ? 'Team Red' : 'Team 2' },
   ]);
   const [newTeamName, setNewTeamName] = useState(''); // For adding new teams
-  const [settings, setSettings] = useState<LocalGameSettings>({
-    music: true,
-    sounds: true,
-    animation: false,
+  const [settings, setSettings] = useState<LocalGameSettings>(() => {
+    const mapped = defaultSettings ? mapQuizSettingsToGameSetup(defaultSettings) : null
+    return {
+      music: mapped?.music ?? true,
+      sounds: mapped?.sounds ?? true,
+      animation: false,
+    }
   });
-  const [selectedTheme, setSelectedTheme] = useState<string>('basic'); // 'basic', 'dark', 'forest'
-  const [selectedGameFeatures, setSelectedGameFeatures] = useState<string>('basic');
-  const [intensityTimeLimit, setIntensityTimeLimit] = useState<number>(15);
-  const [limitedGuesses, setLimitedGuesses] = useState<number | null>(3);
-  const [powerups, setPowerups] = useState<LocalPowerups>({ ...DEFAULT_POWERUPS });
+  const [selectedTheme, setSelectedTheme] = useState<string>(
+    () => (defaultSettings ? mapQuizSettingsToGameSetup(defaultSettings).theme : 'basic')
+  );
+  const [selectedGameFeatures, setSelectedGameFeatures] = useState<string>(
+    () => (defaultSettings ? mapQuizSettingsToGameSetup(defaultSettings).gameFeatures : 'basic')
+  );
+  const [intensityTimeLimit, setIntensityTimeLimit] = useState<number>(
+    () => (defaultSettings ? mapQuizSettingsToGameSetup(defaultSettings).intensityTimeLimit : 15)
+  );
+  const [limitedGuesses, setLimitedGuesses] = useState<number | null>(
+    () => (defaultSettings ? mapQuizSettingsToGameSetup(defaultSettings).limitedGuesses : 3)
+  );
+  const [powerups, setPowerups] = useState<LocalPowerups>(() => {
+    const mapped = defaultSettings ? mapQuizSettingsToGameSetup(defaultSettings) : null
+    return { ...DEFAULT_POWERUPS, ...(mapped?.powerups ?? {}) }
+  });
   const [splashPowerups, setSplashPowerups] = useState<SplashPowerupsConfig>({
     ...DEFAULT_SPLASH_POWERUPS,
   });
@@ -233,7 +242,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
     }
   }, []); // Empty dependency array ensures this runs only once on mount
 
-  // Warm question + scene assets before enabling Play
+  // Fetch question images in the background; the form is already on screen.
   useEffect(() => {
     let cancelled = false;
 
@@ -243,10 +252,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
 
       try {
         let imageUrls: string[] = [];
-        const storeQuestions = selectedQuiz?.questions as Array<{ imageUrl?: string }> | undefined;
-        if (storeQuestions?.length) {
-          imageUrls = extractQuestionImageUrls(storeQuestions);
-        } else if (quizId) {
+        if (quizId) {
           const res = await fetch(`/api/quizzes/${quizId}`);
           const json = await res.json();
           if (res.ok) {
@@ -271,14 +277,12 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
         if (result.ready) {
           setAssetsReady(true);
         } else {
-          // Allow play with warning — question images may still load in-game if cache partially filled
           console.warn('GameSetupPanel: Some assets failed to warm:', result.failed);
           setAssetsReady(true);
         }
       } catch (error) {
         console.error('GameSetupPanel: Asset warmup error:', error);
         if (!cancelled) {
-          // Don't permanently block Play on warmup errors
           setAssetsReady(true);
         }
       }
@@ -288,24 +292,24 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [quizId, initialGameSlug, selectedQuiz?.id, selectedQuiz?.questions]);
+  }, [quizId, initialGameSlug]);
 
   // Effect to load quiz default settings with priority system
   useEffect(() => {
-    if (!selectedQuiz?.defaultSettings) {
+    if (!resolvedDefaults) {
       console.log('GameSetupPanel: No quiz defaultSettings found, using component defaults');
       return;
     }
 
     try {
-      const quizDefaults = selectedQuiz.defaultSettings as QuizDefaultSettings;
+      const quizDefaults = resolvedDefaults;
       console.log('GameSetupPanel: Found quiz defaultSettings:', quizDefaults);
 
       // 1. Start with quiz defaults
       const mappedDefaults = mapQuizSettingsToGameSetup(quizDefaults);
 
       // 2. Check for per-quiz localStorage settings
-      const quizSpecificStorageKey = `pixi-engine/quiz-settings-${selectedQuiz.id}`;
+      const quizSpecificStorageKey = `pixi-engine/quiz-settings-${quizId}`;
       const storedQuizSettings = localStorage.getItem(quizSpecificStorageKey);
       
       let finalSettings = { ...mappedDefaults };
@@ -344,7 +348,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
     } catch (error) {
       console.error('Error processing quiz defaultSettings:', error);
     }
-  }, [selectedQuiz?.id, selectedQuiz?.defaultSettings]); // Re-run when quiz changes
+  }, [quizId, resolvedDefaults]);
 
   // --- Handlers (Placeholders) ---
   const handleAddTeam = () => {
@@ -369,16 +373,16 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
 
   // Helper function to save quiz-specific settings to localStorage
   const saveQuizSettings = (updatedSettings: Record<string, unknown>) => {
-    if (!selectedQuiz?.id) return;
+    if (!quizId) return;
     
     try {
-      const quizSpecificStorageKey = `pixi-engine/quiz-settings-${selectedQuiz.id}`;
+      const quizSpecificStorageKey = `pixi-engine/quiz-settings-${quizId}`;
       const existingSettings = localStorage.getItem(quizSpecificStorageKey);
       const currentSettings = existingSettings ? JSON.parse(existingSettings) : {};
       
       const newSettings = { ...currentSettings, ...updatedSettings };
       localStorage.setItem(quizSpecificStorageKey, JSON.stringify(newSettings));
-      console.log(`GameSetupPanel: Saved quiz-specific settings for ${selectedQuiz.id}:`, newSettings);
+      console.log(`GameSetupPanel: Saved quiz-specific settings for ${quizId}:`, newSettings);
     } catch (error) {
       console.error('Error saving quiz-specific settings:', error);
     }
@@ -519,9 +523,9 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
       <div className="z-20 mx-auto w-full max-w-4xl rounded-[24px] border-2 border-[var(--border-dark)] bg-[var(--panel-bg)] p-4 shadow-solid filter-blur-sm sm:rounded-[32px] sm:p-8">
 
         {/* Quiz Title */}
-        {selectedQuiz && (
+        {resolvedTitle && (
             <h2 className="grandstander mb-3 break-words px-1 text-center text-xl font-semibold text-[var(--text-color)] sm:mb-4 sm:text-2xl">
-              {selectedQuiz.title}
+              {resolvedTitle}
             </h2>
         )}
         {isSplashDash && (

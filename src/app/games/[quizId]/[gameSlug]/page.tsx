@@ -1,14 +1,16 @@
-'use client';
+import Link from 'next/link'
+import GameContainer from '@/components/game_ui/GameContainer'
+import { gameModeRegistry } from '@/lib/game-engine/modes/builtinGameModes'
+import { getQuizPickerSummary } from '@/lib/quiz-summary'
 
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
-import GameContainer from '@/components/game_ui/GameContainer';
-import { gameModeRegistry } from '@/lib/game-engine/modes/builtinGameModes';
+export const revalidate = 60
 
-export default function GamePage() {
-  const params = useParams();
-  const quizId = params.quizId as string | undefined;
-  const gameSlug = params.gameSlug as string | undefined;
+export default async function GamePage({
+  params,
+}: {
+  params: Promise<{ quizId: string; gameSlug: string }>
+}) {
+  const { quizId, gameSlug } = await params
 
   if (!quizId || !gameSlug || !gameModeRegistry.get(gameSlug)) {
     return (
@@ -18,8 +20,15 @@ export default function GamePage() {
           Back to games
         </Link>
       </div>
-    );
+    )
   }
 
-  return <GameContainer quizId={quizId} gameSlug={gameSlug} />;
+  let quizSummary = null
+  try {
+    quizSummary = await getQuizPickerSummary(quizId)
+  } catch (error) {
+    console.error('Setup quiz summary failed:', error)
+  }
+
+  return <GameContainer quizId={quizId} gameSlug={gameSlug} quizSummary={quizSummary} />
 }

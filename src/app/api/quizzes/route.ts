@@ -8,6 +8,8 @@ import { Prisma } from '../../../../prisma/app/generated/prisma/client'
 import { quizSettingsSchema, quizSortSchema } from '@/lib/schemas'
 import { requireAuth, isUnauthorized, getOptionalUserId } from '@/lib/auth'
 import { getQuizStatistics, sortByStatistics, emptyStatisticsJson } from '@/lib/quiz-statistics'
+import { getPublicQuizCatalog, revalidateQuizCatalog, withCatalogEngagement } from '@/lib/quiz-catalog'
+import { quizPlayabilityFields } from '@/lib/quiz-summary'
 
 // Define Zod Schema for a Question (used in POST)
 const QuestionSchema = z.object({
@@ -61,6 +63,13 @@ export async function GET(request: NextRequest) {
       authorFilter = authResult.userId
     } else if (authorIdParam) {
       authorFilter = authorIdParam
+    }
+
+    if (!authorFilter) {
+      const cards = await getPublicQuizCatalog(sort)
+      const currentUserId = await getOptionalUserId()
+      const data = currentUserId ? await withCatalogEngagement(cards, currentUserId) : cards
+      return NextResponse.json({ data })
     }
 
     const currentUserId = await getOptionalUserId()
@@ -291,6 +300,8 @@ export async function POST(request: Request) {
         }
     }))
 
+    const playabilityFields = quizPlayabilityFields(validatedData.quizType, questionsToCreate)
+
     const createData: Prisma.QuizCreateInput = {
         title: validatedData.title,
         description: validatedData.description || null,
@@ -304,6 +315,8 @@ export async function POST(request: Request) {
           ? (validatedData.defaultSettings as Prisma.InputJsonValue)
           : Prisma.JsonNull,
         authorId: validatedData.authorId ?? userId,
+        questionCount: playabilityFields.questionCount,
+        playability: playabilityFields.playability,
         questions: {
           create: questionsToCreate,
         },
@@ -328,6 +341,7 @@ export async function POST(request: Request) {
       }), 'Creating quiz')
 
     console.log('Created quiz:', createdQuiz.id)
+    revalidateQuizCatalog()
     
     const createdQuizTyped = createdQuiz as unknown as ITQuiz; 
     const createdQuizForApi: ITQuiz = {
