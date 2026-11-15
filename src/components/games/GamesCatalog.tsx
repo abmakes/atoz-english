@@ -16,6 +16,7 @@ import {
 import type { QuizListItem } from '@/types/gameTypes';
 import type { QuizSort } from '@/lib/schemas';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useGameStore } from '@/stores/useGameStore';
 import { TagDrawer } from '@/components/management_ui/TagDrawer';
 import { ALL_TAG_CATEGORIES } from '@/lib/tags';
@@ -49,6 +50,22 @@ async function getQuizzesClient(sort: QuizSort): Promise<QuizListItem[]> {
 function quizQuestionCount(quiz: QuizListItem): number {
   if (typeof quiz.questionCount === 'number') return quiz.questionCount;
   return quiz.questions?.length ?? 0;
+}
+
+const HOVER_FLIP_MEDIA = '(hover: hover) and (pointer: fine)';
+
+function useFinePointerHover() {
+  const [fineHover, setFineHover] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia(HOVER_FLIP_MEDIA);
+    const sync = () => setFineHover(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
+
+  return fineHover;
 }
 
 export default function GamesCatalog({
@@ -97,6 +114,9 @@ function GamesPageContent({
   const [sort, setSort] = useState<QuizSort>('newest');
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [navigatingQuizId, setNavigatingQuizId] = useState<string | null>(null);
+  const [flippedQuizId, setFlippedQuizId] = useState<string | null>(null);
+  const fineHover = useFinePointerHover();
+  const router = useRouter();
   const setQuizzes = useGameStore((state) => state.setQuizzes);
   const hasLoadedOnce = useRef(false);
   const requestId = useRef(0);
@@ -307,6 +327,15 @@ function GamesPageContent({
     });
   }, [allQuizzes, searchTerm, selectedTags]);
 
+  useEffect(() => {
+    setFlippedQuizId(null);
+  }, [searchTerm, selectedTags, sort]);
+
+  const openQuiz = (quizId: string) => {
+    setNavigatingQuizId(quizId);
+    router.push(`/games/${quizId}`);
+  };
+
   const catalogEmpty = !isLoading && (!allQuizzes || allQuizzes.length === 0);
   const showSkeleton = isLoading && allQuizzes.length === 0;
 
@@ -428,17 +457,40 @@ function GamesPageContent({
               >
                 {filteredQuizzes.map((quiz, index) => {
                   const isNavigating = navigatingQuizId === quiz.id;
+                  const isFlipped = flippedQuizId === quiz.id;
                   return (
-                  <Link
+                  <article
                     className={`block group cursor-pointer relative ${
                       isNavigating ? 'opacity-70 pointer-events-none' : ''
                     }`}
                     key={quiz.id}
-                    href={`/games/${quiz.id}`}
-                    passHref
                     onClick={() => {
-                      setNavigatingQuizId(quiz.id);
+                      if (isNavigating) return;
+                      if (fineHover) {
+                        openQuiz(quiz.id);
+                        return;
+                      }
+                      setFlippedQuizId((current) => (current === quiz.id ? null : quiz.id));
                     }}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Enter' && event.key !== ' ') return;
+                      event.preventDefault();
+                      if (fineHover) {
+                        openQuiz(quiz.id);
+                        return;
+                      }
+                      setFlippedQuizId((current) => (current === quiz.id ? null : quiz.id));
+                    }}
+                    role={fineHover ? 'link' : 'button'}
+                    tabIndex={0}
+                    aria-label={
+                      fineHover
+                        ? `Open ${quiz.title}`
+                        : isFlipped
+                          ? `${quiz.title} details. Tap Play to open.`
+                          : `Show details for ${quiz.title}`
+                    }
+                    aria-pressed={fineHover ? undefined : isFlipped}
                   >
                     {isNavigating && (
                       <div className="absolute inset-0 z-20 flex items-center justify-center rounded-[32px] bg-white/50 pointer-events-none">
@@ -451,16 +503,22 @@ function GamesPageContent({
                       <div className="relative h-48 w-full min-w-72 bg-[#d7eef6]">
                         <Image
                           src={quiz.imageUrl || CATALOG_PLACEHOLDER_IMAGE}
-                          alt={quiz.title}
+                          alt=""
                           fill
                           priority={index < 4}
                           style={{ objectFit: 'cover' }}
-                          className="rounded-t-[32px] transition-opacity duration-300 group-hover:opacity-20"
+                          className={`rounded-t-[32px] transition-opacity duration-300 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-20 ${
+                            isFlipped ? 'opacity-20' : ''
+                          }`}
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                         />
                       </div>
 
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-white/30 p-4 text-[#114257] opacity-0 transition-opacity duration-300 group-hover:opacity-100 grandstander pointer-events-none group-hover:pointer-events-auto">
+                      <div
+                        className={`absolute inset-0 flex flex-col items-center justify-center gap-1 bg-white/30 p-4 text-[#114257] opacity-0 pointer-events-none transition-opacity duration-300 grandstander [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover:pointer-events-auto ${
+                          isFlipped ? 'opacity-100 pointer-events-auto' : ''
+                        }`}
+                      >
                         <span className="text-xl font-bold">{quizQuestionCount(quiz)} questions</span>
 
                         <button
@@ -512,6 +570,18 @@ function GamesPageContent({
                             ))}
                           </div>
                         )}
+
+                        <Link
+                          href={`/games/${quiz.id}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setNavigatingQuizId(quiz.id);
+                          }}
+                          className="mt-2 inline-flex items-center gap-1 rounded-full border-2 border-[#1E5167] bg-white px-4 py-1 pt-1.5 text-base font-bold grandstander text-[#114257] shadow-[3px_3px_0px_0px_#1E5167]"
+                        >
+                          <Play className="h-4 w-4 fill-[--primary-accent] stroke-[--primary-accent]" />
+                          Play
+                        </Link>
                       </div>
                     </div>
 
@@ -530,13 +600,8 @@ function GamesPageContent({
                       <p className="text-sm font-sans text-[#114257] line-clamp-2 inclusive-sans px-2">
                         {quiz.description}
                       </p>
-                      {quiz.level && (
-                        <span className="mt-2 inline-block rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700 grandstander">
-                          {quiz.level}
-                        </span>
-                      )}
                     </div>
-                  </Link>
+                  </article>
                   );
                 })}
               </div>
