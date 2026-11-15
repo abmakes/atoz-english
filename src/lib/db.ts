@@ -4,6 +4,7 @@
 // Import only what's needed
 import { prisma, withDatabaseRetry } from './prisma';
 import { QuestionType } from '@/types/question_types';
+import { quizPlayabilityFields } from '@/lib/quiz-summary';
 // Removed unused Prisma import
 
 // Helper function to split array into chunks (for batched operations)
@@ -110,6 +111,8 @@ export async function updateQuiz(id: string, data: {
   console.log(`Starting quiz update for quiz ${id} with ${data.questions.length} questions`);
   
   return withDatabaseRetry(async () => {
+    const playabilityFields = quizPlayabilityFields(data.quizType, data.questions)
+
     // 1. Update quiz basic info immediately
     const quizUpdatePromise = prisma.quiz.update({
       where: { id },
@@ -124,6 +127,8 @@ export async function updateQuiz(id: string, data: {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         defaultSettings: data.defaultSettings ? data.defaultSettings as any : undefined,
         authorId: data.authorId || undefined,
+        questionCount: playabilityFields.questionCount,
+        playability: playabilityFields.playability,
       },
     });
     

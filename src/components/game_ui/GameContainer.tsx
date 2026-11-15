@@ -23,6 +23,7 @@ import LoadingSpinner from '../loading_spinner';
 import { useGameStore } from '@/stores/useGameStore'; // Import the store
 import { gameModeRegistry } from '@/lib/game-engine/modes/builtinGameModes';
 import type { GameRuntimeFactory } from '@/lib/game-engine/runtime/GameRuntime';
+import type { QuizPickerSummary } from '@/lib/quiz-playability';
 
 const GameplayView = dynamic(() => import('./GameplayView'), {
     ssr: false,
@@ -41,13 +42,15 @@ interface GameContainerProps {
   quizId: string;
   /** The URL slug for the game type (e.g., 'multiple-choice'). */
   gameSlug: string;
+  /** Quiz row fields so setup can render before question bodies arrive. */
+  quizSummary?: QuizPickerSummary | null;
 }
 
 /**
  * Main container component responsible for managing the game lifecycle,
  * switching between setup, gameplay, and game over views.
  */
-const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
+const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug, quizSummary = null }) => {
   const router = useRouter();
   const [currentView, setCurrentView] = useState<GameView>('setup');
   const [gameConfig, setGameConfig] = useState<GameConfig | null>(null);
@@ -398,6 +401,8 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
                     onGoBack={handleBackFromSetup}
                     initialGameSlug={gameSlug}
                     quizId={quizId}
+                    quizTitle={quizSummary?.title}
+                    defaultSettings={quizSummary?.defaultSettings}
                     isStartingPlay={isStartingPlay}
                 />;
       case 'playing':

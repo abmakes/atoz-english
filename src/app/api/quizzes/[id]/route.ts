@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidateQuizCatalog } from '@/lib/quiz-catalog'
 import { z } from 'zod'
 import { Prisma } from '../../../../../prisma/app/generated/prisma/client'
 import { prisma } from '@/lib/prisma'
@@ -98,6 +99,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Quiz not found', details: { id } }, { status: 404 });
     }
 
+    revalidateQuizCatalog()
     return NextResponse.json({ message: 'Quiz and associated questions deleted successfully' });
   } catch (error: unknown) {
     console.error(`API Error in DELETE /api/quizzes/${id}:`, error);
@@ -407,6 +409,7 @@ export async function PUT(
             }))
         };
         console.log('PUT /api/quizzes/[id] - Successfully updated quiz. Sending response.');
+        revalidateQuizCatalog()
         return NextResponse.json({ data: updatedQuizForApi });
 
     } catch (error: unknown) { 

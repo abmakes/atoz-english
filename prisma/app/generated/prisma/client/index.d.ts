@@ -2106,8 +2106,18 @@ export namespace Prisma {
 
   export type AggregateQuiz = {
     _count: QuizCountAggregateOutputType | null
+    _avg: QuizAvgAggregateOutputType | null
+    _sum: QuizSumAggregateOutputType | null
     _min: QuizMinAggregateOutputType | null
     _max: QuizMaxAggregateOutputType | null
+  }
+
+  export type QuizAvgAggregateOutputType = {
+    questionCount: number | null
+  }
+
+  export type QuizSumAggregateOutputType = {
+    questionCount: number | null
   }
 
   export type QuizMinAggregateOutputType = {
@@ -2116,6 +2126,7 @@ export namespace Prisma {
     description: string | null
     imageUrl: string | null
     quizType: $Enums.QuestionType | null
+    questionCount: number | null
     authorId: string | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -2127,6 +2138,7 @@ export namespace Prisma {
     description: string | null
     imageUrl: string | null
     quizType: $Enums.QuestionType | null
+    questionCount: number | null
     authorId: string | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -2141,6 +2153,8 @@ export namespace Prisma {
     tags: number
     statistics: number
     defaultSettings: number
+    questionCount: number
+    playability: number
     authorId: number
     createdAt: number
     updatedAt: number
@@ -2148,12 +2162,21 @@ export namespace Prisma {
   }
 
 
+  export type QuizAvgAggregateInputType = {
+    questionCount?: true
+  }
+
+  export type QuizSumAggregateInputType = {
+    questionCount?: true
+  }
+
   export type QuizMinAggregateInputType = {
     id?: true
     title?: true
     description?: true
     imageUrl?: true
     quizType?: true
+    questionCount?: true
     authorId?: true
     createdAt?: true
     updatedAt?: true
@@ -2165,6 +2188,7 @@ export namespace Prisma {
     description?: true
     imageUrl?: true
     quizType?: true
+    questionCount?: true
     authorId?: true
     createdAt?: true
     updatedAt?: true
@@ -2179,6 +2203,8 @@ export namespace Prisma {
     tags?: true
     statistics?: true
     defaultSettings?: true
+    questionCount?: true
+    playability?: true
     authorId?: true
     createdAt?: true
     updatedAt?: true
@@ -2223,6 +2249,18 @@ export namespace Prisma {
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
+     * Select which fields to average
+    **/
+    _avg?: QuizAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: QuizSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: QuizMinAggregateInputType
@@ -2253,6 +2291,8 @@ export namespace Prisma {
     take?: number
     skip?: number
     _count?: QuizCountAggregateInputType | true
+    _avg?: QuizAvgAggregateInputType
+    _sum?: QuizSumAggregateInputType
     _min?: QuizMinAggregateInputType
     _max?: QuizMaxAggregateInputType
   }
@@ -2266,10 +2306,14 @@ export namespace Prisma {
     tags: string[]
     statistics: JsonValue | null
     defaultSettings: JsonValue | null
+    questionCount: number
+    playability: JsonValue | null
     authorId: string
     createdAt: Date
     updatedAt: Date
     _count: QuizCountAggregateOutputType | null
+    _avg: QuizAvgAggregateOutputType | null
+    _sum: QuizSumAggregateOutputType | null
     _min: QuizMinAggregateOutputType | null
     _max: QuizMaxAggregateOutputType | null
   }
@@ -2297,6 +2341,8 @@ export namespace Prisma {
     tags?: boolean
     statistics?: boolean
     defaultSettings?: boolean
+    questionCount?: boolean
+    playability?: boolean
     authorId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -2316,6 +2362,8 @@ export namespace Prisma {
     tags?: boolean
     statistics?: boolean
     defaultSettings?: boolean
+    questionCount?: boolean
+    playability?: boolean
     authorId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -2330,6 +2378,8 @@ export namespace Prisma {
     tags?: boolean
     statistics?: boolean
     defaultSettings?: boolean
+    questionCount?: boolean
+    playability?: boolean
     authorId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -2361,6 +2411,8 @@ export namespace Prisma {
       tags: string[]
       statistics: Prisma.JsonValue | null
       defaultSettings: Prisma.JsonValue | null
+      questionCount: number
+      playability: Prisma.JsonValue | null
       authorId: string
       createdAt: Date
       updatedAt: Date
@@ -2769,6 +2821,8 @@ export namespace Prisma {
     readonly tags: FieldRef<"Quiz", 'String[]'>
     readonly statistics: FieldRef<"Quiz", 'Json'>
     readonly defaultSettings: FieldRef<"Quiz", 'Json'>
+    readonly questionCount: FieldRef<"Quiz", 'Int'>
+    readonly playability: FieldRef<"Quiz", 'Json'>
     readonly authorId: FieldRef<"Quiz", 'String'>
     readonly createdAt: FieldRef<"Quiz", 'DateTime'>
     readonly updatedAt: FieldRef<"Quiz", 'DateTime'>
@@ -14982,6 +15036,8 @@ export namespace Prisma {
     tags: 'tags',
     statistics: 'statistics',
     defaultSettings: 'defaultSettings',
+    questionCount: 'questionCount',
+    playability: 'playability',
     authorId: 'authorId',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
@@ -15251,20 +15307,6 @@ export namespace Prisma {
 
 
   /**
-   * Reference to a field of type 'DateTime'
-   */
-  export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
-    
-
-
-  /**
-   * Reference to a field of type 'DateTime[]'
-   */
-  export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
-    
-
-
-  /**
    * Reference to a field of type 'Int'
    */
   export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
@@ -15275,6 +15317,20 @@ export namespace Prisma {
    * Reference to a field of type 'Int[]'
    */
   export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'DateTime'
+   */
+  export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
+    
+
+
+  /**
+   * Reference to a field of type 'DateTime[]'
+   */
+  export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
     
 
 
@@ -15370,6 +15426,8 @@ export namespace Prisma {
     tags?: StringNullableListFilter<"Quiz">
     statistics?: JsonNullableFilter<"Quiz">
     defaultSettings?: JsonNullableFilter<"Quiz">
+    questionCount?: IntFilter<"Quiz"> | number
+    playability?: JsonNullableFilter<"Quiz">
     authorId?: StringFilter<"Quiz"> | string
     createdAt?: DateTimeFilter<"Quiz"> | Date | string
     updatedAt?: DateTimeFilter<"Quiz"> | Date | string
@@ -15388,6 +15446,8 @@ export namespace Prisma {
     tags?: SortOrder
     statistics?: SortOrderInput | SortOrder
     defaultSettings?: SortOrderInput | SortOrder
+    questionCount?: SortOrder
+    playability?: SortOrderInput | SortOrder
     authorId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -15409,6 +15469,8 @@ export namespace Prisma {
     tags?: StringNullableListFilter<"Quiz">
     statistics?: JsonNullableFilter<"Quiz">
     defaultSettings?: JsonNullableFilter<"Quiz">
+    questionCount?: IntFilter<"Quiz"> | number
+    playability?: JsonNullableFilter<"Quiz">
     authorId?: StringFilter<"Quiz"> | string
     createdAt?: DateTimeFilter<"Quiz"> | Date | string
     updatedAt?: DateTimeFilter<"Quiz"> | Date | string
@@ -15427,12 +15489,16 @@ export namespace Prisma {
     tags?: SortOrder
     statistics?: SortOrderInput | SortOrder
     defaultSettings?: SortOrderInput | SortOrder
+    questionCount?: SortOrder
+    playability?: SortOrderInput | SortOrder
     authorId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: QuizCountOrderByAggregateInput
+    _avg?: QuizAvgOrderByAggregateInput
     _max?: QuizMaxOrderByAggregateInput
     _min?: QuizMinOrderByAggregateInput
+    _sum?: QuizSumOrderByAggregateInput
   }
 
   export type QuizScalarWhereWithAggregatesInput = {
@@ -15447,6 +15513,8 @@ export namespace Prisma {
     tags?: StringNullableListFilter<"Quiz">
     statistics?: JsonNullableWithAggregatesFilter<"Quiz">
     defaultSettings?: JsonNullableWithAggregatesFilter<"Quiz">
+    questionCount?: IntWithAggregatesFilter<"Quiz"> | number
+    playability?: JsonNullableWithAggregatesFilter<"Quiz">
     authorId?: StringWithAggregatesFilter<"Quiz"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Quiz"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Quiz"> | Date | string
@@ -16334,6 +16402,8 @@ export namespace Prisma {
     tags?: QuizCreatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -16352,6 +16422,8 @@ export namespace Prisma {
     tags?: QuizCreatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -16370,6 +16442,8 @@ export namespace Prisma {
     tags?: QuizUpdatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: IntFieldUpdateOperationsInput | number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -16388,6 +16462,8 @@ export namespace Prisma {
     tags?: QuizUpdatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: IntFieldUpdateOperationsInput | number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -16406,6 +16482,8 @@ export namespace Prisma {
     tags?: QuizCreatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -16420,6 +16498,8 @@ export namespace Prisma {
     tags?: QuizUpdatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: IntFieldUpdateOperationsInput | number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -16434,6 +16514,8 @@ export namespace Prisma {
     tags?: QuizUpdatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: IntFieldUpdateOperationsInput | number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -17466,6 +17548,17 @@ export namespace Prisma {
     not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
+  export type IntFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntFilter<$PrismaModel> | number
+  }
+
   export type DateTimeFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
@@ -17526,9 +17619,15 @@ export namespace Prisma {
     tags?: SortOrder
     statistics?: SortOrder
     defaultSettings?: SortOrder
+    questionCount?: SortOrder
+    playability?: SortOrder
     authorId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+  }
+
+  export type QuizAvgOrderByAggregateInput = {
+    questionCount?: SortOrder
   }
 
   export type QuizMaxOrderByAggregateInput = {
@@ -17537,6 +17636,7 @@ export namespace Prisma {
     description?: SortOrder
     imageUrl?: SortOrder
     quizType?: SortOrder
+    questionCount?: SortOrder
     authorId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -17548,9 +17648,14 @@ export namespace Prisma {
     description?: SortOrder
     imageUrl?: SortOrder
     quizType?: SortOrder
+    questionCount?: SortOrder
     authorId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+  }
+
+  export type QuizSumOrderByAggregateInput = {
+    questionCount?: SortOrder
   }
 
   export type StringWithAggregatesFilter<$PrismaModel = never> = {
@@ -17622,6 +17727,22 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedJsonNullableFilter<$PrismaModel>
     _max?: NestedJsonNullableFilter<$PrismaModel>
+  }
+
+  export type IntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedIntFilter<$PrismaModel>
+    _min?: NestedIntFilter<$PrismaModel>
+    _max?: NestedIntFilter<$PrismaModel>
   }
 
   export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
@@ -17804,17 +17925,6 @@ export namespace Prisma {
     _max?: NestedJsonFilter<$PrismaModel>
   }
 
-  export type IntFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntFilter<$PrismaModel> | number
-  }
-
   export type IntNullableFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel> | null
     in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
@@ -17906,22 +18016,6 @@ export namespace Prisma {
     height?: SortOrder
     pixabayId?: SortOrder
     usageCount?: SortOrder
-  }
-
-  export type IntWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
-    _count?: NestedIntFilter<$PrismaModel>
-    _avg?: NestedFloatFilter<$PrismaModel>
-    _sum?: NestedIntFilter<$PrismaModel>
-    _min?: NestedIntFilter<$PrismaModel>
-    _max?: NestedIntFilter<$PrismaModel>
   }
 
   export type IntNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -18442,6 +18536,14 @@ export namespace Prisma {
     push?: string | string[]
   }
 
+  export type IntFieldUpdateOperationsInput = {
+    set?: number
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
   export type DateTimeFieldUpdateOperationsInput = {
     set?: Date | string
   }
@@ -18619,14 +18721,6 @@ export namespace Prisma {
 
   export type StoredImageCreatetagsInput = {
     set: string[]
-  }
-
-  export type IntFieldUpdateOperationsInput = {
-    set?: number
-    increment?: number
-    decrement?: number
-    multiply?: number
-    divide?: number
   }
 
   export type StoredImageUpdatetagsInput = {
@@ -18934,6 +19028,17 @@ export namespace Prisma {
     not?: NestedEnumQuestionTypeFilter<$PrismaModel> | $Enums.QuestionType
   }
 
+  export type NestedIntFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntFilter<$PrismaModel> | number
+  }
+
   export type NestedDateTimeFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
@@ -18960,17 +19065,6 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedStringFilter<$PrismaModel>
     _max?: NestedStringFilter<$PrismaModel>
-  }
-
-  export type NestedIntFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntFilter<$PrismaModel> | number
   }
 
   export type NestedStringNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -19033,6 +19127,33 @@ export namespace Prisma {
     not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
+  export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedIntFilter<$PrismaModel>
+    _min?: NestedIntFilter<$PrismaModel>
+    _max?: NestedIntFilter<$PrismaModel>
+  }
+
+  export type NestedFloatFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatFilter<$PrismaModel> | number
+  }
+
   export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
@@ -19078,33 +19199,6 @@ export namespace Prisma {
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
-  }
-
-  export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
-    _count?: NestedIntFilter<$PrismaModel>
-    _avg?: NestedFloatFilter<$PrismaModel>
-    _sum?: NestedIntFilter<$PrismaModel>
-    _min?: NestedIntFilter<$PrismaModel>
-    _max?: NestedIntFilter<$PrismaModel>
-  }
-
-  export type NestedFloatFilter<$PrismaModel = never> = {
-    equals?: number | FloatFieldRefInput<$PrismaModel>
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    lt?: number | FloatFieldRefInput<$PrismaModel>
-    lte?: number | FloatFieldRefInput<$PrismaModel>
-    gt?: number | FloatFieldRefInput<$PrismaModel>
-    gte?: number | FloatFieldRefInput<$PrismaModel>
-    not?: NestedFloatFilter<$PrismaModel> | number
   }
 
   export type NestedIntNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -19447,6 +19541,8 @@ export namespace Prisma {
     tags?: QuizCreatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -19464,6 +19560,8 @@ export namespace Prisma {
     tags?: QuizCreatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -19497,6 +19595,8 @@ export namespace Prisma {
     tags?: QuizUpdatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: IntFieldUpdateOperationsInput | number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -19514,6 +19614,8 @@ export namespace Prisma {
     tags?: QuizUpdatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: IntFieldUpdateOperationsInput | number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -19531,6 +19633,8 @@ export namespace Prisma {
     tags?: QuizCreatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -19548,6 +19652,8 @@ export namespace Prisma {
     tags?: QuizCreatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -19581,6 +19687,8 @@ export namespace Prisma {
     tags?: QuizUpdatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: IntFieldUpdateOperationsInput | number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -19598,6 +19706,8 @@ export namespace Prisma {
     tags?: QuizUpdatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: IntFieldUpdateOperationsInput | number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -19615,6 +19725,8 @@ export namespace Prisma {
     tags?: QuizCreatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -19632,6 +19744,8 @@ export namespace Prisma {
     tags?: QuizCreatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -19665,6 +19779,8 @@ export namespace Prisma {
     tags?: QuizUpdatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: IntFieldUpdateOperationsInput | number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -19682,6 +19798,8 @@ export namespace Prisma {
     tags?: QuizUpdatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: IntFieldUpdateOperationsInput | number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -19699,6 +19817,8 @@ export namespace Prisma {
     tags?: QuizCreatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -19716,6 +19836,8 @@ export namespace Prisma {
     tags?: QuizCreatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -19749,6 +19871,8 @@ export namespace Prisma {
     tags?: QuizUpdatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: IntFieldUpdateOperationsInput | number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -19766,6 +19890,8 @@ export namespace Prisma {
     tags?: QuizUpdatetagsInput | string[]
     statistics?: NullableJsonNullValueInput | InputJsonValue
     defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: IntFieldUpdateOperationsInput | number
+    playability?: NullableJsonNullValueInput | InputJsonValue
     authorId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string

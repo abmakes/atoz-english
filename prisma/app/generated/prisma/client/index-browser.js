@@ -131,6 +131,8 @@ exports.Prisma.QuizScalarFieldEnum = {
   tags: 'tags',
   statistics: 'statistics',
   defaultSettings: 'defaultSettings',
+  questionCount: 'questionCount',
+  playability: 'playability',
   authorId: 'authorId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
