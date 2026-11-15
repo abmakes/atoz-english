@@ -117,8 +117,14 @@ const ninjaClimb: GameModeDefinition = {
         assets: [
           { key: 'ninja_blue_idle', src: '/images/ninja-climb/ninja_blue_idle.webp' },
           { key: 'ninja_red_idle', src: '/images/ninja-climb/ninja_red_idle.webp' },
-          { key: 'ninja_blue_climb', src: '/images/ninja-climb/ninja_blue_climb.png' },
-          { key: 'ninja_red_climb', src: '/images/ninja-climb/ninja_red_climb.png' },
+          ...[0, 1, 2, 5, 6, 7].map((id) => ({
+            key: `ninja_blue_jump_${id}`,
+            src: `/images/ninja-climb/vertical_jump_blue/frame_${String(id).padStart(4, '0')}.png`,
+          })),
+          ...[0, 1, 2, 3, 4, 5].map((id) => ({
+            key: `ninja_red_jump_${id}`,
+            src: `/images/ninja-climb/vertical_jump_red/frame_${String(id).padStart(4, '0')}.png`,
+          })),
           { key: 'sky', src: '/images/ninja-climb/sky.webp' },
           { key: 'icon_teleport', src: '/images/ninja-climb/icon_teleport.png' },
           { key: 'icon_rope', src: '/images/ninja-climb/icon_rope.png' },
@@ -169,7 +175,7 @@ const tugOfWar3d: GameModeDefinition = {
   slug: 'tug-of-war-3d',
   title: 'Tug of War',
   description: 'Two teams take turns answering — first to 3 round points wins.',
-  thumbnail: '/images/marketing/teamquiz_thumb.png',
+  thumbnail: '/images/marketing/tugofwar_thumb.png',
   renderer: 'three',
   questionTimerId: 'tugOfWarQuestionTimer',
   hud: {

@@ -215,8 +215,8 @@ export default function WordChompersScreen({ mode }: { mode: ChomperMode }) {
                 </div>
                 <p className="mt-2 text-sm text-[--text-light] inclusive-sans">
                   {swimInput === 'touch'
-                    ? 'Hold the button on your edge. Your crocodile spins until you hold, then it swims that way.'
-                    : 'Four hands on one keyboard. Bottom Space, left Shift, right 6, top Caps Lock. Hold to swim.'}
+                    ? 'Drag the joystick in your corner. The crocodile swims the way you push.'
+                    : 'The crocodile spins. Hold Space, Shift, 6, or Caps Lock, or hold the button on your edge.'}
                 </p>
               </div>
             ) : null}
@@ -327,9 +327,9 @@ function HowTo({ mode }: { mode: ChomperMode }) {
           'A blue card turns the words around. A red card gives last place a head start.',
         ]
       : [
-          'Hold your button. The crocodile spins, then swims the way its snout points.',
+          'Touch uses the joystick in your corner. Keyboard spins the crocodile: hold your key, or hold the button on your edge.',
           'Eat a person, a matching verb, then any object. The grammar card says which structure to build.',
-          'A wrong word knocks you back for 2 seconds. Your sentence stays.',
+          'A wrong word knocks you back for 2 seconds. You then have a second to swim clear. Your sentence stays.',
           'You have one minute. The most finished sentences wins the round.',
         ]
   return (

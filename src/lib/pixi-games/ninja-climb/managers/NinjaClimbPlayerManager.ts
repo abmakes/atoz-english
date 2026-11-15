@@ -6,6 +6,12 @@ import type { NinjaPowerupId } from '../ninjaPowerups'
 import { layoutOccupants, type OccupantPlacement } from '../plateauSlots'
 
 const ASSET_BASE = '/images/ninja-climb'
+/** First six files in each vertical-jump folder. Blue has no frame_0003 or frame_0004. */
+const JUMP_FRAME_IDS: Record<'blue' | 'red', readonly number[]> = {
+  blue: [0, 1, 2, 5, 6, 7],
+  red: [0, 1, 2, 3, 4, 5],
+}
+const JUMP_FRAME_MS = 150
 
 export type NinjaTeamColor = 'blue' | 'red'
 export type NinjaAnimState = 'idle' | 'climb' | 'teleport' | 'rope' | 'smoke' | 'cheer'
@@ -35,7 +41,7 @@ interface NinjaActor {
   sprite: PIXI.Sprite
   highlight: PIXI.Graphics
   idleSheets: [SpriteSheet | null, SpriteSheet | null]
-  climbSheet: SpriteSheet | null
+  jumpFrames: PIXI.Texture[]
   actionTextures: Partial<Record<NinjaPowerupId | 'cheer', PIXI.Texture>>
   animState: NinjaAnimState
   animFrame: number
@@ -57,7 +63,6 @@ export class NinjaClimbPlayerManager {
   private elapsedMs = 0
   private destroyed = false
   private readonly IDLE_SPEED = 420
-  private readonly CLIMB_SPEED = 90
   private readonly HOP_DURATION = 380
 
   constructor(
@@ -78,7 +83,7 @@ export class NinjaClimbPlayerManager {
 
       const idleA = await this._loadSheet(`${ASSET_BASE}/ninja_${color}_idle.webp`, 2)
       const idleB = await this._loadSheet(`${ASSET_BASE}/ninja_${color}_idle_b.webp`, 2)
-      const climbSheet = await this._loadSheet(`${ASSET_BASE}/ninja_${color}_climb.png`, 4)
+      const jumpFrames = await this._loadJumpFrames(color)
 
       const actionTextures: NinjaActor['actionTextures'] = {}
       for (const action of ['teleport', 'rope', 'smoke', 'cheer'] as const) {
@@ -118,7 +123,7 @@ export class NinjaClimbPlayerManager {
         sprite,
         highlight,
         idleSheets: [idleA, idleB],
-        climbSheet,
+        jumpFrames,
         actionTextures,
         animState: 'idle',
         animFrame: 0,
@@ -343,21 +348,26 @@ export class NinjaClimbPlayerManager {
   }
 
   private _tickStrip(actor: NinjaActor, state: 'idle' | 'climb', deltaMs: number): void {
-    const sheet =
-      state === 'idle'
-        ? actor.idleSheets[actor.poseVariant] ?? actor.idleSheets[0]
-        : actor.climbSheet
+    if (state === 'climb') {
+      this._tickJump(actor, deltaMs)
+      return
+    }
+
+    const sheet = actor.idleSheets[actor.poseVariant] ?? actor.idleSheets[0]
     if (!sheet) return
 
     if (actor.animState !== state) {
       actor.animState = state
       actor.animFrame = 0
-      actor.animTimer = actor.phaseOffsetMs % (state === 'idle' ? this.IDLE_SPEED : this.CLIMB_SPEED)
+      actor.animTimer = actor.phaseOffsetMs % this.IDLE_SPEED
+      this._setFrame(actor.sprite, sheet, 0)
+      const size = this.layoutManager.getLayoutParams().ninjaDisplaySize
+      const scale = (size / sheet.frameHeight) * (this._placementFor(actor)?.scale ?? 1)
+      actor.sprite.scale.set(scale * actor.facing, scale)
     }
 
-    const speed = state === 'idle' ? this.IDLE_SPEED : this.CLIMB_SPEED
     actor.animTimer += deltaMs
-    if (actor.animTimer >= speed) {
+    if (actor.animTimer >= this.IDLE_SPEED) {
       actor.animTimer = 0
       actor.animFrame = (actor.animFrame + 1) % sheet.totalFrames
       this._setFrame(actor.sprite, sheet, actor.animFrame)
@@ -365,6 +375,49 @@ export class NinjaClimbPlayerManager {
       const scale = (size / sheet.frameHeight) * (this._placementFor(actor)?.scale ?? 1)
       actor.sprite.scale.set(scale * actor.facing, scale)
     }
+  }
+
+  /** Loop the six vertical-jump frames while the hop is in the air. */
+  private _tickJump(actor: NinjaActor, deltaMs: number): void {
+    const frames = actor.jumpFrames
+    if (frames.length === 0) return
+
+    if (actor.animState !== 'climb') {
+      actor.animState = 'climb'
+      actor.animFrame = 0
+      actor.animTimer = 0
+      this._applyJumpFrame(actor)
+      return
+    }
+
+    actor.animTimer += deltaMs
+    while (actor.animTimer >= JUMP_FRAME_MS) {
+      actor.animTimer -= JUMP_FRAME_MS
+      actor.animFrame = (actor.animFrame + 1) % frames.length
+      this._applyJumpFrame(actor)
+    }
+  }
+
+  private _applyJumpFrame(actor: NinjaActor): void {
+    const texture = actor.jumpFrames[actor.animFrame]
+    if (!texture) return
+    actor.sprite.texture = texture
+    const size = this.layoutManager.getLayoutParams().ninjaDisplaySize
+    const scale = (size / texture.height) * (this._placementFor(actor)?.scale ?? 1)
+    actor.sprite.scale.set(scale * actor.facing, scale)
+  }
+
+  private async _loadJumpFrames(color: NinjaTeamColor): Promise<PIXI.Texture[]> {
+    const frames: PIXI.Texture[] = []
+    for (const id of JUMP_FRAME_IDS[color]) {
+      const path = `${ASSET_BASE}/vertical_jump_${color}/frame_${String(id).padStart(4, '0')}.png`
+      try {
+        frames.push(await PIXI.Assets.load(path))
+      } catch (e) {
+        console.warn('NinjaClimbPlayerManager: jump frame missing', path, e)
+      }
+    }
+    return frames
   }
 
   private async _loadSheet(path: string, expectedFrames: number): Promise<SpriteSheet | null> {

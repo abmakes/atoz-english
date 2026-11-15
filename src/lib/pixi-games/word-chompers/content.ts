@@ -137,10 +137,10 @@ function peopleSentences(sheHe: string, they: string, object?: string): string[]
 function decoysFor(candidates: readonly string[], sentences: readonly (readonly string[])[]): string[] {
   const used = new Set(sentences.flat())
   const unique: string[] = []
-  for (const word of [...candidates, 'be', 'been', 'being']) {
+  for (const word of candidates) {
     if (!word || used.has(word) || unique.includes(word)) continue
     unique.push(word)
-    if (unique.length === 4) break
+    if (unique.length === 2) break
   }
   if (unique.length < 2) {
     throw new Error('A swim round needs at least two extra words')

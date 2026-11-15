@@ -22,7 +22,7 @@ Each round puts four pictures in the pool. A player can join any subject to a ve
 
 Each person word starts with one fewer copy than there are players. Every agreeing verb form for those people stays on screen (`am` / `is` / `are`, `eat` / `eats`). Only extra shared words, such as `-ing` verbs, wait in reserve: two of those types are on screen at a time, with the same copy count. When the last copy of a word is eaten, the pair comes back after two seconds, or a waiting `-ing` type rotates in. The grammar card stays on screen, so the table can see Present continuous or whichever structure was chosen. The sentence slots stay empty until a word is eaten.
 
-Crocodiles spin until the player holds a button, then swim the way the snout points. Touch uses a hold button on each edge. Keyboard maps bottom Space, left Shift, right 6, and top Caps Lock so four hands can share one laptop. Dots in front of the nose show the heading. A wrong word stuns for 2 seconds, names the missed slot, and leaves the sentence already built. Most finished sentences in 60 seconds wins the round. Five rounds.
+Touch uses a joystick in each corner: push it and the crocodile swims that way. Keyboard makes the crocodile spin until the player holds a key or the button on their edge. Keys are bottom Space, left Shift, right 6, and top Caps Lock. Dots in front of the nose show the heading. A wrong word stuns for 2 seconds, then the player has 1 second to swim clear before another wrong word can stun them. The miss names the slot and leaves the sentence already built. One off-tense word is in the pool; the rest are the singular and plural forms for the chosen structure. Most finished sentences in 60 seconds wins the round. Five rounds.
 
 ## Code
 
@@ -36,4 +36,4 @@ Crocodiles spin until the player holds a button, then swim the way the snout poi
 | `src/app/practice/word-bite/page.tsx` | Word Bite route |
 | `src/app/practice/sentence-swim/page.tsx` | Sentence Swim route |
 
-Theme ink and Grandstander match Sentence Builder. Players are tinted crocodiles drawn in Pixi. Word bubbles use the same ink border as the React cards.
+Theme ink and Grandstander match Sentence Builder. Word Bite draws tinted crocodiles. Sentence Swim uses the frames in `public/images/sentence_swim`: still on frame 0, frames 0, 2, 1, 3, 5, 3, 2 at 150ms each while swimming, and BITE_0000, BITE_0001, BITE_0002 at 100ms each when it touches a word. Word bubbles use the same ink border as the React cards.
