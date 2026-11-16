@@ -322,8 +322,8 @@ export default function GameModePicker({ quiz }: { quiz: QuizPickerSummary }) {
             >
               {navigatingSlug === 'tug-of-war-3d' ? <OpeningOverlay /> : null}
               <ModeThumb
-                src="/images/marketing/teamquiz_thumb.png"
-                alt="Tug of War 3D preview"
+                src="/images/marketing/tugofwar_thumb.png"
+                alt="Tug of War with blue and red ninjas pulling a rope"
               />
               <ModeDetails
                 icon={<Swords size={20} />}
@@ -336,7 +336,7 @@ export default function GameModePicker({ quiz }: { quiz: QuizPickerSummary }) {
           ) : (
             <div className={modeCardMutedClass} aria-disabled="true">
               <ModeThumb
-                src="/images/marketing/teamquiz_thumb.png"
+                src="/images/marketing/tugofwar_thumb.png"
                 alt="Tug of War preview"
                 muted
               />
