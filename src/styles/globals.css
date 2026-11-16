@@ -437,12 +437,23 @@
   background-color: var(--primary-accent-600);
   transform: scale(1.05);
 }
+.buttonXLarge.buttonPlaySetup {
+  font-size: 2.25rem; /* 10% smaller than 2.5rem */
+  padding: 0.675rem 3.6rem;
+  border-width: 5px;
+  box-shadow: 3.6px 5.4px 0 0 var(--primary-accent-hover);
+}
 @media (max-width: 640px) {
   .buttonXLarge {
     border-width: 4px;
     padding: 0.6rem 1.25rem;
     font-size: 1.75rem;
     box-shadow: 3px 4px 0px 0px var(--primary-accent-hover);
+  }
+  .buttonXLarge.buttonPlaySetup {
+    font-size: 1.575rem;
+    padding: 0.54rem 1.125rem;
+    border-width: 4px;
   }
 }
 .buttonAddTeam {
@@ -627,6 +638,10 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+.optionsGrid.optionGridSingle {
+  grid-template-columns: minmax(0, 16rem);
+  justify-content: center;
+}
 .optionBox {
   height: 100%;
   display: flex;
@@ -639,6 +654,15 @@
   padding: 1rem;
   box-shadow: 2px 4px 0px 0px var(--input-shadow);
   text-align: center;
+}
+@media (orientation: landscape) {
+  .optionsGrid {
+    gap: 0.75rem;
+  }
+  .optionBox {
+    padding: 0.5rem 0.75rem;
+    border-radius: 24px;
+  }
 }
 
 .shadow-solid {

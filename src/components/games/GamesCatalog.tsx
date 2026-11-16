@@ -515,73 +515,75 @@ function GamesPageContent({
                       </div>
 
                       <div
-                        className={`absolute inset-0 flex flex-col items-center justify-center gap-1 bg-white/30 p-4 text-[#114257] opacity-0 pointer-events-none transition-opacity duration-300 grandstander [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover:pointer-events-auto ${
+                        className={`absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/30 px-3 pt-3 pb-4 text-[#114257] opacity-0 pointer-events-none transition-opacity duration-300 grandstander [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover:pointer-events-auto ${
                           isFlipped ? 'opacity-100 pointer-events-auto' : ''
                         }`}
                       >
-                        <span className="text-xl font-bold">{quizQuestionCount(quiz)} questions</span>
-
-                        <button
-                          type="button"
-                          aria-label={quiz.likedByMe ? 'Unlike quiz' : 'Like quiz'}
-                          onClick={(e) => toggleLike(e, quiz)}
-                          className="flex items-center gap-1 hover:opacity-80"
-                        >
-                          <Heart
-                            className={`h-5 w-5 ${
-                              quiz.likedByMe
-                                ? 'fill-red-500 stroke-red-500'
-                                : 'stroke-red-500 fill-transparent'
-                            }`}
-                          />
-                          <span className="text-base pt-1 ml-1">
-                            {quiz.statistics?.likes ?? 0} likes
-                          </span>
-                        </button>
-
-                        <button
-                          type="button"
-                          aria-label={quiz.favoritedByMe ? 'Remove favorite' : 'Favorite quiz'}
-                          onClick={(e) => toggleFavorite(e, quiz)}
-                          className="flex items-center gap-1 hover:opacity-80"
-                        >
-                          <Bookmark
-                            className={`h-5 w-5 ${
-                              quiz.favoritedByMe
-                                ? 'fill-[--primary-accent] stroke-[--primary-accent]'
-                                : 'stroke-[#114257] fill-transparent'
-                            }`}
-                          />
-                          <span className="text-base pt-1 ml-1">
-                            {quiz.statistics?.favoritesCount ?? 0} saved
-                          </span>
-                        </button>
-
-                        {quiz.tags.length > 0 && (
-                          <div className="flex flex-wrap justify-center gap-2 mt-1">
-                            {quiz.tags.map((tag, tagIndex) => (
-                              <Badge
-                                key={`${tag}-${tagIndex}`}
-                                variant="outline"
-                                className="text-xs pt-1 bg-white text-[--text-color] border-[--primary-accent] shadow-[3px_3px_0px_0px_var(--primary-accent-hover)]"
-                              >
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-
                         <Link
                           href={`/games/${quiz.id}`}
                           onClick={(event) => {
                             event.stopPropagation();
                             setNavigatingQuizId(quiz.id);
                           }}
-                          className="mt-2 inline-flex items-center gap-1 rounded-full border-2 border-[#1E5167] bg-white px-4 py-1 pt-1.5 text-base font-bold grandstander text-[#114257] shadow-[3px_3px_0px_0px_#1E5167]"
+                          className="inline-flex items-center gap-1 rounded-full border-2 border-[#1E5167] bg-white px-3 py-0.5 pt-1 text-sm font-bold grandstander text-[#114257] shadow-[3px_3px_0px_0px_#1E5167]"
                         >
                           <Play className="h-4 w-4 fill-[--primary-accent] stroke-[--primary-accent]" />
                           Play
                         </Link>
+
+                        <span className="text-lg font-bold leading-tight">{quizQuestionCount(quiz)} questions</span>
+
+                        <div className="flex items-center justify-center gap-3">
+                          <button
+                            type="button"
+                            aria-label={quiz.likedByMe ? 'Unlike quiz' : 'Like quiz'}
+                            onClick={(e) => toggleLike(e, quiz)}
+                            className="flex items-center gap-0.5 hover:opacity-80"
+                          >
+                            <Heart
+                              className={`h-4 w-4 ${
+                                quiz.likedByMe
+                                  ? 'fill-red-500 stroke-red-500'
+                                  : 'stroke-red-500 fill-transparent'
+                              }`}
+                            />
+                            <span className="text-xs pt-0.5">
+                              {quiz.statistics?.likes ?? 0} likes
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            aria-label={quiz.favoritedByMe ? 'Remove favorite' : 'Favorite quiz'}
+                            onClick={(e) => toggleFavorite(e, quiz)}
+                            className="flex items-center gap-0.5 hover:opacity-80"
+                          >
+                            <Bookmark
+                              className={`h-4 w-4 ${
+                                quiz.favoritedByMe
+                                  ? 'fill-[--primary-accent] stroke-[--primary-accent]'
+                                  : 'stroke-[#114257] fill-transparent'
+                              }`}
+                            />
+                            <span className="text-xs pt-0.5">
+                              {quiz.statistics?.favoritesCount ?? 0} saved
+                            </span>
+                          </button>
+                        </div>
+
+                        {quiz.tags.length > 0 && (
+                          <div className="flex flex-wrap justify-center gap-x-1.5 gap-y-2 px-1 pb-1">
+                            {quiz.tags.map((tag, tagIndex) => (
+                              <Badge
+                                key={`${tag}-${tagIndex}`}
+                                variant="outline"
+                                className="text-[10px] pt-0.5 bg-white text-[--text-color] border-[--primary-accent] shadow-[2px_2px_0px_0px_var(--primary-accent-hover)]"
+                              >
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
 
