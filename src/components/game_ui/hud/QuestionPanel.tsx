@@ -20,6 +20,10 @@ interface QuestionPanelProps {
 /**
  * Shared-question card for Tug of War. Clicks emit HUD_EVENTS.ANSWER_SELECTED;
  * the 3D game owns correctness and scoring.
+ *
+ * The image, stem, and every answer stay on screen. Images use object-contain
+ * so side detail (a timetable's hours, labels at the edge) is never cropped.
+ * The picture grows into leftover space; the stem does not.
  */
 const QuestionPanel: React.FC<QuestionPanelProps> = ({
   eventBus,
@@ -83,28 +87,40 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
     eventBus.emit(HUD_EVENTS.ANSWER_SELECTED, { selectedIndex: index })
   }
 
+  const hasImage = Boolean(question.imageUrl)
+
   return (
     <div
-      className={`${className ?? ''} pointer-events-auto mx-auto w-[min(640px,96vw)] max-h-[calc(50dvh-3.25rem)] overflow-y-auto overscroll-contain rounded-2xl border-[3px] border-[#163e66] bg-white/95 p-2 shadow-[3px_3px_0_0_#163e66] sm:p-3 [@media(max-height:520px)]:p-1.5 lg:w-[min(720px,92vw)] lg:rounded-[28px] lg:p-4`}
+      className={`${className ?? ''} pointer-events-auto flex h-full min-h-0 w-full flex-col rounded-2xl border-[3px] border-[#163e66] bg-white/95 p-2 shadow-[3px_3px_0_0_#163e66] sm:p-2.5 lg:rounded-[28px] lg:p-3 [@media(max-height:640px)]:p-1.5`}
       role="region"
       aria-label="Question"
     >
-      <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+      <div
+        className={`flex min-h-0 flex-1 gap-2 sm:gap-3 ${
+          hasImage ? 'flex-col sm:flex-row sm:items-stretch' : 'items-center justify-center'
+        }`}
+      >
         {question.imageUrl && (
-          <div className="relative h-16 w-full shrink-0 overflow-hidden rounded-xl border-2 border-[#163e66] bg-white sm:h-28 sm:w-36 [@media(max-height:520px)]:h-14 [@media(max-height:520px)]:w-28 lg:h-36 lg:w-44 lg:rounded-2xl lg:border-[3px]">
+          <div className="flex min-h-[4.5rem] min-w-0 flex-1 items-center justify-center sm:min-h-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={question.imageUrl}
               alt=""
-              className="h-full w-full object-cover"
+              className="max-h-full max-w-full rounded-xl border-2 border-[#163e66] bg-white object-contain lg:rounded-2xl lg:border-[3px]"
             />
           </div>
         )}
-        <div className="min-w-0 flex-1">
-          <p className="grandstander mb-2 text-sm font-bold leading-snug text-[#163e66] sm:text-lg [@media(max-height:520px)]:mb-1 [@media(max-height:520px)]:text-sm lg:mb-3 lg:text-2xl">
+        <div
+          className={`flex min-h-0 min-w-0 shrink-0 flex-col justify-center ${
+            hasImage
+              ? 'w-full sm:w-[clamp(14rem,38%,32rem)]'
+              : 'w-full max-w-3xl'
+          }`}
+        >
+          <p className="grandstander mb-1.5 text-sm font-bold leading-snug text-[#163e66] sm:mb-2 sm:text-lg lg:text-2xl lg:leading-tight [@media(max-height:760px)]:lg:text-xl [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:text-sm [@media(max-height:640px)]:sm:text-base">
             {question.question}
           </p>
-          <div className="grid grid-cols-1 gap-1.5 sm:gap-2">
+          <div className="grid grid-cols-1 gap-1 sm:gap-1.5 [@media(max-height:640px)]:gap-1">
             {question.answers.map((answer, index) => {
               const optionId = `${question.questionId}-answer-${index}`
               const isPicked = pickedIndex === index
@@ -116,7 +132,7 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
                   type="button"
                   disabled={locked}
                   onClick={() => pick(index)}
-                  className={`grandstander flex items-center gap-2 rounded-xl border-2 px-2.5 py-1.5 text-left text-sm font-semibold transition sm:px-3 sm:py-2 sm:text-base [@media(max-height:520px)]:py-1 [@media(max-height:520px)]:text-sm lg:text-lg
+                  className={`grandstander flex items-center gap-2 rounded-xl border-2 px-2.5 py-1.5 text-left text-sm font-semibold transition sm:px-3 sm:py-2 sm:text-base lg:text-lg [@media(max-height:760px)]:py-1 [@media(max-height:760px)]:sm:py-1.5 [@media(max-height:640px)]:py-1 [@media(max-height:640px)]:text-sm [@media(max-height:640px)]:lg:text-sm
                     ${
                       showWrong
                         ? 'border-red-500 bg-red-100 text-red-900'
@@ -129,7 +145,7 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
                     disabled:cursor-not-allowed`}
                   aria-label={`Answer ${LETTERS[index]}: ${answer}`}
                 >
-                  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/90 text-xs font-bold text-[var(--heading-color,#114257)] sm:h-7 sm:w-7 sm:text-sm">
+                  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/90 text-xs font-bold text-[var(--heading-color,#114257)] sm:h-7 sm:w-7 sm:text-sm [@media(max-height:640px)]:h-5 [@media(max-height:640px)]:w-5">
                     {LETTERS[index]}
                   </span>
                   <span className="min-w-0 break-words">{answer}</span>

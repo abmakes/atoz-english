@@ -417,7 +417,7 @@ const GameplayView: React.FC<GameplayViewProps> = ({
         {splitScores ? (
           <div className="pointer-events-none absolute inset-x-1 top-1 z-30 flex items-start justify-between gap-1 sm:inset-x-3 sm:top-2 sm:gap-2 lg:inset-x-4 lg:top-4 lg:gap-3">
             <div className="pointer-events-auto min-w-0 max-w-[46%]">{renderScoreCard(leftTeam, 'blue')}</div>
-            {hud?.timer && eventBus && modeDefinition && (
+            {hud?.timer && !hud.questionPanel && eventBus && modeDefinition && (
               <TimerBadge eventBus={eventBus} timerId={modeDefinition.questionTimerId} />
             )}
             <div className="pointer-events-auto flex min-w-0 max-w-[46%] items-start justify-end">
@@ -448,8 +448,16 @@ const GameplayView: React.FC<GameplayViewProps> = ({
         </div>
 
         {hud?.questionPanel && eventBus && (
-          <div className="pointer-events-none absolute inset-x-0 top-11 z-10 flex justify-center px-1.5 sm:top-14 [@media(max-height:520px)_and_(max-width:1023px)]:right-24 [@media(max-height:520px)_and_(max-width:1023px)]:justify-end lg:inset-x-0 lg:top-[12%] lg:justify-center lg:px-3">
-            <QuestionPanel eventBus={eventBus} className={themeClassName} />
+          <div className="pointer-events-none absolute inset-x-0 top-12 bottom-[46%] z-10 flex flex-col items-center px-2 sm:top-14 sm:px-4 lg:top-[5.5rem] lg:px-6 [@media(max-height:480px)]:bottom-[4.75rem] [@media(max-height:520px)_and_(max-width:1023px)]:right-[9rem]">
+            <QuestionPanel
+              eventBus={eventBus}
+              className={`${themeClassName} min-h-0 w-full max-w-[1400px] flex-1`}
+            />
+            {hud.timer && modeDefinition && (
+              <div className="mt-1.5 flex shrink-0 justify-center sm:mt-2">
+                <TimerBadge eventBus={eventBus} timerId={modeDefinition.questionTimerId} />
+              </div>
+            )}
           </div>
         )}
 
