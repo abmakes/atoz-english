@@ -17,6 +17,7 @@ import {
   type StoryDto,
   type StoryPanelDto,
 } from '@/components/story_creator/api'
+import { dueInputToIso, dueInputValue } from '@/lib/assignments/due'
 import { DEFAULT_MOUTH, type MouthPlacement } from '@/lib/stories/schemas'
 import {
   Loader2,
@@ -361,6 +362,24 @@ export default function StoryEditorView({ storyId }: StoryEditorViewProps) {
             }
           }}
         />
+        <label className="mt-4 block text-sm font-semibold text-[#114257]">
+          Due date
+          <input
+            type="datetime-local"
+            defaultValue={dueInputValue(story.dueAt)}
+            key={story.dueAt ?? 'none'}
+            onBlur={(event) => {
+              const next = dueInputToIso(event.target.value)
+              if (next !== story.dueAt) {
+                void patchStory(storyId, { dueAt: next }).then(setStory)
+              }
+            }}
+            className="mt-1 w-full rounded-xl border px-3 py-2 font-normal"
+          />
+          <span className="mt-1 block text-xs font-normal text-slate-500">
+            After this time, students can look at the story but cannot send a new recording.
+          </span>
+        </label>
         <div className="mt-3 flex items-center gap-3">
           <Switch
             checked={story.showExampleToStudents}

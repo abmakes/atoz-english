@@ -40,6 +40,7 @@ export async function patchStory(
     exampleStory: string
     showExampleToStudents: boolean
     status: 'DRAFT' | 'READY' | 'ARCHIVED'
+    dueAt: string | null
   }>
 ): Promise<StoryDto> {
   return unwrap(
@@ -148,6 +149,7 @@ export interface StorySessionPanelDto {
 
 export interface StorySessionDto {
   title: string
+  acceptingResponses?: boolean
   showExample: boolean
   exampleStory: string | null
   panels: StorySessionPanelDto[]

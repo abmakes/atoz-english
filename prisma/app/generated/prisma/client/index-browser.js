@@ -212,6 +212,7 @@ exports.Prisma.StoryScalarFieldEnum = {
   showExampleToStudents: 'showExampleToStudents',
   status: 'status',
   shareToken: 'shareToken',
+  dueAt: 'dueAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -255,6 +256,7 @@ exports.Prisma.ThoughtChallengeScalarFieldEnum = {
   showGallery: 'showGallery',
   allowFunnyVoices: 'allowFunnyVoices',
   shareToken: 'shareToken',
+  dueAt: 'dueAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -272,6 +274,56 @@ exports.Prisma.ThoughtSubmissionScalarFieldEnum = {
   clientKey: 'clientKey',
   status: 'status',
   createdAt: 'createdAt'
+};
+
+exports.Prisma.HomeworkAssignmentScalarFieldEnum = {
+  id: 'id',
+  authorId: 'authorId',
+  quizId: 'quizId',
+  title: 'title',
+  shareToken: 'shareToken',
+  dueAt: 'dueAt',
+  acceptingResponses: 'acceptingResponses',
+  showLeaderboard: 'showLeaderboard',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.HomeworkAttemptScalarFieldEnum = {
+  id: 'id',
+  assignmentId: 'assignmentId',
+  studentName: 'studentName',
+  clientKey: 'clientKey',
+  mode: 'mode',
+  status: 'status',
+  queue: 'queue',
+  correctCount: 'correctCount',
+  answeredCount: 'answeredCount',
+  percentage: 'percentage',
+  durationMs: 'durationMs',
+  livesLeft: 'livesLeft',
+  timeLimitMs: 'timeLimitMs',
+  questionStartedAt: 'questionStartedAt',
+  extraLifeGranted: 'extraLifeGranted',
+  endReason: 'endReason',
+  reachedHundred: 'reachedHundred',
+  timeToHundredMs: 'timeToHundredMs',
+  startedAt: 'startedAt',
+  finishedAt: 'finishedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.HomeworkAnswerScalarFieldEnum = {
+  id: 'id',
+  attemptId: 'attemptId',
+  questionId: 'questionId',
+  questionText: 'questionText',
+  selectedAnswer: 'selectedAnswer',
+  correctAnswer: 'correctAnswer',
+  correct: 'correct',
+  timeUsedMs: 'timeUsedMs',
+  order: 'order'
 };
 
 exports.Prisma.SortOrder = {
@@ -337,6 +389,23 @@ exports.ThoughtSubmissionStatus = exports.$Enums.ThoughtSubmissionStatus = {
   HIDDEN: 'HIDDEN'
 };
 
+exports.HomeworkAttemptMode = exports.$Enums.HomeworkAttemptMode = {
+  HOMEWORK: 'HOMEWORK',
+  CHALLENGE: 'CHALLENGE'
+};
+
+exports.HomeworkAttemptStatus = exports.$Enums.HomeworkAttemptStatus = {
+  IN_PROGRESS: 'IN_PROGRESS',
+  FINISHED: 'FINISHED'
+};
+
+exports.HomeworkEndReason = exports.$Enums.HomeworkEndReason = {
+  COMPLETE: 'COMPLETE',
+  WRONG: 'WRONG',
+  TIMEOUT: 'TIMEOUT',
+  HUNDRED: 'HUNDRED'
+};
+
 exports.Prisma.ModelName = {
   Quiz: 'Quiz',
   QuizLike: 'QuizLike',
@@ -350,7 +419,10 @@ exports.Prisma.ModelName = {
   StorySubmission: 'StorySubmission',
   StoryRecording: 'StoryRecording',
   ThoughtChallenge: 'ThoughtChallenge',
-  ThoughtSubmission: 'ThoughtSubmission'
+  ThoughtSubmission: 'ThoughtSubmission',
+  HomeworkAssignment: 'HomeworkAssignment',
+  HomeworkAttempt: 'HomeworkAttempt',
+  HomeworkAnswer: 'HomeworkAnswer'
 };
 
 /**

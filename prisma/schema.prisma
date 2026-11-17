@@ -28,6 +28,7 @@ model Quiz {
   likes     QuizLike[]
   favorites QuizFavorite[]
   lessonKit LessonKit?
+  homeworkAssignments HomeworkAssignment[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 }
@@ -167,6 +168,7 @@ model Story {
   showExampleToStudents Boolean     @default(false)
   status                StoryStatus @default(DRAFT)
   shareToken            String      @unique
+  dueAt                 DateTime?
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
   panels                StoryPanel[]
@@ -237,6 +239,7 @@ model ThoughtChallenge {
   showGallery        Boolean                @default(true)
   allowFunnyVoices   Boolean                @default(true)
   shareToken         String                 @unique
+  dueAt              DateTime?
   createdAt          DateTime               @default(now())
   updatedAt          DateTime               @updatedAt
   submissions        ThoughtSubmission[]
@@ -262,4 +265,88 @@ model ThoughtSubmission {
 
   @@unique([challengeId, clientKey])
   @@index([challengeId, createdAt])
+}
+
+enum HomeworkAttemptMode {
+  HOMEWORK
+  CHALLENGE
+}
+
+enum HomeworkAttemptStatus {
+  IN_PROGRESS
+  FINISHED
+}
+
+enum HomeworkEndReason {
+  COMPLETE
+  WRONG
+  TIMEOUT
+  HUNDRED
+}
+
+/// A multiple-choice quiz assigned as open-book homework, with an optional challenge.
+model HomeworkAssignment {
+  id                 String             @id @default(cuid())
+  authorId           String             @default("admin")
+  quizId             String
+  title              String
+  shareToken         String             @unique
+  dueAt              DateTime
+  acceptingResponses Boolean            @default(true)
+  showLeaderboard    Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  quiz               Quiz               @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  attempts           HomeworkAttempt[]
+
+  @@index([authorId])
+  @@index([quizId])
+}
+
+model HomeworkAttempt {
+  id                String                @id @default(cuid())
+  assignmentId      String
+  studentName       String
+  clientKey         String
+  mode              HomeworkAttemptMode
+  status            HomeworkAttemptStatus @default(IN_PROGRESS)
+  /// Question ids. For homework this is the full order. For a challenge, index 0 is the live question.
+  queue             Json
+  correctCount      Int                   @default(0)
+  answeredCount     Int                   @default(0)
+  percentage        Float?
+  durationMs        Int                   @default(0)
+  livesLeft         Int?
+  timeLimitMs       Int?
+  questionStartedAt DateTime?
+  extraLifeGranted  Boolean               @default(false)
+  endReason         HomeworkEndReason?
+  reachedHundred    Boolean               @default(false)
+  timeToHundredMs   Int?
+  startedAt         DateTime              @default(now())
+  finishedAt        DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  assignment        HomeworkAssignment    @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  answers           HomeworkAnswer[]
+
+  @@index([assignmentId, createdAt])
+  @@index([assignmentId, mode, status])
+}
+
+model HomeworkAnswer {
+  id             String          @id @default(cuid())
+  attemptId      String
+  questionId     String
+  questionText   String
+  selectedAnswer String
+  /// Filled when the try is graded. Empty while a homework try is still open.
+  correctAnswer  String          @default("")
+  correct        Boolean         @default(false)
+  timeUsedMs     Int             @default(0)
+  order          Int
+  attempt        HomeworkAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId, questionId])
+  @@index([attemptId, order])
 }

@@ -8,6 +8,7 @@ import {
   studentNameSchema,
   submissionMetaSchema,
 } from '@/lib/stories/schemas';
+import { isBeforeDue } from '@/lib/assignments/due';
 import { isStoryPlayable } from '@/lib/stories/service';
 
 export const runtime = 'nodejs';
@@ -34,6 +35,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
     });
     if (!story || !isStoryPlayable(story)) {
       return errorResponse('This story is not available.', undefined, 404);
+    }
+    if (!isBeforeDue(story.dueAt)) {
+      return errorResponse('This story is closed.', undefined, 403);
     }
 
     const formData = await request.formData();

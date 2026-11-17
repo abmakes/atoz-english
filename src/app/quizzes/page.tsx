@@ -22,6 +22,7 @@ import {
   type QuizDraftSnapshot,
 } from '@/lib/quiz-draft-storage'
 import { FileEdit, Trash2 } from 'lucide-react'
+import AssignmentsPanel from '@/components/management_ui/AssignmentsPanel'
 
 /**
  * Profile shell — Published, Drafts, Liked, Favorites.
@@ -140,7 +141,14 @@ function ProfileShell({
           <TabsTrigger value="favorites" className="grandstander">
             Favorites
           </TabsTrigger>
+          <TabsTrigger value="assignments" className="grandstander">
+            Assignments
+          </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="assignments">
+          <AssignmentsPanel />
+        </TabsContent>
 
         <TabsContent value="published">
           {loadingRemote ? (

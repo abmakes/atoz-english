@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { errorResponse, handleApiError, successResponse } from '@/lib/api-utils'
+import { isBeforeDue } from '@/lib/assignments/due'
 import { submissionsAccepted } from '@/lib/thoughts/access'
 import { removePrivateAudio, savePrivateAudio } from '@/lib/thoughts/audio-store'
 import {
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const challenge = await prisma.thoughtChallenge.findUnique({
       where: { shareToken: token },
     })
-    if (!challenge || !submissionsAccepted(challenge.status, challenge.acceptingResponses)) {
+    if (!challenge || !submissionsAccepted(challenge.status, challenge.acceptingResponses) || !isBeforeDue(challenge.dueAt)) {
       return errorResponse(
         challenge?.status === 'READY'
           ? 'Your teacher has closed new recordings.'

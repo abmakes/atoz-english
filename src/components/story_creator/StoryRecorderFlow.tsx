@@ -196,8 +196,9 @@ export default function StoryRecorderFlow({
           {session.title}
         </h1>
         <p className="mt-2 text-slate-600">
-          Tell this story with your own voice — one recording for each picture.
-          At the end you get your own movie!
+          {session.acceptingResponses === false
+            ? 'Your teacher has closed new recordings for this story.'
+            : 'Tell this story with your own voice — one recording for each picture. At the end you get your own movie!'}
         </p>
         <div className="mt-4 grid grid-cols-2 gap-2">
           {panels.map((candidate) =>
@@ -218,19 +219,23 @@ export default function StoryRecorderFlow({
             <span className="font-bold">Example:</span> {session.exampleStory}
           </p>
         )}
-        <input
-          value={studentName}
-          onChange={(event) => setStudentName(event.target.value)}
-          placeholder="Type your name"
-          maxLength={40}
-          className="mt-6 w-full rounded-xl border-2 border-violet-300 px-4 py-3 text-center text-lg focus:border-violet-500 focus:outline-none"
-        />
-        <BigButton
-          disabled={studentName.trim().length === 0}
-          onClick={() => setStep('mic')}
-        >
-          Start
-        </BigButton>
+        {session.acceptingResponses === false ? null : (
+          <>
+            <input
+              value={studentName}
+              onChange={(event) => setStudentName(event.target.value)}
+              placeholder="Type your name"
+              maxLength={40}
+              className="mt-6 w-full rounded-xl border-2 border-violet-300 px-4 py-3 text-center text-lg focus:border-violet-500 focus:outline-none"
+            />
+            <BigButton
+              disabled={studentName.trim().length === 0}
+              onClick={() => setStep('mic')}
+            >
+              Start
+            </BigButton>
+          </>
+        )}
       </CenterCard>
     )
   }

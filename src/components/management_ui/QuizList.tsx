@@ -50,6 +50,11 @@ export default function QuizList({
 }: QuizListProps) {
   const [quizzes, setQuizzes] = useState<Quiz[]>(initialQuizzes)
   const [deleteQuizId, setDeleteQuizId] = useState<string | null>(null)
+  const [assignQuiz, setAssignQuiz] = useState<Quiz | null>(null)
+  const [assignTitle, setAssignTitle] = useState('')
+  const [assignDue, setAssignDue] = useState('')
+  const [assignError, setAssignError] = useState<string | null>(null)
+  const [assigning, setAssigning] = useState(false)
   const router = useRouter()
   const { addToast } = useCustomToast()
 
@@ -67,6 +72,56 @@ export default function QuizList({
 
   const handleLesson = (id: string) => {
     router.push(`/quizzes/${id}/lesson`)
+  }
+
+  const openAssign = (quiz: Quiz) => {
+    const due = new Date()
+    due.setDate(due.getDate() + 7)
+    due.setHours(23, 59, 0, 0)
+    const pad = (value: number) => String(value).padStart(2, '0')
+    setAssignQuiz(quiz)
+    setAssignTitle(quiz.title)
+    setAssignDue(
+      `${due.getFullYear()}-${pad(due.getMonth() + 1)}-${pad(due.getDate())}T${pad(due.getHours())}:${pad(due.getMinutes())}`
+    )
+    setAssignError(null)
+  }
+
+  const submitAssign = async () => {
+    if (!assignQuiz) return
+    const dueAt = new Date(assignDue)
+    if (Number.isNaN(dueAt.getTime())) {
+      setAssignError('Choose a due date.')
+      return
+    }
+    setAssigning(true)
+    setAssignError(null)
+    try {
+      const response = await fetch('/api/homework', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quizId: assignQuiz.id,
+          title: assignTitle.trim() || assignQuiz.title,
+          dueAt: dueAt.toISOString(),
+        }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setAssignError(typeof payload?.error === 'string' ? payload.error : 'Could not assign this quiz.')
+        return
+      }
+      const id = payload.data?.id as string | undefined
+      if (!id) {
+        setAssignError('Could not assign this quiz.')
+        return
+      }
+      router.push(`/quizzes/assignments/${id}`)
+    } catch {
+      setAssignError('Could not assign this quiz.')
+    } finally {
+      setAssigning(false)
+    }
   }
 
   const handleUnfavorite = async (id: string) => {
@@ -195,6 +250,15 @@ export default function QuizList({
                       <Play className="h-5 w-5 stroke-green-700 fill-green-700" />
                       Play
                     </button>
+                    {mode === 'owned' && quiz.quizType === 'MULTIPLE_CHOICE' && quiz.questions.length > 0 && (
+                      <button
+                        type="button"
+                        className="text-sm grandstander flex items-center gap-1 font-semibold text-orange-700"
+                        onClick={() => openAssign(quiz)}
+                      >
+                        Assign
+                      </button>
+                    )}
                     {mode === 'owned' && (
                       <button
                         type="button"
@@ -252,6 +316,47 @@ export default function QuizList({
           )
         })}
       </div>
+
+      <AlertDialog open={!!assignQuiz} onOpenChange={() => setAssignQuiz(null)}>
+        <AlertDialogContent className="bg-white border-2 border-[#1E5167] shadow-[4px_4px_0px_0px_#1E5167] text-[--text-color] grandstander">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Assign as homework</AlertDialogTitle>
+            <AlertDialogDescription>
+              Students answer every question on their own, then they can take the challenge.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <label className="block text-sm font-semibold">
+            Name
+            <input
+              value={assignTitle}
+              onChange={(event) => setAssignTitle(event.target.value)}
+              className="mt-1 w-full rounded-xl border px-3 py-2 font-normal"
+            />
+          </label>
+          <label className="mt-3 block text-sm font-semibold">
+            Due
+            <input
+              type="datetime-local"
+              value={assignDue}
+              onChange={(event) => setAssignDue(event.target.value)}
+              className="mt-1 w-full rounded-xl border px-3 py-2 font-normal"
+            />
+          </label>
+          {assignError ? <p className="text-sm text-red-700">{assignError}</p> : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-gray-500 border-none">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault()
+                void submitAssign()
+              }}
+              className="bg-[#114257] text-white"
+            >
+              {assigning ? 'Assigning…' : 'Assign'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!deleteQuizId} onOpenChange={() => setDeleteQuizId(null)}>
         <AlertDialogContent className="bg-white border-2 border-[#1E5167] shadow-[4px_4px_0px_0px_#1E5167] text-[--text-color] grandstander">
