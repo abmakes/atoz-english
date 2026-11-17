@@ -567,7 +567,13 @@ export async function saveHomeworkAnswer(
     data: { answeredCount: saved },
     include: { answers: true },
   })
-  return toPlayState(updated, questions, false)
+  return {
+    ...toPlayState(updated, questions, false),
+    verdict: {
+      correct: input.selectedAnswer === question.correctAnswer,
+      correctAnswer: question.correctAnswer,
+    },
+  }
 }
 
 export async function finishHomework(token: string, attemptId: string, clientKey: string) {
@@ -712,5 +718,8 @@ export async function answerChallenge(
     if (!latest) throw new HomeworkError('That try could not be found.', 404)
     return toPlayState(latest, questions, false)
   }
-  return toPlayState(updated, questions, false)
+  return {
+    ...toPlayState(updated, questions, false),
+    verdict: { correct, correctAnswer: question.correctAnswer },
+  }
 }

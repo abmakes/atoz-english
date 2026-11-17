@@ -6,7 +6,7 @@ This screen owns one Pixi `Application`. It does not use `GameContainer` or Rule
 
 ## Homework
 
-No timer and no lives. The correct answer stays hidden until the whole try is submitted. The result is the percentage, the misses, and a chance to try again.
+No timer and no lives. A tap turns the choice green or red, and a Correct or Not quite stamp stays up long enough to see. The full miss list is still shown after the try is submitted.
 
 ## Challenge
 

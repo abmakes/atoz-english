@@ -158,6 +158,8 @@ export default function HomeworkPlay({ token }: { token: string }) {
       progress: challenge
         ? `${state.correctCount} correct`
         : `${questionIndex + 1} / ${state.questions.length}`,
+      step: challenge ? state.correctCount : questionIndex + 1,
+      total: challenge ? 100 : state.questions.length,
       lives: state.livesLeft,
       timeLimitMs: challenge ? state.timeLimitMs ?? frameRules.timeLimitMs : null,
       startedAtMs: challenge && state.questionStartedAt ? Date.parse(state.questionStartedAt) : null,
@@ -278,9 +280,10 @@ export default function HomeworkPlay({ token }: { token: string }) {
       return
     }
     setBusy(true)
+    gameRef.current?.hold(answer)
     try {
       if (current.mode === 'HOMEWORK') {
-        const saved = await readJson<PlayState>(
+        const saved = await readJson<PlayState & { verdict?: { correct: boolean; correctAnswer: string } }>(
           await fetch(`/api/homework-session/${token}/attempts/${current.attemptId}/answer`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -291,6 +294,10 @@ export default function HomeworkPlay({ token }: { token: string }) {
             }),
           })
         )
+        if (saved.verdict) {
+          gameRef.current?.showVerdict(answer, saved.verdict.correct, saved.verdict.correctAnswer)
+          await wait(1100)
+        }
         const nextIndex = questionIndex + 1
         if (nextIndex >= saved.questions.length) {
           const finished = await readJson<PlayState>(
@@ -309,7 +316,7 @@ export default function HomeworkPlay({ token }: { token: string }) {
         }
       } else {
         const previous = current.correctCount
-        const saved = await readJson<PlayState>(
+        const saved = await readJson<PlayState & { verdict?: { correct: boolean; correctAnswer: string } }>(
           await fetch(`/api/homework-session/${token}/attempts/${current.attemptId}/answer`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -321,8 +328,10 @@ export default function HomeworkPlay({ token }: { token: string }) {
             }),
           })
         )
-        gameRef.current?.mark(answer, saved.correctCount > previous)
-        await wait(650)
+        if (saved.verdict) {
+          gameRef.current?.showVerdict(answer, saved.verdict.correct, saved.verdict.correctAnswer)
+        }
+        await wait(1100)
         setPlay(saved)
         if (saved.status === 'FINISHED') {
           setPhase('challenge-results')
