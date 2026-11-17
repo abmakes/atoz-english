@@ -76,8 +76,9 @@ export default function Navigation() {
     pathname.startsWith('/practice/') && pathname.length > '/practice/'.length;
   // Student-facing story pages (recording / watching) get a clean, nav-free screen.
   const isStudentStoryPage = pathname.startsWith('/story/');
+  const isHomeworkPage = pathname.startsWith('/homework/');
 
-  if (isGamePage || isPracticePlayPage || isStudentStoryPage) {
+  if (isGamePage || isPracticePlayPage || isStudentStoryPage || isHomeworkPage) {
     return null;
   }
 

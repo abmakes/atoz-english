@@ -5,6 +5,7 @@ import { Application } from 'pixi.js'
 import { HomeworkQuizGame, type HomeworkCard, type HomeworkFrame } from '@/lib/pixi-games/homework-quiz/HomeworkQuizGame'
 import { flameColor, frameForCorrect, shouldShake } from '@/lib/homework/rules'
 import { formatDue } from '@/lib/assignments/due'
+import { getPixiThemeConfig, sceneBackgroundUrl, sceneThemeId } from '@/lib/themes'
 
 const CLIENT_KEY = 'playtoz-homework-client'
 
@@ -63,6 +64,7 @@ interface SessionInfo {
   leaderboard: LeaderRow[]
   finishedHomework: boolean
   bestPercentage: number | null
+  theme: string
   resume: { attemptId: string; mode: Mode; studentName: string } | null
 }
 
@@ -101,8 +103,12 @@ export default function HomeworkPlay({ token }: { token: string }) {
   const gameRef = useRef<HomeworkQuizGame | null>(null)
   const playRef = useRef<PlayState | null>(null)
   const indexRef = useRef(0)
+  const sessionRef = useRef<SessionInfo | null>(null)
+  const chooseRef = useRef<(answer: string) => void>(() => undefined)
+  const timeoutRef = useRef<() => void>(() => undefined)
   playRef.current = play
   indexRef.current = index
+  sessionRef.current = session
 
   const loadSession = useCallback(async () => {
     const key = clientKey()
@@ -183,7 +189,7 @@ export default function HomeworkPlay({ token }: { token: string }) {
     void (async () => {
       await app.init({
         resizeTo: mount,
-        background: '#f7fbff',
+        backgroundAlpha: 0,
         antialias: true,
         autoDensity: true,
         resolution: Math.min(window.devicePixelRatio || 1, 2),
@@ -192,13 +198,14 @@ export default function HomeworkPlay({ token }: { token: string }) {
         destroyApp()
         return
       }
+      app.canvas.style.touchAction = 'none'
       mount.appendChild(app.canvas)
-      const game = new HomeworkQuizGame(app, {
+      const game = new HomeworkQuizGame(app, sessionRef.current?.theme, {
         onChoose: (answer) => {
-          void choose(answer)
+          chooseRef.current(answer)
         },
         onTimeout: () => {
-          void timeout()
+          timeoutRef.current()
         },
       })
       gameRef.current = game
@@ -259,10 +266,17 @@ export default function HomeworkPlay({ token }: { token: string }) {
 
   async function choose(answer: string) {
     const current = playRef.current
-    if (!current || busy) return
+    if (!current) {
+      gameRef.current?.unlock()
+      return
+    }
+    if (busy) return
     const questionIndex = indexRef.current
     const question = current.mode === 'HOMEWORK' ? current.questions[questionIndex] : current.questions.find((item) => item.id === current.currentQuestionId)
-    if (!question) return
+    if (!question) {
+      gameRef.current?.unlock()
+      return
+    }
     setBusy(true)
     try {
       if (current.mode === 'HOMEWORK') {
@@ -322,6 +336,9 @@ export default function HomeworkPlay({ token }: { token: string }) {
       setBusy(false)
     }
   }
+  chooseRef.current = (answer) => {
+    void choose(answer)
+  }
 
   async function timeout() {
     const current = playRef.current
@@ -351,14 +368,27 @@ export default function HomeworkPlay({ token }: { token: string }) {
       setBusy(false)
     }
   }
+  timeoutRef.current = () => {
+    void timeout()
+  }
+
+  const scene = sceneThemeId(session?.theme)
+  const colors = getPixiThemeConfig(scene)
+  const background = sceneBackgroundUrl(scene)
+
+  const inkShadow = scene === 'dark' ? '0 2px 8px rgba(0,0,0,0.85)' : '0 1px 0 #fff, 0 0 12px rgba(255,255,255,0.9)'
 
   return (
-    <main className="min-h-screen bg-[#f7fbff] text-[#114257]">
-      <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-6">
-        <p className="text-sm font-semibold text-sky-700">Homework</p>
-        <h1 className="grandstander text-3xl font-bold">{session?.title ?? 'Quiz homework'}</h1>
+    <div
+      className={`bg-cover bg-center bg-no-repeat ${phase === 'play' ? 'h-screen overflow-hidden' : 'min-h-screen'}`}
+      style={{ backgroundImage: `url(${background})`, color: colors.textColor }}
+    >
+      {phase === 'play' ? <div ref={mountRef} className="fixed inset-0 z-0" /> : null}
+      <div className={`relative z-10 flex min-h-screen flex-col px-4 py-6 ${phase === 'play' ? 'pointer-events-none mx-auto max-w-5xl' : 'mx-auto max-w-5xl'}`}>
+        <p className="text-sm font-semibold" style={{ color: colors.primaryAccent, textShadow: inkShadow }}>Homework</p>
+        <h1 className="grandstander text-3xl font-bold" style={{ color: colors.headingColor, textShadow: inkShadow }}>{session?.title ?? 'Quiz homework'}</h1>
         {session ? (
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-sm" style={{ color: colors.textLight, textShadow: inkShadow }}>
             Due {formatDue(session.dueAt)} · {session.questionCount}{' '}
             {session.questionCount === 1 ? 'question' : 'questions'}
             {session.bestPercentage !== null ? ` · Your best ${session.bestPercentage}%` : ''}
@@ -369,7 +399,7 @@ export default function HomeworkPlay({ token }: { token: string }) {
         {phase === 'loading' ? <p className="mt-10 text-slate-500">Loading…</p> : null}
 
         {phase === 'name' && session ? (
-          <section className="mx-auto mt-10 w-full max-w-md rounded-3xl border-2 border-[#1E5167] bg-white p-6 shadow-[4px_4px_0px_0px_#1E5167]">
+          <section className="pointer-events-auto mx-auto mt-10 w-full max-w-md rounded-3xl border-2 border-[#1E5167] bg-white p-6 text-[#114257] shadow-[4px_4px_0px_0px_#1E5167]">
             <p className="text-slate-600">
               Answer every question. You can look things up, and you can try again for a better percentage.
             </p>
@@ -406,10 +436,9 @@ export default function HomeworkPlay({ token }: { token: string }) {
           </section>
         ) : null}
 
-        {phase === 'play' ? <div ref={mountRef} className="mt-4 min-h-[70vh] flex-1 overflow-hidden rounded-3xl" /> : null}
 
         {phase === 'homework-results' && play ? (
-          <section className="mx-auto mt-8 w-full max-w-xl rounded-3xl border-2 border-[#1E5167] bg-white p-6 shadow-[4px_4px_0px_0px_#1E5167]">
+          <section className="pointer-events-auto mx-auto mt-8 w-full max-w-xl rounded-3xl border-2 border-[#1E5167] bg-white p-6 text-[#114257] shadow-[4px_4px_0px_0px_#1E5167]">
             <p className="grandstander text-5xl font-bold">{play.percentage ?? 0}%</p>
             <p className="mt-1 text-slate-600">
               {play.correctCount} of {play.questions.length} in {formatClock(play.durationMs)}
@@ -448,7 +477,7 @@ export default function HomeworkPlay({ token }: { token: string }) {
         ) : null}
 
         {phase === 'challenge-results' && play ? (
-          <section className="mx-auto mt-8 w-full max-w-xl rounded-3xl border-2 border-orange-400 bg-white p-6 text-center shadow-[4px_4px_0px_0px_#fdba74]">
+          <section className="pointer-events-auto mx-auto mt-8 w-full max-w-xl rounded-3xl border-2 border-orange-400 bg-white p-6 text-center text-[#114257] shadow-[4px_4px_0px_0px_#fdba74]">
             <p className="grandstander text-4xl font-bold">
               {play.reachedHundred ? 'Mega Chad' : `${play.correctCount} correct`}
             </p>
@@ -470,7 +499,7 @@ export default function HomeworkPlay({ token }: { token: string }) {
           </section>
         ) : null}
       </div>
-    </main>
+    </div>
   )
 }
 

@@ -1,6 +1,6 @@
-import { Application, Assets, Container, Graphics, Sprite, Text, Texture } from 'pixi.js'
+import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Texture } from 'pixi.js'
 import { ensureFontIsLoaded } from '@/lib/pixi-engine/utils/ensureFontIsLoaded'
-import { getPixiThemeConfig } from '@/lib/themes'
+import { getPixiThemeConfig, getThemeConfig, sceneThemeId, type SceneThemeId } from '@/lib/themes'
 import type { FlameColor } from '@/lib/homework/rules'
 
 export interface HomeworkCard {
@@ -39,8 +39,10 @@ interface ChoiceButton {
 }
 
 export class HomeworkQuizGame {
-  private readonly theme = getPixiThemeConfig('default')
+  private readonly themeId: SceneThemeId
+  private readonly theme: ReturnType<typeof getPixiThemeConfig>
   private readonly root = new Container()
+  private readonly background = new Sprite(Texture.EMPTY)
   private readonly flames = new Container()
   private readonly pictureFrame = new Graphics()
   private readonly pictureMask = new Graphics()
@@ -62,18 +64,22 @@ export class HomeworkQuizGame {
 
   constructor(
     private readonly app: Application,
+    theme: string | null | undefined,
     private readonly hooks: {
       onChoose: (answer: string) => void
       onTimeout: () => void
     }
   ) {
+    this.themeId = sceneThemeId(theme)
+    this.theme = getPixiThemeConfig(this.themeId)
+    const stroke = this.themeId === 'dark' ? { color: '#0f172a', width: 5 } : { color: '#ffffff', width: 5 }
     this.progressText = new Text({
       text: '',
-      style: { fontFamily: 'Grandstander', fontSize: 28, fontWeight: '800', fill: this.theme.headingColor },
+      style: { fontFamily: 'Grandstander', fontSize: 28, fontWeight: '800', fill: this.theme.headingColor, stroke },
     })
     this.livesText = new Text({
       text: '',
-      style: { fontFamily: 'Grandstander', fontSize: 22, fontWeight: '800', fill: this.theme.primaryAccent },
+      style: { fontFamily: 'Grandstander', fontSize: 22, fontWeight: '800', fill: this.theme.primaryAccent, stroke },
     })
     this.questionText = new Text({
       text: '',
@@ -84,6 +90,7 @@ export class HomeworkQuizGame {
         fill: this.theme.questionTextColor,
         align: 'center',
         wordWrap: true,
+        stroke,
       },
     })
     this.picture.anchor.set(0.5)
@@ -92,7 +99,20 @@ export class HomeworkQuizGame {
   async init(): Promise<void> {
     await ensureFontIsLoaded('Grandstander', '32px')
     if (this.destroyed) return
+    this.background.eventMode = 'none'
+    this.background.anchor.set(0.5)
+    this.flames.eventMode = 'none'
+    this.pictureFrame.eventMode = 'none'
+    this.pictureMask.eventMode = 'none'
+    this.picture.eventMode = 'none'
+    this.timerBar.eventMode = 'none'
+    this.timerTrack.eventMode = 'none'
+    this.progressText.eventMode = 'none'
+    this.livesText.eventMode = 'none'
+    this.questionText.eventMode = 'none'
+    this.app.stage.eventMode = 'static'
     this.app.stage.addChild(this.root)
+    this.root.addChild(this.background)
     this.root.addChild(this.flames)
     this.root.addChild(this.timerTrack)
     this.root.addChild(this.timerBar)
@@ -107,6 +127,12 @@ export class HomeworkQuizGame {
     this.app.ticker.add(this.tick)
     this.app.renderer.on('resize', this.layout)
     this.layout()
+    void this.loadBackground()
+  }
+
+  /** Let the student tap again after a save was rejected. */
+  unlock(): void {
+    if (!this.destroyed) this.locked = false
   }
 
   show(card: HomeworkCard, frame: HomeworkFrame): void {
@@ -147,6 +173,18 @@ export class HomeworkQuizGame {
     if (url) void Assets.unload(url).catch(() => undefined)
   }
 
+  private async loadBackground(): Promise<void> {
+    const url = `${getThemeConfig(this.themeId).imagesBasePath}bg_image.webp`
+    try {
+      const texture = await Assets.load<Texture>(url)
+      if (this.destroyed) return
+      this.background.texture = texture
+      this.layout()
+    } catch (error) {
+      console.error('[HomeworkQuiz] background failed', error)
+    }
+  }
+
   private makeButton(): ChoiceButton {
     const view = new Container()
     const plate = new Graphics()
@@ -161,18 +199,31 @@ export class HomeworkQuizGame {
         wordWrap: true,
       },
     })
+    plate.eventMode = 'none'
+    label.eventMode = 'none'
     view.addChild(plate)
     view.addChild(label)
     view.eventMode = 'static'
     view.cursor = 'pointer'
-    view.on('pointertap', () => {
-      const answer = (view as Container & { __answer?: string }).__answer
-      if (!answer || this.locked || this.destroyed) return
+    const button: ChoiceButton = { view, plate, label, answer: '' }
+    let armed = false
+    view.on('pointerdown', (event) => {
+      armed = true
+      event.stopPropagation()
+    })
+    view.on('pointerup', (event) => {
+      if (!armed) return
+      armed = false
+      event.stopPropagation()
+      if (!button.answer || this.locked || this.destroyed) return
       this.locked = true
-      this.hooks.onChoose(answer)
+      this.hooks.onChoose(button.answer)
+    })
+    view.on('pointerupoutside', () => {
+      armed = false
     })
     this.root.addChild(view)
-    return { view, plate, label, answer: '' }
+    return button
   }
 
   private paintButton(button: ChoiceButton, state: 'idle' | 'right' | 'wrong'): void {
@@ -274,14 +325,25 @@ export class HomeworkQuizGame {
 
   private layout = (): void => {
     if (this.destroyed) return
-    const width = this.app.renderer.width
-    const height = this.app.renderer.height
+    const width = this.app.screen.width
+    const height = this.app.screen.height
+    this.app.stage.hitArea = new Rectangle(0, 0, width, height)
+    this.background.position.set(width / 2, height / 2)
+    if (this.background.texture?.width) {
+      const screenAspect = width / Math.max(height, 1)
+      const textureAspect = this.background.texture.width / this.background.texture.height
+      const scale = screenAspect > textureAspect
+        ? width / this.background.texture.width
+        : height / this.background.texture.height
+      this.background.scale.set(Number.isFinite(scale) && scale > 0 ? scale : 1)
+    }
     const column = Math.min(width - 48, 720)
     const left = (width - column) / 2
-    this.progressText.position.set(left, 18)
+    const chromeTop = 132
+    this.progressText.position.set(left, chromeTop)
     this.livesText.anchor.set(1, 0)
-    this.livesText.position.set(left + column, 22)
-    const pictureTop = 64
+    this.livesText.position.set(left + column, chromeTop + 4)
+    const pictureTop = chromeTop + 46
     const pictureHeight = Math.max(160, Math.min(column * 0.62, height * 0.42))
     this.pictureFrame.clear()
     this.pictureFrame
@@ -316,8 +378,8 @@ export class HomeworkQuizGame {
       button.label.style.wordWrapWidth = buttonWidth - 20
       button.label.anchor.set(0.5)
       button.label.position.set(buttonWidth / 2, buttonHeight / 2)
+      button.view.hitArea = new Rectangle(0, 0, buttonWidth, buttonHeight)
       button.view.position.set(left + col * (buttonWidth + gap), choiceTop + row * (buttonHeight + gap))
-      ;(button.view as Container & { __answer?: string }).__answer = button.answer
     })
   }
 }

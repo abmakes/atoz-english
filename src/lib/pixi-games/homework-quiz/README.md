@@ -2,7 +2,7 @@
 
 Single-player homework for a multiple-choice quiz the teacher already created. Students open a class link, answer every question, and get a percentage. They can retry. After one finished try they can play the challenge.
 
-This screen owns one Pixi `Application`. It does not use `GameContainer` or RuleEngine, because there are no teams and the score is graded on the server.
+This screen owns one Pixi `Application`. It does not use `GameContainer` or RuleEngine, because there are no teams and the score is graded on the server. The scene is the quiz theme: Clouds, Forest, or Dark Sea, the same backgrounds as the classroom quiz.
 
 ## Homework
 

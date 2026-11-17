@@ -14,6 +14,7 @@ import {
   livesAfterCorrect,
   type FlameColor,
 } from '@/lib/homework/rules'
+import { sceneThemeId } from '@/lib/themes'
 
 export class HomeworkError extends Error {
   constructor(
@@ -81,6 +82,12 @@ function toPublic(question: QuestionRow): PublicQuestion {
     imageUrl: question.imageUrl,
     answers: question.answers,
   }
+}
+
+function readQuizTheme(settings: Prisma.JsonValue | null): string | null {
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings)) return null
+  const theme = (settings as { theme?: unknown }).theme
+  return typeof theme === 'string' ? theme : null
 }
 
 function usableQuestions(questions: QuestionRow[]): QuestionRow[] {
@@ -283,6 +290,7 @@ export async function getHomeworkSession(token: string, clientKey?: string) {
     leaderboard: assignment.showLeaderboard ? summary.challenge : [],
     finishedHomework: mine.length > 0,
     bestPercentage,
+    theme: sceneThemeId(readQuizTheme(assignment.quiz.defaultSettings)),
     resume: resume
       ? { attemptId: resume.id, mode: resume.mode, studentName: resume.studentName }
       : null,
