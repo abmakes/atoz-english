@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import type { EventBus } from '@/lib/pixi-engine/core/EventBus'
 import {
   GAME_EVENTS,
@@ -21,9 +21,10 @@ interface QuestionPanelProps {
  * Shared-question card for Tug of War. Clicks emit HUD_EVENTS.ANSWER_SELECTED;
  * the 3D game owns correctness and scoring.
  *
- * The image, stem, and every answer stay on screen. Images use object-contain
- * so side detail (a timetable's hours, labels at the edge) is never cropped.
- * The picture grows into leftover space; the stem does not.
+ * The image, stem, and every answer stay on screen. The picture is shown in
+ * full (no crop). Its height matches the question plus the answer buttons, and
+ * its width follows that height. A portrait picture may grow the card; a
+ * landscape one does not.
  */
 const QuestionPanel: React.FC<QuestionPanelProps> = ({
   eventBus,
@@ -33,6 +34,12 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
   const [pickedIndex, setPickedIndex] = useState<number | null>(null)
   const [resolvedCorrect, setResolvedCorrect] = useState<boolean | null>(null)
   const [locked, setLocked] = useState(false)
+  const [copyHeight, setCopyHeight] = useState(0)
+  const [imageRatio, setImageRatio] = useState<number | null>(null)
+  const [wideLayout, setWideLayout] = useState(false)
+  const [viewport, setViewport] = useState({ width: 0, height: 0 })
+  const copyRef = useRef<HTMLDivElement>(null)
+  const imageRef = useRef<HTMLImageElement>(null)
 
   useEffect(() => {
     const onShown = (payload: HudQuestionShownPayload) => {
@@ -78,6 +85,40 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
     return () => window.removeEventListener('keydown', onKey)
   }, [eventBus, locked, question])
 
+  useEffect(() => {
+    setImageRatio(null)
+    setCopyHeight(0)
+    const img = imageRef.current
+    if (img?.complete && img.naturalWidth > 0 && img.naturalHeight > 0) {
+      setImageRatio(img.naturalWidth / img.naturalHeight)
+    }
+  }, [question?.questionId, question?.imageUrl])
+
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 640px)')
+    const readViewport = () => {
+      setWideLayout(media.matches)
+      setViewport({ width: window.innerWidth, height: window.innerHeight })
+    }
+    readViewport()
+    media.addEventListener('change', readViewport)
+    window.addEventListener('resize', readViewport)
+    return () => {
+      media.removeEventListener('change', readViewport)
+      window.removeEventListener('resize', readViewport)
+    }
+  }, [])
+
+  useEffect(() => {
+    const node = copyRef.current
+    if (!node) return
+    const measure = () => setCopyHeight(node.offsetHeight)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [question])
+
   if (!question) return null
 
   const pick = (index: number) => {
@@ -88,33 +129,58 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
   }
 
   const hasImage = Boolean(question.imageUrl)
+  const isPortrait = imageRatio !== null && imageRatio < 1
+  let imageBox: { width: number; height: number } | null = null
+  if (wideLayout && imageRatio && copyHeight > 0 && viewport.width > 0) {
+    const maxWidth = Math.min(viewport.width * 0.46, 560)
+    let height = copyHeight
+    if (isPortrait) {
+      height = Math.min(copyHeight / imageRatio, viewport.height * 0.42)
+      height = Math.max(height, copyHeight)
+    }
+    let width = height * imageRatio
+    if (width > maxWidth) {
+      width = maxWidth
+      height = width / imageRatio
+    }
+    imageBox = { width: Math.round(width), height: Math.round(height) }
+  }
 
   return (
     <div
-      className={`${className ?? ''} pointer-events-auto flex h-full min-h-0 w-full flex-col rounded-2xl border-[3px] border-[#163e66] bg-white/95 p-2 shadow-[3px_3px_0_0_#163e66] sm:p-2.5 lg:rounded-[28px] lg:p-3 [@media(max-height:640px)]:p-1.5`}
+      className={`${className ?? ''} pointer-events-auto w-max max-w-full rounded-2xl border-[3px] border-[#163e66] bg-white/95 p-2 shadow-[3px_3px_0_0_#163e66] sm:p-2.5 lg:rounded-[28px] lg:p-3 [@media(max-height:640px)]:p-1.5`}
       role="region"
       aria-label="Question"
     >
       <div
-        className={`flex min-h-0 flex-1 gap-2 sm:gap-3 ${
-          hasImage ? 'flex-col sm:flex-row sm:items-stretch' : 'items-center justify-center'
+        className={`flex items-center gap-2 sm:gap-3 ${
+          hasImage ? 'flex-col sm:flex-row' : 'justify-center'
         }`}
       >
         {question.imageUrl && (
-          <div className="flex min-h-[4.5rem] min-w-0 flex-1 items-center justify-center sm:min-h-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={question.imageUrl}
-              alt=""
-              className="max-h-full max-w-full rounded-xl border-2 border-[#163e66] bg-white object-contain lg:rounded-2xl lg:border-[3px]"
-            />
-          </div>
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            ref={imageRef}
+            src={question.imageUrl}
+            alt=""
+            onLoad={(event) => {
+              const img = event.currentTarget
+              if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                setImageRatio(img.naturalWidth / img.naturalHeight)
+              }
+            }}
+            style={
+              imageBox
+                ? { width: imageBox.width, height: imageBox.height }
+                : undefined
+            }
+            className="block h-auto w-auto max-h-[38vh] max-w-full shrink-0 rounded-xl border-2 border-[#163e66] bg-white object-contain sm:max-h-none lg:rounded-2xl lg:border-[3px]"
+          />
         )}
         <div
-          className={`flex min-h-0 min-w-0 shrink-0 flex-col justify-center ${
-            hasImage
-              ? 'w-full sm:w-[clamp(14rem,38%,32rem)]'
-              : 'w-full max-w-3xl'
+          ref={copyRef}
+          className={`flex min-w-0 flex-col justify-center ${
+            hasImage ? 'w-full sm:w-[min(26rem,40vw)]' : 'w-full max-w-3xl'
           }`}
         >
           <p className="grandstander mb-1.5 text-sm font-bold leading-snug text-[#163e66] sm:mb-2 sm:text-lg lg:text-2xl lg:leading-tight [@media(max-height:760px)]:lg:text-xl [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:text-sm [@media(max-height:640px)]:sm:text-base">

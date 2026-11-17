@@ -338,7 +338,7 @@ Payload helper: `createQuizRoomAnswerPayload` in `quizRoomLogic.ts`.
 
 Turn-based, **first to 3 round points**. Two teams required. Question card, timer, tug meter, and round dots are **React HUD overlays** (`hud` flags on the mode definition).
 
-The question card is the play surface. It sits under the team banners and widens into the side margins, stopping just above the ninja heads. The timer is under the card, not above it. Question images use `object-contain` so the full frame stays visible (a timetable's hours must not be cropped). The card does not scroll: the image, the stem, and every answer stay on screen. On a very short viewport the card may cover the ninjas so the question remains usable.
+The question card is the play surface. It sits under the team banners and sizes to the question plus the answer buttons. The timer is under the card. A question image is shown in full: its height matches that text block and its width follows the picture, so a landscape image does not grow the card or leave side bars. A portrait image may make the card taller. The card does not scroll.
 
 The Three scene is a painted 2.5D stage (art in `public/images/tug-of-war/`, URLs in `tugArt.ts`):
 

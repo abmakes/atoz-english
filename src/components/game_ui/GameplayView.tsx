@@ -448,11 +448,8 @@ const GameplayView: React.FC<GameplayViewProps> = ({
         </div>
 
         {hud?.questionPanel && eventBus && (
-          <div className="pointer-events-none absolute inset-x-0 top-12 bottom-[46%] z-10 flex flex-col items-center px-2 sm:top-14 sm:px-4 lg:top-[5.5rem] lg:px-6 [@media(max-height:480px)]:bottom-[4.75rem] [@media(max-height:520px)_and_(max-width:1023px)]:right-[9rem]">
-            <QuestionPanel
-              eventBus={eventBus}
-              className={`${themeClassName} min-h-0 w-full max-w-[1400px] flex-1`}
-            />
+          <div className="pointer-events-none absolute inset-x-0 top-12 z-10 flex flex-col items-center px-2 sm:top-14 sm:px-4 lg:top-[5.5rem] lg:px-6 [@media(max-height:520px)_and_(max-width:1023px)]:right-[9rem]">
+            <QuestionPanel eventBus={eventBus} className={themeClassName} />
             {hud.timer && modeDefinition && (
               <div className="mt-1.5 flex shrink-0 justify-center sm:mt-2">
                 <TimerBadge eventBus={eventBus} timerId={modeDefinition.questionTimerId} />
