@@ -315,7 +315,6 @@ export default function HomeworkPlay({ token }: { token: string }) {
           setIndex(nextIndex)
         }
       } else {
-        const previous = current.correctCount
         const saved = await readJson<PlayState & { verdict?: { correct: boolean; correctAnswer: string } }>(
           await fetch(`/api/homework-session/${token}/attempts/${current.attemptId}/answer`, {
             method: 'POST',
