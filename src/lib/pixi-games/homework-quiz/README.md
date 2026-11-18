@@ -10,7 +10,7 @@ No timer and no lives. A tap turns green or red immediately, the card fades out,
 
 ## Challenge
 
-Same questions, repeating, without showing the right answer.
+Same questions, repeating. The run stays on this device. The next picture is loaded ahead of time, and the database is written once, when the run ends.
 
 - 1 life. A miss or a timeout costs it. At 0 the run ends.
 - At 20 correct, one extra life, once.

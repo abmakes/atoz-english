@@ -86,6 +86,72 @@ export function answerIsLate(elapsedMs: number, timeLimitMs: number): boolean {
   return elapsedMs > timeLimitMs + ANSWER_GRACE_MS
 }
 
+export type ChallengeGrade = {
+  correct: boolean
+  timedOut: boolean
+  correctCount: number
+  livesLeft: number
+  extraLifeGranted: boolean
+  endReason: 'WRONG' | 'TIMEOUT' | 'HUNDRED' | null
+  reachedHundred: boolean
+  timeToHundredMs: number | null
+  durationMs: number
+  timeUsedMs: number
+  nextTimeLimitMs: number
+}
+
+/** Grade one challenge tap from the clock and the real answer. This is the same step the saved run is replayed with. */
+export function gradeChallengeTap(input: {
+  correctCount: number
+  livesLeft: number
+  extraLifeGranted: boolean
+  runStartedAtMs: number
+  questionStartedAtMs: number
+  timeLimitMs: number
+  nowMs: number
+  timedOut: boolean
+  selectedAnswer: string
+  correctAnswer: string
+}): ChallengeGrade {
+  const elapsed = Math.max(0, input.nowMs - input.questionStartedAtMs)
+  const timedOut = input.timedOut || answerIsLate(elapsed, input.timeLimitMs)
+  const selected = input.selectedAnswer.trim()
+  const correct = !timedOut && selected.length > 0 && selected === input.correctAnswer
+  let livesLeft = input.livesLeft
+  let correctCount = input.correctCount
+  let extraLifeGranted = input.extraLifeGranted
+  let endReason: ChallengeGrade['endReason'] = null
+  let reachedHundred = false
+  let timeToHundredMs: number | null = null
+  if (correct) {
+    correctCount += 1
+    const next = livesAfterCorrect(correctCount, livesLeft, extraLifeGranted)
+    livesLeft = next.livesLeft
+    extraLifeGranted = next.extraLifeGranted
+    reachedHundred = next.reachedHundred
+    if (reachedHundred) {
+      endReason = 'HUNDRED'
+      timeToHundredMs = Math.max(0, input.nowMs - input.runStartedAtMs)
+    }
+  } else {
+    livesLeft -= 1
+    if (livesLeft <= 0) endReason = timedOut ? 'TIMEOUT' : 'WRONG'
+  }
+  return {
+    correct,
+    timedOut,
+    correctCount,
+    livesLeft,
+    extraLifeGranted,
+    endReason,
+    reachedHundred,
+    timeToHundredMs,
+    durationMs: Math.max(0, input.nowMs - input.runStartedAtMs),
+    timeUsedMs: Math.max(0, Math.min(elapsed, input.timeLimitMs)),
+    nextTimeLimitMs: challengeTimeLimitMs(correctCount),
+  }
+}
+
 export type ChallengeRun = {
   studentName: string
   correctCount: number

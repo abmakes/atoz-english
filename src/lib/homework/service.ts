@@ -7,11 +7,10 @@ import { readQueue, reshuffleAvoiding } from '@/lib/homework/queue'
 import { summarizeHomework, homeworkReportCsv, type HomeworkTryRecord } from '@/lib/homework/report'
 import {
   STARTING_LIVES,
-  answerIsLate,
   displayNameKey,
   frameForCorrect,
+  gradeChallengeTap,
   homeworkPercentage,
-  livesAfterCorrect,
   type FlameColor,
 } from '@/lib/homework/rules'
 import { sceneThemeId } from '@/lib/themes'
@@ -66,6 +65,8 @@ export type PlayState = {
   timeToHundredMs: number | null
   results: GradedAnswer[] | null
   startedAt: string
+  queue: string[]
+  extraLifeGranted: boolean
 }
 
 export type GradedAnswer = {
@@ -255,6 +256,8 @@ function toPlayState(
     timeToHundredMs: attempt.timeToHundredMs,
     results: gradedFrom(attempt, questions, reveal),
     startedAt: attempt.startedAt.toISOString(),
+    queue,
+    extraLifeGranted: attempt.extraLifeGranted,
   }
 }
 
@@ -497,6 +500,38 @@ function unsavedHomework(studentName: string, questions: QuestionRow[], queue: s
     timeToHundredMs: null,
     results: null,
     startedAt: new Date().toISOString(),
+    queue,
+    extraLifeGranted: false,
+  }
+}
+
+function unsavedChallenge(studentName: string, questions: QuestionRow[], queue: string[]): PlayState {
+  const now = new Date().toISOString()
+  const frame = frameForCorrect(0)
+  return {
+    attemptId: 'local',
+    mode: 'CHALLENGE',
+    status: 'IN_PROGRESS',
+    studentName,
+    questions: questions.map(toPublic),
+    selections: [],
+    currentQuestionId: queue[0] ?? null,
+    correctCount: 0,
+    answeredCount: 0,
+    livesLeft: STARTING_LIVES,
+    timeLimitMs: frame.timeLimitMs,
+    questionStartedAt: now,
+    flame: frame.flame,
+    shake: frame.shake,
+    percentage: null,
+    durationMs: 0,
+    endReason: null,
+    reachedHundred: false,
+    timeToHundredMs: null,
+    results: null,
+    startedAt: now,
+    queue,
+    extraLifeGranted: false,
   }
 }
 
@@ -508,58 +543,40 @@ export async function startAttempt(
   const questions = questionsOf(assignment)
   if (questions.length === 0) throw new HomeworkError('This homework has no questions.', 404)
   const studentName = cleanStudentName(input.studentName)
+  const ids = questions.map((question) => question.id)
+  const queue = reshuffleAvoiding(ids, null)
 
-  const existing = await prisma.homeworkAttempt.findFirst({
-    where: {
-      assignmentId: assignment.id,
-      clientKey: input.clientKey,
-      mode: input.mode,
-      status: 'IN_PROGRESS',
-    },
-    include: { answers: true },
-  })
-  if (existing) {
+  if (input.mode === 'HOMEWORK') {
+    const existing = await prisma.homeworkAttempt.findFirst({
+      where: {
+        assignmentId: assignment.id,
+        clientKey: input.clientKey,
+        mode: 'HOMEWORK',
+        status: 'IN_PROGRESS',
+      },
+      include: { answers: true },
+    })
+    if (existing) {
+      assertOpen(assignment)
+      return toPlayState(existing, questions, false)
+    }
     assertOpen(assignment)
-    return toPlayState(existing, questions, false)
+    return unsavedHomework(studentName, questions, queue)
   }
 
   assertOpen(assignment)
-
-  if (input.mode === 'CHALLENGE') {
-    const prior = await prisma.homeworkAttempt.findFirst({
-      where: {
-        assignmentId: assignment.id,
-        mode: 'HOMEWORK',
-        status: 'FINISHED',
-        studentName: { equals: studentName, mode: 'insensitive' },
-      },
-    })
-    if (!prior) {
-      throw new HomeworkError('Finish the homework once before you take the challenge.', 403)
-    }
-  }
-
-  const ids = questions.map((question) => question.id)
-  const queue = reshuffleAvoiding(ids, null)
-  if (input.mode === 'HOMEWORK') {
-    return unsavedHomework(studentName, questions, queue)
-  }
-  const frame = frameForCorrect(0)
-  const now = new Date()
-  const created = await prisma.homeworkAttempt.create({
-    data: {
+  const prior = await prisma.homeworkAttempt.findFirst({
+    where: {
       assignmentId: assignment.id,
-      studentName,
-      clientKey: input.clientKey,
-      mode: input.mode,
-      queue,
-      livesLeft: input.mode === 'CHALLENGE' ? STARTING_LIVES : null,
-      timeLimitMs: input.mode === 'CHALLENGE' ? frame.timeLimitMs : null,
-      questionStartedAt: input.mode === 'CHALLENGE' ? now : null,
+      mode: 'HOMEWORK',
+      status: 'FINISHED',
+      studentName: { equals: studentName, mode: 'insensitive' },
     },
-    include: { answers: true },
   })
-  return toPlayState(created, questions, false)
+  if (!prior) {
+    throw new HomeworkError('Finish the homework once before you take the challenge.', 403)
+  }
+  return unsavedChallenge(studentName, questions, queue)
 }
 
 export async function saveHomeworkAnswer(
@@ -671,39 +688,34 @@ export async function answerChallenge(
   const started = attempt.questionStartedAt ?? attempt.startedAt
   const elapsed = now.getTime() - started.getTime()
   const limit = attempt.timeLimitMs ?? frameForCorrect(attempt.correctCount).timeLimitMs
-  const timedOut = Boolean(input.timedOut) || answerIsLate(elapsed, limit)
   const selected = (input.selectedAnswer ?? '').trim()
-  if (!timedOut && !selected) throw new HomeworkError('Choose an answer.', 400)
-  const correct = !timedOut && selected === question.correctAnswer
-
-  let lives = attempt.livesLeft ?? STARTING_LIVES
-  let correctCount = attempt.correctCount
-  let extraLifeGranted = attempt.extraLifeGranted
-  let endReason: 'WRONG' | 'TIMEOUT' | 'HUNDRED' | null = null
-  let reachedHundred = false
-  let timeToHundredMs: number | null = null
-
-  if (correct) {
-    correctCount += 1
-    const next = livesAfterCorrect(correctCount, lives, extraLifeGranted)
-    lives = next.livesLeft
-    extraLifeGranted = next.extraLifeGranted
-    reachedHundred = next.reachedHundred
-    if (reachedHundred) {
-      endReason = 'HUNDRED'
-      timeToHundredMs = Math.max(0, now.getTime() - attempt.startedAt.getTime())
-    }
-  } else {
-    lives -= 1
-    if (lives <= 0) endReason = timedOut ? 'TIMEOUT' : 'WRONG'
-  }
+  const grade = gradeChallengeTap({
+    correctCount: attempt.correctCount,
+    livesLeft: attempt.livesLeft ?? STARTING_LIVES,
+    extraLifeGranted: attempt.extraLifeGranted,
+    runStartedAtMs: attempt.startedAt.getTime(),
+    questionStartedAtMs: started.getTime(),
+    timeLimitMs: limit,
+    nowMs: now.getTime(),
+    timedOut: Boolean(input.timedOut),
+    selectedAnswer: selected,
+    correctAnswer: question.correctAnswer,
+  })
+  if (!grade.timedOut && !selected) throw new HomeworkError('Choose an answer.', 400)
+  const correct = grade.correct
+  const lives = grade.livesLeft
+  const correctCount = grade.correctCount
+  const extraLifeGranted = grade.extraLifeGranted
+  const endReason = grade.endReason
+  const reachedHundred = grade.reachedHundred
+  const timeToHundredMs = grade.timeToHundredMs
 
   const ids = questions.map((item) => item.id)
   let nextQueue = queue.slice(1)
   if (!endReason && nextQueue.length === 0) {
     nextQueue = reshuffleAvoiding(ids, question.id)
   }
-  const durationMs = Math.max(0, now.getTime() - attempt.startedAt.getTime())
+  const durationMs = grade.durationMs
   const frame = frameForCorrect(correctCount)
   const updated = await prisma.$transaction(async (tx) => {
     const claimed = await tx.homeworkAttempt.updateMany({
@@ -866,4 +878,127 @@ export async function syncHomework(
     })
   })
   return toPlayState(updated, questions, input.submit)
+}
+
+export async function submitChallenge(
+  token: string,
+  input: {
+    studentName: string
+    clientKey: string
+    startedAt: string
+    events: { questionId: string; selectedAnswer: string; timedOut: boolean; timeUsedMs: number }[]
+  }
+) {
+  const assignment = await loadAssignmentByToken(token)
+  assertOpen(assignment)
+  const studentName = cleanStudentName(input.studentName)
+  const prior = await prisma.homeworkAttempt.findFirst({
+    where: {
+      assignmentId: assignment.id,
+      mode: 'HOMEWORK',
+      status: 'FINISHED',
+      studentName: { equals: studentName, mode: 'insensitive' },
+    },
+  })
+  if (!prior) throw new HomeworkError('Finish the homework once before you take the challenge.', 403)
+  const questions = questionsOf(assignment)
+  const byId = new Map(questions.map((question) => [question.id, question]))
+  const parsedStart = new Date(input.startedAt)
+  const now = new Date()
+  const startedAt =
+    Number.isNaN(parsedStart.getTime()) || parsedStart.getTime() > now.getTime() ? now : parsedStart
+
+  let correctCount = 0
+  let livesLeft = STARTING_LIVES
+  let extraLifeGranted = false
+  let endReason: 'WRONG' | 'TIMEOUT' | 'HUNDRED' | null = null
+  const rows: {
+    questionId: string
+    questionText: string
+    selectedAnswer: string
+    correctAnswer: string
+    correct: boolean
+    timeUsedMs: number
+    order: number
+  }[] = []
+  for (const event of input.events) {
+    if (endReason) throw new HomeworkError('That run had already ended.', 400)
+    const question = byId.get(event.questionId)
+    if (!question) throw new HomeworkError('A question in this run is missing.', 400)
+    const selected = question.answers.find((answer) => answer.trim() === event.selectedAnswer.trim()) ?? ''
+    if (!event.timedOut && !selected) {
+      throw new HomeworkError('That answer is not one of the choices.', 400)
+    }
+    const limit = frameForCorrect(correctCount).timeLimitMs
+    const grade = gradeChallengeTap({
+      correctCount,
+      livesLeft,
+      extraLifeGranted,
+      runStartedAtMs: startedAt.getTime(),
+      questionStartedAtMs: 0,
+      timeLimitMs: limit,
+      nowMs: 0,
+      timedOut: event.timedOut,
+      selectedAnswer: selected,
+      correctAnswer: question.correctAnswer,
+    })
+    correctCount = grade.correctCount
+    livesLeft = grade.livesLeft
+    extraLifeGranted = grade.extraLifeGranted
+    endReason = grade.endReason
+    rows.push({
+      questionId: question.id,
+      questionText: question.question,
+      selectedAnswer: selected,
+      correctAnswer: question.correctAnswer,
+      correct: grade.correct,
+      timeUsedMs: Math.max(0, Math.min(event.timeUsedMs, limit)),
+      order: rows.length,
+    })
+  }
+  if (!endReason) throw new HomeworkError('That run is still going.', 400)
+  const durationMs = Math.max(0, now.getTime() - startedAt.getTime())
+  const reachedHundred = endReason === 'HUNDRED'
+
+  const updated = await prisma.$transaction(async (tx) => {
+    await tx.homeworkAttempt.deleteMany({
+      where: {
+        assignmentId: assignment.id,
+        clientKey: input.clientKey,
+        mode: 'CHALLENGE',
+        status: 'IN_PROGRESS',
+      },
+    })
+    const created = await tx.homeworkAttempt.create({
+      data: {
+        assignmentId: assignment.id,
+        studentName,
+        clientKey: input.clientKey,
+        mode: 'CHALLENGE',
+        status: 'FINISHED',
+        queue: input.events.map((event) => event.questionId),
+        correctCount,
+        answeredCount: rows.length,
+        durationMs,
+        livesLeft,
+        extraLifeGranted,
+        endReason,
+        reachedHundred,
+        timeToHundredMs: reachedHundred ? durationMs : null,
+        startedAt,
+        finishedAt: now,
+      },
+    })
+    if (rows.length > 0) {
+      await tx.homeworkAnswer.createMany({
+        data: rows.map((row) => ({ ...row, attemptId: created.id })),
+      })
+    }
+    return tx.homeworkAttempt.findFirst({
+      where: { id: created.id },
+      include: { answers: true },
+    })
+  })
+  if (!updated) throw new HomeworkError('That run could not be saved.', 500)
+  return toPlayState(updated, questions, false)
 }

@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Application } from 'pixi.js'
 import { HomeworkQuizGame, type HomeworkCard, type HomeworkFrame } from '@/lib/pixi-games/homework-quiz/HomeworkQuizGame'
-import { flameColor, frameForCorrect, shouldShake } from '@/lib/homework/rules'
+import { flameColor, frameForCorrect, gradeChallengeTap, shouldShake } from '@/lib/homework/rules'
+import { reshuffleAvoiding } from '@/lib/homework/queue'
 import { formatDue } from '@/lib/assignments/due'
+import { readChallengeTry, rememberChallengeTry, submitChallengeTry } from '@/lib/homework/localChallenge'
 import { flushHomeworkTry, readHomeworkTry, rememberHomeworkTry } from '@/lib/homework/localProgress'
 import { getPixiThemeConfig, sceneBackgroundUrl, sceneThemeId } from '@/lib/themes'
 
@@ -48,6 +50,8 @@ interface PlayState {
   timeToHundredMs: number | null
   results: GradedAnswer[] | null
   startedAt: string
+  queue: string[]
+  extraLifeGranted: boolean
 }
 
 interface LeaderRow {
@@ -137,7 +141,30 @@ export default function HomeworkPlay({ token }: { token: string }) {
           setPhase('play')
           return
         }
-        if (!info.resume || !info.acceptingResponses) {
+        const localChallenge = readChallengeTry<PlayState>(token, clientKey())
+        if (localChallenge && info.acceptingResponses) {
+          setName(localChallenge.play.studentName)
+          if (localChallenge.play.status === 'FINISHED') {
+            setPlay(localChallenge.play)
+            setPhase('challenge-results')
+            void submitChallengeTry<PlayState>(token, clientKey())
+              .then(async (saved) => {
+                if (!saved) return
+                setPlay(saved)
+                await loadSession()
+              })
+              .catch((reason: unknown) => {
+                setError(reason instanceof Error ? reason.message : 'That challenge could not be saved.')
+              })
+            return
+          }
+          const resumed = { ...localChallenge.play, questionStartedAt: new Date().toISOString() }
+          rememberChallengeTry(token, resumed, localChallenge.events, clientKey())
+          setPlay(resumed)
+          setPhase('play')
+          return
+        }
+        if (!info.resume || !info.acceptingResponses || info.resume.mode === 'CHALLENGE') {
           setPhase('name')
           return
         }
@@ -191,7 +218,10 @@ export default function HomeworkPlay({ token }: { token: string }) {
       } satisfies HomeworkCard,
       frame
     )
-    const upcoming = state.mode === 'HOMEWORK' ? state.questions[questionIndex + 1] : null
+    const upcoming =
+      state.mode === 'HOMEWORK'
+        ? state.questions[questionIndex + 1]
+        : state.questions.find((question) => question.id === state.queue[1])
     game.preload(upcoming?.imageUrl ?? null)
   }, [])
 
@@ -231,7 +261,13 @@ export default function HomeworkPlay({ token }: { token: string }) {
       gameRef.current = game
       await game.init()
       const current = playRef.current
-      if (current) showCard(current, current.mode === 'HOMEWORK' ? index : 0)
+      if (current) {
+        const questionIndex =
+          current.mode === 'HOMEWORK'
+            ? indexRef.current
+            : current.questions.findIndex((question) => question.id === current.currentQuestionId)
+        showCard(current, questionIndex < 0 ? 0 : questionIndex)
+      }
     })().catch((reason: unknown) => {
       console.error('[HomeworkQuiz] start failed', reason)
       if (!cancelled) setError('The game could not start. Refresh and try again.')
@@ -279,6 +315,9 @@ export default function HomeworkPlay({ token }: { token: string }) {
       if (state.mode === 'HOMEWORK' && state.status === 'IN_PROGRESS') {
         rememberHomeworkTry(token, state, clientKey(), false)
       }
+      if (state.mode === 'CHALLENGE' && state.status === 'IN_PROGRESS') {
+        rememberChallengeTry(token, state, [], clientKey())
+      }
       setPlay(state)
       if (state.status === 'FINISHED' && state.mode === 'HOMEWORK') {
         setPhase('homework-results')
@@ -300,6 +339,78 @@ export default function HomeworkPlay({ token }: { token: string }) {
     }
   }
 
+  function recordChallenge(current: PlayState, question: PublicQuestion, selectedAnswer: string, timedOut: boolean): PlayState {
+    const limit = current.timeLimitMs ?? frameForCorrect(current.correctCount).timeLimitMs
+    const grade = gradeChallengeTap({
+      correctCount: current.correctCount,
+      livesLeft: current.livesLeft ?? 1,
+      extraLifeGranted: current.extraLifeGranted,
+      runStartedAtMs: Date.parse(current.startedAt),
+      questionStartedAtMs: Date.parse(current.questionStartedAt ?? current.startedAt),
+      timeLimitMs: limit,
+      nowMs: Date.now(),
+      timedOut,
+      selectedAnswer,
+      correctAnswer: question.correctAnswer,
+    })
+    const events = [
+      ...(readChallengeTry<PlayState>(token, clientKey())?.events ?? []),
+      {
+        questionId: question.id,
+        selectedAnswer: grade.timedOut ? '' : selectedAnswer,
+        timedOut: grade.timedOut,
+        timeUsedMs: grade.timeUsedMs,
+      },
+    ]
+    let queue = current.queue.slice(1)
+    if (!grade.endReason && queue.length === 0) {
+      queue = reshuffleAvoiding(
+        current.questions.map((item) => item.id),
+        question.id
+      )
+    }
+    const frame = frameForCorrect(grade.correctCount)
+    const next: PlayState = {
+      ...current,
+      selections: [...current.selections, { questionId: question.id, selectedAnswer: grade.timedOut ? '' : selectedAnswer }],
+      currentQuestionId: grade.endReason ? current.currentQuestionId : (queue[0] ?? null),
+      correctCount: grade.correctCount,
+      answeredCount: current.answeredCount + 1,
+      livesLeft: grade.livesLeft,
+      extraLifeGranted: grade.extraLifeGranted,
+      queue,
+      timeLimitMs: grade.endReason ? current.timeLimitMs : frame.timeLimitMs,
+      flame: frame.flame,
+      shake: frame.shake,
+      durationMs: grade.durationMs,
+      status: grade.endReason ? 'FINISHED' : 'IN_PROGRESS',
+      endReason: grade.endReason,
+      reachedHundred: grade.reachedHundred,
+      timeToHundredMs: grade.timeToHundredMs,
+    }
+    rememberChallengeTry(token, next, events, clientKey())
+    return next
+  }
+
+  async function revealChallenge(nextPlay: PlayState, save: Promise<PlayState | null> | null) {
+    await gameRef.current?.depart()
+    if (nextPlay.status === 'FINISHED') {
+      setPlay(nextPlay)
+      setPhase('challenge-results')
+      const saved = await save
+      if (saved) {
+        setPlay(saved)
+        await loadSession()
+      }
+      return
+    }
+    const revealed = { ...nextPlay, questionStartedAt: new Date().toISOString() }
+    const events = readChallengeTry<PlayState>(token, clientKey())?.events ?? []
+    rememberChallengeTry(token, revealed, events, clientKey())
+    playRef.current = revealed
+    setPlay(revealed)
+  }
+
   async function choose(answer: string) {
     const current = playRef.current
     if (!current) {
@@ -317,19 +428,7 @@ export default function HomeworkPlay({ token }: { token: string }) {
     const correct = answer === question.correctAnswer
     gameRef.current?.showVerdict(answer, correct, question.correctAnswer)
     let nextPlay = current
-    const savePromise =
-      current.mode === 'HOMEWORK'
-        ? null
-        : fetch(`/api/homework-session/${token}/attempts/${current.attemptId}/answer`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              mode: 'CHALLENGE',
-              clientKey: clientKey(),
-              questionId: question.id,
-              selectedAnswer: answer,
-            }),
-          }).then((response) => readJson<PlayState>(response))
+    let challengeSave: Promise<PlayState | null> | null = null
     try {
       if (current.mode === 'HOMEWORK') {
         nextPlay = {
@@ -341,6 +440,10 @@ export default function HomeworkPlay({ token }: { token: string }) {
         }
         rememberHomeworkTry(token, nextPlay, clientKey(), true)
         playRef.current = nextPlay
+      } else {
+        nextPlay = recordChallenge(current, question, answer, false)
+        playRef.current = nextPlay
+        if (nextPlay.status === 'FINISHED') challengeSave = submitChallengeTry<PlayState>(token, clientKey())
       }
       await wait(correct ? 420 : 700)
       if (current.mode === 'HOMEWORK') {
@@ -357,18 +460,16 @@ export default function HomeworkPlay({ token }: { token: string }) {
           setIndex(nextIndex)
         }
       } else {
-        const saved = await savePromise
-        if (!saved) throw new Error('That answer was not saved.')
-        await gameRef.current?.depart()
-        setPlay(saved)
-        if (saved.status === 'FINISHED') {
-          setPhase('challenge-results')
-          await loadSession()
-        }
+        await revealChallenge(nextPlay, challengeSave)
       }
     } catch (reason: unknown) {
       setError(reason instanceof Error ? reason.message : 'That answer was not saved.')
-      if (current) showCard(current, questionIndex)
+      if (nextPlay.status === 'FINISHED') {
+        setPlay(nextPlay)
+        setPhase('challenge-results')
+      } else if (current) {
+        showCard(current, questionIndex)
+      }
     } finally {
       setBusy(false)
     }
@@ -379,26 +480,15 @@ export default function HomeworkPlay({ token }: { token: string }) {
 
   async function timeout() {
     const current = playRef.current
-    if (!current || current.mode !== 'CHALLENGE' || !current.currentQuestionId) return
+    if (!current || current.mode !== 'CHALLENGE' || !current.currentQuestionId || busy) return
+    const question = current.questions.find((item) => item.id === current.currentQuestionId)
+    if (!question) return
     setBusy(true)
     try {
-      const saved = await readJson<PlayState>(
-        await fetch(`/api/homework-session/${token}/attempts/${current.attemptId}/answer`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            mode: 'CHALLENGE',
-            clientKey: clientKey(),
-            questionId: current.currentQuestionId,
-            timedOut: true,
-          }),
-        })
-      )
-      setPlay(saved)
-      if (saved.status === 'FINISHED') {
-        setPhase('challenge-results')
-        await loadSession()
-      }
+      const nextPlay = recordChallenge(current, question, '', true)
+      playRef.current = nextPlay
+      const challengeSave = nextPlay.status === 'FINISHED' ? submitChallengeTry<PlayState>(token, clientKey()) : null
+      await revealChallenge(nextPlay, challengeSave)
     } catch (reason: unknown) {
       setError(reason instanceof Error ? reason.message : 'The clock could not be saved.')
     } finally {

@@ -48,6 +48,23 @@ export const saveAnswerSchema = z.object({
   selectedAnswer: z.string().trim().min(1).max(500),
 })
 
+export const challengeSyncSchema = z.object({
+  studentName: studentNameSchema,
+  clientKey: clientKeySchema,
+  startedAt: z.string().datetime({ offset: true }),
+  events: z
+    .array(
+      z.object({
+        questionId: z.string().min(1),
+        selectedAnswer: z.string().trim().max(500),
+        timedOut: z.boolean(),
+        timeUsedMs: z.number().int().min(0).max(120_000),
+      })
+    )
+    .min(1)
+    .max(150),
+})
+
 export const challengeAnswerSchema = z.object({
   clientKey: clientKeySchema,
   questionId: z.string().min(1),

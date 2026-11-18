@@ -4,6 +4,7 @@ import {
   betterChallengeRun,
   challengeSeconds,
   flameColor,
+  gradeChallengeTap,
   homeworkPercentage,
   livesAfterCorrect,
   rankChallengeRuns,
@@ -71,6 +72,32 @@ describe('challenge clock and flames', () => {
     expect(answerIsLate(17_001, 15_000)).toBe(true)
     expect(homeworkPercentage(1, 0)).toBe(0)
     expect(homeworkPercentage(1, 4)).toBe(25)
+  })
+
+  it('grades a tap locally with the same lives, clock, and finish rules', () => {
+    const base = {
+      correctCount: 0,
+      livesLeft: 1,
+      extraLifeGranted: false,
+      runStartedAtMs: 0,
+      questionStartedAtMs: 0,
+      timeLimitMs: 15_000,
+      nowMs: 1_000,
+      timedOut: false,
+      selectedAnswer: 'cat',
+      correctAnswer: 'cat',
+    }
+    expect(gradeChallengeTap(base).correctCount).toBe(1)
+    expect(gradeChallengeTap({ ...base, correctCount: 19 }).livesLeft).toBe(2)
+    expect(gradeChallengeTap({ ...base, correctCount: 99, livesLeft: 2, extraLifeGranted: true }).endReason).toBe('HUNDRED')
+    expect(gradeChallengeTap({ ...base, selectedAnswer: 'dog' })).toMatchObject({
+      correct: false,
+      endReason: 'WRONG',
+      livesLeft: 0,
+    })
+    expect(gradeChallengeTap({ ...base, timedOut: true })).toMatchObject({ endReason: 'TIMEOUT', correct: false })
+    expect(gradeChallengeTap({ ...base, nowMs: 18_000 }).timedOut).toBe(true)
+    expect(gradeChallengeTap({ ...base, livesLeft: 2, selectedAnswer: 'dog' }).endReason).toBeNull()
   })
 })
 
