@@ -20,6 +20,22 @@ export const homeworkPatchSchema = z
   .partial()
   .refine((patch) => Object.keys(patch).length > 0, { message: 'Nothing to update.' })
 
+export const homeworkSyncSchema = z.object({
+  studentName: studentNameSchema,
+  clientKey: clientKeySchema,
+  questionIds: z.array(z.string().min(1)).min(1).max(200),
+  selections: z
+    .array(
+      z.object({
+        questionId: z.string().min(1),
+        selectedAnswer: z.string().trim().min(1).max(500),
+      })
+    )
+    .max(200),
+  startedAt: z.string().datetime({ offset: true }),
+  submit: z.boolean(),
+})
+
 export const startAttemptSchema = z.object({
   studentName: studentNameSchema,
   clientKey: clientKeySchema,

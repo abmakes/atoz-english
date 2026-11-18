@@ -38,6 +38,8 @@ export type PublicQuestion = {
   question: string
   imageUrl: string | null
   answers: string[]
+  /** Lets the play screen color the tap immediately. The saved score is still graded on the server. */
+  correctAnswer: string
 }
 
 type AttemptMode = 'HOMEWORK' | 'CHALLENGE'
@@ -63,6 +65,7 @@ export type PlayState = {
   reachedHundred: boolean
   timeToHundredMs: number | null
   results: GradedAnswer[] | null
+  startedAt: string
 }
 
 export type GradedAnswer = {
@@ -81,6 +84,7 @@ function toPublic(question: QuestionRow): PublicQuestion {
     question: question.question,
     imageUrl: question.imageUrl,
     answers: question.answers,
+    correctAnswer: question.correctAnswer,
   }
 }
 
@@ -250,6 +254,7 @@ function toPlayState(
     reachedHundred: attempt.reachedHundred,
     timeToHundredMs: attempt.timeToHundredMs,
     results: gradedFrom(attempt, questions, reveal),
+    startedAt: attempt.startedAt.toISOString(),
   }
 }
 
@@ -467,6 +472,34 @@ export async function readAttempt(token: string, attemptId: string, clientKey: s
   return toPlayState(attempt, questions, attempt.status === 'FINISHED' && attempt.mode === 'HOMEWORK')
 }
 
+function unsavedHomework(studentName: string, questions: QuestionRow[], queue: string[]): PlayState {
+  const byId = new Map(questions.map((question) => [question.id, question]))
+  const ordered = queue.map((id) => byId.get(id)).filter((question): question is QuestionRow => !!question)
+  return {
+    attemptId: 'local',
+    mode: 'HOMEWORK',
+    status: 'IN_PROGRESS',
+    studentName,
+    questions: ordered.map(toPublic),
+    selections: [],
+    currentQuestionId: ordered[0]?.id ?? null,
+    correctCount: 0,
+    answeredCount: 0,
+    livesLeft: null,
+    timeLimitMs: null,
+    questionStartedAt: null,
+    flame: null,
+    shake: false,
+    percentage: null,
+    durationMs: 0,
+    endReason: null,
+    reachedHundred: false,
+    timeToHundredMs: null,
+    results: null,
+    startedAt: new Date().toISOString(),
+  }
+}
+
 export async function startAttempt(
   token: string,
   input: { studentName: string; clientKey: string; mode: AttemptMode }
@@ -507,7 +540,10 @@ export async function startAttempt(
   }
 
   const ids = questions.map((question) => question.id)
-  const queue = input.mode === 'HOMEWORK' ? reshuffleAvoiding(ids, null) : reshuffleAvoiding(ids, null)
+  const queue = reshuffleAvoiding(ids, null)
+  if (input.mode === 'HOMEWORK') {
+    return unsavedHomework(studentName, questions, queue)
+  }
   const frame = frameForCorrect(0)
   const now = new Date()
   const created = await prisma.homeworkAttempt.create({
@@ -722,4 +758,112 @@ export async function answerChallenge(
     ...toPlayState(updated, questions, false),
     verdict: { correct, correctAnswer: question.correctAnswer },
   }
+}
+
+export async function syncHomework(
+  token: string,
+  input: {
+    studentName: string
+    clientKey: string
+    questionIds: string[]
+    selections: { questionId: string; selectedAnswer: string }[]
+    startedAt: string
+    submit: boolean
+  }
+) {
+  const assignment = await loadAssignmentByToken(token)
+  assertOpen(assignment)
+  const questions = questionsOf(assignment)
+  const byId = new Map(questions.map((question) => [question.id, question]))
+  const expected = new Set(questions.map((question) => question.id))
+  const sameQuestions =
+    input.questionIds.length === expected.size &&
+    input.questionIds.every((id) => expected.has(id)) &&
+    new Set(input.questionIds).size === input.questionIds.length
+  if (!sameQuestions) {
+    throw new HomeworkError('This homework has changed. Start the try again.', 409)
+  }
+  const chosen = new Map<string, string>()
+  for (const selection of input.selections) {
+    const question = byId.get(selection.questionId)
+    if (!question || !question.answers.includes(selection.selectedAnswer)) continue
+    chosen.set(selection.questionId, selection.selectedAnswer)
+  }
+  if (input.submit && input.questionIds.some((id) => !chosen.has(id))) {
+    throw new HomeworkError('Answer every question before you finish.', 400)
+  }
+  const parsedStart = new Date(input.startedAt)
+  const now = new Date()
+  const startedAt =
+    Number.isNaN(parsedStart.getTime()) || parsedStart.getTime() > now.getTime()
+      ? now
+      : parsedStart
+  const studentName = cleanStudentName(input.studentName)
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const existing = await tx.homeworkAttempt.findFirst({
+      where: {
+        assignmentId: assignment.id,
+        clientKey: input.clientKey,
+        mode: 'HOMEWORK',
+        status: 'IN_PROGRESS',
+      },
+    })
+    const attempt = existing
+      ? await tx.homeworkAttempt.update({
+          where: { id: existing.id },
+          data: { queue: input.questionIds, studentName },
+        })
+      : await tx.homeworkAttempt.create({
+          data: {
+            assignmentId: assignment.id,
+            studentName,
+            clientKey: input.clientKey,
+            mode: 'HOMEWORK',
+            queue: input.questionIds,
+            startedAt,
+          },
+        })
+    await tx.homeworkAnswer.deleteMany({ where: { attemptId: attempt.id } })
+    const rows = input.questionIds.flatMap((id, order) => {
+      const selected = chosen.get(id)
+      const question = byId.get(id)
+      if (!selected || !question) return []
+      const correct = selected === question.correctAnswer
+      return [
+        {
+          attemptId: attempt.id,
+          questionId: id,
+          questionText: question.question,
+          selectedAnswer: selected,
+          correctAnswer: input.submit ? question.correctAnswer : '',
+          correct: input.submit ? correct : false,
+          order,
+        },
+      ]
+    })
+    if (rows.length > 0) await tx.homeworkAnswer.createMany({ data: rows })
+    const correctCount = rows.filter((row) => row.correct).length
+    return tx.homeworkAttempt.update({
+      where: { id: attempt.id },
+      data: input.submit
+        ? {
+            status: 'FINISHED',
+            endReason: 'COMPLETE',
+            correctCount,
+            answeredCount: rows.length,
+            percentage: homeworkPercentage(correctCount, input.questionIds.length),
+            durationMs: Math.max(0, now.getTime() - (existing?.startedAt ?? startedAt).getTime()),
+            finishedAt: now,
+          }
+        : {
+            answeredCount: rows.length,
+            correctCount: 0,
+            percentage: null,
+            durationMs: Math.max(0, now.getTime() - (existing?.startedAt ?? startedAt).getTime()),
+          },
+      include: { answers: true },
+    })
+  })
+  return toPlayState(updated, questions, input.submit)
 }

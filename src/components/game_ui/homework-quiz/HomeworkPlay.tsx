@@ -5,6 +5,7 @@ import { Application } from 'pixi.js'
 import { HomeworkQuizGame, type HomeworkCard, type HomeworkFrame } from '@/lib/pixi-games/homework-quiz/HomeworkQuizGame'
 import { flameColor, frameForCorrect, shouldShake } from '@/lib/homework/rules'
 import { formatDue } from '@/lib/assignments/due'
+import { flushHomeworkTry, readHomeworkTry, rememberHomeworkTry } from '@/lib/homework/localProgress'
 import { getPixiThemeConfig, sceneBackgroundUrl, sceneThemeId } from '@/lib/themes'
 
 const CLIENT_KEY = 'playtoz-homework-client'
@@ -16,6 +17,7 @@ interface PublicQuestion {
   question: string
   imageUrl: string | null
   answers: string[]
+  correctAnswer: string
 }
 
 interface GradedAnswer {
@@ -45,6 +47,7 @@ interface PlayState {
   reachedHundred: boolean
   timeToHundredMs: number | null
   results: GradedAnswer[] | null
+  startedAt: string
 }
 
 interface LeaderRow {
@@ -123,6 +126,17 @@ export default function HomeworkPlay({ token }: { token: string }) {
     void (async () => {
       try {
         const info = await loadSession()
+        const local = readHomeworkTry<PlayState>(token, clientKey())
+        if (local && info.acceptingResponses) {
+          setName(local.play.studentName)
+          setPlay(local.play)
+          const open = local.play.questions.findIndex(
+            (question) => !local.play.selections.some((selection) => selection.questionId === question.id)
+          )
+          setIndex(open < 0 ? 0 : open)
+          setPhase('play')
+          return
+        }
         if (!info.resume || !info.acceptingResponses) {
           setPhase('name')
           return
@@ -134,6 +148,7 @@ export default function HomeworkPlay({ token }: { token: string }) {
           )
         )
         setName(state.studentName)
+        if (state.mode === 'HOMEWORK') rememberHomeworkTry(token, state, clientKey(), false)
         setPlay(state)
         const open = state.questions.findIndex(
           (question) => !state.selections.some((selection) => selection.questionId === question.id)
@@ -172,9 +187,12 @@ export default function HomeworkPlay({ token }: { token: string }) {
         question: card.question,
         imageUrl: card.imageUrl,
         answers: card.answers,
+        correctAnswer: card.correctAnswer,
       } satisfies HomeworkCard,
       frame
     )
+    const upcoming = state.mode === 'HOMEWORK' ? state.questions[questionIndex + 1] : null
+    game.preload(upcoming?.imageUrl ?? null)
   }, [])
 
   useEffect(() => {
@@ -234,6 +252,19 @@ export default function HomeworkPlay({ token }: { token: string }) {
     showCard(play, questionIndex < 0 ? 0 : questionIndex)
   }, [index, phase, play, showCard])
 
+  useEffect(() => {
+    if (phase !== 'play') return
+    const flush = () => {
+      if (playRef.current?.mode !== 'HOMEWORK') return
+      void flushHomeworkTry(token, clientKey(), false).catch(() => undefined)
+    }
+    window.addEventListener('pagehide', flush)
+    return () => {
+      window.removeEventListener('pagehide', flush)
+      flush()
+    }
+  }, [phase, token])
+
   async function start(mode: Mode) {
     setBusy(true)
     setError(null)
@@ -245,6 +276,9 @@ export default function HomeworkPlay({ token }: { token: string }) {
           body: JSON.stringify({ studentName: name.trim(), clientKey: clientKey(), mode }),
         })
       )
+      if (state.mode === 'HOMEWORK' && state.status === 'IN_PROGRESS') {
+        rememberHomeworkTry(token, state, clientKey(), false)
+      }
       setPlay(state)
       if (state.status === 'FINISHED' && state.mode === 'HOMEWORK') {
         setPhase('homework-results')
@@ -280,43 +314,13 @@ export default function HomeworkPlay({ token }: { token: string }) {
       return
     }
     setBusy(true)
-    gameRef.current?.hold(answer)
-    try {
-      if (current.mode === 'HOMEWORK') {
-        const saved = await readJson<PlayState & { verdict?: { correct: boolean; correctAnswer: string } }>(
-          await fetch(`/api/homework-session/${token}/attempts/${current.attemptId}/answer`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              clientKey: clientKey(),
-              questionId: question.id,
-              selectedAnswer: answer,
-            }),
-          })
-        )
-        if (saved.verdict) {
-          gameRef.current?.showVerdict(answer, saved.verdict.correct, saved.verdict.correctAnswer)
-          await wait(1100)
-        }
-        const nextIndex = questionIndex + 1
-        if (nextIndex >= saved.questions.length) {
-          const finished = await readJson<PlayState>(
-            await fetch(`/api/homework-session/${token}/attempts/${current.attemptId}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ clientKey: clientKey() }),
-            })
-          )
-          setPlay(finished)
-          setPhase('homework-results')
-          await loadSession()
-        } else {
-          setPlay(saved)
-          setIndex(nextIndex)
-        }
-      } else {
-        const saved = await readJson<PlayState & { verdict?: { correct: boolean; correctAnswer: string } }>(
-          await fetch(`/api/homework-session/${token}/attempts/${current.attemptId}/answer`, {
+    const correct = answer === question.correctAnswer
+    gameRef.current?.showVerdict(answer, correct, question.correctAnswer)
+    let nextPlay = current
+    const savePromise =
+      current.mode === 'HOMEWORK'
+        ? null
+        : fetch(`/api/homework-session/${token}/attempts/${current.attemptId}/answer`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -325,12 +329,37 @@ export default function HomeworkPlay({ token }: { token: string }) {
               questionId: question.id,
               selectedAnswer: answer,
             }),
-          })
-        )
-        if (saved.verdict) {
-          gameRef.current?.showVerdict(answer, saved.verdict.correct, saved.verdict.correctAnswer)
+          }).then((response) => readJson<PlayState>(response))
+    try {
+      if (current.mode === 'HOMEWORK') {
+        nextPlay = {
+          ...current,
+          selections: [
+            ...current.selections.filter((selection) => selection.questionId !== question.id),
+            { questionId: question.id, selectedAnswer: answer },
+          ],
         }
-        await wait(1100)
+        rememberHomeworkTry(token, nextPlay, clientKey(), true)
+        playRef.current = nextPlay
+      }
+      await wait(correct ? 420 : 700)
+      if (current.mode === 'HOMEWORK') {
+        await gameRef.current?.depart()
+        const nextIndex = questionIndex + 1
+        if (nextIndex >= current.questions.length) {
+          const finished = await flushHomeworkTry<PlayState>(token, clientKey(), true)
+          if (!finished) throw new Error('That homework could not be saved.')
+          setPlay(finished)
+          setPhase('homework-results')
+          await loadSession()
+        } else {
+          setPlay(nextPlay)
+          setIndex(nextIndex)
+        }
+      } else {
+        const saved = await savePromise
+        if (!saved) throw new Error('That answer was not saved.')
+        await gameRef.current?.depart()
         setPlay(saved)
         if (saved.status === 'FINISHED') {
           setPhase('challenge-results')
@@ -392,17 +421,21 @@ export default function HomeworkPlay({ token }: { token: string }) {
       style={{ backgroundImage: `url(${background})`, color: colors.textColor }}
     >
       {phase === 'play' ? <div ref={mountRef} className="fixed inset-0 z-0" /> : null}
-      <div className={`relative z-10 flex min-h-screen flex-col px-4 py-6 ${phase === 'play' ? 'pointer-events-none mx-auto max-w-5xl' : 'mx-auto max-w-5xl'}`}>
-        <p className="text-sm font-semibold" style={{ color: colors.primaryAccent, textShadow: inkShadow }}>Homework</p>
-        <h1 className="grandstander text-3xl font-bold" style={{ color: colors.headingColor, textShadow: inkShadow }}>{session?.title ?? 'Quiz homework'}</h1>
-        {session ? (
-          <p className="mt-1 text-sm" style={{ color: colors.textLight, textShadow: inkShadow }}>
-            Due {formatDue(session.dueAt)} · {session.questionCount}{' '}
-            {session.questionCount === 1 ? 'question' : 'questions'}
-            {session.bestPercentage !== null ? ` · Your best ${session.bestPercentage}%` : ''}
-          </p>
-        ) : null}
-        {error ? <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+      <div className={`relative z-10 flex min-h-screen flex-col px-4 py-6 ${phase === 'play' ? 'pointer-events-none' : 'mx-auto max-w-5xl'}`}>
+        {phase === 'play' ? null : (
+          <>
+            <p className="text-sm font-semibold" style={{ color: colors.primaryAccent, textShadow: inkShadow }}>Homework</p>
+            <h1 className="grandstander text-3xl font-bold" style={{ color: colors.headingColor, textShadow: inkShadow }}>{session?.title ?? 'Quiz homework'}</h1>
+            {session ? (
+              <p className="mt-1 text-sm" style={{ color: colors.textLight, textShadow: inkShadow }}>
+                Due {formatDue(session.dueAt)} · {session.questionCount}{' '}
+                {session.questionCount === 1 ? 'question' : 'questions'}
+                {session.bestPercentage !== null ? ` · Your best ${session.bestPercentage}%` : ''}
+              </p>
+            ) : null}
+          </>
+        )}
+        {error ? <p className="pointer-events-auto mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
 
         {phase === 'loading' ? <p className="mt-10 text-slate-500">Loading…</p> : null}
 

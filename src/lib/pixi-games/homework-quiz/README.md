@@ -6,7 +6,7 @@ This screen owns one Pixi `Application`. It does not use `GameContainer` or Rule
 
 ## Homework
 
-No timer and no lives. A tap turns the choice green or red, and a Correct or Not quite stamp stays up long enough to see. The full miss list is still shown after the try is submitted.
+No timer and no lives. A tap turns green or red immediately, the card fades out, and the next picture fades in. Answers stay on this device until the try is submitted or the page closes, then they are saved once. A single bar shows how far through the questions they are. The full miss list is still shown after the try is submitted.
 
 ## Challenge
 

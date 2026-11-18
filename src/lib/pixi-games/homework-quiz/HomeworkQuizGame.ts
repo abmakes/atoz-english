@@ -8,6 +8,7 @@ export interface HomeworkCard {
   question: string
   imageUrl: string | null
   answers: string[]
+  correctAnswer: string
 }
 
 export interface HomeworkFrame {
@@ -47,6 +48,7 @@ export class HomeworkQuizGame {
   private readonly themeId: SceneThemeId
   private readonly theme: ReturnType<typeof getPixiThemeConfig>
   private readonly root = new Container()
+  private readonly board = new Container()
   private readonly background = new Sprite(Texture.EMPTY)
   private readonly flames = new Container()
   private readonly pictureFrame = new Graphics()
@@ -64,7 +66,13 @@ export class HomeworkQuizGame {
   private readonly tones: ButtonTone[] = ['idle', 'idle', 'idle', 'idle']
   private bannerOn = false
   private bannerGood = false
-  private pipTone: 'current' | 'right' | 'wrong' = 'current'
+  private boardFade = 1
+  private boardFadeTarget = 1
+  private boardY = 0
+  private boardYTarget = 0
+  private barShown = 0
+  private barTargetRatio = 0
+  private settle: (() => void) | null = null
   private card: HomeworkCard | null = null
   private frame: HomeworkFrame | null = null
   private locked = false
@@ -87,7 +95,7 @@ export class HomeworkQuizGame {
     const stroke = this.themeId === 'dark' ? { color: '#0f172a', width: 5 } : { color: '#ffffff', width: 5 }
     this.progressText = new Text({
       text: '',
-      style: { fontFamily: 'Grandstander', fontSize: 40, fontWeight: '800', fill: this.theme.headingColor, stroke },
+      style: { fontFamily: 'Grandstander', fontSize: 22, fontWeight: '800', fill: this.theme.headingColor, stroke },
     })
     this.bannerText = new Text({
       text: '',
@@ -139,19 +147,20 @@ export class HomeworkQuizGame {
     this.app.stage.eventMode = 'static'
     this.app.stage.addChild(this.root)
     this.root.addChild(this.background)
-    this.root.addChild(this.flames)
-    this.root.addChild(this.timerTrack)
-    this.root.addChild(this.timerBar)
-    this.root.addChild(this.pictureFrame)
-    this.root.addChild(this.picture)
-    this.picture.mask = this.pictureMask
-    this.root.addChild(this.pictureMask)
     this.root.addChild(this.progressText)
     this.root.addChild(this.progressPips)
     this.root.addChild(this.livesText)
-    this.root.addChild(this.questionText)
-    this.root.addChild(this.bannerPlate)
-    this.root.addChild(this.bannerText)
+    this.root.addChild(this.board)
+    this.picture.mask = this.pictureMask
+    this.board.addChild(this.flames)
+    this.board.addChild(this.timerTrack)
+    this.board.addChild(this.timerBar)
+    this.board.addChild(this.pictureFrame)
+    this.board.addChild(this.picture)
+    this.board.addChild(this.pictureMask)
+    this.board.addChild(this.questionText)
+    this.board.addChild(this.bannerPlate)
+    this.board.addChild(this.bannerText)
     for (let index = 0; index < 4; index += 1) this.buttons.push(this.makeButton())
     this.app.ticker.add(this.tick)
     this.app.renderer.on('resize', this.layout)
@@ -170,9 +179,18 @@ export class HomeworkQuizGame {
     this.locked = false
     this.timeoutSent = false
     this.bannerOn = false
-    this.pipTone = 'current'
     this.tones.fill('idle')
     this.progressText.text = frame.progress
+    const total = Math.max(1, frame.total)
+    const done = frame.mode === 'HOMEWORK' ? Math.max(0, frame.step - 1) : frame.step
+    this.barTargetRatio = Math.min(1, done / total)
+    if (this.barShown === 0 && done === 0) this.barShown = 0
+    this.boardFade = 0
+    this.boardFadeTarget = 1
+    this.boardY = 28
+    this.boardYTarget = 0
+    this.board.alpha = 0
+    this.board.y = 28
     this.livesText.text = frame.mode === 'CHALLENGE' ? `${frame.lives ?? 0} ${frame.lives === 1 ? 'life' : 'lives'}` : ''
     this.questionText.text = card.question
     this.buttons.forEach((button, index) => {
@@ -186,25 +204,21 @@ export class HomeworkQuizGame {
     this.remainingMs()
   }
 
-  /** Immediate press so the tap is visible before the server answers. */
-  hold(answer: string): void {
-    this.locked = true
-    this.buttons.forEach((button, index) => {
-      this.tones[index] = button.view.visible && button.answer === answer ? 'pressed' : 'dim'
-    })
-    this.layout()
-  }
-
   /**
    * Color the chosen answer and stamp Correct or Not quite on the card.
-   * The caller waits, then moves to the next question.
+   * This does not wait on the server. The caller then fades the card out.
    */
   showVerdict(selected: string, correct: boolean, correctAnswer: string): void {
     this.locked = true
     this.bannerOn = true
     this.bannerGood = correct
     this.bannerText.text = correct ? 'Correct!' : `Not quite. ${correctAnswer}`
-    this.pipTone = correct ? 'right' : 'wrong'
+    if (this.frame) {
+      const total = Math.max(1, this.frame.total)
+      const next = this.frame.mode === 'HOMEWORK' ? this.frame.step : this.frame.step + (correct ? 1 : 0)
+      this.barTargetRatio = Math.min(1, next / total)
+    }
+    this.blip(correct)
     this.buttons.forEach((button, index) => {
       if (!button.view.visible || !button.answer) {
         this.tones[index] = 'idle'
@@ -215,6 +229,20 @@ export class HomeworkQuizGame {
       else this.tones[index] = 'dim'
     })
     this.layout()
+  }
+
+  /** Fade the question out so the next one can come in. */
+  depart(): Promise<void> {
+    this.boardFadeTarget = 0
+    this.boardYTarget = 22
+    return new Promise((resolve) => {
+      this.settle = resolve
+    })
+  }
+
+  /** Warm the next picture so the incoming card does not pop in late. */
+  preload(url: string | null): void {
+    if (url) void Assets.load(url).catch(() => undefined)
   }
 
   destroy(): void {
@@ -263,8 +291,10 @@ export class HomeworkQuizGame {
     const button: ChoiceButton = { view, plate, label, answer: '' }
     let armed = false
     view.on('pointerdown', (event) => {
+      if (this.locked || this.destroyed || !button.answer) return
       armed = true
       event.stopPropagation()
+      view.scale.set(0.96)
     })
     view.on('pointerup', (event) => {
       if (!armed) return
@@ -277,7 +307,7 @@ export class HomeworkQuizGame {
     view.on('pointerupoutside', () => {
       armed = false
     })
-    this.root.addChild(view)
+    this.board.addChild(view)
     return button
   }
 
@@ -301,6 +331,21 @@ export class HomeworkQuizGame {
 
   private tick = (): void => {
     if (this.destroyed || !this.frame) return
+    const dt = this.app.ticker.deltaMS || 16
+    const glide = (current: number, target: number, ms: number) => current + (target - current) * (1 - Math.exp(-dt / ms))
+    this.boardFade = glide(this.boardFade, this.boardFadeTarget, 80)
+    this.boardY = glide(this.boardY, this.boardYTarget, 80)
+    this.barShown = glide(this.barShown, this.barTargetRatio, 90)
+    this.board.alpha = this.boardFade
+    this.board.y = this.boardY
+    this.drawBar()
+    if (this.settle && Math.abs(this.boardFade - this.boardFadeTarget) < 0.04) {
+      const done = this.settle
+      this.settle = null
+      this.boardFade = this.boardFadeTarget
+      this.board.alpha = this.boardFade
+      done()
+    }
     const now = performance.now()
     if (this.frame.shake) {
       this.picture.position.x = this.pictureX + Math.sin(now / 28) * 5
@@ -366,6 +411,7 @@ export class HomeworkQuizGame {
     if (next === this.loadedUrl) return
     const previous = this.loadedUrl
     this.loadedUrl = next
+    this.picture.visible = false
     if (!next) {
       this.picture.texture = Texture.EMPTY
       this.picture.visible = false
@@ -403,12 +449,12 @@ export class HomeworkQuizGame {
     }
     const column = Math.min(width - 48, 720)
     const left = (width - column) / 2
-    const chromeTop = 148
+    const chromeTop = 28
     this.progressText.position.set(left, chromeTop)
     this.livesText.anchor.set(1, 0)
-    this.livesText.position.set(left + column, chromeTop + 8)
-    this.drawPips(left, chromeTop + this.progressText.height + 8, column)
-    const pictureTop = chromeTop + this.progressText.height + 28
+    this.livesText.position.set(left + column, chromeTop)
+    this.drawBar()
+    const pictureTop = chromeTop + 36
     const belowPicture = 16 + 48 + 16 + 72 * 2 + 12 + 20
     const pictureHeight = Math.max(140, Math.min(column * 0.55, height - pictureTop - belowPicture))
     this.pictureFrame.clear()
@@ -445,35 +491,36 @@ export class HomeworkQuizGame {
       button.label.anchor.set(0.5)
       button.label.position.set(buttonWidth / 2, buttonHeight / 2)
       button.view.hitArea = new Rectangle(0, 0, buttonWidth, buttonHeight)
-      button.view.position.set(left + col * (buttonWidth + gap), choiceTop + row * (buttonHeight + gap))
-      this.paintButton(button, this.tones[index] ?? 'idle', buttonWidth, buttonHeight)
+      const tone = this.tones[index] ?? 'idle'
+      button.view.pivot.set(buttonWidth / 2, buttonHeight / 2)
+      button.view.position.set(
+        left + col * (buttonWidth + gap) + buttonWidth / 2,
+        choiceTop + row * (buttonHeight + gap) + buttonHeight / 2
+      )
+      button.view.scale.set(tone === 'right' ? 1.03 : 1)
+      this.paintButton(button, tone, buttonWidth, buttonHeight)
     })
     this.drawBanner(width, this.pictureY)
   }
 
-  private drawPips(left: number, top: number, column: number): void {
+  private drawBar(): void {
     this.progressPips.clear()
-    const total = this.frame?.mode === 'HOMEWORK' ? this.frame.total : 0
-    if (!this.frame || total < 2 || total > 24) return
-    const gap = 6
-    const width = Math.min(36, (column - gap * (total - 1)) / total)
-    const step = Math.min(total, Math.max(1, this.frame.step))
-    for (let index = 0; index < total; index += 1) {
-      const done = index < step - 1
-      const current = index === step - 1
-      const fill = current && this.pipTone === 'right'
-        ? 0x22c55e
-        : current && this.pipTone === 'wrong'
-          ? 0xef4444
-          : done
-            ? 0x7dd3fc
-            : current
-              ? 0x38bdf8
-              : 0xffffff
-      this.progressPips
-        .roundRect(left + index * (width + gap), top, width, 10, 5)
-        .fill({ color: fill, alpha: done || current ? 1 : 0.55 })
-    }
+    if (!this.frame) return
+    const width = this.app.screen.width
+    const column = Math.min(width - 48, 720)
+    const left = (width - column) / 2
+    const barX = left + this.progressText.width + 14
+    const barWidth = Math.max(40, column - this.progressText.width - 14)
+    const y = 36
+    this.progressPips.roundRect(barX, y, barWidth, 8, 4).fill({ color: 0xffffff, alpha: 0.35 })
+    const filled = Math.max(0, Math.min(barWidth, barWidth * this.barShown))
+    if (filled > 1) this.progressPips.roundRect(barX, y, filled, 8, 4).fill({ color: 0x38bdf8 })
+  }
+
+  private blip(correct: boolean): void {
+    const audio = new Audio(correct ? '/audio/default/correct-sound.mp3' : '/audio/default/incorrect-sound.mp3')
+    audio.volume = 0.5
+    void audio.play().catch(() => undefined)
   }
 
   private drawBanner(screenWidth: number, centerY: number): void {
