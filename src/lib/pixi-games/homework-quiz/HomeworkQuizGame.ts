@@ -447,51 +447,85 @@ export class HomeworkQuizGame {
         : height / this.background.texture.height
       this.background.scale.set(Number.isFinite(scale) && scale > 0 ? scale : 1)
     }
-    const column = Math.min(width - 48, 720)
+    const desktopLandscape = width > height && width >= 960
+    const gutter = width < 700 ? 16 : 28
+    const column = Math.min(width - gutter * 2, desktopLandscape ? 960 : 720)
     const left = (width - column) / 2
-    const chromeTop = 28
+    const chromeTop = 20
     this.progressText.position.set(left, chromeTop)
     this.livesText.anchor.set(1, 0)
     this.livesText.position.set(left + column, chromeTop)
     this.drawBar()
-    const pictureTop = chromeTop + 36
-    const belowPicture = 16 + 48 + 16 + 72 * 2 + 12 + 20
-    const pictureHeight = Math.max(140, Math.min(column * 0.55, height - pictureTop - belowPicture))
+    const pictureTop = chromeTop + 40
+    const bottomMargin = width < 700 ? 28 : 32
+    const gap = 10
+    const choices = this.buttons.filter((button) => button.view.visible)
+    const questionSize = width < 700 ? 22 : 30
+    this.questionText.style.fontSize = questionSize
+    this.questionText.style.wordWrapWidth = column
+    this.questionText.anchor.set(0.5, 0)
+    const columns = desktopLandscape || height < 560 ? 2 : 1
+    const rows = Math.max(1, Math.ceil(choices.length / columns))
+    const buttonWidth = columns === 1 ? column : (column - gap) / columns
+    choices.forEach((button) => {
+      button.label.style.fontSize = width < 700 ? 20 : 22
+      button.label.style.wordWrapWidth = buttonWidth - 28
+    })
+    const textHeight = choices.reduce((tallest, button) => Math.max(tallest, button.label.height), 0)
+    let buttonHeight = Math.max(desktopLandscape ? 72 : 56, textHeight + 28)
+    const questionGap = 14
+    const reserved = this.questionText.height + questionGap + rows * buttonHeight + (rows - 1) * gap + bottomMargin
+    const minPicture = 120
+    if (pictureTop + minPicture + reserved > height) {
+      const room = height - pictureTop - minPicture - bottomMargin - this.questionText.height - questionGap - (rows - 1) * gap
+      buttonHeight = Math.max(48, room / rows)
+    }
+    const answersHeight = rows * buttonHeight + (rows - 1) * gap
+    const blockHeight = this.questionText.height + questionGap + answersHeight
+    let questionY = desktopLandscape
+      ? pictureTop + Math.max(minPicture, Math.min(column * 0.46, height - pictureTop - blockHeight - bottomMargin)) + 16
+      : height - bottomMargin - blockHeight
+    const minQuestionY = pictureTop + minPicture
+    if (questionY < minQuestionY) questionY = minQuestionY
+    const pictureRoom = Math.max(minPicture, questionY - 16 - pictureTop)
+    let frameWidth = column
+    let frameHeight = pictureRoom
+    if (this.picture.texture?.width && this.picture.texture.height) {
+      const aspect = this.picture.texture.width / this.picture.texture.height
+      frameHeight = Math.min(pictureRoom, frameWidth / aspect)
+      frameWidth = Math.min(column, frameHeight * aspect)
+      frameHeight = frameWidth / aspect
+    }
+    const frameLeft = left + (column - frameWidth) / 2
+    const frameTop = pictureTop
     this.pictureFrame.clear()
     this.pictureFrame
-      .roundRect(left, pictureTop, column, pictureHeight, 28)
+      .roundRect(frameLeft, frameTop, frameWidth, frameHeight, 28)
       .fill({ color: this.theme.panelBg })
       .stroke({ width: 6, color: this.theme.primaryAccent })
     this.pictureMask.clear()
-    this.pictureMask.roundRect(left + 8, pictureTop + 8, column - 16, pictureHeight - 16, 22).fill(0xffffff)
-    this.pictureX = left + column / 2
-    this.pictureY = pictureTop + pictureHeight / 2
+    this.pictureMask.roundRect(frameLeft + 8, frameTop + 8, frameWidth - 16, frameHeight - 16, 22).fill(0xffffff)
+    this.pictureX = frameLeft + frameWidth / 2
+    this.pictureY = frameTop + frameHeight / 2
     this.picture.position.set(this.pictureX, this.pictureY)
     if (this.picture.texture?.width) {
-      const scale = Math.min((column - 24) / this.picture.texture.width, (pictureHeight - 24) / this.picture.texture.height)
+      const scale = Math.min((frameWidth - 24) / this.picture.texture.width, (frameHeight - 24) / this.picture.texture.height)
       this.picture.scale.set(Number.isFinite(scale) && scale > 0 ? scale : 1)
     }
-    this.questionText.style.wordWrapWidth = column
-    this.questionText.anchor.set(0.5, 0)
-    const questionY = pictureTop + pictureHeight + 16
     this.questionText.position.set(width / 2, questionY)
-    const choiceTop = questionY + this.questionText.height + 16
-    const gap = 12
-    const buttonWidth = (column - gap) / 2
-    const buttonHeight = 72
-    this.buttons.forEach((button, index) => {
-      const col = index % 2
-      const row = Math.floor(index / 2)
+    const choiceTop = questionY + this.questionText.height + questionGap
+    choices.forEach((button, index) => {
+      const col = index % columns
+      const row = Math.floor(index / columns)
       button.plate.clear()
       button.plate
         .roundRect(0, 0, buttonWidth, buttonHeight, 18)
         .fill(this.theme.buttonFillColor)
         .stroke({ width: 4, color: this.theme.buttonBorderColor ?? this.theme.inputBorder })
-      button.label.style.wordWrapWidth = buttonWidth - 20
       button.label.anchor.set(0.5)
       button.label.position.set(buttonWidth / 2, buttonHeight / 2)
       button.view.hitArea = new Rectangle(0, 0, buttonWidth, buttonHeight)
-      const tone = this.tones[index] ?? 'idle'
+      const tone = this.tones[this.buttons.indexOf(button)] ?? 'idle'
       button.view.pivot.set(buttonWidth / 2, buttonHeight / 2)
       button.view.position.set(
         left + col * (buttonWidth + gap) + buttonWidth / 2,
@@ -507,11 +541,14 @@ export class HomeworkQuizGame {
     this.progressPips.clear()
     if (!this.frame) return
     const width = this.app.screen.width
-    const column = Math.min(width - 48, 720)
+    const gutter = width < 700 ? 16 : 28
+    const desktopLandscape = width > this.app.screen.height && width >= 960
+    const column = Math.min(width - gutter * 2, desktopLandscape ? 960 : 720)
     const left = (width - column) / 2
+    const livesWidth = this.livesText.text ? this.livesText.width + 16 : 0
     const barX = left + this.progressText.width + 14
-    const barWidth = Math.max(40, column - this.progressText.width - 14)
-    const y = 36
+    const barWidth = Math.max(40, column - this.progressText.width - 14 - livesWidth)
+    const y = 28
     this.progressPips.roundRect(barX, y, barWidth, 8, 4).fill({ color: 0xffffff, alpha: 0.35 })
     const filled = Math.max(0, Math.min(barWidth, barWidth * this.barShown))
     if (filled > 1) this.progressPips.roundRect(barX, y, filled, 8, 4).fill({ color: 0x38bdf8 })
