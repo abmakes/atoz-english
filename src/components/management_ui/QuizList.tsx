@@ -16,7 +16,7 @@ import {
 import Image from 'next/image'
 import { Edit, Play, Trash, Heart, Bookmark, BookOpen } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Question, Quiz } from '@/types'
+import { Quiz } from '@/types'
 import { useCustomToast } from '@/components/ui/CustomToast'
 import { getQuizStatistics } from '@/lib/quiz-statistics'
 
@@ -29,9 +29,14 @@ interface QuizListProps {
   onUnlike?: (quizId: string) => void
 }
 
-const getQuizTypeLabel = (questions: Question[]): string => {
-  if (!questions || questions.length === 0) return 'Empty'
-  const type = questions[0]?.type || 'MULTIPLE_CHOICE'
+function questionCountOf(quiz: Quiz): number {
+  if (typeof quiz.questionCount === 'number') return quiz.questionCount
+  return quiz.questions?.length ?? 0
+}
+
+const getQuizTypeLabel = (quiz: Quiz): string => {
+  const type = quiz.quizType || quiz.questions?.[0]?.type
+  if (!type || questionCountOf(quiz) === 0) return 'Empty'
   switch (type) {
     case 'MULTIPLE_CHOICE': return 'Multiple Choice'
     case 'TRUE_FALSE': return 'True/False'
@@ -233,11 +238,11 @@ export default function QuizList({
                 <CardContent className="mt-3 flex flex-col gap-3 p-0 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-wrap gap-1 text-xs">
                     <span className="inline-flex items-center rounded-full border px-2 py-0.5 font-semibold bg-pink-100 text-pink-800">
-                      {quiz.questions.length}{' '}
-                      {quiz.questions.length === 1 ? 'question' : 'questions'}
+                      {questionCountOf(quiz)}{' '}
+                      {questionCountOf(quiz) === 1 ? 'question' : 'questions'}
                     </span>
                     <span className="inline-flex items-center rounded-full border px-2 py-0.5 font-semibold bg-blue-100 text-blue-800">
-                      {getQuizTypeLabel(quiz.questions)}
+                      {getQuizTypeLabel(quiz)}
                     </span>
                   </div>
 
@@ -250,7 +255,7 @@ export default function QuizList({
                       <Play className="h-5 w-5 stroke-green-700 fill-green-700" />
                       Play
                     </button>
-                    {mode === 'owned' && quiz.quizType === 'MULTIPLE_CHOICE' && quiz.questions.length > 0 && (
+                    {mode === 'owned' && quiz.quizType === 'MULTIPLE_CHOICE' && questionCountOf(quiz) > 0 && (
                       <button
                         type="button"
                         className="text-sm grandstander flex items-center gap-1 font-semibold text-orange-700"
