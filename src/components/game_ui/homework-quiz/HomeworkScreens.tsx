@@ -214,12 +214,23 @@ function ZoomedPicture({
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  const centered = useRef(false)
+
+  function settlePicture() {
+    const node = scrollerRef.current
+    if (!node) return
+    const wide = node.scrollWidth > node.clientWidth + 8
+    setSlidesSideways(wide)
+    if (!wide || centered.current) return
+    node.scrollLeft = (node.scrollWidth - node.clientWidth) / 2
+    centered.current = true
+  }
+
   useEffect(() => {
     const node = scrollerRef.current
     if (!node) return
-    const measure = () => setSlidesSideways(node.scrollWidth > node.clientWidth + 8)
-    measure()
-    const observer = new ResizeObserver(measure)
+    settlePicture()
+    const observer = new ResizeObserver(() => settlePicture())
     observer.observe(node)
     return () => observer.disconnect()
   }, [src])
@@ -248,10 +259,7 @@ function ZoomedPicture({
             className="h-[50dvh] w-auto max-w-none shrink-0 rounded-[24px] border-[3px] bg-white"
             style={{ borderColor: border }}
             onClick={(event) => event.stopPropagation()}
-            onLoad={() => {
-              const node = scrollerRef.current
-              if (node) setSlidesSideways(node.scrollWidth > node.clientWidth + 8)
-            }}
+            onLoad={() => settlePicture()}
           />
         </div>
       </div>
@@ -352,14 +360,17 @@ export function QuizScreen({
             <button
               type="button"
               onClick={() => setZoomed(true)}
-              className="relative block min-h-0 max-h-full max-w-full rounded-[24px] border-[3px] bg-white p-0"
+              className="relative block min-h-0 max-h-full max-w-full overflow-hidden rounded-[24px] border-[3px] bg-white p-0"
               style={{ borderColor: palette.border }}
               aria-label="Make the picture bigger"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={imageUrl} alt="" className="block max-h-full max-w-full object-contain" />
-              <span className="grandstander pointer-events-none absolute bottom-2 right-2 rounded-full border-2 border-[#7dd3fc] bg-white px-2.5 py-1 text-xs font-bold text-[#114257]">
-                Zoom
+              <span className="pointer-events-none absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#7dd3fc] bg-white text-[#114257]" aria-hidden="true">
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="10.5" cy="10.5" r="6.25" />
+                  <path d="M15.2 15.2 L20 20" strokeLinecap="round" />
+                </svg>
               </span>
             </button>
           ) : null}
