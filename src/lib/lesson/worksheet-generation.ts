@@ -7,6 +7,7 @@ import {
   exerciseInstruction,
   finishChoiceLabel,
   finishWorksheetSentence,
+  mixChoiceOrder,
   labelWorksheetSections,
   planWorksheetLayout,
   suggestWorksheetSections,
@@ -274,7 +275,7 @@ export function worksheetPrompt(input: Omit<GenerateInput, 'generate'>, counts: 
   }
   if (blocks.cues > 0) {
     sections.push(
-      `"sentences": ${blocks.cues + 2} correct sentences that use the language point. Also give "words": the words of that sentence, in order, including the question word and "is" or "are". Leave out only a word the student must change, such as "big" for "bigger". A student who sees only those words must be able to write that one sentence and no other. Example: {"words":["What","is","the number","909","in words"],"answer":"What is the number 909 in words?"}. Do not give {"words":["number","909","words"]} for that sentence.`
+      `"sentences": ${blocks.cues + 2} correct sentences that use the language point. Also give "words": the words the student needs. Include the question word and "is" or "are", unless one word is there to be changed, such as "big" for "bigger". The page mixes the word order, so the student cannot copy the line. Example: {"words":["What","is","the number","909","in words"],"answer":"What is the number 909 in words?"}. Do not give {"words":["number","909","words"]} for that sentence.`
     )
   }
   if (counts.long > 0) {
@@ -401,9 +402,34 @@ function frameCues(answer: string): string[] {
 
 function cueWords(answer: string, given: string[]): string[] {
   const cleaned = given.map((word) => word.trim()).filter(Boolean)
-  if (modelCuesAreGuided(answer, cleaned)) return cleaned.slice(0, 7)
   const framed = frameCues(answer)
-  return framed.length >= 2 ? framed : cleaned.slice(0, 4)
+  const guided = modelCuesAreGuided(answer, cleaned) ? cleaned.slice(0, 7) : framed
+  const words = guided.length >= 2 ? guided : cleaned.slice(0, 4)
+  return jumbleCues(words, cueSeed(answer))
+}
+
+/** The printed cues are not the sentence with slashes left in. A reprint uses the same order. */
+function jumbleCues(cues: string[], seed: number): string[] {
+  const chunks = cues.map((cue) => cue.replace(/[.?!]+$/, '').trim()).filter(Boolean)
+  if (chunks.length < 2) return chunks
+  const order = chunks.map((_, index) => index)
+  let state = ((Math.abs(seed) + 1) * 7919) % 233280
+  for (let index = order.length - 1; index > 0; index -= 1) {
+    state = (state * 9301 + 49297) % 233280
+    const swap = state % (index + 1)
+    ;[order[index], order[swap]] = [order[swap], order[index]]
+  }
+  if (order.every((value, index) => value === index)) {
+    const first = order.shift()
+    if (first !== undefined) order.push(first)
+  }
+  return order.map((index) => chunks[index])
+}
+
+function cueSeed(answer: string): number {
+  let seed = 1
+  for (let index = 0; index < answer.length; index += 1) seed = (seed * 33 + answer.charCodeAt(index)) % 233280
+  return seed + 1
 }
 
 function listOf<T>(value: unknown, schema: z.ZodType<T>, rejected: Rejection[]): T[] {
@@ -448,10 +474,10 @@ function arrangePage(
     else if (answers.length < 2) rejected.push({ reason: 'duplicate-answers', line })
     else if (!fresh(line)) rejected.push({ reason: 'duplicate', line })
     else {
-      const turn = (choices.length + 1) % answers.length
+      const correct = finishChoiceLabel(answers[0])
       choices.push(draft('choice', line, scaffold, {
-        choices: [...answers.slice(turn), ...answers.slice(0, turn)].map(finishChoiceLabel),
-        correctAnswer: finishChoiceLabel(answers[0]),
+        choices: mixChoiceOrder(answers.map(finishChoiceLabel), correct, choices.length + 1),
+        correctAnswer: correct,
         imageUrl: picture?.imageUrl,
         questionId: picture?.id,
         sourceQuestion: item.question,
@@ -488,8 +514,12 @@ function arrangePage(
 
   const circles: PracticeDraft[] = []
   for (const item of listOf(page.circles, circleSchema, rejected)) {
-    const options = uniqueAnswers(item.options, item.answer).map(finishChoiceLabel)
     const answer = finishChoiceLabel(item.answer)
+    const options = mixChoiceOrder(
+      uniqueAnswers(item.options, item.answer).map(finishChoiceLabel),
+      answer,
+      circles.length + 1
+    )
     const line = circleLine(item.sentence, options, answer)
     if (!line) rejected.push({ reason: 'circle-needs-one-word', line: item.sentence })
     else if (SUBJECTIVE.test(line)) rejected.push({ reason: 'subjective', line })
@@ -651,13 +681,13 @@ function quizPictureDrafts(questions: PracticeSource[], limit = 6): PracticeDraf
   return questions
     .filter((question) => realPicture(question.imageUrl))
     .slice(0, limit)
-    .map((question) => {
+    .map((question, index) => {
       const answers = uniqueAnswers(question.answers, question.correctAnswer).map(finishChoiceLabel)
       const correct = finishChoiceLabel(question.correctAnswer)
       return {
         activity: 'choice' as const,
         line: finishWorksheetSentence(question.question.replace(/_{2,}/g, '______')),
-        choices: answers,
+        choices: mixChoiceOrder(answers, correct, index + 1),
         correctAnswer: answers.find((answer) => answer.toLowerCase() === correct.toLowerCase()) ?? correct,
         reason: 'Kept with the picture you chose.',
         sourceQuestion: question.question,

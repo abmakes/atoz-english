@@ -73,7 +73,7 @@ export function exerciseInstruction(activity: string, scaffold = worksheetScaffo
   if (activity === 'rewrite') {
     return scaffold.sentences === 'jumbled'
       ? 'Put the words in order to make a sentence. The first one is an example.'
-      : 'Use the words in this order to write the sentence. The first one is an example.'
+      : 'Put the words in order to write the sentence. Change a word if it needs a different form. The first one is an example.'
   }
   if (activity === 'circle') return 'Circle the correct word. The first one is an example.'
   if (activity === 'question') return 'Write a full sentence.'
@@ -490,16 +490,57 @@ function capPhrase(phrase: string): string {
   return trimmed[0].toUpperCase() + trimmed.slice(1)
 }
 
+/**
+ * The correct option is not left first on every item. The same seed reprints
+ * the same order. Distractors are mixed, then the answer is placed in a slot
+ * that changes with the seed.
+ */
+export function mixChoiceOrder(options: string[], correct: string, seed: number): string[] {
+  const seen = new Set<string>()
+  const items: string[] = []
+  const keyOf = (value: string) => value.toLowerCase().replace(/[.?!]+$/, '').trim()
+  for (const option of [correct, ...options]) {
+    const text = option.trim()
+    const key = keyOf(text)
+    if (!text || seen.has(key)) continue
+    seen.add(key)
+    items.push(text)
+  }
+  if (items.length < 2) return items
+  const answer = items[0]
+  const rest = items.slice(1)
+  let state = ((Math.abs(seed) + 1) * 7919) % 233280
+  for (let index = rest.length - 1; index > 0; index -= 1) {
+    state = (state * 9301 + 49297) % 233280
+    const swap = state % (index + 1)
+    ;[rest[index], rest[swap]] = [rest[swap], rest[index]]
+  }
+  rest.splice(Math.abs(seed) % items.length, 0, answer)
+  return rest
+}
+
 function exerciseDraft(
   activity: 'question' | 'gap' | 'choice',
   line: string,
   extra: Partial<PracticeDraft> = {}
 ): PracticeDraft {
+  const given = extra.choices ?? []
+  const choices =
+    activity === 'choice' && given.length > 1
+      ? mixChoiceOrder(given, extra.correctAnswer ?? given[0], choiceSeed(`${line}|${extra.correctAnswer ?? ''}|${given.join('|')}`))
+      : given
   return draft(activity, line, EXERCISE_TITLE[activity], {
     ...extra,
+    choices,
     exercise: EXERCISE_TITLE[activity],
     sourceQuestion: extra.sourceQuestion ?? EXERCISE_TITLE[activity],
   })
+}
+
+function choiceSeed(value: string): number {
+  let seed = 1
+  for (let index = 0; index < value.length; index += 1) seed = (seed * 33 + value.charCodeAt(index)) % 233280
+  return seed + 1
 }
 
 function thereExercises(questions: PracticeSource[]): PracticeDraft[] {

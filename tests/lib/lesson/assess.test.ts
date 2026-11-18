@@ -11,7 +11,7 @@ import {
   type SourceQuestion,
 } from '@/lib/lesson/assess'
 import { promptsFromLesson, sentencePromptFromLesson } from '@/lib/lesson/prompts'
-import { planWorksheetLayout, worksheetLineNumbers } from '@/lib/lesson/worksheet-practice'
+import { mixChoiceOrder, planWorksheetLayout, worksheetLineNumbers } from '@/lib/lesson/worksheet-practice'
 import { QuestionType } from '@/types/question_types'
 
 const kicking: SourceQuestion = {
@@ -277,7 +277,10 @@ describe('lesson conversion', () => {
     const a2Gaps = a2.filter((item) => item.activity === 'gap')
     expect(a2Gaps[0]?.bank).toBe('big')
     expect(a2Gaps[0]?.correctAnswer).toBe('bigger')
-    expect(a2.filter((item) => item.activity === 'rewrite')[0]?.line).toBe('a horse / big / a mouse')
+    const a2Sentence = a2.filter((item) => item.activity === 'rewrite')[0]?.line ?? ''
+    expect(a2Sentence.split(' / ').sort()).toEqual(['a horse', 'a mouse', 'big'].sort())
+    expect(a2Sentence).not.toBe('a horse / big / a mouse')
+    expect(a2Sentence).not.toContain('bigger')
     const b1 = await assessLessonQuestions({ target: 'worksheet', scope: 'set', level: 'B1', generate, questions: pictured })
     const b1Gaps = b1.filter((item) => item.activity === 'gap')
     expect(b1Gaps[0]?.line).toBe('An elephant is ______ (big) than a horse.')
@@ -433,12 +436,62 @@ describe('lesson conversion', () => {
       questions: [kicking],
     })
     const line = (answer: string) => items.find((item) => item.correctAnswer === answer)?.line ?? ''
-    expect(line('What is the number 909 in words?')).toBe('What / is / the number / 909 / in words?')
-    expect(line('What is the 4th month?')).toBe('What / is / the 4th / month?')
-    expect(line('The number is 2000 in words.')).toBe('The number / is / 2000 / in words.')
-    expect(line('The 6th month is June.')).toBe('The 6th / month / is / June.')
-    expect(line('What month comes after June?')).toBe('What / month / comes / after / June?')
-    expect(line('A horse is bigger than a mouse.')).toBe('a horse / big / a mouse')
+    const chunks = (value: string) => value.split(' / ').map((part) => part.replace(/[.?!]+$/, '').trim()).sort()
+    expect(chunks(line('What is the number 909 in words?'))).toEqual(['909', 'What', 'in words', 'is', 'the number'].sort())
+    expect(line('What is the number 909 in words?')).not.toBe('What / is / the number / 909 / in words?')
+    expect(chunks(line('What is the 4th month?'))).toEqual(['What', 'is', 'the 4th', 'month'].sort())
+    expect(line('What is the 4th month?')).not.toBe('What / is / the 4th / month?')
+    expect(chunks(line('The number is 2000 in words.'))).toEqual(['The number', 'is', '2000', 'in words'].sort())
+    expect(line('The number is 2000 in words.')).not.toBe('The number / is / 2000 / in words.')
+    expect(chunks(line('The 6th month is June.'))).toEqual(['The 6th', 'month', 'is', 'June'].sort())
+    expect(chunks(line('What month comes after June?'))).toEqual(['What', 'month', 'comes', 'after', 'June'].sort())
+    expect(line('What month comes after June?')).not.toBe('What / month / comes / after / June?')
+    const horse = line('A horse is bigger than a mouse.')
+    expect(chunks(horse)).toEqual(['a horse', 'a mouse', 'big'].sort())
+    expect(horse).not.toBe('a horse / big / a mouse')
+    expect(horse).not.toContain('bigger')
+  })
+
+  it('mixes the correct choice on every multiple-choice and circle item', async () => {
+    const colours = ['blue', 'green', 'red', 'yellow', 'pink', 'black']
+    const questions = colours.map((color, index) => ({
+      ...kicking,
+      id: `c${index}`,
+      imageUrl: '/images/sentence-builder/sam-dog.jpg',
+      question: `Which colour is number ${index}?`,
+      answers: [color, 'brown', 'white', 'grey'],
+      correctAnswer: color,
+    }))
+    const circles = colours.map((color, index) => ({
+      sentence: `The sock number ${index} is ______.`,
+      options: [color, 'brown', 'white'],
+      answer: color,
+    }))
+    const generate = vi.fn(async () => JSON.stringify({ circles }))
+    const items = await assessLessonQuestions({
+      target: 'worksheet',
+      scope: 'set',
+      level: 'A1',
+      sections: ['choice', 'circle'],
+      generate,
+      questions,
+    })
+    const slot = (choices: string[], correct: string) =>
+      choices.findIndex((choice) => choice.toLowerCase() === correct.toLowerCase())
+    const choiceSlots = items
+      .filter((item) => item.activity === 'choice')
+      .map((item) => slot(item.choices, item.correctAnswer))
+    const circleSlots = items
+      .filter((item) => item.activity === 'circle')
+      .map((item) => slot(item.line.match(/\(([^)]+)\)/)?.[1]?.split(' / ') ?? [], item.correctAnswer))
+    expect(choiceSlots.length).toBeGreaterThanOrEqual(4)
+    expect(circleSlots.length).toBeGreaterThanOrEqual(4)
+    expect(choiceSlots.every((index) => index >= 0)).toBe(true)
+    expect(circleSlots.every((index) => index >= 0)).toBe(true)
+    expect(choiceSlots.every((index) => index === 0)).toBe(false)
+    expect(circleSlots.every((index) => index === 0)).toBe(false)
+    const direct = [1, 2, 3, 4, 5, 6].map((seed) => mixChoiceOrder(['yes', 'no', 'maybe'], 'yes', seed).indexOf('yes'))
+    expect(direct.every((index) => index === 0)).toBe(false)
   })
 
   it('drops questions about a person the student cannot see', async () => {
