@@ -245,6 +245,7 @@ export const TUG_EVENTS = {
   OFFSET_CHANGED: 'tug:offsetChanged',
   ROUND_WON: 'tug:roundWon',
   MATCH_ENDED: 'tug:matchEnded',
+  STREAK_CHANGED: 'tug:streakChanged',
 } as const;
 
 export interface TugOffsetChangedPayload {
@@ -260,6 +261,12 @@ export interface TugRoundWonPayload {
   roundNumber: number
   blueRoundWins: number
   redRoundWins: number
+}
+
+export interface TugStreakChangedPayload {
+  /** Consecutive correct answers. The next correct is a double pull when `streak % 4 === 3`. */
+  blueStreak: number
+  redStreak: number
 }
 
 export interface TugMatchEndedPayload {
@@ -347,6 +354,7 @@ export interface EngineEvents {
   [TUG_EVENTS.OFFSET_CHANGED]: (payload: TugOffsetChangedPayload) => void;
   [TUG_EVENTS.ROUND_WON]: (payload: TugRoundWonPayload) => void;
   [TUG_EVENTS.MATCH_ENDED]: (payload: TugMatchEndedPayload) => void;
+  [TUG_EVENTS.STREAK_CHANGED]: (payload: TugStreakChangedPayload) => void;
 
   // Add Settings Events
   [SETTINGS_EVENTS.SET_GLOBAL_VOLUME]: (volume: number) => void;

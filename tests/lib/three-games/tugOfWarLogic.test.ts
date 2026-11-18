@@ -23,6 +23,7 @@ import {
   signedPullDelta,
   stepDisplayedOffset,
   stepsForCorrectStreak,
+  streakCharge,
   teamHasSuperSaiyanGlow,
   tugNormalizedOffset,
   winnerFromRounds,
@@ -137,6 +138,11 @@ describe('tugOfWarLogic pull math', () => {
       }).magnitude
     ).toBe(2)
     expect(stepsForCorrectStreak(TUG_STREAK_FOR_DOUBLE + 1)).toBe(TUG_STEP)
+    expect(streakCharge(0)).toEqual({ filled: 0, ready: false })
+    expect(streakCharge(2)).toEqual({ filled: 2, ready: false })
+    expect(streakCharge(TUG_STREAK_FOR_DOUBLE)).toEqual({ filled: 3, ready: true })
+    expect(streakCharge(TUG_STREAK_FOR_DOUBLE + 1)).toEqual({ filled: 0, ready: false })
+    expect(streakCharge(Number.NaN)).toEqual({ filled: 0, ready: false })
   })
 })
 

@@ -350,7 +350,8 @@ The Three scene is a painted 2.5D stage (art in `public/images/tug-of-war/`, URL
 - Eligibility: same as 3D Quiz Room (MC, 2–4 answers). Setup forces Team Blue / Team Red.
 - Timer id: `tugOfWarQuestionTimer`.
 - Discrete steps: a correct answer pulls **1 step toward the active team**. A miss or timeout **does not move the rope** (the opponent is not awarded a step). A **lead of 2** scores 1 round point and resets the rope. **Match win is first to 3 round points**, not best-of-3 (first to 2).
-- Streak double: after **3 correct in a row** for that team, the next correct is worth **2 steps**. The bonus repeats every four consecutive correct answers and clears on a miss.
+- Streak double: after **3 correct in a row** for that team, the next correct is worth **2 steps**. The bonus repeats every four consecutive correct answers and clears on a miss. Each team banner uses the three round dots plus a flame for that power-up; the dots fill as the streak builds and the flame lights when the next pull is double. Each round win hangs a bookmark banner under the team pill. Three banners wins the match.
+- Length: setup offers Short, Regular, and Long, with an estimate from the question timer. Short asks each question once. Regular deals every question to every team. Long does that twice. The match still ends as soon as a team hangs 3 banners. If the schedule runs out first, resolve by round wins, then rope, then a draw.
 - Super Saiyan glow: ninjas get a gold additive aura while that team's next answer is the streak double, or while a classroom buff is active (`PowerUpManager`).
 - Questions exhausted: more round wins, then current rope advantage, then a draw.
 - Ninja clip names and GLB delivery: [TUG_OF_WAR_NINJA_ASSET_SPEC.md](TUG_OF_WAR_NINJA_ASSET_SPEC.md).

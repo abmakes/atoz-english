@@ -7,16 +7,23 @@ interface RoundDotsProps {
   wins: number
   max?: number
   side?: 'blue' | 'red'
+  /** Replaces the default "round wins" description. */
+  label?: string
 }
 
 const RoundDots: React.FC<RoundDotsProps> = ({
   wins,
   max = TUG_ROUNDS_TO_WIN,
   side = 'blue',
+  label,
 }) => {
   const fill = side === 'blue' ? 'bg-[#2b6cb0]' : 'bg-[#c53030]'
   return (
-    <div className="flex items-center gap-1 lg:gap-1.5" aria-label={`${wins} of ${max} round wins`}>
+    <div
+      className="flex items-center gap-1 lg:gap-1.5"
+      role="img"
+      aria-label={label ?? `${wins} of ${max} round wins`}
+    >
       {Array.from({ length: max }, (_, index) => {
         const filled = index < wins
         return (

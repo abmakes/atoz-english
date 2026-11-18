@@ -86,6 +86,8 @@ export interface GameSetupData {
   settings: GameSettingsData;
   gameFeatures: string;
   intensityTimeLimit: number;
+  /** Ninja Climb and Tug of War match length. Regular is the classroom default. */
+  gameLength?: 'short' | 'regular' | 'long';
   limitedGuesses: number | null;
   powerups: PowerupsData;
   splashPowerups?: SplashPowerupsData;

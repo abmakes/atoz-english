@@ -275,6 +275,12 @@ export interface GameConfig {
    */
   intensityTimeLimit: number;
 
+  /**
+   * How long Ninja Climb and Tug of War keep going.
+   * Short is a quick round, regular is the classroom default, long repeats more.
+   */
+  gameLength?: 'short' | 'regular' | 'long';
+
   /** Splash Dash floating pickup power-ups (ignored by Score Attack). */
   splashPowerups?: {
     enabled: boolean;
@@ -526,6 +532,7 @@ export function createGameConfig(
         assets: partialConfig.assets ?? DEFAULT_GAME_CONFIG.assets,
         powerups: mergedPowerups, // Use the merged powerup config
         intensityTimeLimit: partialConfig.intensityTimeLimit ?? DEFAULT_GAME_CONFIG.intensityTimeLimit,
+        gameLength: partialConfig.gameLength,
         audio: partialConfig.audio ?? DEFAULT_GAME_CONFIG.audio,
         // <<< ADDED: Merge questionHandling config >>>
         questionHandling: { 

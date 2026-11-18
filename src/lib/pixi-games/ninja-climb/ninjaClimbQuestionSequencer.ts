@@ -1,10 +1,10 @@
 import { QuestionData } from '@/types'
 
 /**
- * Ninja Climb question schedule:
- * - Each cycle: every unique question is answered by every team (Q for team0, Q for team1, …)
- *   so turn order A,B,A,B maps cleanly when team0 goes first.
- * - Within a cycle, the same team never sees the same question twice.
+ * Ninja Climb question schedule. Turns alternate team 0, team 1, …
+ * - Questions are dealt in order: team 0 gets Q1, team 1 gets Q2, team 0 gets Q3, …
+ * - A team is never handed a question it has already seen until every team has
+ *   seen every question in the cycle.
  * - Extra cycles are appended when the pool is too short for a tall summit climb.
  */
 export class NinjaClimbQuestionSequencer {
@@ -38,12 +38,7 @@ export class NinjaClimbQuestionSequencer {
 
     for (let c = 0; c < cyclesNeeded; c++) {
       const order = c === 0 ? unique : this._shuffle([...unique], rng)
-      for (const q of order) {
-        // Each team answers this question once this cycle (team0, team1, …)
-        for (let t = 0; t < numTeams; t++) {
-          this._schedule.push(q)
-        }
-      }
+      this._schedule.push(...dealQuestionsAcrossTeams(order, numTeams))
     }
 
     this._totalQuestionsToAsk = this._schedule.length
@@ -86,6 +81,40 @@ export class NinjaClimbQuestionSequencer {
  * How many turns to schedule so a typical correct climb can reach the summit.
  * Uses a conservative ~50 pts / correct answer floor.
  */
+/**
+ * One coverage cycle. Turn `t` belongs to team `t % numTeams` and receives the
+ * next question that team has not yet seen, walking forward through the list.
+ */
+export function dealQuestionsAcrossTeams(
+  questions: readonly QuestionData[],
+  numTeams: number
+): QuestionData[] {
+  const count = questions.length
+  const seen = Array.from({ length: numTeams }, () => new Set<number>())
+  const schedule: QuestionData[] = []
+  let cursor = 0
+  let team = 0
+  const target = count * numTeams
+
+  while (schedule.length < target) {
+    let picked = -1
+    for (let step = 0; step < count; step++) {
+      const index = (cursor + step) % count
+      if (!seen[team].has(index)) {
+        picked = index
+        break
+      }
+    }
+    if (picked < 0) break
+    seen[team].add(picked)
+    schedule.push(questions[picked])
+    cursor = (picked + 1) % count
+    team = (team + 1) % numTeams
+  }
+
+  return schedule
+}
+
 export function estimateTurnsForSummit(
   summitPoints: number,
   numTeams: number,
