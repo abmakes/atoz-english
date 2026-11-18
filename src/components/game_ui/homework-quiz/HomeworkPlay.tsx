@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Application } from 'pixi.js'
 import { HomeworkQuizGame, type HomeworkCard, type HomeworkFrame } from '@/lib/pixi-games/homework-quiz/HomeworkQuizGame'
-import { flameColor, frameForCorrect, gradeChallengeTap, shouldShake } from '@/lib/homework/rules'
+import { flameColor, frameForCorrect, gradeChallengeTap, shouldShake, type FlameColor } from '@/lib/homework/rules'
 import { reshuffleAvoiding } from '@/lib/homework/queue'
 import { formatDue } from '@/lib/assignments/due'
 import { readChallengeTry, rememberChallengeTry, submitChallengeTry } from '@/lib/homework/localChallenge'
@@ -40,9 +40,12 @@ interface PlayState {
   selections: { questionId: string; selectedAnswer: string }[]
   currentQuestionId: string | null
   correctCount: number
+  answeredCount: number
   livesLeft: number | null
   timeLimitMs: number | null
   questionStartedAt: string | null
+  flame: FlameColor | null
+  shake: boolean
   percentage: number | null
   durationMs: number
   endReason: 'COMPLETE' | 'WRONG' | 'TIMEOUT' | 'HUNDRED' | null
