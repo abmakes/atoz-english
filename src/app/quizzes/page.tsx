@@ -115,11 +115,13 @@ function ProfileShell({
           {loadingRemote ? (
             <ProfileStatsSkeleton draftCount={drafts.length} />
           ) : (
-            <p className="text-sm text-muted-foreground mt-1 inclusive-sans">
-              {owned.length} published · {drafts.length} draft{drafts.length === 1 ? '' : 's'} ·{' '}
-              {liked.length} liked · {favorites.length} favorite{favorites.length === 1 ? '' : 's'} ·{' '}
-              {totalLikesReceived} like{totalLikesReceived === 1 ? '' : 's'} received
-            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <ProfileStat label="Published" value={owned.length} tone="sky" />
+              <ProfileStat label="Drafts" value={drafts.length} tone="amber" />
+              <ProfileStat label="Liked" value={liked.length} tone="rose" />
+              <ProfileStat label="Favorites" value={favorites.length} tone="violet" />
+              <ProfileStat label="Likes received" value={totalLikesReceived} tone="emerald" />
+            </div>
           )}
         </div>
         <Link href="/create" passHref>
@@ -289,6 +291,30 @@ function ProfileShell({
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+function ProfileStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: number
+  tone: 'sky' | 'amber' | 'rose' | 'violet' | 'emerald'
+}) {
+  const toneClass = {
+    sky: 'border-sky-300 bg-sky-100 text-sky-900',
+    amber: 'border-amber-300 bg-amber-100 text-amber-900',
+    rose: 'border-rose-300 bg-rose-100 text-rose-900',
+    violet: 'border-violet-300 bg-violet-100 text-violet-900',
+    emerald: 'border-emerald-300 bg-emerald-100 text-emerald-900',
+  }[tone]
+  return (
+    <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold ${toneClass}`}>
+      <span className="grandstander text-base font-black">{value}</span>
+      {label}
+    </span>
   )
 }
 

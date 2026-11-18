@@ -14,10 +14,10 @@ interface AssignmentRow {
   href: string
 }
 
-const KIND_LABEL = {
-  quiz: 'Quiz',
-  thoughts: 'Thoughts',
-  story: 'Story',
+const KIND_STYLE = {
+  quiz: 'border-sky-300 bg-sky-100 text-sky-900',
+  thoughts: 'border-violet-300 bg-violet-100 text-violet-900',
+  story: 'border-emerald-300 bg-emerald-100 text-emerald-900',
 } as const
 
 export default function AssignmentsPanel() {
@@ -75,10 +75,18 @@ export default function AssignmentsPanel() {
                   {row.title}
                 </Link>
               </td>
-              <td className="px-4 py-3">{KIND_LABEL[row.kind]}</td>
+              <td className="px-4 py-3">
+                <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-bold ${KIND_STYLE[row.kind]}`}>
+                  {row.kind === 'quiz' ? 'Quiz' : row.kind === 'thoughts' ? 'Thoughts' : 'Story'}
+                </span>
+              </td>
               <td className="px-4 py-3">{formatDue(row.assignedAt)}</td>
               <td className="px-4 py-3">{formatDue(row.dueAt)}</td>
-              <td className="px-4 py-3 tabular-nums">{row.submissions}</td>
+              <td className="px-4 py-3">
+                <span className={`inline-flex min-w-8 justify-center rounded-full border px-2.5 py-0.5 font-bold tabular-nums ${row.submissions > 0 ? 'border-emerald-300 bg-emerald-100 text-emerald-900' : 'border-slate-200 bg-slate-100 text-slate-600'}`}>
+                  {row.submissions}
+                </span>
+              </td>
             </tr>
           ))}
         </tbody>

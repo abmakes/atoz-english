@@ -728,3 +728,40 @@
 .sentence-builder-toast {
   animation: sentence-builder-toast 1.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+.tide {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: linear-gradient(180deg, #ffffff 0%, #f3fbff 42%, #e7f6ff 100%);
+}
+
+.tide-sheet {
+  position: absolute;
+  top: -8%;
+  left: -30%;
+  width: 160%;
+  height: 116%;
+}
+
+.tide-drift {
+  animation: tide-drift 78s ease-in-out infinite alternate;
+}
+
+.tide-drift-slow {
+  animation: tide-drift 118s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes tide-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-7%, 1.5%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tide-drift,
+  .tide-drift-slow {
+    animation: none;
+  }
+}

@@ -221,10 +221,18 @@ export default function HomeworkReport({ assignmentId }: { assignmentId: string 
       </section>
 
       <section className="grid gap-3 sm:grid-cols-4">
-        <Stat label="Students finished" value={String(report.overview.finishedStudents)} />
-        <Stat label="Class accuracy" value={report.overview.classAccuracy === null ? '—' : `${report.overview.classAccuracy}%`} />
-        <Stat label="Answers" value={String(report.overview.totalAnswers)} />
-        <Stat label="Wrong answers" value={String(report.overview.totalWrong)} />
+        <Stat label="Students finished" value={String(report.overview.finishedStudents)} tone="sky" />
+        <Stat
+          label="Class accuracy"
+          value={report.overview.classAccuracy === null ? '—' : `${report.overview.classAccuracy}%`}
+          tone={report.overview.classAccuracy === null ? 'sky' : scoreTone(report.overview.classAccuracy)}
+        />
+        <Stat label="Answers" value={String(report.overview.totalAnswers)} tone="sky" />
+        <Stat
+          label="Wrong answers"
+          value={String(report.overview.totalWrong)}
+          tone={report.overview.totalWrong === 0 ? 'good' : 'low'}
+        />
       </section>
 
       <section>
@@ -250,7 +258,7 @@ export default function HomeworkReport({ assignmentId }: { assignmentId: string 
               {students.map((student) => (
                 <Fragment key={student.studentName}>
                   <tr
-                    className="cursor-pointer border-b border-slate-100"
+                    className={`cursor-pointer border-b border-slate-100 ${student.bestPercentage >= 80 ? 'bg-emerald-50' : student.bestPercentage < 50 ? 'bg-rose-50' : ''}`}
                     tabIndex={0}
                     onClick={() =>
                       setOpenStudent(openStudent === student.studentName ? null : student.studentName)
@@ -263,7 +271,9 @@ export default function HomeworkReport({ assignmentId }: { assignmentId: string 
                     }}
                   >
                     <td className="px-3 py-2 font-semibold">{student.studentName}</td>
-                    <td className="px-3 py-2">{student.bestPercentage}%</td>
+                    <td className="px-3 py-2">
+                      <ScorePill percent={student.bestPercentage} />
+                    </td>
                     <td className="px-3 py-2">{student.attemptCount}</td>
                     <td className="px-3 py-2">
                       <span className="inline-flex gap-1">
@@ -284,7 +294,7 @@ export default function HomeworkReport({ assignmentId }: { assignmentId: string 
                         {student.tries.map((attempt) => (
                           <div key={attempt.id} className="mb-3">
                             <p className="font-semibold">
-                              {formatDue(attempt.createdAt)} · {attempt.percentage}% · {formatClock(attempt.durationMs)}
+                              {formatDue(attempt.createdAt)} · <ScorePill percent={attempt.percentage} /> · {formatClock(attempt.durationMs)}
                             </p>
                             {attempt.misses.length === 0 ? (
                               <p className="text-slate-600">No misses.</p>
@@ -324,11 +334,13 @@ export default function HomeworkReport({ assignmentId }: { assignmentId: string 
             </thead>
             <tbody>
               {report.questions.map((question) => (
-                <tr key={question.questionId} className="border-b border-slate-100">
+                <tr key={question.questionId} className={`border-b border-slate-100 ${question.incorrectPercent >= 50 ? 'bg-rose-50' : question.incorrectPercent <= 15 ? 'bg-emerald-50' : ''}`}>
                   <td className="px-3 py-2">{question.questionText}</td>
                   <td className="px-3 py-2">{question.answered}</td>
                   <td className="px-3 py-2">{question.wrong}</td>
-                  <td className="px-3 py-2">{question.incorrectPercent}%</td>
+                  <td className="px-3 py-2">
+                    <ScorePill percent={100 - question.incorrectPercent} label={`${question.incorrectPercent}% missed`} />
+                  </td>
                   <td className="px-3 py-2">{question.commonWrong ?? '—'}</td>
                 </tr>
               ))}
@@ -360,11 +372,32 @@ export default function HomeworkReport({ assignmentId }: { assignmentId: string 
   )
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function scoreTone(percent: number): 'good' | 'mid' | 'low' {
+  if (percent >= 80) return 'good'
+  if (percent >= 50) return 'mid'
+  return 'low'
+}
+
+const TONE_CLASS = {
+  good: 'border-emerald-300 bg-emerald-100 text-emerald-900',
+  mid: 'border-amber-300 bg-amber-100 text-amber-900',
+  low: 'border-rose-300 bg-rose-100 text-rose-900',
+  sky: 'border-sky-300 bg-sky-100 text-sky-900',
+} as const
+
+function ScorePill({ percent, label }: { percent: number; label?: string }) {
   return (
-    <div className="rounded-2xl border-2 border-[#1E5167] bg-white px-4 py-3">
-      <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="grandstander text-2xl font-bold text-[#114257]">{value}</p>
+    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-sm font-bold ${TONE_CLASS[scoreTone(percent)]}`}>
+      {label ?? `${percent}%`}
+    </span>
+  )
+}
+
+function Stat({ label, value, tone }: { label: string; value: string; tone: keyof typeof TONE_CLASS }) {
+  return (
+    <div className={`rounded-2xl border-2 px-4 py-3 ${TONE_CLASS[tone]}`}>
+      <p className="text-xs font-semibold uppercase tracking-wide opacity-80">{label}</p>
+      <p className="grandstander text-2xl font-bold">{value}</p>
     </div>
   )
 }
