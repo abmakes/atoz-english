@@ -17,7 +17,7 @@ type ProfileQuizListSkeletonProps = {
 export default function ProfileQuizListSkeleton({ count = 4 }: ProfileQuizListSkeletonProps) {
   return (
     <div
-      className="grid gap-6 md:grid-cols-2"
+      className="grid gap-4"
       role="status"
       aria-busy="true"
       aria-label="Loading quizzes"
@@ -41,10 +41,10 @@ function ProfileQuizCardSkeleton({ index, title }: { index: number; title: strin
       className="bg-white border-2 border-[#1E5167] shadow-[4px_4px_0px_0px_#1E5167] flex flex-row overflow-hidden rounded-lg quiz-skel-cascade"
       style={{ animationDelay: `${delayMs}ms` }}
     >
-      <div className="w-1/3 relative flex-shrink-0 min-h-[140px] quiz-skel-thumb overflow-hidden">
+      <div className="relative w-36 shrink-0 min-h-[140px] quiz-skel-thumb overflow-hidden sm:w-44">
         <div className="absolute inset-0 quiz-skel-shimmer" />
       </div>
-      <div className="w-2/3 p-4 flex flex-col justify-between gap-3">
+      <div className="flex min-w-0 flex-1 flex-col justify-between gap-3 p-4">
         <div>
           <h3 className="text-lg font-semibold grandstander quiz-skel-blur-text line-clamp-2">
             {title}

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import type { QuizPickerSummary } from '@/lib/quiz-playability'
 
 const modeCardBase =
-  'relative flex min-h-[13.5rem] items-stretch overflow-hidden rounded-[24px] sm:min-h-[15rem] xl:min-h-[17rem]'
+  'relative flex min-h-[11.5rem] items-stretch overflow-hidden rounded-[24px] sm:min-h-[12.75rem]'
 
 const modeCardClass = `${modeCardBase} border-2 border-[#1E5167] bg-white shadow-[4px_4px_0px_0px_#1E5167] transition hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_0px_#1E5167]`
 
@@ -215,7 +215,7 @@ export default function GameModePicker({ quiz }: { quiz: QuizPickerSummary }) {
           Select game mode
         </h2>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6">
+        <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-5 sm:grid-cols-2">
           <Link
             href={`/games/${quiz.id}/multiple-choice`}
             onClick={() => setNavigatingSlug('multiple-choice')}

@@ -167,16 +167,16 @@ export default function QuizList({
 
   return (
     <>
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4">
         {quizzes.map((quiz) => {
           const stats = getQuizStatistics(quiz.statistics)
           return (
             <Card
               key={quiz.id}
-              className="bg-white border-2 border-[#1E5167] shadow-[4px_4px_0px_0px_#1E5167] transition-shadow duration-300 flex flex-row overflow-hidden"
+              className="flex flex-row bg-white border-2 border-[#1E5167] shadow-[4px_4px_0px_0px_#1E5167]"
             >
               {quiz.imageUrl ? (
-                <div className="w-1/3 relative flex-shrink-0 min-h-[140px]">
+                <div className="relative w-36 shrink-0 self-stretch overflow-hidden sm:w-44">
                   <Image
                     src={quiz.imageUrl}
                     alt={quiz.title}
@@ -186,12 +186,12 @@ export default function QuizList({
                   />
                 </div>
               ) : (
-                <div className="w-1/3 relative flex-shrink-0 bg-slate-100 flex items-center justify-center">
-                  <span className="text-slate-400 text-sm">No Image</span>
+                <div className="flex w-36 shrink-0 items-center justify-center bg-slate-100 sm:w-44">
+                  <span className="text-sm text-slate-400">No Image</span>
                 </div>
               )}
 
-              <div className={`flex flex-col justify-between p-4 ${quiz.imageUrl ? 'w-2/3' : 'w-full'}`}>
+              <div className="flex min-w-0 flex-1 flex-col justify-between p-4">
                 <div>
                   <CardHeader className="p-0 mb-2">
                     <CardTitle className="line-clamp-2 text-lg font-semibold grandstander">
@@ -230,7 +230,7 @@ export default function QuizList({
                   </CardHeader>
                 </div>
 
-                <CardContent className="p-0 flex justify-between items-end gap-2">
+                <CardContent className="mt-3 flex flex-col gap-3 p-0 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-wrap gap-1 text-xs">
                     <span className="inline-flex items-center rounded-full border px-2 py-0.5 font-semibold bg-pink-100 text-pink-800">
                       {quiz.questions.length}{' '}
@@ -241,7 +241,7 @@ export default function QuizList({
                     </span>
                   </div>
 
-                  <div className="flex justify-end space-x-3 shrink-0">
+                  <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 [&_button]:shrink-0 [&_button]:whitespace-nowrap">
                     <button
                       type="button"
                       className="text-sm grandstander flex items-center gap-1 font-semibold text-green-700"

@@ -173,7 +173,7 @@ function ProfileShell({
 
         <TabsContent value="drafts">
           {drafts.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4">
               {drafts.map((draft) => (
                 <div
                   key={draft.id}
