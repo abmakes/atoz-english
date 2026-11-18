@@ -735,33 +735,12 @@
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
-  background: linear-gradient(180deg, #ffffff 0%, #f3fbff 42%, #e7f6ff 100%);
+  background: linear-gradient(to bottom, #ffffff 40%, #b3e3ff);
 }
 
-.tide-sheet {
+.tide svg {
   position: absolute;
-  top: -8%;
-  left: -30%;
-  width: 160%;
-  height: 116%;
-}
-
-.tide-drift {
-  animation: tide-drift 78s ease-in-out infinite alternate;
-}
-
-.tide-drift-slow {
-  animation: tide-drift 118s ease-in-out infinite alternate-reverse;
-}
-
-@keyframes tide-drift {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(-7%, 1.5%, 0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tide-drift,
-  .tide-drift-slow {
-    animation: none;
-  }
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
