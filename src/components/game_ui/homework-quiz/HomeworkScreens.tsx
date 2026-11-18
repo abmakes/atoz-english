@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { SceneThemeId } from '@/lib/themes'
 import styles from './homework-screens.module.css'
 
@@ -78,7 +78,10 @@ function chunkyStyle(stroke: string, size: number): CSSProperties {
 
 export function ChunkyNumber({ value, stroke }: { value: string; stroke: string }) {
   return (
-    <p className="grandstander text-center text-7xl font-black leading-none" style={chunkyStyle(stroke, 6)}>
+    <p
+      className={`grandstander text-center font-black leading-none ${value.length > 3 ? 'text-6xl' : 'text-7xl'}`}
+      style={chunkyStyle(stroke, 6)}
+    >
       {value}
     </p>
   )
@@ -187,6 +190,89 @@ export function StartScreen({
   )
 }
 
+function ZoomedPicture({
+  src,
+  border,
+  shadow,
+  onClose,
+}: {
+  src: string
+  border: string
+  shadow: string
+  onClose: () => void
+}) {
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const dragStart = useRef(0)
+  const dragged = useRef(false)
+  const [slidesSideways, setSlidesSideways] = useState(false)
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  useEffect(() => {
+    const node = scrollerRef.current
+    if (!node) return
+    const measure = () => setSlidesSideways(node.scrollWidth > node.clientWidth + 8)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [src])
+
+  return (
+    <div className="fixed inset-0 z-40 flex flex-col bg-[#041525]/80" role="dialog" aria-modal="true" aria-label="Picture">
+      <div
+        ref={scrollerRef}
+        className="flex min-h-0 flex-1 items-center overflow-x-auto overflow-y-hidden overscroll-x-contain"
+        onPointerDown={(event) => {
+          dragStart.current = event.clientX
+          dragged.current = false
+        }}
+        onPointerMove={(event) => {
+          if (Math.abs(event.clientX - dragStart.current) > 6) dragged.current = true
+        }}
+        onClick={() => {
+          if (!dragged.current) onClose()
+        }}
+      >
+        <div className="flex w-max min-w-full shrink-0 justify-center px-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt=""
+            className="h-[50dvh] w-auto max-w-none shrink-0 rounded-[24px] border-[3px] bg-white"
+            style={{ borderColor: border }}
+            onClick={(event) => event.stopPropagation()}
+            onLoad={() => {
+              const node = scrollerRef.current
+              if (node) setSlidesSideways(node.scrollWidth > node.clientWidth + 8)
+            }}
+          />
+        </div>
+      </div>
+      <div className="shrink-0 px-4 pt-3" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
+        {slidesSideways ? (
+          <p className="grandstander mb-3 text-center text-base font-bold text-white">Slide sideways to see all of it</p>
+        ) : null}
+        <button
+          type="button"
+          autoFocus
+          onClick={onClose}
+          className="grandstander w-full rounded-full border-[3px] bg-white px-4 py-3.5 text-lg font-bold text-[#114257] active:translate-x-1 active:translate-y-1"
+          style={{ borderColor: border, boxShadow: `4px 5px 0 0 ${shadow}` }}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function QuizScreen({
   palette,
   title,
@@ -225,7 +311,12 @@ export function QuizScreen({
   onChoose: (answer: string) => void
 }) {
   const pills = Math.max(1, Math.min(total, 24))
+  const [zoomed, setZoomed] = useState(false)
+  useEffect(() => {
+    setZoomed(false)
+  }, [question])
   return (
+    <>
     <div className={`fixed inset-0 z-10 flex justify-center ${shake ? styles.shake : ''}`}>
       <div
         className="flex h-full w-full max-w-md flex-col px-4"
@@ -258,13 +349,19 @@ export function QuizScreen({
       <div key={question} className={`${styles.rise} flex min-h-0 flex-1 flex-col justify-evenly overflow-hidden`}>
         <div className="mx-auto flex min-h-0 w-full max-w-full flex-col items-center" style={{ maxHeight: '48%' }}>
           {imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={imageUrl}
-              alt=""
-              className="min-h-0 max-h-full max-w-full rounded-[24px] border-[3px] bg-white object-contain"
+            <button
+              type="button"
+              onClick={() => setZoomed(true)}
+              className="relative block min-h-0 max-h-full max-w-full rounded-[24px] border-[3px] bg-white p-0"
               style={{ borderColor: palette.border }}
-            />
+              aria-label="Make the picture bigger"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={imageUrl} alt="" className="block max-h-full max-w-full object-contain" />
+              <span className="grandstander pointer-events-none absolute bottom-2 right-2 rounded-full border-2 border-[#7dd3fc] bg-white px-2.5 py-1 text-xs font-bold text-[#114257]">
+                Zoom
+              </span>
+            </button>
           ) : null}
           {timerRatio !== null ? (
             <div className="mt-2 h-2 w-full shrink-0 overflow-hidden rounded-full" style={{ background: palette.pillOff }}>
@@ -306,6 +403,15 @@ export function QuizScreen({
       </div>
       </div>
     </div>
+    {zoomed && imageUrl ? (
+      <ZoomedPicture
+        src={imageUrl}
+        border={palette.border}
+        shadow={palette.shadow}
+        onClose={() => setZoomed(false)}
+      />
+    ) : null}
+    </>
   )
 }
 
@@ -314,6 +420,7 @@ export function EndScreen({
   title,
   dueLabel,
   score,
+  mode,
   misses,
   canRetry,
   busy,
@@ -325,6 +432,7 @@ export function EndScreen({
   title: string
   dueLabel: string
   score: string
+  mode: 'homework' | 'challenge'
   misses: { questionText: string; selectedAnswer: string; correctAnswer: string }[]
   canRetry: boolean
   busy: boolean
@@ -332,6 +440,7 @@ export function EndScreen({
   onChallenge: () => void
   leaderboard: { name: string; detail: string }[] | null
 }) {
+  const [showMistakes, setShowMistakes] = useState(false)
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-5 py-8">
       <h1 className="grandstander text-center text-2xl font-black leading-tight" style={{ color: palette.ink }}>{title}</h1>
@@ -346,26 +455,52 @@ export function EndScreen({
         <ChunkyNumber value={score} stroke={palette.chunkyStroke} />
       </div>
       <div className="mt-8 flex flex-col gap-4">
-        <PillButton border={palette.border} shadow={palette.shadow} disabled={busy || !canRetry} onClick={onAgain}>
-          Play Again
-        </PillButton>
-        <PillButton border={palette.challengeBorder} shadow={palette.challengeShadow} disabled={busy || !canRetry} onClick={onChallenge}>
-          Challenge
-        </PillButton>
+        {mode === 'challenge' ? (
+          <>
+            <PillButton border={palette.challengeBorder} shadow={palette.challengeShadow} disabled={busy || !canRetry} onClick={onChallenge}>
+              Play Again
+            </PillButton>
+            <PillButton border={palette.border} shadow={palette.shadow} disabled={busy || !canRetry} onClick={onAgain}>
+              Practice quiz again
+            </PillButton>
+          </>
+        ) : (
+          <>
+            <PillButton border={palette.border} shadow={palette.shadow} disabled={busy || !canRetry} onClick={onAgain}>
+              Play Again
+            </PillButton>
+            <PillButton border={palette.challengeBorder} shadow={palette.challengeShadow} disabled={busy || !canRetry} onClick={onChallenge}>
+              Challenge
+            </PillButton>
+          </>
+        )}
       </div>
-      {misses.length > 0 ? (
-        <section className="mt-6 rounded-[24px] bg-white px-4 py-4 text-left">
-          {misses.map((miss) => (
-            <div key={`${miss.questionText}-${miss.correctAnswer}`} className="border-b border-slate-100 py-2 last:border-b-0">
-              <p className="text-sm font-bold" style={{ color: palette.cardInk }}>{miss.questionText}</p>
-              <p className="text-sm" style={{ color: palette.cardInk }}>You chose {miss.selectedAnswer || '—'}</p>
-              <p className="text-sm font-semibold" style={{ color: palette.cardInk }}>Right answer: {miss.correctAnswer}</p>
-            </div>
-          ))}
-        </section>
+      {mode === 'homework' && misses.length > 0 ? (
+        <div className="mt-6">
+          <button
+            type="button"
+            aria-expanded={showMistakes}
+            onClick={() => setShowMistakes((open) => !open)}
+            className="grandstander w-full rounded-full border-[3px] bg-white px-5 py-3.5 text-xl font-bold text-[#114257] transition active:translate-x-1 active:translate-y-1 active:shadow-none"
+            style={{ borderColor: palette.border, boxShadow: `4px 5px 0 0 ${palette.shadow}` }}
+          >
+            {showMistakes ? 'Hide my mistakes' : 'View my mistakes'}
+          </button>
+          {showMistakes ? (
+            <section className="mt-4 rounded-[24px] bg-white px-4 py-4 text-left">
+              {misses.map((miss) => (
+                <div key={`${miss.questionText}-${miss.correctAnswer}`} className="border-b border-slate-100 py-2 last:border-b-0">
+                  <p className="text-sm font-bold" style={{ color: palette.cardInk }}>{miss.questionText}</p>
+                  <p className="text-sm" style={{ color: palette.cardInk }}>You chose {miss.selectedAnswer || '—'}</p>
+                  <p className="text-sm font-semibold" style={{ color: palette.cardInk }}>Right answer: {miss.correctAnswer}</p>
+                </div>
+              ))}
+            </section>
+          ) : null}
+        </div>
       ) : null}
       {leaderboard ? (
-        <div className="relative mt-12">
+        <div className="relative mt-28">
           <Crown />
           <div
             className="rounded-[28px] border-[3px] bg-white px-4 pb-4 pt-8"
@@ -399,12 +534,15 @@ export function EndScreen({
 
 function Crown() {
   return (
-    <svg viewBox="0 0 88 64" className="absolute -top-10 left-1/2 h-14 w-16 -translate-x-1/2" aria-hidden="true">
-      <path d="M8 50 L16 22 L32 38 L44 12 L56 38 L72 22 L80 50 Z" fill="#f5c542" stroke="#d97706" strokeWidth="3" />
-      <rect x="10" y="48" width="68" height="10" rx="3" fill="#f5c542" stroke="#d97706" strokeWidth="3" />
-      <circle cx="20" cy="28" r="4" fill="#ef4444" />
-      <circle cx="44" cy="20" r="4" fill="#22c55e" />
-      <circle cx="68" cy="28" r="4" fill="#3b82f6" />
-    </svg>
+    <div className="pointer-events-none absolute -top-[6.75rem] left-1/2 h-28 w-28 -translate-x-1/2 overflow-hidden" aria-hidden="true">
+      {/* The file has a large empty margin, so the picture is shifted to show only the crown. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/images/ui/crown.png"
+        alt=""
+        className="absolute max-w-none"
+        style={{ width: '164.5%', height: '201%', left: '-61.5%', top: '-43.6%' }}
+      />
+    </div>
   )
 }

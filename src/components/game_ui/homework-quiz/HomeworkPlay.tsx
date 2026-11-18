@@ -492,7 +492,8 @@ export default function HomeworkPlay({ token }: { token: string }) {
           palette={palette}
           title={session.title}
           dueLabel={formatDue(session.dueAt)}
-          score={phase === 'homework-results' ? `${Math.round(play.percentage ?? 0)}` : `${play.correctCount}`}
+          score={phase === 'homework-results' ? quizPercent(play.percentage) : `${play.correctCount}`}
+          mode={phase === 'homework-results' ? 'homework' : 'challenge'}
           misses={phase === 'homework-results' ? (play.results ?? []).filter((answer) => !answer.correct) : []}
           canRetry={session.acceptingResponses}
           busy={busy}
@@ -503,6 +504,11 @@ export default function HomeworkPlay({ token }: { token: string }) {
       ) : null}
     </div>
   )
+}
+
+function quizPercent(value: number | null): string {
+  const amount = Math.round((value ?? 0) * 10) / 10
+  return `${Number.isInteger(amount) ? amount : amount.toFixed(1)}%`
 }
 
 function wait(ms: number): Promise<void> {
