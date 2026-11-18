@@ -2,11 +2,11 @@
 
 Single-player homework for a multiple-choice quiz the teacher already created. Students open a class link, answer every question, and get a percentage. They can retry. After one finished try they can play the challenge.
 
-This screen owns one Pixi `Application`. It does not use `GameContainer` or RuleEngine, because there are no teams and the score is graded on the server. The scene is the quiz theme: Clouds, Forest, or Dark Sea, the same backgrounds as the classroom quiz.
+The start, question, and score screens are React. They use the same thick border and hard shadow as the rest of the site. The scene is the quiz theme: Clouds, Forest, or Dark Sea, with the background lined up to the left edge so the clouds, trees, or night sky stay in view. Dark Sea uses light text on the picture and white cards so the words stay readable.
 
 ## Homework
 
-No timer and no lives. A tap turns green or red immediately, the card fades out, and the next picture fades in. On a phone the answers stack at the bottom of the screen. The two-by-two grid is for a wide landscape screen. Answers stay on this device until the try is submitted or the page closes, then they are saved once. A single bar shows how far through the questions they are. The full miss list is still shown after the try is submitted.
+No timer and no lives. A tap turns green or red immediately, then the next question fades in. Answers are a single column. They stay on this device until the try is submitted or the page closes, then they are saved once. A row of pills shows how far through the questions they are. The misses are still listed after the try is submitted.
 
 ## Challenge
 

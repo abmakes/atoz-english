@@ -1,14 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Application } from 'pixi.js'
-import { HomeworkQuizGame, type HomeworkCard, type HomeworkFrame } from '@/lib/pixi-games/homework-quiz/HomeworkQuizGame'
-import { flameColor, frameForCorrect, gradeChallengeTap, shouldShake, type FlameColor } from '@/lib/homework/rules'
+import { frameForCorrect, gradeChallengeTap, shouldShake, type FlameColor } from '@/lib/homework/rules'
 import { reshuffleAvoiding } from '@/lib/homework/queue'
 import { formatDue } from '@/lib/assignments/due'
 import { readChallengeTry, rememberChallengeTry, submitChallengeTry } from '@/lib/homework/localChallenge'
 import { flushHomeworkTry, readHomeworkTry, rememberHomeworkTry } from '@/lib/homework/localProgress'
-import { getPixiThemeConfig, sceneBackgroundUrl, sceneThemeId } from '@/lib/themes'
+import { sceneBackgroundUrl, sceneThemeId } from '@/lib/themes'
+import { EndScreen, QuizScreen, sceneShell, screenPalette, StartScreen } from '@/components/game_ui/homework-quiz/HomeworkScreens'
 
 const CLIENT_KEY = 'playtoz-homework-client'
 
@@ -109,16 +108,14 @@ export default function HomeworkPlay({ token }: { token: string }) {
   const [play, setPlay] = useState<PlayState | null>(null)
   const [index, setIndex] = useState(0)
   const [busy, setBusy] = useState(false)
-  const mountRef = useRef<HTMLDivElement | null>(null)
-  const gameRef = useRef<HomeworkQuizGame | null>(null)
+  const [verdict, setVerdict] = useState<{ selected: string; correct: boolean; note: string } | null>(null)
+  const [clockMs, setClockMs] = useState<number | null>(null)
   const playRef = useRef<PlayState | null>(null)
   const indexRef = useRef(0)
-  const sessionRef = useRef<SessionInfo | null>(null)
-  const chooseRef = useRef<(answer: string) => void>(() => undefined)
   const timeoutRef = useRef<() => void>(() => undefined)
+  const timingOut = useRef(false)
   playRef.current = play
   indexRef.current = index
-  sessionRef.current = session
 
   const loadSession = useCallback(async () => {
     const key = clientKey()
@@ -192,104 +189,36 @@ export default function HomeworkPlay({ token }: { token: string }) {
     })()
   }, [loadSession, token])
 
-  const showCard = useCallback((state: PlayState, questionIndex: number) => {
-    const game = gameRef.current
-    const card = state.questions[questionIndex]
-    if (!game || !card) return
-    const challenge = state.mode === 'CHALLENGE'
-    const frameRules = frameForCorrect(state.correctCount)
-    const frame: HomeworkFrame = {
-      mode: state.mode,
-      progress: challenge
-        ? `${state.correctCount} correct`
-        : `${questionIndex + 1} / ${state.questions.length}`,
-      step: challenge ? state.correctCount : questionIndex + 1,
-      total: challenge ? 100 : state.questions.length,
-      lives: state.livesLeft,
-      timeLimitMs: challenge ? state.timeLimitMs ?? frameRules.timeLimitMs : null,
-      startedAtMs: challenge && state.questionStartedAt ? Date.parse(state.questionStartedAt) : null,
-      flame: challenge ? flameColor(state.correctCount) : null,
-      shake: challenge ? shouldShake(frameRules.seconds) : false,
-    }
-    game.show(
-      {
-        id: card.id,
-        question: card.question,
-        imageUrl: card.imageUrl,
-        answers: card.answers,
-        correctAnswer: card.correctAnswer,
-      } satisfies HomeworkCard,
-      frame
-    )
-    const upcoming =
-      state.mode === 'HOMEWORK'
-        ? state.questions[questionIndex + 1]
-        : state.questions.find((question) => question.id === state.queue[1])
-    game.preload(upcoming?.imageUrl ?? null)
-  }, [])
-
-  useEffect(() => {
-    if (phase !== 'play' || !mountRef.current) return
-    const mount = mountRef.current
-    let cancelled = false
-    let destroyed = false
-    const app = new Application()
-    const destroyApp = () => {
-      if (destroyed || !app.renderer) return
-      destroyed = true
-      app.destroy(true)
-    }
-    void (async () => {
-      await app.init({
-        resizeTo: mount,
-        backgroundAlpha: 0,
-        antialias: true,
-        autoDensity: true,
-        resolution: Math.min(window.devicePixelRatio || 1, 2),
-      })
-      if (cancelled) {
-        destroyApp()
-        return
-      }
-      app.canvas.style.touchAction = 'none'
-      mount.appendChild(app.canvas)
-      const game = new HomeworkQuizGame(app, sessionRef.current?.theme, {
-        onChoose: (answer) => {
-          chooseRef.current(answer)
-        },
-        onTimeout: () => {
-          timeoutRef.current()
-        },
-      })
-      gameRef.current = game
-      await game.init()
-      const current = playRef.current
-      if (current) {
-        const questionIndex =
-          current.mode === 'HOMEWORK'
-            ? indexRef.current
-            : current.questions.findIndex((question) => question.id === current.currentQuestionId)
-        showCard(current, questionIndex < 0 ? 0 : questionIndex)
-      }
-    })().catch((reason: unknown) => {
-      console.error('[HomeworkQuiz] start failed', reason)
-      if (!cancelled) setError('The game could not start. Refresh and try again.')
-    })
-    return () => {
-      cancelled = true
-      gameRef.current?.destroy()
-      gameRef.current = null
-      destroyApp()
-    }
-    // The game is created once per play phase. Question changes go through showCard.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase])
-
   useEffect(() => {
     if (phase !== 'play' || !play) return
-    const questionIndex = play.mode === 'HOMEWORK' ? index : Math.max(0, play.questions.findIndex((question) => question.id === play.currentQuestionId))
-    showCard(play, questionIndex < 0 ? 0 : questionIndex)
-  }, [index, phase, play, showCard])
+    const upcoming = play.mode === 'HOMEWORK'
+      ? play.questions[index + 1]
+      : play.questions.find((question) => question.id === play.queue[1])
+    if (!upcoming?.imageUrl) return
+    const image = new Image()
+    image.src = upcoming.imageUrl
+  }, [index, phase, play])
+
+  useEffect(() => {
+    if (phase !== 'play' || play?.mode !== 'CHALLENGE' || !play.questionStartedAt || !play.timeLimitMs) return
+    const startedAt = Date.parse(play.questionStartedAt)
+    const startedIso = play.questionStartedAt
+    const questionId = play.currentQuestionId
+    const limit = play.timeLimitMs
+    let timer = 0
+    const tick = () => {
+      const left = limit - (Date.now() - startedAt)
+      setClockMs(left)
+      const sameQuestion = playRef.current?.currentQuestionId === questionId && playRef.current.questionStartedAt === startedIso
+      if (left <= 0 && sameQuestion) {
+        window.clearInterval(timer)
+        timeoutRef.current()
+      }
+    }
+    tick()
+    timer = window.setInterval(tick, 100)
+    return () => window.clearInterval(timer)
+  }, [phase, play?.mode, play?.questionStartedAt, play?.timeLimitMs, play?.currentQuestionId])
 
   useEffect(() => {
     if (phase !== 'play') return
@@ -396,7 +325,7 @@ export default function HomeworkPlay({ token }: { token: string }) {
   }
 
   async function revealChallenge(nextPlay: PlayState, save: Promise<PlayState | null> | null) {
-    await gameRef.current?.depart()
+    setVerdict(null)
     if (nextPlay.status === 'FINISHED') {
       setPlay(nextPlay)
       setPhase('challenge-results')
@@ -416,20 +345,20 @@ export default function HomeworkPlay({ token }: { token: string }) {
 
   async function choose(answer: string) {
     const current = playRef.current
-    if (!current) {
-      gameRef.current?.unlock()
-      return
-    }
-    if (busy) return
+    if (!current || busy) return
     const questionIndex = indexRef.current
     const question = current.mode === 'HOMEWORK' ? current.questions[questionIndex] : current.questions.find((item) => item.id === current.currentQuestionId)
-    if (!question) {
-      gameRef.current?.unlock()
-      return
-    }
+    if (!question) return
     setBusy(true)
     const correct = answer === question.correctAnswer
-    gameRef.current?.showVerdict(answer, correct, question.correctAnswer)
+    setVerdict({
+      selected: answer,
+      correct,
+      note: correct ? 'Correct!' : `Not quite. ${question.correctAnswer}`,
+    })
+    const blip = new Audio(correct ? '/audio/default/correct-sound.mp3' : '/audio/default/incorrect-sound.mp3')
+    blip.volume = 0.5
+    void blip.play().catch(() => undefined)
     let nextPlay = current
     let challengeSave: Promise<PlayState | null> | null = null
     try {
@@ -449,8 +378,8 @@ export default function HomeworkPlay({ token }: { token: string }) {
         if (nextPlay.status === 'FINISHED') challengeSave = submitChallengeTry<PlayState>(token, clientKey())
       }
       await wait(correct ? 420 : 700)
+      setVerdict(null)
       if (current.mode === 'HOMEWORK') {
-        await gameRef.current?.depart()
         const nextIndex = questionIndex + 1
         if (nextIndex >= current.questions.length) {
           const finished = await flushHomeworkTry<PlayState>(token, clientKey(), true)
@@ -467,34 +396,34 @@ export default function HomeworkPlay({ token }: { token: string }) {
       }
     } catch (reason: unknown) {
       setError(reason instanceof Error ? reason.message : 'That answer was not saved.')
+      setVerdict(null)
       if (nextPlay.status === 'FINISHED') {
         setPlay(nextPlay)
         setPhase('challenge-results')
-      } else if (current) {
-        showCard(current, questionIndex)
       }
     } finally {
       setBusy(false)
     }
   }
-  chooseRef.current = (answer) => {
-    void choose(answer)
-  }
-
   async function timeout() {
     const current = playRef.current
-    if (!current || current.mode !== 'CHALLENGE' || !current.currentQuestionId || busy) return
+    if (!current || current.mode !== 'CHALLENGE' || !current.currentQuestionId || busy || timingOut.current) return
     const question = current.questions.find((item) => item.id === current.currentQuestionId)
     if (!question) return
+    timingOut.current = true
     setBusy(true)
+    setVerdict({ selected: '', correct: false, note: 'Time’s up' })
     try {
+      await wait(420)
       const nextPlay = recordChallenge(current, question, '', true)
       playRef.current = nextPlay
       const challengeSave = nextPlay.status === 'FINISHED' ? submitChallengeTry<PlayState>(token, clientKey()) : null
       await revealChallenge(nextPlay, challengeSave)
     } catch (reason: unknown) {
       setError(reason instanceof Error ? reason.message : 'The clock could not be saved.')
+      setVerdict(null)
     } finally {
+      timingOut.current = false
       setBusy(false)
     }
   }
@@ -503,136 +432,75 @@ export default function HomeworkPlay({ token }: { token: string }) {
   }
 
   const scene = sceneThemeId(session?.theme)
-  const colors = getPixiThemeConfig(scene)
+  const palette = screenPalette(scene)
   const background = sceneBackgroundUrl(scene)
-
-  const inkShadow = scene === 'dark' ? '0 2px 8px rgba(0,0,0,0.85)' : '0 1px 0 #fff, 0 0 12px rgba(255,255,255,0.9)'
+  const question = play
+    ? play.mode === 'HOMEWORK'
+      ? play.questions[index]
+      : play.questions.find((item) => item.id === play.currentQuestionId)
+    : undefined
+  const challengeFrame = play?.mode === 'CHALLENGE' ? frameForCorrect(play.correctCount) : null
+  const leaderboard = session?.showLeaderboard
+    ? session.leaderboard.map((row) => ({
+        name: row.studentName,
+        detail: row.reachedHundred ? `${row.correctCount} - ${formatClock(row.timeToHundredMs)}` : `${row.correctCount}`,
+      }))
+    : null
 
   return (
-    <div
-      className={`bg-cover bg-center bg-no-repeat ${phase === 'play' ? 'h-screen overflow-hidden' : 'min-h-screen'}`}
-      style={{ backgroundImage: `url(${background})`, color: colors.textColor }}
-    >
-      {phase === 'play' ? <div ref={mountRef} className="fixed inset-0 z-0" /> : null}
-      <div className={`relative z-10 flex min-h-screen flex-col px-4 py-6 ${phase === 'play' ? 'pointer-events-none' : 'mx-auto max-w-5xl'}`}>
-        {phase === 'play' ? null : (
-          <>
-            <p className="text-sm font-semibold" style={{ color: colors.primaryAccent, textShadow: inkShadow }}>Homework</p>
-            <h1 className="grandstander text-3xl font-bold" style={{ color: colors.headingColor, textShadow: inkShadow }}>{session?.title ?? 'Quiz homework'}</h1>
-            {session ? (
-              <p className="mt-1 text-sm" style={{ color: colors.textLight, textShadow: inkShadow }}>
-                Due {formatDue(session.dueAt)} · {session.questionCount}{' '}
-                {session.questionCount === 1 ? 'question' : 'questions'}
-                {session.bestPercentage !== null ? ` · Your best ${session.bestPercentage}%` : ''}
-              </p>
-            ) : null}
-          </>
-        )}
-        {error ? <p className="pointer-events-auto mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
-
-        {phase === 'loading' ? <p className="mt-10 text-slate-500">Loading…</p> : null}
-
-        {phase === 'name' && session ? (
-          <section className="pointer-events-auto mx-auto mt-10 w-full max-w-md rounded-3xl border-2 border-[#1E5167] bg-white p-6 text-[#114257] shadow-[4px_4px_0px_0px_#1E5167]">
-            <p className="text-slate-600">
-              Answer every question. You can look things up, and you can try again for a better percentage.
-            </p>
-            <label className="mt-4 block text-sm font-semibold" htmlFor="homework-name">
-              Your name
-            </label>
-            <input
-              id="homework-name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Type your name"
-              maxLength={40}
-              className="mt-1 w-full rounded-xl border-2 border-sky-300 px-4 py-3 text-center text-lg"
-            />
-            <button
-              type="button"
-              disabled={busy || name.trim().length === 0 || !session.acceptingResponses}
-              onClick={() => void start('HOMEWORK')}
-              className="grandstander mt-4 w-full rounded-full bg-[#114257] px-4 py-3 font-bold text-white disabled:opacity-50"
-            >
-              {session.acceptingResponses ? 'Start homework' : 'This homework is closed'}
-            </button>
-            {session.finishedHomework ? (
-              <button
-                type="button"
-                disabled={busy || name.trim().length === 0 || !session.acceptingResponses}
-                onClick={() => void start('CHALLENGE')}
-                className="grandstander mt-3 w-full rounded-full border-2 border-orange-400 px-4 py-3 font-bold text-orange-700 disabled:opacity-50"
-              >
-                Take the challenge
-              </button>
-            ) : null}
-            {session.showLeaderboard ? <Leaderboard rows={session.leaderboard} /> : null}
-          </section>
-        ) : null}
-
-
-        {phase === 'homework-results' && play ? (
-          <section className="pointer-events-auto mx-auto mt-8 w-full max-w-xl rounded-3xl border-2 border-[#1E5167] bg-white p-6 text-[#114257] shadow-[4px_4px_0px_0px_#1E5167]">
-            <p className="grandstander text-5xl font-bold">{play.percentage ?? 0}%</p>
-            <p className="mt-1 text-slate-600">
-              {play.correctCount} of {play.questions.length} in {formatClock(play.durationMs)}
-            </p>
-            <ul className="mt-4 space-y-2">
-              {(play.results ?? []).filter((answer) => !answer.correct).map((answer) => (
-                <li key={answer.questionId} className="rounded-xl bg-slate-50 px-3 py-2 text-sm">
-                  <p className="font-semibold">{answer.questionText}</p>
-                  <p>You chose {answer.selectedAnswer || '—'}</p>
-                  <p>Right answer: {answer.correctAnswer}</p>
-                </li>
-              ))}
-            </ul>
-            {(play.results ?? []).every((answer) => answer.correct) ? (
-              <p className="mt-4 text-sm text-slate-600">Every answer was right.</p>
-            ) : null}
-            <div className="mt-6 flex flex-col gap-3">
-              <button
-                type="button"
-                disabled={busy || session?.acceptingResponses === false}
-                onClick={() => void start('HOMEWORK')}
-                className="rounded-full bg-[#114257] px-4 py-3 font-bold text-white disabled:opacity-50"
-              >
-                Try again
-              </button>
-              <button
-                type="button"
-                disabled={busy || session?.acceptingResponses === false}
-                onClick={() => void start('CHALLENGE')}
-                className="rounded-full border-2 border-orange-400 px-4 py-3 font-bold text-orange-700 disabled:opacity-50"
-              >
-                Take the challenge
-              </button>
-            </div>
-          </section>
-        ) : null}
-
-        {phase === 'challenge-results' && play ? (
-          <section className="pointer-events-auto mx-auto mt-8 w-full max-w-xl rounded-3xl border-2 border-orange-400 bg-white p-6 text-center text-[#114257] shadow-[4px_4px_0px_0px_#fdba74]">
-            <p className="grandstander text-4xl font-bold">
-              {play.reachedHundred ? 'Mega Chad' : `${play.correctCount} correct`}
-            </p>
-            <p className="mt-2 text-slate-600">
-              {play.reachedHundred
-                ? `100 correct in ${formatClock(play.timeToHundredMs)}`
-                : play.endReason === 'TIMEOUT'
-                  ? 'Time ran out.'
-                  : 'That miss ended the run.'}
-            </p>
-            <button
-              type="button"
-              className="mt-6 rounded-full bg-[#114257] px-4 py-3 font-bold text-white"
-              onClick={() => setPhase('name')}
-            >
-              Back
-            </button>
-            {session?.showLeaderboard ? <Leaderboard rows={session.leaderboard} /> : null}
-          </section>
-        ) : null}
-      </div>
+    <div className="min-h-screen" style={sceneShell(background)}>
+      {error ? <p className="mx-auto mt-3 max-w-md rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+      {phase === 'loading' || !session ? <p className="px-5 pt-16 text-center font-semibold" style={{ color: palette.ink }}>Loading…</p> : null}
+      {phase === 'name' && session ? (
+        <StartScreen
+          palette={palette}
+          title={session.title}
+          dueLabel={formatDue(session.dueAt)}
+          questionCount={session.questionCount}
+          name={name}
+          closed={!session.acceptingResponses}
+          busy={busy}
+          canChallenge={session.finishedHomework}
+          onName={setName}
+          onStartQuiz={() => void start('HOMEWORK')}
+          onStartChallenge={() => void start('CHALLENGE')}
+        />
+      ) : null}
+      {phase === 'play' && session && play && question ? (
+        <QuizScreen
+          palette={palette}
+          title={session.title}
+          dueLabel={formatDue(session.dueAt)}
+          progressLabel={play.mode === 'HOMEWORK' ? `${index + 1}/${play.questions.length}` : `${play.correctCount}`}
+          filled={play.mode === 'HOMEWORK' ? index + 1 : Math.min(10, Math.floor(play.correctCount / 10))}
+          total={play.mode === 'HOMEWORK' ? play.questions.length : 10}
+          imageUrl={question.imageUrl}
+          question={question.question}
+          answers={question.answers}
+          selected={verdict?.selected || null}
+          correctAnswer={verdict ? question.correctAnswer : null}
+          note={verdict?.note ?? null}
+          lives={play.mode === 'CHALLENGE' ? play.livesLeft : null}
+          timerRatio={play.mode === 'CHALLENGE' && play.timeLimitMs ? Math.max(0, (clockMs ?? play.timeLimitMs) / play.timeLimitMs) : null}
+          shake={Boolean(challengeFrame && shouldShake(challengeFrame.seconds) && (clockMs ?? play.timeLimitMs ?? 0) > 0)}
+          busy={busy}
+          onChoose={(answer) => void choose(answer)}
+        />
+      ) : null}
+      {(phase === 'homework-results' || phase === 'challenge-results') && session && play ? (
+        <EndScreen
+          palette={palette}
+          title={session.title}
+          dueLabel={formatDue(session.dueAt)}
+          score={phase === 'homework-results' ? `${Math.round(play.percentage ?? 0)}` : `${play.correctCount}`}
+          misses={phase === 'homework-results' ? (play.results ?? []).filter((answer) => !answer.correct) : []}
+          canRetry={session.acceptingResponses}
+          busy={busy}
+          onAgain={() => void start('HOMEWORK')}
+          onChallenge={() => void start('CHALLENGE')}
+          leaderboard={leaderboard}
+        />
+      ) : null}
     </div>
   )
 }
@@ -641,28 +509,4 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => {
     window.setTimeout(resolve, ms)
   })
-}
-
-function Leaderboard({ rows }: { rows: LeaderRow[] }) {
-  return (
-    <div className="mt-6 text-left">
-      <h2 className="grandstander text-xl font-bold">Challenge leaderboard</h2>
-      {rows.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-500">No challenge scores yet.</p>
-      ) : (
-        <ol className="mt-2 space-y-1 text-sm">
-          {rows.map((row) => (
-            <li key={`${row.rank}-${row.studentName}`} className="flex justify-between gap-3">
-              <span>
-                {row.rank}. {row.studentName}
-              </span>
-              <span className="font-semibold">
-                {row.reachedHundred ? formatClock(row.timeToHundredMs) : `${row.correctCount} correct`}
-              </span>
-            </li>
-          ))}
-        </ol>
-      )}
-    </div>
-  )
 }
