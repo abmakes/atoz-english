@@ -4,11 +4,31 @@ import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import { Button } from '@/components/ui/button'
-import { isRealPicture, type WorksheetItem } from '@/lib/lesson/assess'
+import WorksheetPaper from '@/components/lesson/WorksheetPaper'
+import type { WorksheetItem } from '@/lib/lesson/assess'
+import { levelFromTags } from '@/lib/taxonomy/quiz-taxonomy'
+import { QuestionType } from '@/types/question_types'
 import { Loader2, Printer } from 'lucide-react'
 
+function storable(item: WorksheetItem) {
+  return {
+    questionId: item.questionId,
+    line: item.line,
+    imageUrl: item.imageUrl ?? null,
+    choices: item.choices,
+    activity: item.activity,
+    exercise: item.exercise,
+    instruction: item.instruction,
+    bank: item.bank,
+    example: item.example,
+    warning: item.warning,
+    held: item.held,
+    answer: item.answer,
+  }
+}
+
 interface PrintPayload {
-  quiz: { id: string; title: string }
+  quiz: { id: string; title: string; tags: string[] }
   lesson: { worksheetItems: WorksheetItem[] }
 }
 
@@ -19,7 +39,10 @@ export default function QuizWorksheetPrintPage({
 }) {
   const { id } = use(params)
   const [payload, setPayload] = useState<PrintPayload | null>(null)
+  const [items, setItems] = useState<WorksheetItem[]>([])
   const [error, setError] = useState('')
+  const [withKey, setWithKey] = useState(false)
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -30,7 +53,10 @@ export default function QuizWorksheetPrintPage({
         return body.data
       })
       .then((data) => {
-        if (!cancelled) setPayload(data)
+        if (!cancelled) {
+          setPayload(data)
+          setItems(data.lesson.worksheetItems)
+        }
       })
       .catch((loadError: unknown) => {
         if (!cancelled) setError(loadError instanceof Error ? loadError.message : 'Could not open the worksheet.')
@@ -48,7 +74,62 @@ export default function QuizWorksheetPrintPage({
     )
   }
 
-  const items = payload?.lesson.worksheetItems ?? []
+  const save = async (next: WorksheetItem[]) => {
+    setItems(next)
+    const response = await fetch(`/api/quizzes/${id}/lesson`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: 'worksheet', items: next.map(storable) }),
+    })
+    if (!response.ok) {
+      const body = (await response.json().catch(() => ({}))) as { error?: string }
+      throw new Error(body.error || 'Could not save the worksheet.')
+    }
+  }
+
+  const regenerate = async (index: number) => {
+    const item = items[index]
+    if (!item || !payload) return
+    setBusy(true)
+    setError('')
+    try {
+      const response = await fetch('/api/ai/assess-lesson', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target: 'worksheet',
+          scope: 'item',
+          sections: item.activity === 'question' ? ['long'] : undefined,
+          level: levelFromTags(payload.quiz.tags) ?? 'A1',
+          title: payload.quiz.title,
+          quizId: payload.quiz.id,
+          questions: [
+            {
+              id: item.questionId,
+              question: item.line,
+              answers: item.choices.length > 0 ? item.choices : [item.answer || 'yes', 'no', 'maybe', 'soon'],
+              correctAnswer: item.answer || item.choices[0] || 'yes',
+              type: QuestionType.MULTIPLE_CHOICE,
+              imageUrl: item.imageUrl ?? null,
+            },
+          ],
+        }),
+      })
+      const body = (await response.json()) as { error?: string; items?: { line: string; choices: string[]; correctAnswer: string; warning?: string; imageUrl?: string | null }[] }
+      const fresh = body.items?.[0]
+      if (!response.ok || !fresh) throw new Error(body.error || 'Could not replace that line.')
+      const next = items.map((row, rowIndex) =>
+        rowIndex === index
+          ? { ...row, line: fresh.line, choices: fresh.choices, answer: fresh.correctAnswer, warning: fresh.warning, imageUrl: fresh.imageUrl || row.imageUrl }
+          : row
+      )
+      await save(next)
+    } catch (regenError) {
+      setError(regenError instanceof Error ? regenError.message : 'Could not replace that line.')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <ProtectedRoute>
@@ -65,9 +146,22 @@ export default function QuizWorksheetPrintPage({
               Check again
             </Link>
             <Button
-              onClick={() => window.print()}
-              className="bg-[--primary-accent] text-white hover:bg-[--primary-accent-hover]"
+              variant="outline"
+              onClick={() => {
+                setWithKey(true)
+                setTimeout(() => window.print(), 50)
+              }}
               disabled={items.length === 0}
+            >
+              Print with answer key
+            </Button>
+            <Button
+              onClick={() => {
+                setWithKey(false)
+                setTimeout(() => window.print(), 50)
+              }}
+              className="bg-[--primary-accent] text-white hover:bg-[--primary-accent-hover]"
+              disabled={items.length === 0 || busy}
             >
               <Printer className="mr-2 h-4 w-4" />
               Print
@@ -83,67 +177,18 @@ export default function QuizWorksheetPrintPage({
             </Link>
           </div>
         ) : (
-          <div className="worksheet rounded border bg-white p-8 shadow-sm">
-            <div className="flex items-end justify-between gap-6 border-b-2 border-slate-800 pb-3">
-              <h1 className="grandstander text-2xl font-bold text-slate-900">{payload?.quiz.title}</h1>
-              <div className="text-sm text-slate-700">
-                Name: ______________________ &nbsp; Date: ____________
-              </div>
-            </div>
-            <p className="mt-3 text-sm text-slate-600">Circle the answer, or fill the blank.</p>
-            <ol className="mt-6 space-y-8">
-              {items.map((item, index) => (
-                <li key={`${item.questionId ?? 'line'}-${index}`} className="break-inside-avoid">
-                  {isRealPicture(item.imageUrl) ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={item.imageUrl}
-                      alt=""
-                      className="mb-3 max-h-48 rounded border border-slate-300 object-contain"
-                    />
-                  ) : null}
-                  <p className="text-lg text-slate-900">{item.line}</p>
-                  {item.choices.length > 0 ? (
-                    <ul className="mt-3 space-y-2">
-                      {item.choices.map((choice, choiceIndex) => (
-                        <li key={`${choice}-${choiceIndex}`} className="flex items-center gap-3 text-base text-slate-800">
-                          <span className="inline-block h-4 w-4 shrink-0 rounded-full border-2 border-slate-800" />
-                          {choice}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </li>
-              ))}
-            </ol>
-          </div>
+          <WorksheetPaper
+            title={payload?.quiz.title || 'Worksheet'}
+            items={items}
+            withKey={withKey}
+            busy={busy}
+            onReplace={(index) => void regenerate(index)}
+            onChange={(next) => {
+              save(next).catch((saveError: unknown) => setError(saveError instanceof Error ? saveError.message : 'Could not save.'))
+            }}
+          />
         )}
       </div>
-      <style jsx global>{`
-        @media print {
-          nav,
-          .no-print {
-            display: none !important;
-          }
-          body {
-            background: white !important;
-          }
-          .print-page {
-            max-width: none !important;
-            padding: 0 !important;
-            margin: 0 !important;
-          }
-          .worksheet {
-            border: none !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-          }
-          @page {
-            size: A4 portrait;
-            margin: 14mm;
-          }
-        }
-      `}</style>
     </ProtectedRoute>
   )
 }

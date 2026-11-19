@@ -10,8 +10,10 @@ import { useCustomToast } from '@/components/ui/CustomToast'
 import AIQuestionReviewPanel, {
   type ReviewableQuestion,
 } from '@/components/management_ui/AIQuestionReviewPanel'
+import WorksheetSetup, { type WorksheetPick } from '@/components/lesson/WorksheetSetup'
 import {
   commitLessonSelection,
+  isRealPicture,
   type LessonAssessmentItem,
   type LessonSentence,
   type LessonTarget,
@@ -19,7 +21,8 @@ import {
   type WorksheetItem,
 } from '@/lib/lesson/assess'
 import { promptsFromLesson } from '@/lib/lesson/prompts'
-import { levelFromTags } from '@/lib/taxonomy/quiz-taxonomy'
+import { studentThoughtPath } from '@/lib/lesson/thought-assignment'
+import { levelFromTags, resolveGrammarTags } from '@/lib/taxonomy/quiz-taxonomy'
 import { QuestionType } from '@/types/question_types'
 
 const SOURCE_CARD =
@@ -34,11 +37,21 @@ interface LessonQuiz {
   questions: SourceQuestion[]
 }
 
+interface LessonThought {
+  id: string
+  title: string
+  prompt: string
+  shareToken: string
+  status: string
+  studentPath: string
+}
+
 interface LessonRecord {
   id: string
   title: string
   worksheetItems: WorksheetItem[]
   sentences: LessonSentence[]
+  thought: LessonThought | null
 }
 
 function toReviewQuestion(item: LessonAssessmentItem): ReviewableQuestion {
@@ -56,6 +69,10 @@ function toReviewQuestion(item: LessonAssessmentItem): ReviewableQuestion {
     sourceQuestion: item.sourceQuestion,
     sourceAnswers: item.sourceAnswers,
     assessmentReason: item.reason,
+    activity: item.activity,
+    exercise: item.exercise,
+    instruction: item.instruction,
+    bank: item.bank,
   }
 }
 
@@ -72,7 +89,9 @@ export default function LessonKitScreen({
   const [lesson, setLesson] = useState<LessonRecord | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [view, setView] = useState<'pieces' | 'checking' | 'review'>('pieces')
+  const [view, setView] = useState<'pieces' | 'options' | 'checking' | 'review' | 'thought'>('pieces')
+  const [sharing, setSharing] = useState(false)
+  const [origin, setOrigin] = useState('')
   const [target, setTarget] = useState<LessonTarget>('worksheet')
   const [reviewQuestions, setReviewQuestions] = useState<ReviewableQuestion[]>([])
   const [notice, setNotice] = useState('')
@@ -113,6 +132,10 @@ export default function LessonKitScreen({
     }
   }, [quizId])
 
+  useEffect(() => {
+    setOrigin(window.location.origin)
+  }, [])
+
   const playableCount = useMemo(() => {
     if (!quiz || !lesson) return 0
     return promptsFromLesson({
@@ -123,7 +146,7 @@ export default function LessonKitScreen({
   }, [lesson, quiz])
 
   const runCheck = useCallback(
-    async (nextTarget: LessonTarget) => {
+    async (nextTarget: LessonTarget, setup?: { sections: WorksheetPick[]; pages: 1 | 2 }) => {
       if (!quiz) return
       if (quiz.questions.length === 0) {
         setNotice('This quiz has no questions yet.')
@@ -139,6 +162,13 @@ export default function LessonKitScreen({
           body: JSON.stringify({
             target: nextTarget,
             level: levelFromTags(quiz.tags) ?? 'A1',
+            grammar: resolveGrammarTags(quiz.tags),
+            title: quiz.title,
+            description: quiz.description ?? '',
+            scope: 'set',
+            quizId: quiz.id,
+            sections: setup?.sections,
+            pages: setup?.pages,
             questions: quiz.questions.map((question) => ({
               id: question.id,
               question: question.question,
@@ -156,6 +186,37 @@ export default function LessonKitScreen({
         if (!response.ok || !payload.items) {
           throw new Error(payload.error || 'Failed to check these questions.')
         }
+        if (nextTarget === 'worksheet') {
+          const selection = commitLessonSelection(
+            'worksheet',
+            payload.items.map((item) => ({
+              status: 'approved' as const,
+              questionId: item.questionId,
+              line: item.line,
+              choices: item.choices,
+              imageUrl: item.imageUrl,
+              correctAnswer: item.correctAnswer,
+              activity: item.activity,
+              exercise: item.exercise,
+              instruction: item.instruction,
+              bank: item.bank,
+              example: item.example,
+              warning: item.warning,
+            }))
+          )
+          if (!selection.ok) throw new Error(selection.message)
+          const saved = await fetch(`/api/quizzes/${quiz.id}/lesson`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target: 'worksheet', items: selection.worksheetItems }),
+          })
+          if (!saved.ok) {
+            const body = (await saved.json().catch(() => ({}))) as { error?: string }
+            throw new Error(body.error || 'Failed to save the worksheet.')
+          }
+          router.push(`/quizzes/${quiz.id}/print`)
+          return
+        }
         setReviewQuestions(payload.items.map(toReviewQuestion))
         setView('review')
       } catch (checkError) {
@@ -166,12 +227,16 @@ export default function LessonKitScreen({
         })
       }
     },
-    [addToast, quiz]
+    [addToast, quiz, router]
   )
 
   useEffect(() => {
     if (!quiz || !initialCheck || startedCheck) return
     setStartedCheck(true)
+    if (initialCheck === 'worksheet') {
+      setView('options')
+      return
+    }
     void runCheck(initialCheck)
   }, [initialCheck, quiz, runCheck, startedCheck])
 
@@ -185,6 +250,10 @@ export default function LessonKitScreen({
           body: JSON.stringify({
             target,
             level: levelFromTags(quiz.tags) ?? 'A1',
+            grammar: resolveGrammarTags(quiz.tags),
+            title: quiz.title,
+            description: quiz.description ?? '',
+            scope: 'item',
             questions: [
               {
                 id: previous.id,
@@ -229,6 +298,10 @@ export default function LessonKitScreen({
           choices: item.answers,
           imageUrl: item.imageUrl,
           correctAnswer: item.correctAnswer,
+          activity: item.activity,
+          exercise: item.exercise,
+          instruction: item.instruction,
+          bank: item.bank,
         }))
       )
       if (!selection.ok) {
@@ -300,6 +373,30 @@ export default function LessonKitScreen({
 
   const worksheetReady = lesson.worksheetItems.length > 0
   const sentenceReady = playableCount > 0
+  const studentLink = lesson.thought ? `${origin}${studentThoughtPath(lesson.thought.shareToken)}` : ''
+
+  const shareThought = async () => {
+    if (!quiz) return
+    if (lesson.thought) {
+      setView('thought')
+      return
+    }
+    setSharing(true)
+    setNotice('')
+    try {
+      const response = await fetch(`/api/quizzes/${quiz.id}/lesson/thought`, { method: 'POST' })
+      const payload = (await response.json()) as { error?: string; data?: { thought: LessonThought } }
+      if (!response.ok || !payload.data?.thought) {
+        throw new Error(payload.error || 'Could not create the speaking assignment.')
+      }
+      setLesson({ ...lesson, thought: payload.data.thought })
+      setView('thought')
+    } catch (shareError) {
+      setNotice(shareError instanceof Error ? shareError.message : 'Could not create the speaking assignment.')
+    } finally {
+      setSharing(false)
+    }
+  }
 
   return (
     <div className="container mx-auto max-w-screen-xl px-4 py-6 grandstander text-[--text-color]">
@@ -351,7 +448,17 @@ export default function LessonKitScreen({
 
         <div className="mt-2 flex h-full basis-3/4 flex-col items-center gap-4 align-middle grandstander text-[--text-color] lg:mt-0">
           <div className="flex h-full w-full max-w-screen-2xl flex-col rounded-lg border border-[--border-dark] bg-white shadow-[4px_4px_0px_0px_var(--border-dark)]">
-            {view === 'review' ? (
+            {view === 'options' ? (
+              <div className="px-4 py-6">
+                <WorksheetSetup
+                  level={levelFromTags(quiz.tags) ?? 'A1'}
+                  hasPictures={quiz.questions.some((question) => isRealPicture(question.imageUrl))}
+                  busy={false}
+                  onBack={() => setView('pieces')}
+                  onWrite={(choice) => void runCheck('worksheet', choice)}
+                />
+              </div>
+            ) : view === 'review' ? (
               <div className="px-4 py-4">
                 <AIQuestionReviewPanel
                   purpose="lesson"
@@ -367,6 +474,42 @@ export default function LessonKitScreen({
                   }}
                 />
               </div>
+            ) : view === 'thought' && lesson.thought ? (
+              <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
+                <h3 className="text-xl font-bold">Funny Faces</h3>
+                <p className="max-w-md text-sm text-slate-600">{lesson.thought.prompt}</p>
+                <p className="max-w-md text-sm text-slate-600">
+                  Students open this link on a phone. They read the task, make a character, record, pick a voice, and submit.
+                </p>
+                <p className="max-w-lg break-all rounded-lg border border-[--border-dark] bg-[--background] px-3 py-2 text-sm">
+                  {studentLink}
+                </p>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <button
+                    type="button"
+                    className="rounded-lg border-2 border-[--border-dark] bg-white px-4 py-2 text-sm font-semibold shadow-[3px_3px_0px_0px_var(--border-dark)]"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(studentLink)
+                      addToast('Student link copied.', { variant: 'success', position: 'top-center' })
+                    }}
+                  >
+                    Copy link
+                  </button>
+                  <Link
+                    href={`/tools/thoughts/${lesson.thought.id}`}
+                    className="rounded-lg border-2 border-[--border-dark] bg-white px-4 py-2 text-sm font-semibold shadow-[3px_3px_0px_0px_var(--border-dark)]"
+                  >
+                    Teacher settings
+                  </Link>
+                  <button
+                    type="button"
+                    className="px-4 py-2 text-sm font-semibold underline"
+                    onClick={() => setView('pieces')}
+                  >
+                    Back
+                  </button>
+                </div>
+              </div>
             ) : view === 'checking' ? (
               <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-16">
                 <Loader2 className="h-8 w-8 animate-spin" />
@@ -377,7 +520,7 @@ export default function LessonKitScreen({
                 <div className="max-w-md text-center">
                   <h3 className="text-xl font-bold">Add a piece</h3>
                   <p className="mt-1 text-sm text-slate-600">
-                    Check this quiz, then print a worksheet or play the sentences.
+                    Check this quiz, then print a worksheet, play the sentences, or share a speaking link.
                   </p>
                   {notice ? (
                     <p role="status" className="mt-3 text-sm font-semibold text-amber-800">
@@ -394,7 +537,7 @@ export default function LessonKitScreen({
                         router.push(`/quizzes/${quiz.id}/print`)
                         return
                       }
-                      void runCheck('worksheet')
+                      setView('options')
                     }}
                   >
                     <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-[--border-dark] bg-[--background]">
@@ -402,7 +545,7 @@ export default function LessonKitScreen({
                     </div>
                     <span className="text-base font-semibold">Add worksheet</span>
                     <span className="text-xs text-slate-600">
-                      {worksheetReady ? 'Open' : 'Print the pictures and questions'}
+                      {worksheetReady ? 'Open' : 'Grammar practice to print'}
                     </span>
                   </button>
                   <button
@@ -434,15 +577,17 @@ export default function LessonKitScreen({
                   </button>
                   <button
                     type="button"
-                    className={`${SOURCE_CARD} cursor-not-allowed hover:bg-white`}
-                    aria-disabled="true"
-                    onClick={(event) => event.preventDefault()}
+                    className={SOURCE_CARD}
+                    disabled={sharing}
+                    onClick={() => void shareThought()}
                   >
                     <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-[--border-dark] bg-[--background]">
                       <Smile size={22} />
                     </div>
                     <span className="text-base font-semibold">Funny Faces</span>
-                    <span className="text-xs text-slate-600">Later</span>
+                    <span className="text-xs text-slate-600">
+                      {lesson.thought ? 'Share the student link' : 'Speaking from this lesson'}
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -463,7 +608,7 @@ export default function LessonKitScreen({
                       <button
                         type="button"
                         className="font-semibold underline"
-                        onClick={() => void runCheck('worksheet')}
+                        onClick={() => setView('options')}
                       >
                         Check the worksheet again
                       </button>

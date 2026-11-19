@@ -1,14 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { Prisma, PrismaClient } from '../../../../../../prisma/app/generated/prisma/client'
+import { Prisma } from '../../../../../../prisma/app/generated/prisma/client'
 import { requireAuth, isUnauthorized } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { finishWorksheetSentence } from '@/lib/lesson/assess'
+import { ensureLessonKitTable } from '@/lib/lesson/lesson-kit-table'
+import { studentThoughtPath } from '@/lib/lesson/thought-assignment'
+
+const worksheetActivitySchema = z.enum(['gap', 'question', 'choice', 'rewrite', 'circle', 'matching', 'practice'])
 
 const worksheetItemSchema = z.object({
   questionId: z.string().optional(),
   line: z.string().trim().min(1).max(500),
   imageUrl: z.string().nullable().optional(),
   choices: z.array(z.string().max(120)).max(4),
+  activity: worksheetActivitySchema.optional(),
+  exercise: z.string().max(80).optional(),
+  instruction: z.string().max(200).optional(),
+  bank: z.string().max(60).optional(),
+  answer: z.string().max(200).optional(),
+  example: z.boolean().optional(),
+  warning: z.string().max(300).optional(),
+  held: z.boolean().optional(),
 })
 
 const sentenceSchema = z.object({
@@ -20,7 +33,7 @@ const sentenceSchema = z.object({
 const commitSchema = z.discriminatedUnion('target', [
   z.object({
     target: z.literal('worksheet'),
-    items: z.array(worksheetItemSchema).min(1).max(40),
+    items: z.array(worksheetItemSchema).max(60),
   }),
   z.object({
     target: z.literal('sentence-builder'),
@@ -31,8 +44,16 @@ const commitSchema = z.discriminatedUnion('target', [
 const storedWorksheetSchema = z.object({
   questionId: z.string().optional(),
   line: z.string(),
-  imageUrl: z.string().optional(),
+  imageUrl: z.string().nullable().optional(),
   choices: z.array(z.string()).optional(),
+  activity: worksheetActivitySchema.optional(),
+  exercise: z.string().max(80).optional(),
+  instruction: z.string().max(200).optional(),
+  bank: z.string().max(60).optional(),
+  answer: z.string().max(200).optional(),
+  example: z.boolean().optional(),
+  warning: z.string().max(300).optional(),
+  held: z.boolean().optional(),
 })
 
 const storedSentenceSchema = z.object({
@@ -46,9 +67,17 @@ function readWorksheetItems(value: unknown) {
   if (!parsed.success) return []
   return parsed.data.map((item) => ({
     questionId: item.questionId,
-    line: item.line,
-    imageUrl: item.imageUrl,
+    line: finishWorksheetSentence(item.line),
+    imageUrl: item.imageUrl || undefined,
     choices: item.choices ?? [],
+    activity: item.activity,
+    exercise: item.exercise,
+    instruction: item.instruction,
+    bank: item.bank,
+    answer: item.answer,
+    example: item.example,
+    warning: item.warning,
+    held: item.held,
   }))
 }
 
@@ -63,13 +92,52 @@ function lessonPayload(lesson: {
   title: string
   worksheetItems: unknown
   sentences: unknown
+  thoughtChallenge?: {
+    id: string
+    title: string
+    prompt: string
+    shareToken: string
+    status: string
+  } | null
 }) {
+  const thought = lesson.thoughtChallenge
   return {
     id: lesson.id,
     title: lesson.title,
     worksheetItems: readWorksheetItems(lesson.worksheetItems),
     sentences: readSentences(lesson.sentences),
+    thought: thought
+      ? {
+          id: thought.id,
+          title: thought.title,
+          prompt: thought.prompt,
+          shareToken: thought.shareToken,
+          status: thought.status,
+          studentPath: studentThoughtPath(thought.shareToken),
+        }
+      : null,
   }
+}
+
+async function lessonWithThought(quizId: string) {
+  try {
+    return await prisma.lessonKit.findUnique({
+      where: { quizId },
+      include: { thoughtChallenge: true },
+    })
+  } catch (error) {
+    if (!missingLessonTable(error) && !missingThoughtColumn(error)) throw error
+    await ensureLessonKitTable()
+    return prisma.lessonKit.findUnique({
+      where: { quizId },
+      include: { thoughtChallenge: true },
+    })
+  }
+}
+
+function missingThoughtColumn(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  return /thoughtChallengeId/i.test(message)
 }
 
 async function ownedQuiz(quizId: string, userId: string) {
@@ -89,62 +157,6 @@ function missingLessonTable(error: unknown): boolean {
     typeof error === 'object' && error && 'code' in error ? String((error as { code: unknown }).code) : ''
   const message = error instanceof Error ? error.message : String(error)
   return code === 'P2021' || (/lessonkit/i.test(message) && /does not exist/i.test(message))
-}
-
-/**
- * Preview and production builds do not run migrations. The first lesson open
- * creates the table on the direct database connection. The pooled Neon URL
- * rejects this DDL and can kill the function, which comes back as plain text
- * instead of JSON.
- */
-function lessonDdlClient(): { client: PrismaClient; close: boolean } {
-  const direct = process.env.POSTGRES_URL_NON_POOLING
-  if (!direct) return { client: prisma, close: false }
-  return {
-    client: new PrismaClient({ datasources: { db: { url: direct } } }),
-    close: true,
-  }
-}
-
-function alreadyExists(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error)
-  return /already exists|duplicate_object/i.test(message)
-}
-
-async function ensureLessonKitTable(): Promise<void> {
-  const { client, close } = lessonDdlClient()
-  try {
-    await client.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "LessonKit" (
-        "id" TEXT NOT NULL,
-        "authorId" TEXT NOT NULL DEFAULT 'admin',
-        "quizId" TEXT NOT NULL,
-        "title" TEXT NOT NULL,
-        "worksheetItems" JSONB NOT NULL,
-        "sentences" JSONB NOT NULL,
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP(3) NOT NULL,
-        CONSTRAINT "LessonKit_pkey" PRIMARY KEY ("id")
-      )
-    `)
-    await client.$executeRawUnsafe(
-      `CREATE UNIQUE INDEX IF NOT EXISTS "LessonKit_quizId_key" ON "LessonKit"("quizId")`
-    )
-    await client.$executeRawUnsafe(
-      `CREATE INDEX IF NOT EXISTS "LessonKit_authorId_idx" ON "LessonKit"("authorId")`
-    )
-    try {
-      await client.$executeRawUnsafe(`
-        ALTER TABLE "LessonKit"
-          ADD CONSTRAINT "LessonKit_quizId_fkey"
-          FOREIGN KEY ("quizId") REFERENCES "Quiz"("id") ON DELETE CASCADE ON UPDATE CASCADE
-      `)
-    } catch (error) {
-      if (!alreadyExists(error)) throw error
-    }
-  } finally {
-    if (close) await client.$disconnect().catch(() => {})
-  }
 }
 
 async function upsertLesson(input: {
@@ -229,11 +241,15 @@ export async function GET(
     if (owned.error) return owned.error
     const quiz = owned.quiz
 
-    const lesson = await upsertLesson({
+    await upsertLesson({
       userId: authResult.userId,
       quizId: quiz.id,
       title: quiz.title,
     })
+    const lesson = await lessonWithThought(quiz.id)
+    if (!lesson) {
+      return NextResponse.json({ error: 'Failed to open this lesson.' }, { status: 500 })
+    }
 
     return NextResponse.json({
       data: {
@@ -277,13 +293,17 @@ export async function POST(
         ? (parsed.data.items as unknown as Prisma.InputJsonValue)
         : undefined
 
-    const lesson = await upsertLesson({
+    await upsertLesson({
       userId: authResult.userId,
       quizId: quiz.id,
       title: quiz.title,
       worksheetItems,
       sentences,
     })
+    const lesson = await lessonWithThought(quiz.id)
+    if (!lesson) {
+      return NextResponse.json({ error: 'Failed to save the approved items.' }, { status: 500 })
+    }
 
     return NextResponse.json({
       data: {

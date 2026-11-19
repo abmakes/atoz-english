@@ -6445,6 +6445,7 @@ export namespace Prisma {
     authorId: string | null
     quizId: string | null
     title: string | null
+    thoughtChallengeId: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -6454,6 +6455,7 @@ export namespace Prisma {
     authorId: string | null
     quizId: string | null
     title: string | null
+    thoughtChallengeId: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -6465,6 +6467,7 @@ export namespace Prisma {
     title: number
     worksheetItems: number
     sentences: number
+    thoughtChallengeId: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -6476,6 +6479,7 @@ export namespace Prisma {
     authorId?: true
     quizId?: true
     title?: true
+    thoughtChallengeId?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -6485,6 +6489,7 @@ export namespace Prisma {
     authorId?: true
     quizId?: true
     title?: true
+    thoughtChallengeId?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -6496,6 +6501,7 @@ export namespace Prisma {
     title?: true
     worksheetItems?: true
     sentences?: true
+    thoughtChallengeId?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -6580,6 +6586,7 @@ export namespace Prisma {
     title: string
     worksheetItems: JsonValue
     sentences: JsonValue
+    thoughtChallengeId: string | null
     createdAt: Date
     updatedAt: Date
     _count: LessonKitCountAggregateOutputType | null
@@ -6608,9 +6615,11 @@ export namespace Prisma {
     title?: boolean
     worksheetItems?: boolean
     sentences?: boolean
+    thoughtChallengeId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     quiz?: boolean | QuizDefaultArgs<ExtArgs>
+    thoughtChallenge?: boolean | LessonKit$thoughtChallengeArgs<ExtArgs>
   }, ExtArgs["result"]["lessonKit"]>
 
   export type LessonKitSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -6620,9 +6629,11 @@ export namespace Prisma {
     title?: boolean
     worksheetItems?: boolean
     sentences?: boolean
+    thoughtChallengeId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     quiz?: boolean | QuizDefaultArgs<ExtArgs>
+    thoughtChallenge?: boolean | LessonKit$thoughtChallengeArgs<ExtArgs>
   }, ExtArgs["result"]["lessonKit"]>
 
   export type LessonKitSelectScalar = {
@@ -6632,21 +6643,25 @@ export namespace Prisma {
     title?: boolean
     worksheetItems?: boolean
     sentences?: boolean
+    thoughtChallengeId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
   export type LessonKitInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     quiz?: boolean | QuizDefaultArgs<ExtArgs>
+    thoughtChallenge?: boolean | LessonKit$thoughtChallengeArgs<ExtArgs>
   }
   export type LessonKitIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     quiz?: boolean | QuizDefaultArgs<ExtArgs>
+    thoughtChallenge?: boolean | LessonKit$thoughtChallengeArgs<ExtArgs>
   }
 
   export type $LessonKitPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "LessonKit"
     objects: {
       quiz: Prisma.$QuizPayload<ExtArgs>
+      thoughtChallenge: Prisma.$ThoughtChallengePayload<ExtArgs> | null
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -6655,6 +6670,7 @@ export namespace Prisma {
       title: string
       worksheetItems: Prisma.JsonValue
       sentences: Prisma.JsonValue
+      thoughtChallengeId: string | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["lessonKit"]>
@@ -7022,6 +7038,7 @@ export namespace Prisma {
   export interface Prisma__LessonKitClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     quiz<T extends QuizDefaultArgs<ExtArgs> = {}>(args?: Subset<T, QuizDefaultArgs<ExtArgs>>): Prisma__QuizClient<$Result.GetResult<Prisma.$QuizPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    thoughtChallenge<T extends LessonKit$thoughtChallengeArgs<ExtArgs> = {}>(args?: Subset<T, LessonKit$thoughtChallengeArgs<ExtArgs>>): Prisma__ThoughtChallengeClient<$Result.GetResult<Prisma.$ThoughtChallengePayload<ExtArgs>, T, "findUniqueOrThrow"> | null, null, ExtArgs>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -7057,6 +7074,7 @@ export namespace Prisma {
     readonly title: FieldRef<"LessonKit", 'String'>
     readonly worksheetItems: FieldRef<"LessonKit", 'Json'>
     readonly sentences: FieldRef<"LessonKit", 'Json'>
+    readonly thoughtChallengeId: FieldRef<"LessonKit", 'String'>
     readonly createdAt: FieldRef<"LessonKit", 'DateTime'>
     readonly updatedAt: FieldRef<"LessonKit", 'DateTime'>
   }
@@ -7374,6 +7392,21 @@ export namespace Prisma {
      * Filter which LessonKits to delete
      */
     where?: LessonKitWhereInput
+  }
+
+  /**
+   * LessonKit.thoughtChallenge
+   */
+  export type LessonKit$thoughtChallengeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ThoughtChallenge
+     */
+    select?: ThoughtChallengeSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ThoughtChallengeInclude<ExtArgs> | null
+    where?: ThoughtChallengeWhereInput
   }
 
   /**
@@ -13571,6 +13604,7 @@ export namespace Prisma {
     createdAt?: boolean
     updatedAt?: boolean
     submissions?: boolean | ThoughtChallenge$submissionsArgs<ExtArgs>
+    lessonKit?: boolean | ThoughtChallenge$lessonKitArgs<ExtArgs>
     _count?: boolean | ThoughtChallengeCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["thoughtChallenge"]>
 
@@ -13606,6 +13640,7 @@ export namespace Prisma {
 
   export type ThoughtChallengeInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     submissions?: boolean | ThoughtChallenge$submissionsArgs<ExtArgs>
+    lessonKit?: boolean | ThoughtChallenge$lessonKitArgs<ExtArgs>
     _count?: boolean | ThoughtChallengeCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type ThoughtChallengeIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -13614,6 +13649,7 @@ export namespace Prisma {
     name: "ThoughtChallenge"
     objects: {
       submissions: Prisma.$ThoughtSubmissionPayload<ExtArgs>[]
+      lessonKit: Prisma.$LessonKitPayload<ExtArgs> | null
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -13993,6 +14029,7 @@ export namespace Prisma {
   export interface Prisma__ThoughtChallengeClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     submissions<T extends ThoughtChallenge$submissionsArgs<ExtArgs> = {}>(args?: Subset<T, ThoughtChallenge$submissionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ThoughtSubmissionPayload<ExtArgs>, T, "findMany"> | Null>
+    lessonKit<T extends ThoughtChallenge$lessonKitArgs<ExtArgs> = {}>(args?: Subset<T, ThoughtChallenge$lessonKitArgs<ExtArgs>>): Prisma__LessonKitClient<$Result.GetResult<Prisma.$LessonKitPayload<ExtArgs>, T, "findUniqueOrThrow"> | null, null, ExtArgs>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -14365,6 +14402,21 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: ThoughtSubmissionScalarFieldEnum | ThoughtSubmissionScalarFieldEnum[]
+  }
+
+  /**
+   * ThoughtChallenge.lessonKit
+   */
+  export type ThoughtChallenge$lessonKitArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the LessonKit
+     */
+    select?: LessonKitSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: LessonKitInclude<ExtArgs> | null
+    where?: LessonKitWhereInput
   }
 
   /**
@@ -18762,6 +18814,7 @@ export namespace Prisma {
     title: 'title',
     worksheetItems: 'worksheetItems',
     sentences: 'sentences',
+    thoughtChallengeId: 'thoughtChallengeId',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -19479,9 +19532,11 @@ export namespace Prisma {
     title?: StringFilter<"LessonKit"> | string
     worksheetItems?: JsonFilter<"LessonKit">
     sentences?: JsonFilter<"LessonKit">
+    thoughtChallengeId?: StringNullableFilter<"LessonKit"> | string | null
     createdAt?: DateTimeFilter<"LessonKit"> | Date | string
     updatedAt?: DateTimeFilter<"LessonKit"> | Date | string
     quiz?: XOR<QuizRelationFilter, QuizWhereInput>
+    thoughtChallenge?: XOR<ThoughtChallengeNullableRelationFilter, ThoughtChallengeWhereInput> | null
   }
 
   export type LessonKitOrderByWithRelationInput = {
@@ -19491,14 +19546,17 @@ export namespace Prisma {
     title?: SortOrder
     worksheetItems?: SortOrder
     sentences?: SortOrder
+    thoughtChallengeId?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     quiz?: QuizOrderByWithRelationInput
+    thoughtChallenge?: ThoughtChallengeOrderByWithRelationInput
   }
 
   export type LessonKitWhereUniqueInput = Prisma.AtLeast<{
     id?: string
     quizId?: string
+    thoughtChallengeId?: string
     AND?: LessonKitWhereInput | LessonKitWhereInput[]
     OR?: LessonKitWhereInput[]
     NOT?: LessonKitWhereInput | LessonKitWhereInput[]
@@ -19509,7 +19567,8 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"LessonKit"> | Date | string
     updatedAt?: DateTimeFilter<"LessonKit"> | Date | string
     quiz?: XOR<QuizRelationFilter, QuizWhereInput>
-  }, "id" | "quizId">
+    thoughtChallenge?: XOR<ThoughtChallengeNullableRelationFilter, ThoughtChallengeWhereInput> | null
+  }, "id" | "quizId" | "thoughtChallengeId">
 
   export type LessonKitOrderByWithAggregationInput = {
     id?: SortOrder
@@ -19518,6 +19577,7 @@ export namespace Prisma {
     title?: SortOrder
     worksheetItems?: SortOrder
     sentences?: SortOrder
+    thoughtChallengeId?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: LessonKitCountOrderByAggregateInput
@@ -19535,6 +19595,7 @@ export namespace Prisma {
     title?: StringWithAggregatesFilter<"LessonKit"> | string
     worksheetItems?: JsonWithAggregatesFilter<"LessonKit">
     sentences?: JsonWithAggregatesFilter<"LessonKit">
+    thoughtChallengeId?: StringNullableWithAggregatesFilter<"LessonKit"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"LessonKit"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"LessonKit"> | Date | string
   }
@@ -20019,6 +20080,7 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"ThoughtChallenge"> | Date | string
     updatedAt?: DateTimeFilter<"ThoughtChallenge"> | Date | string
     submissions?: ThoughtSubmissionListRelationFilter
+    lessonKit?: XOR<LessonKitNullableRelationFilter, LessonKitWhereInput> | null
   }
 
   export type ThoughtChallengeOrderByWithRelationInput = {
@@ -20035,6 +20097,7 @@ export namespace Prisma {
     createdAt?: SortOrder
     updatedAt?: SortOrder
     submissions?: ThoughtSubmissionOrderByRelationAggregateInput
+    lessonKit?: LessonKitOrderByWithRelationInput
   }
 
   export type ThoughtChallengeWhereUniqueInput = Prisma.AtLeast<{
@@ -20054,6 +20117,7 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"ThoughtChallenge"> | Date | string
     updatedAt?: DateTimeFilter<"ThoughtChallenge"> | Date | string
     submissions?: ThoughtSubmissionListRelationFilter
+    lessonKit?: XOR<LessonKitNullableRelationFilter, LessonKitWhereInput> | null
   }, "id" | "shareToken">
 
   export type ThoughtChallengeOrderByWithAggregationInput = {
@@ -20796,6 +20860,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     quiz: QuizCreateNestedOneWithoutLessonKitInput
+    thoughtChallenge?: ThoughtChallengeCreateNestedOneWithoutLessonKitInput
   }
 
   export type LessonKitUncheckedCreateInput = {
@@ -20805,6 +20870,7 @@ export namespace Prisma {
     title: string
     worksheetItems: JsonNullValueInput | InputJsonValue
     sentences: JsonNullValueInput | InputJsonValue
+    thoughtChallengeId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -20818,6 +20884,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     quiz?: QuizUpdateOneRequiredWithoutLessonKitNestedInput
+    thoughtChallenge?: ThoughtChallengeUpdateOneWithoutLessonKitNestedInput
   }
 
   export type LessonKitUncheckedUpdateInput = {
@@ -20827,6 +20894,7 @@ export namespace Prisma {
     title?: StringFieldUpdateOperationsInput | string
     worksheetItems?: JsonNullValueInput | InputJsonValue
     sentences?: JsonNullValueInput | InputJsonValue
+    thoughtChallengeId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -20838,6 +20906,7 @@ export namespace Prisma {
     title: string
     worksheetItems: JsonNullValueInput | InputJsonValue
     sentences: JsonNullValueInput | InputJsonValue
+    thoughtChallengeId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -20859,6 +20928,7 @@ export namespace Prisma {
     title?: StringFieldUpdateOperationsInput | string
     worksheetItems?: JsonNullValueInput | InputJsonValue
     sentences?: JsonNullValueInput | InputJsonValue
+    thoughtChallengeId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -21397,6 +21467,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     submissions?: ThoughtSubmissionCreateNestedManyWithoutChallengeInput
+    lessonKit?: LessonKitCreateNestedOneWithoutThoughtChallengeInput
   }
 
   export type ThoughtChallengeUncheckedCreateInput = {
@@ -21413,6 +21484,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     submissions?: ThoughtSubmissionUncheckedCreateNestedManyWithoutChallengeInput
+    lessonKit?: LessonKitUncheckedCreateNestedOneWithoutThoughtChallengeInput
   }
 
   export type ThoughtChallengeUpdateInput = {
@@ -21429,6 +21501,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     submissions?: ThoughtSubmissionUpdateManyWithoutChallengeNestedInput
+    lessonKit?: LessonKitUpdateOneWithoutThoughtChallengeNestedInput
   }
 
   export type ThoughtChallengeUncheckedUpdateInput = {
@@ -21445,6 +21518,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     submissions?: ThoughtSubmissionUncheckedUpdateManyWithoutChallengeNestedInput
+    lessonKit?: LessonKitUncheckedUpdateOneWithoutThoughtChallengeNestedInput
   }
 
   export type ThoughtChallengeCreateManyInput = {
@@ -22351,6 +22425,11 @@ export namespace Prisma {
     not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
+  export type ThoughtChallengeNullableRelationFilter = {
+    is?: ThoughtChallengeWhereInput | null
+    isNot?: ThoughtChallengeWhereInput | null
+  }
+
   export type LessonKitCountOrderByAggregateInput = {
     id?: SortOrder
     authorId?: SortOrder
@@ -22358,6 +22437,7 @@ export namespace Prisma {
     title?: SortOrder
     worksheetItems?: SortOrder
     sentences?: SortOrder
+    thoughtChallengeId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -22367,6 +22447,7 @@ export namespace Prisma {
     authorId?: SortOrder
     quizId?: SortOrder
     title?: SortOrder
+    thoughtChallengeId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -22376,6 +22457,7 @@ export namespace Prisma {
     authorId?: SortOrder
     quizId?: SortOrder
     title?: SortOrder
+    thoughtChallengeId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -23525,12 +23607,28 @@ export namespace Prisma {
     connect?: QuizWhereUniqueInput
   }
 
+  export type ThoughtChallengeCreateNestedOneWithoutLessonKitInput = {
+    create?: XOR<ThoughtChallengeCreateWithoutLessonKitInput, ThoughtChallengeUncheckedCreateWithoutLessonKitInput>
+    connectOrCreate?: ThoughtChallengeCreateOrConnectWithoutLessonKitInput
+    connect?: ThoughtChallengeWhereUniqueInput
+  }
+
   export type QuizUpdateOneRequiredWithoutLessonKitNestedInput = {
     create?: XOR<QuizCreateWithoutLessonKitInput, QuizUncheckedCreateWithoutLessonKitInput>
     connectOrCreate?: QuizCreateOrConnectWithoutLessonKitInput
     upsert?: QuizUpsertWithoutLessonKitInput
     connect?: QuizWhereUniqueInput
     update?: XOR<XOR<QuizUpdateToOneWithWhereWithoutLessonKitInput, QuizUpdateWithoutLessonKitInput>, QuizUncheckedUpdateWithoutLessonKitInput>
+  }
+
+  export type ThoughtChallengeUpdateOneWithoutLessonKitNestedInput = {
+    create?: XOR<ThoughtChallengeCreateWithoutLessonKitInput, ThoughtChallengeUncheckedCreateWithoutLessonKitInput>
+    connectOrCreate?: ThoughtChallengeCreateOrConnectWithoutLessonKitInput
+    upsert?: ThoughtChallengeUpsertWithoutLessonKitInput
+    disconnect?: ThoughtChallengeWhereInput | boolean
+    delete?: ThoughtChallengeWhereInput | boolean
+    connect?: ThoughtChallengeWhereUniqueInput
+    update?: XOR<XOR<ThoughtChallengeUpdateToOneWithWhereWithoutLessonKitInput, ThoughtChallengeUpdateWithoutLessonKitInput>, ThoughtChallengeUncheckedUpdateWithoutLessonKitInput>
   }
 
   export type StoredImageCreatetagsInput = {
@@ -23750,11 +23848,23 @@ export namespace Prisma {
     connect?: ThoughtSubmissionWhereUniqueInput | ThoughtSubmissionWhereUniqueInput[]
   }
 
+  export type LessonKitCreateNestedOneWithoutThoughtChallengeInput = {
+    create?: XOR<LessonKitCreateWithoutThoughtChallengeInput, LessonKitUncheckedCreateWithoutThoughtChallengeInput>
+    connectOrCreate?: LessonKitCreateOrConnectWithoutThoughtChallengeInput
+    connect?: LessonKitWhereUniqueInput
+  }
+
   export type ThoughtSubmissionUncheckedCreateNestedManyWithoutChallengeInput = {
     create?: XOR<ThoughtSubmissionCreateWithoutChallengeInput, ThoughtSubmissionUncheckedCreateWithoutChallengeInput> | ThoughtSubmissionCreateWithoutChallengeInput[] | ThoughtSubmissionUncheckedCreateWithoutChallengeInput[]
     connectOrCreate?: ThoughtSubmissionCreateOrConnectWithoutChallengeInput | ThoughtSubmissionCreateOrConnectWithoutChallengeInput[]
     createMany?: ThoughtSubmissionCreateManyChallengeInputEnvelope
     connect?: ThoughtSubmissionWhereUniqueInput | ThoughtSubmissionWhereUniqueInput[]
+  }
+
+  export type LessonKitUncheckedCreateNestedOneWithoutThoughtChallengeInput = {
+    create?: XOR<LessonKitCreateWithoutThoughtChallengeInput, LessonKitUncheckedCreateWithoutThoughtChallengeInput>
+    connectOrCreate?: LessonKitCreateOrConnectWithoutThoughtChallengeInput
+    connect?: LessonKitWhereUniqueInput
   }
 
   export type EnumThoughtChallengeStatusFieldUpdateOperationsInput = {
@@ -23775,6 +23885,16 @@ export namespace Prisma {
     deleteMany?: ThoughtSubmissionScalarWhereInput | ThoughtSubmissionScalarWhereInput[]
   }
 
+  export type LessonKitUpdateOneWithoutThoughtChallengeNestedInput = {
+    create?: XOR<LessonKitCreateWithoutThoughtChallengeInput, LessonKitUncheckedCreateWithoutThoughtChallengeInput>
+    connectOrCreate?: LessonKitCreateOrConnectWithoutThoughtChallengeInput
+    upsert?: LessonKitUpsertWithoutThoughtChallengeInput
+    disconnect?: LessonKitWhereInput | boolean
+    delete?: LessonKitWhereInput | boolean
+    connect?: LessonKitWhereUniqueInput
+    update?: XOR<XOR<LessonKitUpdateToOneWithWhereWithoutThoughtChallengeInput, LessonKitUpdateWithoutThoughtChallengeInput>, LessonKitUncheckedUpdateWithoutThoughtChallengeInput>
+  }
+
   export type ThoughtSubmissionUncheckedUpdateManyWithoutChallengeNestedInput = {
     create?: XOR<ThoughtSubmissionCreateWithoutChallengeInput, ThoughtSubmissionUncheckedCreateWithoutChallengeInput> | ThoughtSubmissionCreateWithoutChallengeInput[] | ThoughtSubmissionUncheckedCreateWithoutChallengeInput[]
     connectOrCreate?: ThoughtSubmissionCreateOrConnectWithoutChallengeInput | ThoughtSubmissionCreateOrConnectWithoutChallengeInput[]
@@ -23787,6 +23907,16 @@ export namespace Prisma {
     update?: ThoughtSubmissionUpdateWithWhereUniqueWithoutChallengeInput | ThoughtSubmissionUpdateWithWhereUniqueWithoutChallengeInput[]
     updateMany?: ThoughtSubmissionUpdateManyWithWhereWithoutChallengeInput | ThoughtSubmissionUpdateManyWithWhereWithoutChallengeInput[]
     deleteMany?: ThoughtSubmissionScalarWhereInput | ThoughtSubmissionScalarWhereInput[]
+  }
+
+  export type LessonKitUncheckedUpdateOneWithoutThoughtChallengeNestedInput = {
+    create?: XOR<LessonKitCreateWithoutThoughtChallengeInput, LessonKitUncheckedCreateWithoutThoughtChallengeInput>
+    connectOrCreate?: LessonKitCreateOrConnectWithoutThoughtChallengeInput
+    upsert?: LessonKitUpsertWithoutThoughtChallengeInput
+    disconnect?: LessonKitWhereInput | boolean
+    delete?: LessonKitWhereInput | boolean
+    connect?: LessonKitWhereUniqueInput
+    update?: XOR<XOR<LessonKitUpdateToOneWithWhereWithoutThoughtChallengeInput, LessonKitUpdateWithoutThoughtChallengeInput>, LessonKitUncheckedUpdateWithoutThoughtChallengeInput>
   }
 
   export type ThoughtChallengeCreateNestedOneWithoutSubmissionsInput = {
@@ -24430,6 +24560,7 @@ export namespace Prisma {
     sentences: JsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
+    thoughtChallenge?: ThoughtChallengeCreateNestedOneWithoutLessonKitInput
   }
 
   export type LessonKitUncheckedCreateWithoutQuizInput = {
@@ -24438,6 +24569,7 @@ export namespace Prisma {
     title: string
     worksheetItems: JsonNullValueInput | InputJsonValue
     sentences: JsonNullValueInput | InputJsonValue
+    thoughtChallengeId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -24583,6 +24715,7 @@ export namespace Prisma {
     sentences?: JsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    thoughtChallenge?: ThoughtChallengeUpdateOneWithoutLessonKitNestedInput
   }
 
   export type LessonKitUncheckedUpdateWithoutQuizInput = {
@@ -24591,6 +24724,7 @@ export namespace Prisma {
     title?: StringFieldUpdateOperationsInput | string
     worksheetItems?: JsonNullValueInput | InputJsonValue
     sentences?: JsonNullValueInput | InputJsonValue
+    thoughtChallengeId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -24960,6 +25094,43 @@ export namespace Prisma {
     create: XOR<QuizCreateWithoutLessonKitInput, QuizUncheckedCreateWithoutLessonKitInput>
   }
 
+  export type ThoughtChallengeCreateWithoutLessonKitInput = {
+    id?: string
+    authorId?: string
+    title: string
+    prompt: string
+    status?: $Enums.ThoughtChallengeStatus
+    acceptingResponses?: boolean
+    showGallery?: boolean
+    allowFunnyVoices?: boolean
+    shareToken: string
+    dueAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    submissions?: ThoughtSubmissionCreateNestedManyWithoutChallengeInput
+  }
+
+  export type ThoughtChallengeUncheckedCreateWithoutLessonKitInput = {
+    id?: string
+    authorId?: string
+    title: string
+    prompt: string
+    status?: $Enums.ThoughtChallengeStatus
+    acceptingResponses?: boolean
+    showGallery?: boolean
+    allowFunnyVoices?: boolean
+    shareToken: string
+    dueAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    submissions?: ThoughtSubmissionUncheckedCreateNestedManyWithoutChallengeInput
+  }
+
+  export type ThoughtChallengeCreateOrConnectWithoutLessonKitInput = {
+    where: ThoughtChallengeWhereUniqueInput
+    create: XOR<ThoughtChallengeCreateWithoutLessonKitInput, ThoughtChallengeUncheckedCreateWithoutLessonKitInput>
+  }
+
   export type QuizUpsertWithoutLessonKitInput = {
     update: XOR<QuizUpdateWithoutLessonKitInput, QuizUncheckedUpdateWithoutLessonKitInput>
     create: XOR<QuizCreateWithoutLessonKitInput, QuizUncheckedCreateWithoutLessonKitInput>
@@ -25009,6 +25180,49 @@ export namespace Prisma {
     likes?: QuizLikeUncheckedUpdateManyWithoutQuizNestedInput
     favorites?: QuizFavoriteUncheckedUpdateManyWithoutQuizNestedInput
     homeworkAssignments?: HomeworkAssignmentUncheckedUpdateManyWithoutQuizNestedInput
+  }
+
+  export type ThoughtChallengeUpsertWithoutLessonKitInput = {
+    update: XOR<ThoughtChallengeUpdateWithoutLessonKitInput, ThoughtChallengeUncheckedUpdateWithoutLessonKitInput>
+    create: XOR<ThoughtChallengeCreateWithoutLessonKitInput, ThoughtChallengeUncheckedCreateWithoutLessonKitInput>
+    where?: ThoughtChallengeWhereInput
+  }
+
+  export type ThoughtChallengeUpdateToOneWithWhereWithoutLessonKitInput = {
+    where?: ThoughtChallengeWhereInput
+    data: XOR<ThoughtChallengeUpdateWithoutLessonKitInput, ThoughtChallengeUncheckedUpdateWithoutLessonKitInput>
+  }
+
+  export type ThoughtChallengeUpdateWithoutLessonKitInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    prompt?: StringFieldUpdateOperationsInput | string
+    status?: EnumThoughtChallengeStatusFieldUpdateOperationsInput | $Enums.ThoughtChallengeStatus
+    acceptingResponses?: BoolFieldUpdateOperationsInput | boolean
+    showGallery?: BoolFieldUpdateOperationsInput | boolean
+    allowFunnyVoices?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    submissions?: ThoughtSubmissionUpdateManyWithoutChallengeNestedInput
+  }
+
+  export type ThoughtChallengeUncheckedUpdateWithoutLessonKitInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    prompt?: StringFieldUpdateOperationsInput | string
+    status?: EnumThoughtChallengeStatusFieldUpdateOperationsInput | $Enums.ThoughtChallengeStatus
+    acceptingResponses?: BoolFieldUpdateOperationsInput | boolean
+    showGallery?: BoolFieldUpdateOperationsInput | boolean
+    allowFunnyVoices?: BoolFieldUpdateOperationsInput | boolean
+    shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    submissions?: ThoughtSubmissionUncheckedUpdateManyWithoutChallengeNestedInput
   }
 
   export type StoryPanelCreateWithoutStoryInput = {
@@ -25451,6 +25665,33 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type LessonKitCreateWithoutThoughtChallengeInput = {
+    id?: string
+    authorId?: string
+    title: string
+    worksheetItems: JsonNullValueInput | InputJsonValue
+    sentences: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    quiz: QuizCreateNestedOneWithoutLessonKitInput
+  }
+
+  export type LessonKitUncheckedCreateWithoutThoughtChallengeInput = {
+    id?: string
+    authorId?: string
+    quizId: string
+    title: string
+    worksheetItems: JsonNullValueInput | InputJsonValue
+    sentences: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type LessonKitCreateOrConnectWithoutThoughtChallengeInput = {
+    where: LessonKitWhereUniqueInput
+    create: XOR<LessonKitCreateWithoutThoughtChallengeInput, LessonKitUncheckedCreateWithoutThoughtChallengeInput>
+  }
+
   export type ThoughtSubmissionUpsertWithWhereUniqueWithoutChallengeInput = {
     where: ThoughtSubmissionWhereUniqueInput
     update: XOR<ThoughtSubmissionUpdateWithoutChallengeInput, ThoughtSubmissionUncheckedUpdateWithoutChallengeInput>
@@ -25485,6 +25726,39 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"ThoughtSubmission"> | Date | string
   }
 
+  export type LessonKitUpsertWithoutThoughtChallengeInput = {
+    update: XOR<LessonKitUpdateWithoutThoughtChallengeInput, LessonKitUncheckedUpdateWithoutThoughtChallengeInput>
+    create: XOR<LessonKitCreateWithoutThoughtChallengeInput, LessonKitUncheckedCreateWithoutThoughtChallengeInput>
+    where?: LessonKitWhereInput
+  }
+
+  export type LessonKitUpdateToOneWithWhereWithoutThoughtChallengeInput = {
+    where?: LessonKitWhereInput
+    data: XOR<LessonKitUpdateWithoutThoughtChallengeInput, LessonKitUncheckedUpdateWithoutThoughtChallengeInput>
+  }
+
+  export type LessonKitUpdateWithoutThoughtChallengeInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    worksheetItems?: JsonNullValueInput | InputJsonValue
+    sentences?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    quiz?: QuizUpdateOneRequiredWithoutLessonKitNestedInput
+  }
+
+  export type LessonKitUncheckedUpdateWithoutThoughtChallengeInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    quizId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    worksheetItems?: JsonNullValueInput | InputJsonValue
+    sentences?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type ThoughtChallengeCreateWithoutSubmissionsInput = {
     id?: string
     authorId?: string
@@ -25498,6 +25772,7 @@ export namespace Prisma {
     dueAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    lessonKit?: LessonKitCreateNestedOneWithoutThoughtChallengeInput
   }
 
   export type ThoughtChallengeUncheckedCreateWithoutSubmissionsInput = {
@@ -25513,6 +25788,7 @@ export namespace Prisma {
     dueAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    lessonKit?: LessonKitUncheckedCreateNestedOneWithoutThoughtChallengeInput
   }
 
   export type ThoughtChallengeCreateOrConnectWithoutSubmissionsInput = {
@@ -25544,6 +25820,7 @@ export namespace Prisma {
     dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lessonKit?: LessonKitUpdateOneWithoutThoughtChallengeNestedInput
   }
 
   export type ThoughtChallengeUncheckedUpdateWithoutSubmissionsInput = {
@@ -25559,6 +25836,7 @@ export namespace Prisma {
     dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lessonKit?: LessonKitUncheckedUpdateOneWithoutThoughtChallengeNestedInput
   }
 
   export type QuizCreateWithoutHomeworkAssignmentsInput = {
