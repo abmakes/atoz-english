@@ -38,6 +38,8 @@ export interface Quiz {
   statistics?: Record<string, unknown> | null;
   defaultSettings?: Record<string, unknown> | null;
   authorId: string;
+  /** Set when the list loaded card counts instead of question rows. */
+  questionCount?: number;
   questions: Question[];
   createdAt?: Date;
   updatedAt?: Date;

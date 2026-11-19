@@ -91,6 +91,10 @@ describe('word chomper grammar', () => {
       expect(shown.active.some((item) => item.text === 'eat')).toBe(true)
     }
     expect(shown.reserve.some((item) => item.kind === 'verb')).toBe(true)
+    expect(shown.active.filter((item) => item.kind === 'decoy')).toHaveLength(1)
+    const offTense = swimVocabulary(apple).filter((word) => !apple.sentences.flat().includes(word))
+    expect(offTense).not.toContain('been')
+    expect(offTense).not.toContain('being')
 
     const continuous = roundWith('present-continuous', ['She', 'is', 'eating', 'an apple'])
     const continuousRoster = swimRoster(continuous.sentences, swimVocabulary(continuous), 3, () => 0.2)

@@ -16,6 +16,7 @@ import {
   teacherAudioUrl,
   type ThoughtChallengeDetail,
 } from '@/components/thoughts/api'
+import { dueInputToIso, dueInputValue } from '@/lib/assignments/due'
 import { THOUGHT_PROMPTS } from '@/lib/thoughts/prompts'
 import type { SubmissionStatus } from '@/lib/thoughts/access'
 import { formatDuration, VOICE_LABELS } from '@/lib/thoughts/voices'
@@ -155,6 +156,23 @@ export default function TeacherEditor({ challengeId }: { challengeId: string }) 
             checked={challenge.allowFunnyVoices}
             onCheckedChange={(allowFunnyVoices) => setChallenge({ ...challenge, allowFunnyVoices })}
           />
+          <label className="block text-sm font-semibold">
+            Due date
+            <input
+              type="datetime-local"
+              value={dueInputValue(challenge.dueAt)}
+              onChange={(event) =>
+                setChallenge({
+                  ...challenge,
+                  dueAt: dueInputToIso(event.target.value),
+                })
+              }
+              className="mt-1 w-full rounded-xl border px-3 py-2 font-normal"
+            />
+            <span className="mt-1 block text-xs font-normal text-slate-500">
+              Leave this empty if the class link should stay open.
+            </span>
+          </label>
           <Button
             type="button"
             disabled={saving}
@@ -166,6 +184,7 @@ export default function TeacherEditor({ challengeId }: { challengeId: string }) 
                 acceptingResponses: challenge.acceptingResponses,
                 showGallery: challenge.showGallery,
                 allowFunnyVoices: challenge.allowFunnyVoices,
+                dueAt: challenge.dueAt,
               })
             }}
             className="w-full bg-violet-600 text-white hover:bg-violet-700"

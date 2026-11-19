@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <div className="overflow-hidden text-[--text-color]">
-      <section className="relative flex min-h-[calc(100dvh-3.5rem)] items-center bg-[--primary-bg]">
+      <section className="relative flex min-h-[calc(100dvh-3.5rem)] items-center">
         <div className="pointer-events-none absolute -left-24 top-16 h-72 w-72 rounded-full bg-white/50 blur-3xl" />
         <div className="pointer-events-none absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-[--primary-accent]/25 blur-3xl" />
 

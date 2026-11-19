@@ -16,7 +16,7 @@ import {
 import Image from 'next/image'
 import { Edit, Play, Trash, Heart, Bookmark, BookOpen } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Question, Quiz } from '@/types'
+import { Quiz } from '@/types'
 import { useCustomToast } from '@/components/ui/CustomToast'
 import { getQuizStatistics } from '@/lib/quiz-statistics'
 
@@ -29,9 +29,14 @@ interface QuizListProps {
   onUnlike?: (quizId: string) => void
 }
 
-const getQuizTypeLabel = (questions: Question[]): string => {
-  if (!questions || questions.length === 0) return 'Empty'
-  const type = questions[0]?.type || 'MULTIPLE_CHOICE'
+function questionCountOf(quiz: Quiz): number {
+  if (typeof quiz.questionCount === 'number') return quiz.questionCount
+  return quiz.questions?.length ?? 0
+}
+
+const getQuizTypeLabel = (quiz: Quiz): string => {
+  const type = quiz.quizType || quiz.questions?.[0]?.type
+  if (!type || questionCountOf(quiz) === 0) return 'Empty'
   switch (type) {
     case 'MULTIPLE_CHOICE': return 'Multiple Choice'
     case 'TRUE_FALSE': return 'True/False'
@@ -50,6 +55,11 @@ export default function QuizList({
 }: QuizListProps) {
   const [quizzes, setQuizzes] = useState<Quiz[]>(initialQuizzes)
   const [deleteQuizId, setDeleteQuizId] = useState<string | null>(null)
+  const [assignQuiz, setAssignQuiz] = useState<Quiz | null>(null)
+  const [assignTitle, setAssignTitle] = useState('')
+  const [assignDue, setAssignDue] = useState('')
+  const [assignError, setAssignError] = useState<string | null>(null)
+  const [assigning, setAssigning] = useState(false)
   const router = useRouter()
   const { addToast } = useCustomToast()
 
@@ -67,6 +77,56 @@ export default function QuizList({
 
   const handleLesson = (id: string) => {
     router.push(`/quizzes/${id}/lesson`)
+  }
+
+  const openAssign = (quiz: Quiz) => {
+    const due = new Date()
+    due.setDate(due.getDate() + 7)
+    due.setHours(23, 59, 0, 0)
+    const pad = (value: number) => String(value).padStart(2, '0')
+    setAssignQuiz(quiz)
+    setAssignTitle(quiz.title)
+    setAssignDue(
+      `${due.getFullYear()}-${pad(due.getMonth() + 1)}-${pad(due.getDate())}T${pad(due.getHours())}:${pad(due.getMinutes())}`
+    )
+    setAssignError(null)
+  }
+
+  const submitAssign = async () => {
+    if (!assignQuiz) return
+    const dueAt = new Date(assignDue)
+    if (Number.isNaN(dueAt.getTime())) {
+      setAssignError('Choose a due date.')
+      return
+    }
+    setAssigning(true)
+    setAssignError(null)
+    try {
+      const response = await fetch('/api/homework', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quizId: assignQuiz.id,
+          title: assignTitle.trim() || assignQuiz.title,
+          dueAt: dueAt.toISOString(),
+        }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setAssignError(typeof payload?.error === 'string' ? payload.error : 'Could not assign this quiz.')
+        return
+      }
+      const id = payload.data?.id as string | undefined
+      if (!id) {
+        setAssignError('Could not assign this quiz.')
+        return
+      }
+      router.push(`/quizzes/assignments/${id}`)
+    } catch {
+      setAssignError('Could not assign this quiz.')
+    } finally {
+      setAssigning(false)
+    }
   }
 
   const handleUnfavorite = async (id: string) => {
@@ -112,16 +172,16 @@ export default function QuizList({
 
   return (
     <>
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4">
         {quizzes.map((quiz) => {
           const stats = getQuizStatistics(quiz.statistics)
           return (
             <Card
               key={quiz.id}
-              className="bg-white border-2 border-[#1E5167] shadow-[4px_4px_0px_0px_#1E5167] transition-shadow duration-300 flex flex-row overflow-hidden"
+              className="flex flex-row bg-white border-2 border-[#1E5167] shadow-[4px_4px_0px_0px_#1E5167]"
             >
               {quiz.imageUrl ? (
-                <div className="w-1/3 relative flex-shrink-0 min-h-[140px]">
+                <div className="relative w-36 shrink-0 self-stretch overflow-hidden sm:w-44">
                   <Image
                     src={quiz.imageUrl}
                     alt={quiz.title}
@@ -131,12 +191,12 @@ export default function QuizList({
                   />
                 </div>
               ) : (
-                <div className="w-1/3 relative flex-shrink-0 bg-slate-100 flex items-center justify-center">
-                  <span className="text-slate-400 text-sm">No Image</span>
+                <div className="flex w-36 shrink-0 items-center justify-center bg-slate-100 sm:w-44">
+                  <span className="text-sm text-slate-400">No Image</span>
                 </div>
               )}
 
-              <div className={`flex flex-col justify-between p-4 ${quiz.imageUrl ? 'w-2/3' : 'w-full'}`}>
+              <div className="flex min-w-0 flex-1 flex-col justify-between p-4">
                 <div>
                   <CardHeader className="p-0 mb-2">
                     <CardTitle className="line-clamp-2 text-lg font-semibold grandstander">
@@ -175,18 +235,18 @@ export default function QuizList({
                   </CardHeader>
                 </div>
 
-                <CardContent className="p-0 flex justify-between items-end gap-2">
+                <CardContent className="mt-3 flex flex-col gap-3 p-0 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-wrap gap-1 text-xs">
                     <span className="inline-flex items-center rounded-full border px-2 py-0.5 font-semibold bg-pink-100 text-pink-800">
-                      {quiz.questions.length}{' '}
-                      {quiz.questions.length === 1 ? 'question' : 'questions'}
+                      {questionCountOf(quiz)}{' '}
+                      {questionCountOf(quiz) === 1 ? 'question' : 'questions'}
                     </span>
                     <span className="inline-flex items-center rounded-full border px-2 py-0.5 font-semibold bg-blue-100 text-blue-800">
-                      {getQuizTypeLabel(quiz.questions)}
+                      {getQuizTypeLabel(quiz)}
                     </span>
                   </div>
 
-                  <div className="flex justify-end space-x-3 shrink-0">
+                  <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 [&_button]:shrink-0 [&_button]:whitespace-nowrap">
                     <button
                       type="button"
                       className="text-sm grandstander flex items-center gap-1 font-semibold text-green-700"
@@ -195,6 +255,15 @@ export default function QuizList({
                       <Play className="h-5 w-5 stroke-green-700 fill-green-700" />
                       Play
                     </button>
+                    {mode === 'owned' && quiz.quizType === 'MULTIPLE_CHOICE' && questionCountOf(quiz) > 0 && (
+                      <button
+                        type="button"
+                        className="text-sm grandstander flex items-center gap-1 font-semibold text-orange-700"
+                        onClick={() => openAssign(quiz)}
+                      >
+                        Assign
+                      </button>
+                    )}
                     {mode === 'owned' && (
                       <button
                         type="button"
@@ -252,6 +321,47 @@ export default function QuizList({
           )
         })}
       </div>
+
+      <AlertDialog open={!!assignQuiz} onOpenChange={() => setAssignQuiz(null)}>
+        <AlertDialogContent className="bg-white border-2 border-[#1E5167] shadow-[4px_4px_0px_0px_#1E5167] text-[--text-color] grandstander">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Assign as homework</AlertDialogTitle>
+            <AlertDialogDescription>
+              Students answer every question on their own, then they can take the challenge.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <label className="block text-sm font-semibold">
+            Name
+            <input
+              value={assignTitle}
+              onChange={(event) => setAssignTitle(event.target.value)}
+              className="mt-1 w-full rounded-xl border px-3 py-2 font-normal"
+            />
+          </label>
+          <label className="mt-3 block text-sm font-semibold">
+            Due
+            <input
+              type="datetime-local"
+              value={assignDue}
+              onChange={(event) => setAssignDue(event.target.value)}
+              className="mt-1 w-full rounded-xl border px-3 py-2 font-normal"
+            />
+          </label>
+          {assignError ? <p className="text-sm text-red-700">{assignError}</p> : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-gray-500 border-none">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault()
+                void submitAssign()
+              }}
+              className="bg-[#114257] text-white"
+            >
+              {assigning ? 'Assigning…' : 'Assign'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!deleteQuizId} onOpenChange={() => setDeleteQuizId(null)}>
         <AlertDialogContent className="bg-white border-2 border-[#1E5167] shadow-[4px_4px_0px_0px_#1E5167] text-[--text-color] grandstander">

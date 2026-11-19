@@ -37,9 +37,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (!parsed.success) {
       return errorResponse('Invalid activity', parsed.error.flatten(), 400)
     }
+    const { dueAt, ...rest } = parsed.data
     await prisma.thoughtChallenge.update({
       where: { id: owned.id },
-      data: parsed.data,
+      data: {
+        ...rest,
+        ...(dueAt !== undefined ? { dueAt: dueAt === null ? null : new Date(dueAt) } : {}),
+      },
     })
     const challenge = await getChallengeDetail(owned.id, authResult.userId)
     return successResponse(challenge)

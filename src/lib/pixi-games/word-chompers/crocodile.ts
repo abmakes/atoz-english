@@ -60,12 +60,12 @@ export function drawCrocodile(graphics: Graphics, color: number, open: number, f
   if (flash) graphics.circle(8, 0, 40).stroke({ width: 5, color: BAD })
 }
 
-export function drawHeadingDots(graphics: Graphics, color: number) {
+export function drawHeadingDots(graphics: Graphics, color: number, lead = 46) {
   graphics.clear()
   for (const [x, radius] of [
-    [46, 3.2],
-    [56, 2.4],
-    [64, 1.7],
+    [lead, 3.2],
+    [lead + 10, 2.4],
+    [lead + 18, 1.7],
   ] as const) {
     graphics.circle(x, 0, radius).fill({ color, alpha: 0.92 }).stroke({ width: 1.5, color: INK })
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import type { EventBus } from '@/lib/pixi-engine/core/EventBus'
 import {
   GAME_EVENTS,
@@ -20,6 +20,11 @@ interface QuestionPanelProps {
 /**
  * Shared-question card for Tug of War. Clicks emit HUD_EVENTS.ANSWER_SELECTED;
  * the 3D game owns correctness and scoring.
+ *
+ * The image, stem, and every answer stay on screen. The picture is shown in
+ * full (no crop). Its height matches the question plus the answer buttons, and
+ * its width follows that height. A portrait picture may grow the card; a
+ * landscape one does not.
  */
 const QuestionPanel: React.FC<QuestionPanelProps> = ({
   eventBus,
@@ -29,6 +34,12 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
   const [pickedIndex, setPickedIndex] = useState<number | null>(null)
   const [resolvedCorrect, setResolvedCorrect] = useState<boolean | null>(null)
   const [locked, setLocked] = useState(false)
+  const [copyHeight, setCopyHeight] = useState(0)
+  const [imageRatio, setImageRatio] = useState<number | null>(null)
+  const [wideLayout, setWideLayout] = useState(false)
+  const [viewport, setViewport] = useState({ width: 0, height: 0 })
+  const copyRef = useRef<HTMLDivElement>(null)
+  const imageRef = useRef<HTMLImageElement>(null)
 
   useEffect(() => {
     const onShown = (payload: HudQuestionShownPayload) => {
@@ -74,6 +85,40 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
     return () => window.removeEventListener('keydown', onKey)
   }, [eventBus, locked, question])
 
+  useEffect(() => {
+    setImageRatio(null)
+    setCopyHeight(0)
+    const img = imageRef.current
+    if (img?.complete && img.naturalWidth > 0 && img.naturalHeight > 0) {
+      setImageRatio(img.naturalWidth / img.naturalHeight)
+    }
+  }, [question?.questionId, question?.imageUrl])
+
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 640px)')
+    const readViewport = () => {
+      setWideLayout(media.matches)
+      setViewport({ width: window.innerWidth, height: window.innerHeight })
+    }
+    readViewport()
+    media.addEventListener('change', readViewport)
+    window.addEventListener('resize', readViewport)
+    return () => {
+      media.removeEventListener('change', readViewport)
+      window.removeEventListener('resize', readViewport)
+    }
+  }, [])
+
+  useEffect(() => {
+    const node = copyRef.current
+    if (!node) return
+    const measure = () => setCopyHeight(node.offsetHeight)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [question])
+
   if (!question) return null
 
   const pick = (index: number) => {
@@ -83,28 +128,65 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
     eventBus.emit(HUD_EVENTS.ANSWER_SELECTED, { selectedIndex: index })
   }
 
+  const hasImage = Boolean(question.imageUrl)
+  const isPortrait = imageRatio !== null && imageRatio < 1
+  let imageBox: { width: number; height: number } | null = null
+  if (wideLayout && imageRatio && copyHeight > 0 && viewport.width > 0) {
+    const maxWidth = Math.min(viewport.width * 0.46, 560)
+    let height = copyHeight
+    if (isPortrait) {
+      height = Math.min(copyHeight / imageRatio, viewport.height * 0.42)
+      height = Math.max(height, copyHeight)
+    }
+    let width = height * imageRatio
+    if (width > maxWidth) {
+      width = maxWidth
+      height = width / imageRatio
+    }
+    imageBox = { width: Math.round(width), height: Math.round(height) }
+  }
+
   return (
     <div
-      className={`${className ?? ''} pointer-events-auto mx-auto w-[min(640px,96vw)] max-h-[calc(50dvh-3.25rem)] overflow-y-auto overscroll-contain rounded-2xl border-[3px] border-[#163e66] bg-white/95 p-2 shadow-[3px_3px_0_0_#163e66] sm:p-3 [@media(max-height:520px)]:p-1.5 lg:w-[min(720px,92vw)] lg:rounded-[28px] lg:p-4`}
+      className={`${className ?? ''} pointer-events-auto w-max max-w-full rounded-2xl border-[3px] border-[#163e66] bg-white/95 p-2 shadow-[3px_3px_0_0_#163e66] sm:p-2.5 lg:rounded-[28px] lg:p-3 [@media(max-height:640px)]:p-1.5`}
       role="region"
       aria-label="Question"
     >
-      <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+      <div
+        className={`flex items-center gap-2 sm:gap-3 ${
+          hasImage ? 'flex-col sm:flex-row' : 'justify-center'
+        }`}
+      >
         {question.imageUrl && (
-          <div className="relative h-16 w-full shrink-0 overflow-hidden rounded-xl border-2 border-[#163e66] bg-white sm:h-28 sm:w-36 [@media(max-height:520px)]:h-14 [@media(max-height:520px)]:w-28 lg:h-36 lg:w-44 lg:rounded-2xl lg:border-[3px]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={question.imageUrl}
-              alt=""
-              className="h-full w-full object-cover"
-            />
-          </div>
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            ref={imageRef}
+            src={question.imageUrl}
+            alt=""
+            onLoad={(event) => {
+              const img = event.currentTarget
+              if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                setImageRatio(img.naturalWidth / img.naturalHeight)
+              }
+            }}
+            style={
+              imageBox
+                ? { width: imageBox.width, height: imageBox.height }
+                : undefined
+            }
+            className="block h-auto w-auto max-h-[38vh] max-w-full shrink-0 rounded-xl border-2 border-[#163e66] bg-white object-contain sm:max-h-none lg:rounded-2xl lg:border-[3px]"
+          />
         )}
-        <div className="min-w-0 flex-1">
-          <p className="grandstander mb-2 text-sm font-bold leading-snug text-[#163e66] sm:text-lg [@media(max-height:520px)]:mb-1 [@media(max-height:520px)]:text-sm lg:mb-3 lg:text-2xl">
+        <div
+          ref={copyRef}
+          className={`flex min-w-0 flex-col justify-center ${
+            hasImage ? 'w-full sm:w-[min(26rem,40vw)]' : 'w-full max-w-3xl'
+          }`}
+        >
+          <p className="grandstander mb-1.5 text-sm font-bold leading-snug text-[#163e66] sm:mb-2 sm:text-lg lg:text-2xl lg:leading-tight [@media(max-height:760px)]:lg:text-xl [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:text-sm [@media(max-height:640px)]:sm:text-base">
             {question.question}
           </p>
-          <div className="grid grid-cols-1 gap-1.5 sm:gap-2">
+          <div className="grid grid-cols-1 gap-1 sm:gap-1.5 [@media(max-height:640px)]:gap-1">
             {question.answers.map((answer, index) => {
               const optionId = `${question.questionId}-answer-${index}`
               const isPicked = pickedIndex === index
@@ -116,7 +198,7 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
                   type="button"
                   disabled={locked}
                   onClick={() => pick(index)}
-                  className={`grandstander flex items-center gap-2 rounded-xl border-2 px-2.5 py-1.5 text-left text-sm font-semibold transition sm:px-3 sm:py-2 sm:text-base [@media(max-height:520px)]:py-1 [@media(max-height:520px)]:text-sm lg:text-lg
+                  className={`grandstander flex items-center gap-2 rounded-xl border-2 px-2.5 py-1.5 text-left text-sm font-semibold transition sm:px-3 sm:py-2 sm:text-base lg:text-lg [@media(max-height:760px)]:py-1 [@media(max-height:760px)]:sm:py-1.5 [@media(max-height:640px)]:py-1 [@media(max-height:640px)]:text-sm [@media(max-height:640px)]:lg:text-sm
                     ${
                       showWrong
                         ? 'border-red-500 bg-red-100 text-red-900'
@@ -129,7 +211,7 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
                     disabled:cursor-not-allowed`}
                   aria-label={`Answer ${LETTERS[index]}: ${answer}`}
                 >
-                  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/90 text-xs font-bold text-[var(--heading-color,#114257)] sm:h-7 sm:w-7 sm:text-sm">
+                  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/90 text-xs font-bold text-[var(--heading-color,#114257)] sm:h-7 sm:w-7 sm:text-sm [@media(max-height:640px)]:h-5 [@media(max-height:640px)]:w-5">
                     {LETTERS[index]}
                   </span>
                   <span className="min-w-0 break-words">{answer}</span>

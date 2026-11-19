@@ -83,6 +83,7 @@ const REQUIRED_ASSETS = [
   'public/images/shared/kunai_tip.png',
   'public/images/shared/rope_segment.png',
   'public/images/marketing/ninjaclimb_thumb.png',
+  'public/images/marketing/tugofwar_thumb.png',
   // Tug of War painted stage (see src/lib/three-games/tug-of-war/tugArt.ts)
   'public/images/tug-of-war/arena-backdrop.webp',
   'public/images/tug-of-war/rope-strip.webp',

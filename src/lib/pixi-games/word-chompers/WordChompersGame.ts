@@ -1,11 +1,14 @@
 import {
   Application,
+  Assets,
   Circle,
   Container,
   Graphics,
   Rectangle,
+  Sprite,
   Text,
   type FederatedPointerEvent,
+  type Texture,
   type Ticker,
 } from 'pixi.js'
 import { ensureFontIsLoaded } from '@/lib/pixi-engine/utils/ensureFontIsLoaded'
@@ -27,6 +30,7 @@ import {
   HINT_MS,
   KEY_LABEL,
   ROTATION_SPEED,
+  SAFE_MS,
   STUN_MS,
   SWIM_ROUND_MS,
   SWIM_ROUNDS,
@@ -51,6 +55,19 @@ const BAD = 0xdc2626
 const ANGLES = (Math.PI * 2) / 10
 const PULSE = (Math.PI * 2) / 4
 const PLAYER_COLORS = [0xff6b6b, 0x14919b, 0xe09b12, 0x7c5cbf]
+
+/** Sentence Swim poses in `public/images/sentence_swim`. Idle is frame 0. */
+const SWIM_FILE_IDS = [0, 1, 2, 3, 5] as const
+const SWIM_POSE = [0, 2, 1, 3, 5, 3, 2] as const
+const SWIM_FRAME_MS = 150
+/** Bite poses in `public/images/sentence_swim`, played once on contact. */
+const BITE_FILE_IDS = [0, 1, 2] as const
+const BITE_FRAME_MS = 100
+/**
+ * 768px art, snout toward the top of the image. This scale puts the nose
+ * just past the eat radius after the swim actor scale.
+ */
+const SWIM_SPRITE_SCALE = 0.22
 
 const SEATS: Record<PlayerCount, { x: number; y: number; edge: TableEdge }[]> = {
   2: [
@@ -123,12 +140,22 @@ interface Chomper {
   view: Container
   facing: Container
   face: Graphics
+  sprite: Sprite | null
+  /** `this.now` when the current swim cycle started, or -1 while still. */
+  swimStarted: number
+  /** `this.now` when the bite started, or -1 when not biting. */
+  biteStarted: number
   badge: Container
   badgeBg: Graphics
   badgeText: Text
   mouth: number
   stunUntil: number
+  /** Wrong words are ignored until this time, so a stun cannot chain. */
+  safeUntil: number
   missUntil: number
+  jx: number
+  jy: number
+  knob: Graphics | null
   lunge: { t0: number; dir: number; hit: boolean } | null
   x: number
   y: number
@@ -249,6 +276,9 @@ export class WordChompersGame {
   private bannerBottom!: Text
   private scoreBoard!: Container
   private finalView!: Container
+  private swimTextures: Map<number, Texture> | null = null
+  private biteTextures: Texture[] | null = null
+  private swimTextureUrls: string[] = []
 
   constructor(
     private readonly app: Application,
@@ -270,6 +300,8 @@ export class WordChompersGame {
     await ensureFontIsLoaded('Grandstander', '700 32px')
     if (this.destroyed) return
     this.resolution = Math.min(window.devicePixelRatio || 1, 2)
+    await this.loadSwimTextures()
+    if (this.destroyed) return
     this.prepareQueue()
     this.buildStage()
     this.buildPlayers()
@@ -291,10 +323,60 @@ export class WordChompersGame {
     window.removeEventListener('keyup', this.onKeyUp)
     window.speechSynthesis?.cancel()
     void this.audioContext?.close()
-    if (!this.built) return
+    if (!this.built) {
+      this.releaseSwimTextures()
+      return
+    }
     this.bg.destroy()
     this.world.destroy({ children: true })
     this.hud.destroy({ children: true })
+    this.releaseSwimTextures()
+  }
+
+  private async loadSwimTextures() {
+    if (this.options.mode !== 'swim') return
+    const textures = new Map<number, Texture>()
+    const bites: Texture[] = []
+    const frameUrls = SWIM_FILE_IDS.map((id) => `/images/sentence_swim/frame_${String(id).padStart(4, '0')}.png`)
+    const biteUrls = BITE_FILE_IDS.map((id) => `/images/sentence_swim/BITE_${String(id).padStart(4, '0')}.png`)
+    this.swimTextureUrls = [...frameUrls, ...biteUrls]
+    await Promise.all([
+      ...SWIM_FILE_IDS.map(async (id, index) => {
+        const url = frameUrls[index]
+        if (!url) return
+        textures.set(id, await Assets.load<Texture>(url))
+      }),
+      ...BITE_FILE_IDS.map(async (_id, index) => {
+        const url = biteUrls[index]
+        if (!url) return
+        bites[index] = await Assets.load<Texture>(url)
+      }),
+    ])
+    if (this.destroyed) {
+      if (this.swimTextureUrls.length > 0) this.releaseSwimTextures()
+      return
+    }
+    this.swimTextures = textures
+    this.biteTextures = bites
+  }
+
+  private releaseSwimTextures() {
+    const urls = this.swimTextureUrls
+    this.swimTextureUrls = []
+    this.swimTextures = null
+    this.biteTextures = null
+    for (const url of urls) void Assets.unload(url)
+  }
+
+  /** Snout-up art, rotated so the nose points along +x like the drawn crocodile. */
+  private makeSwimSprite(): Sprite | null {
+    const idle = this.swimTextures?.get(0)
+    if (!idle) return null
+    const sprite = new Sprite(idle)
+    sprite.anchor.set(0.5)
+    sprite.rotation = Math.PI / 2
+    sprite.scale.set(SWIM_SPRITE_SCALE)
+    return sprite
   }
 
   setPaused(paused: boolean) {
@@ -393,6 +475,8 @@ export class WordChompersGame {
       const facing = new Container()
       const face = new Graphics()
       const heading = new Graphics()
+      const sprite = this.makeSwimSprite()
+      if (sprite) facing.addChild(sprite)
       facing.addChild(face, heading)
       view.addChild(facing)
 
@@ -404,13 +488,15 @@ export class WordChompersGame {
       badge.addChild(badgeBg, badgeText)
 
       const joy = new Container()
-      joy.eventMode = swim && !keyboard ? 'static' : 'none'
+      joy.eventMode = swim ? 'static' : 'none'
       joy.visible = swim
       joy.zIndex = 5
       joy.hitArea = new Circle(0, 0, 54)
       const joyBg = new Graphics()
       const keyLabel = this.makeLabel('', 14)
+      const knob = keyboard ? null : new Graphics()
       joy.addChild(joyBg, keyLabel)
+      if (knob) joy.addChild(knob)
 
       const slots = new Container()
       slots.eventMode = 'none'
@@ -428,12 +514,19 @@ export class WordChompersGame {
         view,
         facing,
         face,
+        sprite,
+        swimStarted: -1,
+        biteStarted: -1,
         badge,
         badgeBg,
         badgeText,
         mouth: 0,
         stunUntil: 0,
+        safeUntil: 0,
         missUntil: 0,
+        jx: 0,
+        jy: 0,
+        knob,
         lunge: null,
         x: 0,
         y: 0,
@@ -452,11 +545,11 @@ export class WordChompersGame {
         edge: seat.edge,
         keyCode: keys[seat.edge] ?? '',
       }
-      drawCrocodile(face, color, 0, false)
-      drawHeadingDots(heading, color)
+      if (!sprite) drawCrocodile(face, color, 0, false)
+      drawHeadingDots(heading, color, sprite ? Math.round(390 * SWIM_SPRITE_SCALE) + 6 : 46)
       heading.visible = swim
       this.paintBadge(player)
-      joy.on('pointerdown', (event) => this.onHoldDown(player, event))
+      joy.on('pointerdown', (event) => (keyboard ? this.onHoldDown(player, event) : this.onJoyDown(player, event)))
       this.world.addChild(view, badge, joy, slots)
       this.players.push(player)
     })
@@ -687,8 +780,9 @@ export class WordChompersGame {
       player.slots.rotation = item.top ? Math.PI : 0
       item.card.position.set(clueX, y)
       item.card.rotation = item.top ? Math.PI : 0
-      const homeX = item.top ? width - this.playInset - 8 : this.playInset + 8
-      const homeY = item.top ? this.playInset + (compact ? 34 : 46) : height - this.playInset - (compact ? 34 : 46)
+      const tuck = Math.round(340 * SWIM_SPRITE_SCALE * (compact ? 0.72 : 0.64))
+      const homeX = item.top ? width - this.playInset - tuck : this.playInset + tuck
+      const homeY = item.top ? this.playInset + tuck : height - this.playInset - tuck
       player.anchorX = homeX
       player.anchorY = homeY
       if (!(this.phase === 'swim' && this.lastW > 0)) {
@@ -806,11 +900,11 @@ export class WordChompersGame {
     this.clueRight.rotation = -Math.PI / 2
     this.applyClueVisibility()
 
-    const park = compact ? 36 : 48
+    const park = (compact ? 36 : 48) + Math.round(300 * SWIM_SPRITE_SCALE * (compact ? 0.72 : 0.64))
     const homes = [
-      { player: bottom, x: leftX + joyR + 12, y: bottomY - band / 2 - park },
-      { player: right, x: rightX - band / 2 - park, y: bottomY - joyR - 16 },
-      { player: top, x: leftX + joyR + 12, y: topY + band / 2 + park },
+      { player: bottom, x: leftX + joyR + park, y: bottomY - band / 2 - park },
+      { player: right, x: rightX - band / 2 - park, y: bottomY - joyR - park },
+      { player: top, x: leftX + joyR + park, y: topY + band / 2 + park },
     ]
     for (const home of homes) {
       home.player.anchorX = Math.max(36, Math.min(width - this.playInset - 20, home.x))
@@ -971,14 +1065,15 @@ export class WordChompersGame {
     }
 
     placeColumn(right, this.clueRight, rightCard.cardW, rightX, -Math.PI / 2, bottomY, true)
-    placeColumn(left, this.clueLeft, leftCard.cardW, leftX, Math.PI / 2, bottomY, true)
+    placeColumn(left, this.clueLeft, leftCard.cardW, leftX, Math.PI / 2, topY, true)
 
-    const park = compact ? 36 : 48
+    const park = (compact ? 36 : 48) + Math.round(300 * SWIM_SPRITE_SCALE * (compact ? 0.72 : 0.64))
+    const spread = Math.round(720 * SWIM_SPRITE_SCALE * (compact ? 0.72 : 0.64))
     const homes = [
-      { player: bottom, x: leftX + joyR + 12, y: bottomY - band / 2 - park },
-      { player: right, x: rightX - band / 2 - park, y: bottomY - joyR - 16 },
-      { player: left, x: leftX + band / 2 + park, y: bottomY - joyR - 16 },
-      { player: top, x: width - leftX - joyR - 12, y: topY + band / 2 + park },
+      { player: bottom, x: leftX + joyR + spread, y: bottomY - band / 2 - park },
+      { player: right, x: rightX - band / 2 - park, y: bottomY - joyR - park },
+      { player: left, x: leftX + band / 2 + park, y: bottomY - joyR - spread },
+      { player: top, x: width - leftX - joyR - spread, y: topY + band / 2 + park },
     ]
     for (const home of homes) {
       home.player.anchorX = Math.max(this.playInset + 20, Math.min(width - this.playInset - 20, home.x))
@@ -996,15 +1091,24 @@ export class WordChompersGame {
     bg.clear()
     const keyboard = this.options.swimInput === 'keyboard'
     const pressed = player.thrusting
-    bg.circle(0, 0, radius)
-      .fill({ color: pressed ? player.color : 0xffffff, alpha: keyboard ? 0.94 : 0.88 })
-      .stroke({ width: 3, color: player.color })
-    player.keyLabel.text = keyboard ? (KEY_LABEL[player.keyCode] ?? '') : ''
-    player.keyLabel.style.fontSize = radius > 36 ? 13 : 10
-    player.keyLabel.style.fill = pressed && keyboard ? 0xffffff : INK
+    if (keyboard) {
+      bg.circle(0, 0, radius)
+        .fill({ color: pressed ? player.color : 0xffffff, alpha: 0.94 })
+        .stroke({ width: 3, color: player.color })
+      player.keyLabel.text = KEY_LABEL[player.keyCode] ?? ''
+      player.keyLabel.style.fontSize = radius > 36 ? 13 : 10
+      player.keyLabel.style.fill = pressed ? 0xffffff : INK
+    } else {
+      bg.circle(0, 0, radius).fill({ color: 0xffffff, alpha: 0.82 }).stroke({ width: 3, color: player.color })
+      player.keyLabel.text = ''
+      if (player.knob) {
+        player.knob.clear()
+        player.knob.circle(0, 0, Math.max(10, radius * 0.36)).fill(player.color)
+      }
+    }
     player.joy.hitArea = new Circle(0, 0, radius + 6)
-    player.joy.eventMode = this.options.mode === 'swim' && !keyboard ? 'static' : 'none'
-    const pulse = this.now < this.hintUntil && !player.thrusting ? 1 + Math.sin(this.now / 140) * 0.08 : 1
+    player.joy.eventMode = this.options.mode === 'swim' ? 'static' : 'none'
+    const pulse = keyboard && this.now < this.hintUntil && !player.thrusting ? 1 + Math.sin(this.now / 140) * 0.08 : 1
     player.joy.scale.set(pulse)
   }
 
@@ -1110,8 +1214,12 @@ export class WordChompersGame {
     for (const player of this.players) {
       player.lunge = null
       player.mouth = 0
-      player.stunUntil = 0
-      player.view.alpha = 1
+        player.stunUntil = 0
+        player.safeUntil = 0
+        player.jx = 0
+        player.jy = 0
+        player.knob?.position.set(0, 0)
+        player.view.alpha = 1
       player.view.visible = true
       player.badge.visible = true
       this.paintChomper(player)
@@ -1121,6 +1229,7 @@ export class WordChompersGame {
         player.done = new Set()
         player.lockUntil = 0
         player.thrusting = false
+        player.biteStarted = -1
         player.notice = ''
         player.noticeUntil = 0
         player.x = player.anchorX
@@ -1395,15 +1504,29 @@ export class WordChompersGame {
     const width = this.app.screen.width
     const height = this.app.screen.height
     for (const player of this.players) {
+      let swimming = false
       if (this.phase === 'swim') {
         const stunned = this.now < player.stunUntil
-        const moving = !stunned && player.thrusting
-        if (moving) {
-          const speed = Math.min(width, height) * 0.28
-          player.x += Math.cos(player.dir) * speed * dt
-          player.y += Math.sin(player.dir) * speed * dt
-        } else if (!stunned) {
-          player.dir += ROTATION_SPEED * dt
+        const keyboard = this.options.swimInput === 'keyboard'
+        if (keyboard) {
+          const moving = !stunned && player.thrusting
+          swimming = moving
+          if (moving) {
+            const speed = Math.min(width, height) * 0.28
+            player.x += Math.cos(player.dir) * speed * dt
+            player.y += Math.sin(player.dir) * speed * dt
+          } else if (!stunned) {
+            player.dir += ROTATION_SPEED * dt
+          }
+        } else {
+          const pushed = Math.hypot(player.jx, player.jy) > 0.12
+          swimming = !stunned && pushed
+          if (swimming) {
+            player.dir = Math.atan2(player.jy, player.jx)
+            const speed = Math.min(width, height) * 0.35
+            player.x += player.jx * speed * dt
+            player.y += player.jy * speed * dt
+          }
         }
         const edge = this.playInset
         player.x = Math.max(edge, Math.min(width - edge, player.x))
@@ -1415,6 +1538,7 @@ export class WordChompersGame {
           this.syncSlots(player)
         }
       }
+      this.poseSwimmer(player, swimming)
       const bob = Math.sin(this.now / 280 + player.index) * 3
       const actor = this.options.mode === 'swim' ? (this.compact ? 0.72 : 0.64) : 1
       player.view.scale.set(actor)
@@ -1436,7 +1560,8 @@ export class WordChompersGame {
         this.paintChomper(player)
       }
       const back = player.dir + Math.PI
-      const badgeGap = this.compact ? 34 : 36
+      const tailReach = player.sprite ? 370 * SWIM_SPRITE_SCALE * actor + 20 : 0
+      const badgeGap = Math.max(this.compact ? 34 : 36, tailReach)
       player.badge.position.set(player.view.x + Math.cos(back) * badgeGap, player.view.y + Math.sin(back) * badgeGap)
       player.badge.rotation = player.y < height * 0.5 ? Math.PI : 0
       if (player.lockUntil > 0 && this.now >= player.lockUntil) {
@@ -1652,6 +1777,7 @@ export class WordChompersGame {
     if (!frame) return
     const next = player.seq.concat(fish.text)
     const match = swimMatch(frame.sentences, next)
+    if (match === 'reject' && this.now < player.safeUntil) return
     this.snapBite(player)
     if (match === 'reject') {
       const angle = Math.atan2(player.y - fish.y, player.x - fish.x)
@@ -1685,6 +1811,14 @@ export class WordChompersGame {
   }
 
   private snapBite(player: Chomper) {
+    const bite = player.sprite && this.biteTextures?.[0]
+    if (player.sprite && bite) {
+      player.biteStarted = this.now
+      player.mouth = 0
+      player.facing.scale.set(1)
+      player.sprite.texture = bite
+      return
+    }
     player.mouth = 1
     player.facing.scale.set(1.12, 0.9)
     this.paintChomper(player)
@@ -1786,6 +1920,7 @@ export class WordChompersGame {
       this.paintBadge(player)
     }
     player.stunUntil = this.now + STUN_MS
+    player.safeUntil = player.stunUntil + SAFE_MS
     player.missUntil = this.now + 360
     player.view.alpha = 0.45
     this.paintChomper(player)
@@ -1793,7 +1928,40 @@ export class WordChompersGame {
   }
 
   private paintChomper(player: Chomper) {
+    if (player.sprite) {
+      player.face.clear()
+      if (this.now < player.missUntil) {
+        player.face.circle(8, 0, 400 * SWIM_SPRITE_SCALE).stroke({ width: 5, color: BAD })
+      }
+      return
+    }
     drawCrocodile(player.face, player.color, player.mouth, this.now < player.missUntil)
+  }
+
+  /** Hold frame 0 while still. Loop the swim poses at 150ms while moving. A bite plays once at 100ms per frame. */
+  private poseSwimmer(player: Chomper, swimming: boolean) {
+    const sprite = player.sprite
+    const textures = this.swimTextures
+    if (!sprite || !textures) return
+    if (player.biteStarted >= 0 && this.biteTextures) {
+      const index = Math.floor((this.now - player.biteStarted) / BITE_FRAME_MS)
+      const frame = this.biteTextures[index]
+      if (frame) {
+        if (sprite.texture !== frame) sprite.texture = frame
+        return
+      }
+      player.biteStarted = -1
+    }
+    const idle = textures.get(0)
+    if (!swimming) {
+      player.swimStarted = -1
+      if (idle && sprite.texture !== idle) sprite.texture = idle
+      return
+    }
+    if (player.swimStarted < 0) player.swimStarted = this.now
+    const pose = SWIM_POSE[Math.floor((this.now - player.swimStarted) / SWIM_FRAME_MS) % SWIM_POSE.length]
+    const texture = (pose === undefined ? idle : textures.get(pose)) ?? idle
+    if (texture && sprite.texture !== texture) sprite.texture = texture
   }
 
   private paintBadge(player: Chomper) {
@@ -1828,8 +1996,48 @@ export class WordChompersGame {
     this.paintChomper(nearest)
   }
 
+  private onJoyDown(player: Chomper, event: FederatedPointerEvent) {
+    if (this.options.mode !== 'swim' || this.paused || this.options.swimInput !== 'touch') return
+    event.stopPropagation()
+    this.resumeAudio()
+    player.pointerId = event.pointerId
+    this.joyVector(player, event)
+    const move = (next: FederatedPointerEvent) => {
+      if (next.pointerId !== player.pointerId) return
+      this.joyVector(player, next)
+    }
+    const up = (next: FederatedPointerEvent) => {
+      if (next.pointerId !== player.pointerId) return
+      player.pointerId = -1
+      player.jx = 0
+      player.jy = 0
+      player.knob?.position.set(0, 0)
+      this.app.stage.off('pointermove', move)
+      this.app.stage.off('pointerup', up)
+      this.app.stage.off('pointerupoutside', up)
+    }
+    this.app.stage.on('pointermove', move)
+    this.app.stage.on('pointerup', up)
+    this.app.stage.on('pointerupoutside', up)
+  }
+
+  private joyVector(player: Chomper, event: FederatedPointerEvent) {
+    const center = player.joy.getGlobalPosition()
+    let dx = event.globalX - center.x
+    let dy = event.globalY - center.y
+    const distance = Math.hypot(dx, dy)
+    const radius = this.joyRadius * 0.82
+    if (distance > radius && distance > 0) {
+      dx = (dx / distance) * radius
+      dy = (dy / distance) * radius
+    }
+    player.jx = (dx / radius) * 0.9
+    player.jy = (dy / radius) * 0.9
+    player.knob?.position.set(dx, dy)
+  }
+
   private onHoldDown(player: Chomper, event: FederatedPointerEvent) {
-    if (this.options.mode !== 'swim' || this.paused || this.options.swimInput === 'keyboard') return
+    if (this.options.mode !== 'swim' || this.paused || this.options.swimInput !== 'keyboard') return
     event.stopPropagation()
     this.resumeAudio()
     player.pointerId = event.pointerId

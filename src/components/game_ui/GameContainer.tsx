@@ -18,11 +18,12 @@ import {
 } from '@/lib/pixi-engine/config/GameConfig';
 import type { NavMenuItemProps } from './NavMenu';
 import { GAME_EVENTS, ENGINE_EVENTS, TUG_EVENTS } from '@/lib/pixi-engine/core/EventTypes';
-import { PowerupConfig, STANDARD_SCORE_MODE_POWERUPS } from '@/lib/pixi-engine/config/PowerupConfig';
+import { DEFAULT_POWERUP_CONFIG, PowerupConfig, STANDARD_SCORE_MODE_POWERUPS } from '@/lib/pixi-engine/config/PowerupConfig';
 import LoadingSpinner from '../loading_spinner';
 import { useGameStore } from '@/stores/useGameStore'; // Import the store
 import { gameModeRegistry } from '@/lib/game-engine/modes/builtinGameModes';
 import type { GameRuntimeFactory } from '@/lib/game-engine/runtime/GameRuntime';
+import type { QuizPickerSummary } from '@/lib/quiz-playability';
 
 const GameplayView = dynamic(() => import('./GameplayView'), {
     ssr: false,
@@ -41,13 +42,15 @@ interface GameContainerProps {
   quizId: string;
   /** The URL slug for the game type (e.g., 'multiple-choice'). */
   gameSlug: string;
+  /** Quiz row fields so setup can render before question bodies arrive. */
+  quizSummary?: QuizPickerSummary | null;
 }
 
 /**
  * Main container component responsible for managing the game lifecycle,
  * switching between setup, gameplay, and game over views.
  */
-const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
+const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug, quizSummary = null }) => {
   const router = useRouter();
   const [currentView, setCurrentView] = useState<GameView>('setup');
   const [gameConfig, setGameConfig] = useState<GameConfig | null>(null);
@@ -105,18 +108,19 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
           type: 'score',
           name: 'Team Quiz',
       };
-      // --- Define Powerup Config --- 
-      const powerupConfig: PowerupConfig = {
-          // Check if any powerup is enabled in UI selections
-          powerupsEnabled: Object.values(setupData.powerups).some(enabled => enabled),
-          // Filter catalog based on UI selections (buffs + power-downs)
-          availablePowerups: STANDARD_SCORE_MODE_POWERUPS.filter(powerup => {
-              if (!powerup.setupKey) return false;
-              const toggles = setupData.powerups as unknown as Record<string, boolean>;
-              return Boolean(toggles[powerup.setupKey]);
-          }),
-          spawnMechanic: {},
-      };
+      // Team Quiz spin-wheel powers only. Splash/Ninja have their own configs; Tug has none.
+      const usesScoreModePowers = gameSlug === 'multiple-choice';
+      const powerupConfig: PowerupConfig = usesScoreModePowers
+        ? {
+            powerupsEnabled: Object.values(setupData.powerups).some(enabled => enabled),
+            availablePowerups: STANDARD_SCORE_MODE_POWERUPS.filter(powerup => {
+                if (!powerup.setupKey) return false;
+                const toggles = setupData.powerups as unknown as Record<string, boolean>;
+                return Boolean(toggles[powerup.setupKey]);
+            }),
+            spawnMechanic: {},
+          }
+        : DEFAULT_POWERUP_CONFIG;
       
       console.log("GameContainer: Enabled powerups:", powerupConfig.availablePowerups.map(p => p.id));
 
@@ -398,6 +402,8 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug }) => {
                     onGoBack={handleBackFromSetup}
                     initialGameSlug={gameSlug}
                     quizId={quizId}
+                    quizTitle={quizSummary?.title}
+                    defaultSettings={quizSummary?.defaultSettings}
                     isStartingPlay={isStartingPlay}
                 />;
       case 'playing':

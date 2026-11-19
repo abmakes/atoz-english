@@ -51,14 +51,18 @@ export function getNinjaClimbSceneAssetUrls(): string[] {
     '/images/ninja-climb/icon_smoke.png',
     '/images/ninja-climb/ninja_blue_idle.webp',
     '/images/ninja-climb/ninja_blue_idle_b.webp',
-    '/images/ninja-climb/ninja_blue_climb.png',
+    ...[0, 1, 2, 5, 6, 7].map(
+      (id) => `/images/ninja-climb/vertical_jump_blue/frame_${String(id).padStart(4, '0')}.png`
+    ),
     '/images/ninja-climb/ninja_blue_teleport.png',
     '/images/ninja-climb/ninja_blue_rope.webp',
     '/images/ninja-climb/ninja_blue_smoke.png',
     '/images/ninja-climb/ninja_blue_cheer.png',
     '/images/ninja-climb/ninja_red_idle.webp',
     '/images/ninja-climb/ninja_red_idle_b.webp',
-    '/images/ninja-climb/ninja_red_climb.png',
+    ...[0, 1, 2, 3, 4, 5].map(
+      (id) => `/images/ninja-climb/vertical_jump_red/frame_${String(id).padStart(4, '0')}.png`
+    ),
     '/images/ninja-climb/ninja_red_teleport.png',
     '/images/ninja-climb/ninja_red_rope.webp',
     '/images/ninja-climb/ninja_red_smoke.png',

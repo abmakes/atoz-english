@@ -4,6 +4,7 @@ import Navigation from "@/components/layout/Navigation";
 import { CustomToastProvider } from "@/components/ui/CustomToast";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ClerkActiveProvider } from "@/components/auth/ClerkActiveProvider";
+import PlaytozWaves from "@/components/layout/PlaytozWaves";
 
 export const metadata: Metadata = {
   title: "PlaytoZ — Classroom games for English teachers",
@@ -33,6 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-white">
+        <PlaytozWaves />
         {clerkActive ? (
           <ClerkProvider publishableKey={clerkPublishableKey}>
             {body}

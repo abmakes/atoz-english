@@ -10,8 +10,11 @@ export interface QuizListItem {
   };
   tags: string[];
   authorId: string;
-  createdAt: Date;
-  questions: Question[];
+  createdAt: Date | string;
+  /** Omitted on the public catalog. Game setup loads the full quiz by id. */
+  questions?: Question[];
+  /** Present on catalog cards so the grid does not need every question body. */
+  questionCount?: number;
   likedByMe?: boolean;
   favoritedByMe?: boolean;
   level?: string;

@@ -93,6 +93,7 @@ export const storyPatchSchema = z.object({
   exampleStory: z.string().trim().max(2000).optional(),
   showExampleToStudents: z.boolean().optional(),
   status: z.enum(['DRAFT', 'READY', 'ARCHIVED']).optional(),
+  dueAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 
 export const panelPatchSchema = z.object({

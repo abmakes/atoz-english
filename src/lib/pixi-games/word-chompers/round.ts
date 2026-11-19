@@ -3,6 +3,8 @@ export const BITE_ROUND_MS = 14000
 export const SWIM_ROUNDS = 5
 export const SWIM_ROUND_MS = 60_000
 export const STUN_MS = 2000
+/** After a stun ends, wrong words cannot stun the player again for this long. */
+export const SAFE_MS = 1000
 /** After the last copy of a word is eaten, the pair waits this long. */
 export const WORD_RETURN_MS = 2000
 export const HINT_MS = 10_000
@@ -163,7 +165,7 @@ export function swimRoster(
     ...copiesOf(aux, copies, 'aux'),
     ...copiesOf(shownLexical, copies, 'verb'),
     ...objects.slice(0, 4).map((text) => spec(text, 'object')),
-    ...decoys.slice(0, 2).map((text) => spec(text, 'decoy')),
+    ...decoys.slice(0, 1).map((text) => spec(text, 'decoy')),
   ]
   const reserve = [
     ...copiesOf(laterLexical, copies, 'verb'),
