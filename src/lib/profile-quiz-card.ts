@@ -2,6 +2,18 @@ import { getQuizStatistics } from '@/lib/quiz-statistics'
 import type { Quiz } from '@/types'
 import { QuestionType } from '@/types/question_types'
 
+export interface ProfileQuizLists {
+  owned: Quiz[]
+  liked: Quiz[]
+  favorites: Quiz[]
+}
+
+export const emptyProfileQuizLists = (): ProfileQuizLists => ({
+  owned: [],
+  liked: [],
+  favorites: [],
+})
+
 const PLACEHOLDER_IMAGE = '/images/placeholder.webp'
 
 export type ProfileCardRow = {
