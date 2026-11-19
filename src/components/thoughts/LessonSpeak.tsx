@@ -3,18 +3,20 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import FaceStage from '@/components/thoughts/FaceStage'
 import StudentSession from '@/components/thoughts/StudentSession'
+import { useClipPlayer } from '@/components/thoughts/useClipPlayer'
 import { submitThought } from '@/components/thoughts/api'
 import { useVoiceRecorder } from '@/components/story_creator/useVoiceRecorder'
 import { stepAmplitude } from '@/lib/thoughts/animation'
 import type { Character } from '@/lib/thoughts/character'
 import type { LessonSpeakPicture } from '@/lib/lesson/thought-assignment'
 import type { ThoughtSessionDto } from '@/lib/thoughts/service'
+import { VOICE_EFFECTS, VOICE_LABELS, type VoiceEffect } from '@/lib/thoughts/voices'
 
-type Phase = 'brief' | 'make' | 'count' | 'speak' | 'submit' | 'sent'
+type Phase = 'brief' | 'make' | 'count' | 'speak' | 'listen' | 'submit' | 'sent'
 
 /**
- * Lesson speaking: the task, then the character maker, then the recording
- * screen, then submit.
+ * Lesson speaking: the task, the character maker, the recording screen,
+ * playback with funny voices, then submit.
  */
 export default function LessonSpeak({
   token,
@@ -24,10 +26,12 @@ export default function LessonSpeak({
   session: ThoughtSessionDto
 }) {
   const recorder = useVoiceRecorder()
+  const player = useClipPlayer()
   const [phase, setPhase] = useState<Phase>('brief')
   const [count, setCount] = useState(3)
   const [character, setCharacter] = useState<Character | null>(null)
   const [name, setName] = useState('')
+  const [voice, setVoice] = useState<VoiceEffect>('original')
   const [take, setTake] = useState<Awaited<ReturnType<typeof recorder.stop>>>(null)
   const [clientKey, setClientKey] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -108,8 +112,9 @@ export default function LessonSpeak({
     }
     setTake(result)
     setClientKey(crypto.randomUUID())
+    setVoice('original')
     setMessage(null)
-    setPhase('submit')
+    setPhase('listen')
   }
   finishRef.current = () => {
     void finishRecording()
@@ -133,7 +138,7 @@ export default function LessonSpeak({
           durationMs: Math.min(60_000, Math.round(take.durationMs)),
           envelope: take.envelope,
           character,
-          voiceEffect: 'original',
+          voiceEffect: voice,
         },
         take.blob
       )
@@ -145,7 +150,47 @@ export default function LessonSpeak({
     }
   }
 
-  const getLevel = () => (recorder.isRecording ? liveRef.current : 0)
+  const getLevel = () => (recorder.isRecording ? liveRef.current : player.levelRef.current)
+
+  const playTake = (effect: VoiceEffect) => {
+    if (!take) return
+    setVoice(effect)
+    void player.play({ blob: take.blob, envelope: take.envelope, effect })
+  }
+
+  useEffect(() => {
+    if (phase !== 'listen' || !take) return
+    void player.play({ blob: take.blob, envelope: take.envelope, effect: 'original' })
+    return () => player.stop()
+    // Play once when the recording is ready. Picking a voice starts it again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, take])
+
+  const shareRecording = async () => {
+    if (!take) return
+    const type = take.mimeType || 'audio/webm'
+    const extension = type.includes('mp4') ? 'm4a' : 'webm'
+    const file = new File([take.blob], `my-thought.${extension}`, { type })
+    const text = session.prompt
+    try {
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'My thought', text })
+        return
+      }
+      if (navigator.share) {
+        await navigator.share({ title: 'My thought', text })
+        return
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
+      setMessage('Could not open share. The recording is still here.')
+      return
+    }
+    const link = document.createElement('a')
+    link.href = take.objectUrl
+    link.download = file.name
+    link.click()
+  }
 
   if (!session.acceptingResponses) {
     return (
@@ -163,7 +208,8 @@ export default function LessonSpeak({
         <ol className="space-y-2 text-lg font-bold">
           <li>Step 1. Create your character.</li>
           <li>Step 2. Record.</li>
-          <li>Step 3. Submit.</li>
+          <li>Step 3. Listen and pick a voice.</li>
+          <li>Step 4. Submit.</li>
         </ol>
         <button type="button" className="neo-button bg-[--primary-accent] text-[--text-color]" onClick={() => setPhase('make')}>
           Start
@@ -198,10 +244,82 @@ export default function LessonSpeak({
     )
   }
 
+  if (phase === 'listen' && take && character) {
+    return (
+      <div className="mx-auto flex h-[calc(100dvh-3.5rem)] max-w-md flex-col overflow-hidden bg-white px-4 pb-3 text-[--text-color] grandstander">
+        <p className="pt-2 text-center text-lg font-bold">Step 3. Listen and pick a voice.</p>
+        <div className="flex min-h-0 flex-1 items-center justify-center py-1">
+          <div className="aspect-square h-full max-h-full w-auto max-w-full">
+            <FaceStage character={character} getLevel={getLevel} className="!h-full !w-full" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {VOICE_EFFECTS.map((effect) => (
+            <button
+              key={effect}
+              type="button"
+              aria-pressed={voice === effect}
+              onClick={() => playTake(effect)}
+              className={`rounded-full border-[3px] border-[--text-color] px-2 py-2 text-sm font-bold shadow-[3px_3px_0_0_var(--text-color)] ${
+                voice === effect ? 'bg-[--primary-accent]' : 'bg-white'
+              }`}
+            >
+              {VOICE_LABELS[effect]}
+            </button>
+          ))}
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            className="neo-button bg-white px-3 py-2 text-sm text-[--text-color]"
+            onClick={() => {
+              if (player.playing) player.stop()
+              else playTake(voice)
+            }}
+          >
+            {player.playing ? 'Pause' : 'Play'}
+          </button>
+          <button
+            type="button"
+            className="neo-button bg-white px-3 py-2 text-sm text-[--text-color]"
+            onClick={() => void shareRecording()}
+          >
+            Share
+          </button>
+        </div>
+        {message ? <p className="pt-1 text-center text-xs font-semibold text-amber-800">{message}</p> : null}
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            className="neo-button bg-white px-3 py-2 text-sm text-[--text-color]"
+            onClick={() => {
+              player.stop()
+              setMessage(null)
+              void begin()
+            }}
+          >
+            Record again
+          </button>
+          <button
+            type="button"
+            className="neo-button bg-[--primary-accent] px-3 py-2 text-sm text-[--text-color]"
+            onClick={() => {
+              player.stop()
+              setMessage(null)
+              setPhase('submit')
+            }}
+          >
+            Submit
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   if (phase === 'submit') {
     return (
       <Page>
-        <p className="text-center text-2xl font-bold">Step 3. Submit.</p>
+        <p className="text-center text-2xl font-bold">Step 4. Submit.</p>
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
