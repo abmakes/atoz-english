@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { toProfileQuizCard } from '@/lib/profile-quiz-card'
+import { emptyProfileQuizLists, toProfileQuizCard } from '@/lib/profile-quiz-card'
 
 describe('toProfileQuizCard', () => {
   it('keeps the cover fields and question count without question bodies', () => {
@@ -43,5 +43,9 @@ describe('toProfileQuizCard', () => {
     expect(card.quizType).toBe('MULTIPLE_CHOICE')
     expect(card.authorId).toBe('admin')
     expect(card.questionCount).toBe(0)
+  })
+
+  it('starts the profile lists empty without touching the database', () => {
+    expect(emptyProfileQuizLists()).toEqual({ owned: [], liked: [], favorites: [] })
   })
 })

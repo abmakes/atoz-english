@@ -17,7 +17,7 @@ import { useUser } from '@clerk/nextjs'
 import {
   emptyProfileQuizLists,
   type ProfileQuizLists,
-} from '@/lib/profile-quizzes'
+} from '@/lib/profile-quiz-card'
 import {
   deleteQuizDraft,
   draftHasContent,

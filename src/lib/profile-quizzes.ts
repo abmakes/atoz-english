@@ -1,7 +1,18 @@
+/**
+ * Server-only profile query. Client components must import
+ * `emptyProfileQuizLists` from `@/lib/profile-quiz-card` instead.
+ * Importing this file pulls in Prisma, which throws in the browser.
+ */
 import { prisma, withDatabaseRetry } from '@/lib/prisma'
-import { toProfileQuizCard } from '@/lib/profile-quiz-card'
+import {
+  emptyProfileQuizLists,
+  toProfileQuizCard,
+  type ProfileQuizLists,
+} from '@/lib/profile-quiz-card'
 import { shouldSkipCatalogQuery } from '@/lib/quiz-catalog-card'
-import type { Quiz } from '@/types'
+
+export type { ProfileQuizLists }
+export { emptyProfileQuizLists }
 
 const profileCardSelect = {
   id: true,
@@ -14,18 +25,6 @@ const profileCardSelect = {
   authorId: true,
   questionCount: true,
 } as const
-
-export interface ProfileQuizLists {
-  owned: Quiz[]
-  liked: Quiz[]
-  favorites: Quiz[]
-}
-
-export const emptyProfileQuizLists = (): ProfileQuizLists => ({
-  owned: [],
-  liked: [],
-  favorites: [],
-})
 
 /**
  * Owned, liked, and favorited quizzes for one teacher.
