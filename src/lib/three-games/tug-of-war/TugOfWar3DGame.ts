@@ -13,8 +13,8 @@ import {
 } from '@/lib/pixi-engine/core/EventTypes'
 import { GamePhase } from '@/lib/pixi-engine/core/GameStateManager'
 import { TimerType } from '@/lib/pixi-engine/game/TimerManager'
-import { QuestionSequencer } from '@/lib/pixi-engine/game/QuestionSequencer'
 import { DEFAULT_QUESTION_HANDLING_CONFIG } from '@/lib/pixi-engine/config/GameConfig'
+import { TugQuestionSequencer } from './tugQuestionSchedule'
 import type {
   ThreeGame,
   ThreeGameContext,
@@ -94,7 +94,7 @@ export class TugOfWar3DGame implements ThreeGame {
   private readonly winLines: THREE.Mesh[] = []
 
   private questions: QuestionData[] = []
-  private sequencer: QuestionSequencer | null = null
+  private sequencer: TugQuestionSequencer | null = null
   private currentQuestion: QuestionData | null = null
   /** Answer order shown on the card. Scoring must use this, not the stored list. */
   private shownAnswers: string[] = []
@@ -147,10 +147,13 @@ export class TugOfWar3DGame implements ThreeGame {
       )
     }
 
-    this.sequencer = this.context.quizDataSource.createSequencer(
-      { ...quiz, questions: this.questions },
-      this.context.config.teams.length,
+    const handling =
       this.context.config.questionHandling ?? DEFAULT_QUESTION_HANDLING_CONFIG
+    this.sequencer = new TugQuestionSequencer(
+      this.questions,
+      this.context.config.teams.length,
+      this.context.config.gameLength ?? 'regular',
+      handling.randomizeOrder !== false
     )
     this.totalQuestions = this.sequencer.getTotalQuestionsToAsk()
     this.durationMs = this.context.config.intensityTimeLimit * 1000
@@ -662,6 +665,7 @@ export class TugOfWar3DGame implements ThreeGame {
       answerLocked: this.answerLocked,
       lastHudQuestion: this.lastHudQuestion,
     }
+    this._emitStreak()
     if (!canReplayHudQuestion(replay)) return
     this.context.services.eventBus.emit(
       HUD_EVENTS.QUESTION_SHOWN,
@@ -695,6 +699,14 @@ export class TugOfWar3DGame implements ThreeGame {
       this.ninjas
         .filter((ninja) => ninja.side === side)
         .forEach((ninja) => ninja.setGlow(glowing))
+    })
+    this._emitStreak()
+  }
+
+  private _emitStreak(): void {
+    this.context.services.eventBus.emit(TUG_EVENTS.STREAK_CHANGED, {
+      blueStreak: this.match.blueStreak,
+      redStreak: this.match.redStreak,
     })
   }
 }

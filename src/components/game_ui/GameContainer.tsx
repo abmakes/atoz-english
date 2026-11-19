@@ -298,6 +298,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug, quizSum
           gameMode: gameMode,
           powerups: powerupConfig,
           intensityTimeLimit: setupData.intensityTimeLimit,
+          gameLength: setupData.gameLength,
           splashPowerups: setupData.splashPowerups,
           ninjaPowerups: setupData.ninjaPowerups,
           rules: ruleConfig, // Assign the RuleConfig object
@@ -403,6 +404,7 @@ const GameContainer: React.FC<GameContainerProps> = ({ quizId, gameSlug, quizSum
                     initialGameSlug={gameSlug}
                     quizId={quizId}
                     quizTitle={quizSummary?.title}
+                    questionCount={quizSummary?.questionCount}
                     defaultSettings={quizSummary?.defaultSettings}
                     isStartingPlay={isStartingPlay}
                 />;

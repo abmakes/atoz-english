@@ -132,11 +132,14 @@ export class NinjaClimbRaceManager {
     teamIds: string[]
     startingCharges: NinjaPowerupId[]
     questionsPerTeam: number
+    /** Overrides the summit derived from the question count (game-length setting). */
+    summitPoints?: number
     shortcutsEnabled?: boolean
     nodes?: Omit<ShortcutNodeDef, 'stepIndex'>[]
     rng?: () => number
   }) {
-    this.summitPoints = computeSummitPoints(options.questionsPerTeam)
+    this.summitPoints =
+      options.summitPoints ?? computeSummitPoints(options.questionsPerTeam)
     this.shortcutsEnabled = options.shortcutsEnabled !== false
     this.rng = options.rng ?? Math.random
     this.teamOrder = [...options.teamIds]

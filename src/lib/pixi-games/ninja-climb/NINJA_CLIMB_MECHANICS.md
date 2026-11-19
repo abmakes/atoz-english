@@ -58,9 +58,10 @@ Prompt shows a pie chart (green = forward, red = back), “Take a chance?”, an
 
 When the quiz pool is short relative to summit height, questions **recycle in coverage cycles**:
 
-1. Each unique question is answered by **each team** once per cycle (turn order A→B→A→B maps to Q,Q, nextQ, nextQ, …).
-2. Within a cycle, the same team never sees the same question twice.
-3. Extra cycles are scheduled so there are enough turns for a typical climb to 480+.
+1. Turns alternate teams and deal the next different question (team A gets Q1, team B gets Q2, team A gets Q3, …).
+2. Within a cycle, a question is not repeated for anyone until every team has seen every question. The same team never sees the same question twice in that cycle.
+3. Extra cycles are scheduled so there are enough turns for a typical climb to the summit.
+4. Setup offers Short, Regular, and Long. Regular is today's summit (`max(480, questions × 80)`). Short is about half that height (never under 240). Long is twice as tall. The setup screen estimates minutes from the question timer.
 
 ## Trail & occupancy
 

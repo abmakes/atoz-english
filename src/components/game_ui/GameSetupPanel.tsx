@@ -26,6 +26,12 @@ import {
   type NinjaPowerupsConfig,
 } from '@/lib/pixi-games/ninja-climb/ninjaPowerups';
 import type { SplashPowerupsData, NinjaPowerupsData, QuizDefaultSettings as SharedQuizDefaultSettings } from '@/types/gameTypes';
+import {
+  GAME_LENGTH_OPTIONS,
+  formatPlayTime,
+  turnsForGameLength,
+  type GameLengthId,
+} from '@/lib/game-length';
 
 // Define props explicitly, using imported types
 /**
@@ -42,6 +48,8 @@ interface GameSetupPanelProps {
     quizId: string;
     /** Title from the Quiz row so the form does not wait on question bodies. */
     quizTitle?: string;
+    /** How many questions the quiz has, used for the play-time estimate. */
+    questionCount?: number;
     /** Default timers/theme from the Quiz row. */
     defaultSettings?: SharedQuizDefaultSettings;
     /** True while the parent is loading the game module after Play. */
@@ -124,11 +132,13 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
   initialGameSlug,
   quizId,
   quizTitle,
+  questionCount,
   defaultSettings,
   isStartingPlay = false,
 }) => {
   const selectedQuiz = useGameStore((state) => state.selectedQuiz);
   const resolvedTitle = quizTitle || selectedQuiz?.title;
+  const resolvedQuestionCount = questionCount ?? selectedQuiz?.questionCount ?? 0;
   const resolvedDefaults = defaultSettings ?? selectedQuiz?.defaultSettings;
   const isSplashDash = initialGameSlug === 'splash-dash';
   const isNinjaClimb = initialGameSlug === 'ninja-climb';
@@ -162,6 +172,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
   const [intensityTimeLimit, setIntensityTimeLimit] = useState<number>(
     () => (defaultSettings ? mapQuizSettingsToGameSetup(defaultSettings).intensityTimeLimit : 15)
   );
+  const [gameLength, setGameLength] = useState<GameLengthId>('regular');
   const [limitedGuesses, setLimitedGuesses] = useState<number | null>(
     () => (defaultSettings ? mapQuizSettingsToGameSetup(defaultSettings).limitedGuesses : 3)
   );
@@ -336,6 +347,10 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
       setSelectedTheme(finalSettings.theme);
       setSelectedGameFeatures(finalSettings.gameFeatures);
       setIntensityTimeLimit(finalSettings.intensityTimeLimit);
+      const storedLength = (finalSettings as { gameLength?: unknown }).gameLength;
+      if (storedLength === 'short' || storedLength === 'regular' || storedLength === 'long') {
+        setGameLength(storedLength);
+      }
       setLimitedGuesses(finalSettings.limitedGuesses);
       setPowerups({ ...DEFAULT_POWERUPS, ...finalSettings.powerups });
       
@@ -444,6 +459,11 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
     saveQuizSettings({ intensityTimeLimit: value });
   };
 
+  const handleGameLengthClick = (value: GameLengthId) => {
+    setGameLength(value);
+    saveQuizSettings({ gameLength: value });
+  };
+
   const handleGuessesClick = (value: number) => {
     const newValue = limitedGuesses === value ? null : value;
     setLimitedGuesses(newValue);
@@ -487,6 +507,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
       theme: selectedTheme,
       gameFeatures: selectedGameFeatures,
       intensityTimeLimit,
+      gameLength: isNinjaClimb || isTugOfWar ? gameLength : undefined,
       // While limited-guesses UI is hidden, keep the feature inactive
       limitedGuesses: SHOW_LIMITED_GUESSES ? limitedGuesses : null,
       powerups,
@@ -674,7 +695,7 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
 
         {/* Options grid */}
         <div className={`optionsGrid md:max-w-5xl md:mx-auto ${
-          !isSplashDash && !isNinjaClimb && !usesScoreModePowers ? 'optionGridSingle' : ''
+          !isSplashDash && !isNinjaClimb && !isTugOfWar && !usesScoreModePowers ? 'optionGridSingle' : ''
         }`}>
           {/* Box 1: Intensity — used by Team Quiz and Splash Dash question timers */}
           <div className={'optionBox'}>
@@ -703,6 +724,39 @@ const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
               ))}
             </div>
           </div>
+
+          {(isNinjaClimb || isTugOfWar) && (
+          <div className={'optionBox'}>
+            <h3 className={`font-semibold mb-2 text-md text-[var(--text-color)]`}>
+              How long to play
+            </h3>
+            <div className={`buttonGroup`}>
+              {GAME_LENGTH_OPTIONS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => handleGameLengthClick(option.id)}
+                  className={`buttonChoice ${gameLength === option.id ? 'buttonChoiceActive' : ''}`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-center text-sm text-[var(--text-color)]">
+              {resolvedQuestionCount > 0
+                ? isTugOfWar
+                  ? `${formatPlayTime(
+                      turnsForGameLength(initialGameSlug, resolvedQuestionCount, 2, gameLength),
+                      intensityTimeLimit
+                    )}. A team can win sooner by hanging 3 banners.`
+                  : `${formatPlayTime(
+                      turnsForGameLength(initialGameSlug, resolvedQuestionCount, 2, gameLength),
+                      intensityTimeLimit
+                    )} to the summit.`
+                : 'The time estimate appears once this quiz has questions.'}
+            </p>
+          </div>
+          )}
 
           {isSplashDash ? (
           <>

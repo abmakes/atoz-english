@@ -16,6 +16,7 @@ import {
   AnswerSelectedPayload,
 } from '@/lib/pixi-engine/core/EventTypes'
 import { ensureFontIsLoaded } from '@/lib/pixi-engine/utils/ensureFontIsLoaded'
+import { ninjaSummitForLength } from '@/lib/game-length'
 import { QuestionData } from '@/types'
 import { NinjaClimbDataManager } from './managers/NinjaClimbDataManager'
 import { NinjaClimbLayoutManager } from './managers/NinjaClimbLayoutManager'
@@ -29,7 +30,6 @@ import {
 import {
   NinjaClimbRaceManager,
   computeCorrectGain,
-  computeSummitPoints,
 } from './managers/NinjaClimbRaceManager'
 import {
   DEFAULT_NINJA_POWERUPS,
@@ -120,7 +120,10 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
     // Summit from unique pool size (not expanded schedule length). Start with no charges.
     const uniqueQuestions = Math.max(1, this.dataManager.getTotalLoadedQuestions())
     const questionsPerTeam = uniqueQuestions
-    const previewSummit = computeSummitPoints(questionsPerTeam)
+    const previewSummit = ninjaSummitForLength(
+      questionsPerTeam,
+      this.config.gameLength ?? 'regular'
+    )
     this.dataManager.setSummitPointsForSchedule(previewSummit)
     this.dataManager.initializeSequencer(this.config.teams.length)
 
@@ -128,6 +131,7 @@ export class NinjaClimbGame extends BaseGame<NinjaClimbGameState> {
       teamIds: this.config.teams.map((t) => String(t.id)),
       startingCharges: [],
       questionsPerTeam,
+      summitPoints: previewSummit,
       shortcutsEnabled: this.ninjaPowerupsConfig.shortcuts,
     })
 

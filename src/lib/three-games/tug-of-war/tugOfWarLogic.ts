@@ -101,6 +101,14 @@ export function stepsForCorrectStreak(streak: number): number {
     : TUG_STEP
 }
 
+/** How full the double-pull meter is. `ready` means the next correct answer is worth 2. */
+export function streakCharge(streak: number): { filled: number; ready: boolean } {
+  const cycle = TUG_STREAK_FOR_DOUBLE + 1
+  const safe = Number.isFinite(streak) ? Math.max(0, Math.floor(streak)) : 0
+  const filled = safe % cycle
+  return { filled, ready: filled === TUG_STREAK_FOR_DOUBLE }
+}
+
 export function streakForTeam(
   state: TugMatchState,
   teamIndex: number
