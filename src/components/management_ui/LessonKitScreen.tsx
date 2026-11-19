@@ -21,6 +21,7 @@ import {
   type WorksheetItem,
 } from '@/lib/lesson/assess'
 import { promptsFromLesson } from '@/lib/lesson/prompts'
+import { studentThoughtPath } from '@/lib/lesson/thought-assignment'
 import { levelFromTags, resolveGrammarTags } from '@/lib/taxonomy/quiz-taxonomy'
 import { QuestionType } from '@/types/question_types'
 
@@ -36,11 +37,21 @@ interface LessonQuiz {
   questions: SourceQuestion[]
 }
 
+interface LessonThought {
+  id: string
+  title: string
+  prompt: string
+  shareToken: string
+  status: string
+  studentPath: string
+}
+
 interface LessonRecord {
   id: string
   title: string
   worksheetItems: WorksheetItem[]
   sentences: LessonSentence[]
+  thought: LessonThought | null
 }
 
 function toReviewQuestion(item: LessonAssessmentItem): ReviewableQuestion {
@@ -78,7 +89,9 @@ export default function LessonKitScreen({
   const [lesson, setLesson] = useState<LessonRecord | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [view, setView] = useState<'pieces' | 'options' | 'checking' | 'review'>('pieces')
+  const [view, setView] = useState<'pieces' | 'options' | 'checking' | 'review' | 'thought'>('pieces')
+  const [sharing, setSharing] = useState(false)
+  const [origin, setOrigin] = useState('')
   const [target, setTarget] = useState<LessonTarget>('worksheet')
   const [reviewQuestions, setReviewQuestions] = useState<ReviewableQuestion[]>([])
   const [notice, setNotice] = useState('')
@@ -118,6 +131,10 @@ export default function LessonKitScreen({
       cancelled = true
     }
   }, [quizId])
+
+  useEffect(() => {
+    setOrigin(window.location.origin)
+  }, [])
 
   const playableCount = useMemo(() => {
     if (!quiz || !lesson) return 0
@@ -356,6 +373,30 @@ export default function LessonKitScreen({
 
   const worksheetReady = lesson.worksheetItems.length > 0
   const sentenceReady = playableCount > 0
+  const studentLink = lesson.thought ? `${origin}${studentThoughtPath(lesson.thought.shareToken)}` : ''
+
+  const shareThought = async () => {
+    if (!quiz) return
+    if (lesson.thought) {
+      setView('thought')
+      return
+    }
+    setSharing(true)
+    setNotice('')
+    try {
+      const response = await fetch(`/api/quizzes/${quiz.id}/lesson/thought`, { method: 'POST' })
+      const payload = (await response.json()) as { error?: string; data?: { thought: LessonThought } }
+      if (!response.ok || !payload.data?.thought) {
+        throw new Error(payload.error || 'Could not create the speaking assignment.')
+      }
+      setLesson({ ...lesson, thought: payload.data.thought })
+      setView('thought')
+    } catch (shareError) {
+      setNotice(shareError instanceof Error ? shareError.message : 'Could not create the speaking assignment.')
+    } finally {
+      setSharing(false)
+    }
+  }
 
   return (
     <div className="container mx-auto max-w-screen-xl px-4 py-6 grandstander text-[--text-color]">
@@ -433,6 +474,42 @@ export default function LessonKitScreen({
                   }}
                 />
               </div>
+            ) : view === 'thought' && lesson.thought ? (
+              <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
+                <h3 className="text-xl font-bold">Funny Faces</h3>
+                <p className="max-w-md text-sm text-slate-600">{lesson.thought.prompt}</p>
+                <p className="max-w-md text-sm text-slate-600">
+                  Students open this link on a phone. They press Start, count down, and say the answer with the face on top.
+                </p>
+                <p className="max-w-lg break-all rounded-lg border border-[--border-dark] bg-[--background] px-3 py-2 text-sm">
+                  {studentLink}
+                </p>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <button
+                    type="button"
+                    className="rounded-lg border-2 border-[--border-dark] bg-white px-4 py-2 text-sm font-semibold shadow-[3px_3px_0px_0px_var(--border-dark)]"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(studentLink)
+                      addToast('Student link copied.', { variant: 'success', position: 'top-center' })
+                    }}
+                  >
+                    Copy link
+                  </button>
+                  <Link
+                    href={`/tools/thoughts/${lesson.thought.id}`}
+                    className="rounded-lg border-2 border-[--border-dark] bg-white px-4 py-2 text-sm font-semibold shadow-[3px_3px_0px_0px_var(--border-dark)]"
+                  >
+                    Teacher settings
+                  </Link>
+                  <button
+                    type="button"
+                    className="px-4 py-2 text-sm font-semibold underline"
+                    onClick={() => setView('pieces')}
+                  >
+                    Back
+                  </button>
+                </div>
+              </div>
             ) : view === 'checking' ? (
               <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-16">
                 <Loader2 className="h-8 w-8 animate-spin" />
@@ -443,7 +520,7 @@ export default function LessonKitScreen({
                 <div className="max-w-md text-center">
                   <h3 className="text-xl font-bold">Add a piece</h3>
                   <p className="mt-1 text-sm text-slate-600">
-                    Check this quiz, then print a worksheet or play the sentences.
+                    Check this quiz, then print a worksheet, play the sentences, or share a speaking link.
                   </p>
                   {notice ? (
                     <p role="status" className="mt-3 text-sm font-semibold text-amber-800">
@@ -500,15 +577,17 @@ export default function LessonKitScreen({
                   </button>
                   <button
                     type="button"
-                    className={`${SOURCE_CARD} cursor-not-allowed hover:bg-white`}
-                    aria-disabled="true"
-                    onClick={(event) => event.preventDefault()}
+                    className={SOURCE_CARD}
+                    disabled={sharing}
+                    onClick={() => void shareThought()}
                   >
                     <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-[--border-dark] bg-[--background]">
                       <Smile size={22} />
                     </div>
                     <span className="text-base font-semibold">Funny Faces</span>
-                    <span className="text-xs text-slate-600">Later</span>
+                    <span className="text-xs text-slate-600">
+                      {lesson.thought ? 'Share the student link' : 'Speaking from this lesson'}
+                    </span>
                   </button>
                   <button
                     type="button"

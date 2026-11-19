@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/prisma'
+import { ensureLessonKitTable } from '@/lib/lesson/lesson-kit-table'
+import { lessonShowsPictures, lessonSpeakPictures, type LessonSpeakPicture } from '@/lib/lesson/thought-assignment'
 import { createShareToken } from '@/lib/stories/tokens'
 import { classCanWatch, type ChallengeStatus, type SubmissionStatus } from '@/lib/thoughts/access'
 import type { Character } from '@/lib/thoughts/character'
@@ -48,6 +50,10 @@ export interface ThoughtSessionDto {
   showGallery: boolean
   allowFunnyVoices: boolean
   gallery: ThoughtPublicClip[]
+  /** True when this activity was shared from a saved lesson. */
+  lesson: boolean
+  /** Matching lesson pictures. Empty for a speaking prompt that is only text. */
+  pictures: LessonSpeakPicture[]
 }
 
 type ChallengeRow = {
@@ -186,16 +192,47 @@ export async function deleteChallengeAudio(challengeId: string): Promise<void> {
   await Promise.all(rows.map((row) => removePrivateAudio(row.audioPath).catch(() => undefined)))
 }
 
-export async function getSessionByToken(token: string): Promise<ThoughtSessionDto | null> {
-  const challenge = await prisma.thoughtChallenge.findUnique({
-    where: { shareToken: token },
+const sessionInclude = {
+  submissions: {
+    where: { status: 'APPROVED' as const },
+    orderBy: { createdAt: 'desc' as const },
+  },
+  lessonKit: {
     include: {
-      submissions: {
-        where: { status: 'APPROVED' },
-        orderBy: { createdAt: 'desc' },
+      quiz: {
+        include: {
+          questions: { orderBy: { id: 'asc' as const } },
+        },
       },
     },
-  })
+  },
+}
+
+function missingLessonStore(error: unknown): boolean {
+  const code =
+    typeof error === 'object' && error && 'code' in error ? String((error as { code: unknown }).code) : ''
+  const message = error instanceof Error ? error.message : String(error)
+  return code === 'P2021' || code === 'P2022' || /thoughtChallengeId|lessonkit/i.test(message)
+}
+
+async function loadSessionChallenge(token: string) {
+  try {
+    return await prisma.thoughtChallenge.findUnique({
+      where: { shareToken: token },
+      include: sessionInclude,
+    })
+  } catch (error) {
+    if (!missingLessonStore(error)) throw error
+    await ensureLessonKitTable()
+    return prisma.thoughtChallenge.findUnique({
+      where: { shareToken: token },
+      include: sessionInclude,
+    })
+  }
+}
+
+export async function getSessionByToken(token: string): Promise<ThoughtSessionDto | null> {
+  const challenge = await loadSessionChallenge(token)
   if (!challenge || challenge.status !== 'READY') return null
   const gallery = challenge.showGallery
     ? challenge.submissions
@@ -210,6 +247,9 @@ export async function getSessionByToken(token: string): Promise<ThoughtSessionDt
         )
         .map(toPublicClip)
     : []
+  const quiz = challenge.lessonKit?.quiz
+  const pictures =
+    quiz && lessonShowsPictures(quiz) ? lessonSpeakPictures(quiz.questions, quiz.imageUrl) : []
   return {
     title: challenge.title,
     prompt: challenge.prompt,
@@ -217,6 +257,8 @@ export async function getSessionByToken(token: string): Promise<ThoughtSessionDt
     showGallery: challenge.showGallery,
     allowFunnyVoices: challenge.allowFunnyVoices,
     gallery,
+    lesson: Boolean(challenge.lessonKit),
+    pictures,
   }
 }
 
