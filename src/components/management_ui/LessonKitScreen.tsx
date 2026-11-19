@@ -479,7 +479,7 @@ export default function LessonKitScreen({
                 <h3 className="text-xl font-bold">Funny Faces</h3>
                 <p className="max-w-md text-sm text-slate-600">{lesson.thought.prompt}</p>
                 <p className="max-w-md text-sm text-slate-600">
-                  Students open this link on a phone. They press Start, count down, and say the answer with the face on top.
+                  Students open this link on a phone. They read the task, make a character, record, and submit.
                 </p>
                 <p className="max-w-lg break-all rounded-lg border border-[--border-dark] bg-[--background] px-3 py-2 text-sm">
                   {studentLink}

@@ -29,15 +29,23 @@ describe('lesson thoughts assignment', () => {
     expect(studentThoughtPath('abc_def')).toBe('/thoughts/abc_def')
   })
 
-  it('asks the student to use the lesson grammar in their own life', () => {
+  it('asks for three or four sentences about the student\'s life', () => {
     const copy = lessonThoughtCopy({
       title: 'Bigger and smaller',
       grammar: ['Comparatives & Superlatives'],
     })
-    expect(copy.prompt).toContain('your own life')
-    expect(copy.prompt).toContain('Comparatives & Superlatives')
+    expect(copy.prompt).toBe('Make three or four sentences about your life. Use comparatives and superlatives.')
     expect(copy.title.length).toBeLessThanOrEqual(80)
     expect(copy.prompt.length).toBeLessThanOrEqual(400)
+  })
+
+  it('talks about school subjects when that is the lesson', () => {
+    const copy = lessonThoughtCopy({
+      title: 'My week',
+      grammar: ['Prepositions of Time'],
+      topics: ['School & Classroom'],
+    })
+    expect(copy.prompt).toBe('Make three or four sentences about school subjects. Use prepositions of time.')
   })
 
   it('recognises image description and there is / there are', () => {
@@ -91,7 +99,7 @@ describe('lesson thoughts assignment', () => {
       pictures: true,
     })
     expect(copy.prompt).toBe(
-      'Look at each picture and say the sentence. Use this language: There is / There are.'
+      'Look at each picture. Say a sentence for each one. Use there is and there are.'
     )
   })
 

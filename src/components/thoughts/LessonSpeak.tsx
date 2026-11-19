@@ -1,20 +1,20 @@
 'use client'
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
 import FaceStage from '@/components/thoughts/FaceStage'
+import StudentSession from '@/components/thoughts/StudentSession'
 import { submitThought } from '@/components/thoughts/api'
 import { useVoiceRecorder } from '@/components/story_creator/useVoiceRecorder'
 import { stepAmplitude } from '@/lib/thoughts/animation'
-import { assembleRandomFace, type Character } from '@/lib/thoughts/character'
+import type { Character } from '@/lib/thoughts/character'
 import type { LessonSpeakPicture } from '@/lib/lesson/thought-assignment'
 import type { ThoughtSessionDto } from '@/lib/thoughts/service'
 
-type Phase = 'start' | 'count' | 'speak' | 'sent'
+type Phase = 'brief' | 'make' | 'count' | 'speak' | 'submit' | 'sent'
 
 /**
- * The lesson speaking page. One phone screen: a start button, a countdown,
- * then the face on top and the assignment underneath for the whole recording.
+ * Lesson speaking: the task, then the character maker, then the recording
+ * screen, then submit.
  */
 export default function LessonSpeak({
   token,
@@ -24,7 +24,7 @@ export default function LessonSpeak({
   session: ThoughtSessionDto
 }) {
   const recorder = useVoiceRecorder()
-  const [phase, setPhase] = useState<Phase>('start')
+  const [phase, setPhase] = useState<Phase>('brief')
   const [count, setCount] = useState(3)
   const [character, setCharacter] = useState<Character | null>(null)
   const [name, setName] = useState('')
@@ -36,10 +36,6 @@ export default function LessonSpeak({
   const liveRef = useRef(0)
   const startedRef = useRef(false)
   const finishRef = useRef<() => void>(() => {})
-
-  useEffect(() => {
-    setCharacter(assembleRandomFace())
-  }, [])
 
   useEffect(() => {
     if (!recorder.isRecording) {
@@ -88,7 +84,7 @@ export default function LessonSpeak({
     }
     const allowed = recorder.hasPermission || (await recorder.requestPermission())
     if (!allowed) {
-      setMessage('Allow the microphone, then press Start.')
+      setMessage('Allow the microphone, then press Record.')
       return
     }
     setTake(null)
@@ -113,6 +109,7 @@ export default function LessonSpeak({
     setTake(result)
     setClientKey(crypto.randomUUID())
     setMessage(null)
+    setPhase('submit')
   }
   finishRef.current = () => {
     void finishRecording()
@@ -152,41 +149,95 @@ export default function LessonSpeak({
 
   if (!session.acceptingResponses) {
     return (
-      <Screen>
-        <p className="max-w-xs text-center text-xl font-semibold">{session.prompt}</p>
-        <p className="text-center text-sm text-slate-600">Your teacher has closed new recordings.</p>
-      </Screen>
+      <Page>
+        <p className="max-w-xs text-center text-2xl font-bold">{session.prompt}</p>
+        <p className="text-center text-base">Your teacher has closed new recordings.</p>
+      </Page>
     )
   }
 
-  if (phase === 'start') {
+  if (phase === 'brief') {
     return (
-      <Screen>
-        <button
-          type="button"
-          onClick={() => void begin()}
-          className="h-28 w-full max-w-xs rounded-full bg-violet-600 text-3xl font-bold text-white shadow-[0_8px_0_0_#5b21b6]"
-        >
+      <div className="mx-auto flex min-h-[calc(100dvh-3.5rem)] max-w-md flex-col justify-center gap-6 px-5 py-6 text-[--text-color] grandstander">
+        <p className="text-center text-2xl font-bold leading-snug">{session.prompt}</p>
+        <ol className="space-y-2 text-lg font-bold">
+          <li>Step 1. Create your character.</li>
+          <li>Step 2. Record.</li>
+          <li>Step 3. Submit.</li>
+        </ol>
+        <button type="button" className="neo-button bg-[--primary-accent] text-[--text-color]" onClick={() => setPhase('make')}>
           Start
         </button>
-        {message ? <p className="max-w-xs text-center text-sm font-semibold text-amber-800">{message}</p> : null}
-      </Screen>
+      </div>
+    )
+  }
+
+  if (phase === 'make') {
+    return (
+      <StudentSession
+        token={token}
+        session={session}
+        lessonStep
+        notice={message}
+        onContinue={(face) => {
+          setCharacter(face)
+          void begin()
+        }}
+      />
     )
   }
 
   if (phase === 'count') {
     return (
-      <Screen>
-        <p className="text-[8rem] font-bold leading-none text-violet-700" aria-live="assertive">
+      <Page>
+        <p className="text-center text-lg font-bold">Step 2. Record.</p>
+        <p className="text-[7rem] font-bold leading-none" aria-live="assertive">
           {count}
         </p>
-      </Screen>
+      </Page>
+    )
+  }
+
+  if (phase === 'submit') {
+    return (
+      <Page>
+        <p className="text-center text-2xl font-bold">Step 3. Submit.</p>
+        <input
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Your name"
+          maxLength={40}
+          aria-label="Your name"
+          className="h-12 w-full max-w-xs rounded-full border-2 border-[--border-dark] bg-white px-4 text-lg font-bold text-[--text-color] outline-none"
+        />
+        {message ? <p className="max-w-xs text-center text-sm font-semibold text-amber-800">{message}</p> : null}
+        <button
+          type="button"
+          onClick={() => void send()}
+          disabled={submitting || !take}
+          className="neo-button bg-[--primary-accent] text-[--text-color] disabled:opacity-50"
+        >
+          {submitting ? 'Sending' : 'Submit'}
+        </button>
+        <button
+          type="button"
+          className="neo-button bg-white text-[--text-color]"
+          onClick={() => {
+            setTake(null)
+            setClientKey(null)
+            setMessage(null)
+            void begin()
+          }}
+        >
+          Record again
+        </button>
+      </Page>
     )
   }
 
   if (phase === 'sent') {
     return (
-      <Screen>
+      <Page>
         <p className="text-4xl font-bold">Sent</p>
         <button
           type="button"
@@ -194,32 +245,31 @@ export default function LessonSpeak({
             setTake(null)
             setClientKey(null)
             setMessage(null)
-            setPhase('start')
+            setPhase('brief')
           }}
-          className="rounded-full bg-violet-600 px-8 py-4 text-lg font-bold text-white"
+          className="neo-button bg-[--primary-accent] text-[--text-color]"
         >
-          Record another
+          Start again
         </button>
-      </Screen>
+      </Page>
     )
   }
 
   return (
-    <FullScreen>
-    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#fbf6ef] text-[#1e1b4b]">
-      <div className="flex h-1/2 min-h-0 items-center justify-center px-3 pt-[max(0.5rem,env(safe-area-inset-top))]">
+    <div className="flex h-[calc(100dvh-3.5rem)] flex-col overflow-hidden bg-white text-[--text-color] grandstander">
+      <div className="flex h-1/2 min-h-0 items-center justify-center px-3">
         {character ? (
           <div className="aspect-square h-full max-h-full w-auto max-w-full">
             <FaceStage character={character} getLevel={getLevel} className="!h-full !w-full" />
           </div>
         ) : null}
       </div>
-      <div className="flex h-1/2 min-h-0 flex-col px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="flex h-1/2 min-h-0 flex-col px-3 pb-3">
         <div className="min-h-0 flex-1 overflow-hidden">
           {session.pictures.length > 0 ? (
             <PictureBoard pictures={session.pictures} />
           ) : (
-            <p className="flex h-full items-center justify-center overflow-y-auto text-center text-xl font-semibold leading-snug">
+            <p className="flex h-full items-center justify-center overflow-y-auto text-center text-xl font-bold leading-snug">
               {session.prompt}
             </p>
           )}
@@ -229,65 +279,29 @@ export default function LessonSpeak({
           <button
             type="button"
             onClick={() => void finishRecording()}
-            className="mx-auto mt-2 h-12 shrink-0 rounded-full bg-rose-600 px-8 text-base font-bold text-white"
+            className="neo-button mx-auto mt-2 shrink-0 bg-white text-[--text-color]"
           >
             Stop
           </button>
-        ) : take ? (
-          <div className="mt-2 flex shrink-0 items-center gap-2">
-            <input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Your name"
-              maxLength={40}
-              aria-label="Your name"
-              className="h-12 min-w-0 flex-1 rounded-full border border-slate-300 bg-white px-4 text-base font-semibold outline-none"
-            />
-            <button
-              type="button"
-              onClick={() => void begin()}
-              className="h-12 shrink-0 rounded-full bg-white px-4 text-sm font-bold text-violet-800"
-            >
-              Again
-            </button>
-            <button
-              type="button"
-              onClick={() => void send()}
-              disabled={submitting}
-              className="h-12 shrink-0 rounded-full bg-violet-600 px-4 text-sm font-bold text-white disabled:opacity-50"
-            >
-              {submitting ? 'Sending' : 'Send'}
-            </button>
-          </div>
         ) : (
           <button
             type="button"
             onClick={() => void begin()}
-            className="mx-auto mt-2 h-12 shrink-0 rounded-full bg-violet-600 px-8 text-base font-bold text-white"
+            className="neo-button mx-auto mt-2 shrink-0 bg-[--primary-accent] text-[--text-color]"
           >
-            Again
+            Record again
           </button>
         )}
       </div>
     </div>
-    </FullScreen>
   )
 }
 
-function FullScreen({ children }: { children: ReactNode }) {
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
-  if (!mounted) return null
-  return createPortal(children, document.body)
-}
-
-function Screen({ children }: { children: ReactNode }) {
+function Page({ children }: { children: ReactNode }) {
   return (
-    <FullScreen>
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-[#fbf6ef] px-6 text-[#1e1b4b]">
-        {children}
-      </div>
-    </FullScreen>
+    <div className="mx-auto flex min-h-[calc(100dvh-3.5rem)] max-w-md flex-col items-center justify-center gap-5 px-5 text-[--text-color] grandstander">
+      {children}
+    </div>
   )
 }
 

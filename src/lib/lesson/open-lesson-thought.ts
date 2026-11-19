@@ -7,7 +7,7 @@ import {
   type LessonPictureQuestion,
 } from '@/lib/lesson/thought-assignment'
 import { createShareToken } from '@/lib/stories/tokens'
-import { resolveGrammarTags } from '@/lib/taxonomy/quiz-taxonomy'
+import { resolveGrammarTags, resolveTopicTags } from '@/lib/taxonomy/quiz-taxonomy'
 
 export interface LessonThought {
   id: string
@@ -61,6 +61,7 @@ export async function openLessonThought(
   const copy = lessonThoughtCopy({
     title: quiz.title,
     grammar: resolveGrammarTags(quiz.tags),
+    topics: resolveTopicTags(quiz.tags),
     pictures: pictures.length > 0,
   })
   let lesson = await savedLesson(quiz.id)

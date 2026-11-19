@@ -88,28 +88,54 @@ export function lessonSpeakPictures(
   return usable.slice(0, 6)
 }
 
+/** A tag as a child would say it: "Prepositions of Time" becomes "prepositions of time". */
+export function spokenLessonTag(tag: string): string {
+  return tag
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/\s*\/\s*/g, ' and ')
+    .replace(/\s*&\s*/g, ' and ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+}
+
+function spokenTopic(topic: string): string {
+  if (topic.trim().toLowerCase() === 'school & classroom') return 'school subjects'
+  return spokenLessonTag(topic)
+}
+
+function joinSpoken(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? ''
+  if (items.length === 2) return `${items[0]} and ${items[1]}`
+  return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`
+}
+
 /**
  * A speaking task for the grammar already saved on the lesson.
  * Three grammar tags fit in the Thoughts prompt. The title stays short enough to store.
- * Picture lessons ask the student to say a sentence for each picture.
+ * A school lesson talks about school subjects. Other lessons talk about the student's life.
+ * Picture lessons ask for a sentence for each picture.
  */
 export function lessonThoughtCopy(input: {
   title: string
   grammar: string[]
+  topics?: string[]
   pictures?: boolean
 }): { title: string; prompt: string } {
   const lesson = input.title.replace(/\s+/g, ' ').trim() || 'This lesson'
   const grammar = [...new Set(input.grammar.map((tag) => tag.replace(/\s+/g, ' ').trim()).filter(Boolean))].slice(0, 3)
-  const point = grammar.join(', ')
-  const title = (point ? `${lesson}: ${point}` : lesson).slice(0, 80)
+  const topics = [...new Set((input.topics ?? []).map((tag) => tag.replace(/\s+/g, ' ').trim()).filter(Boolean))].slice(0, 2)
+  const point = joinSpoken(grammar.map(spokenLessonTag))
+  const about = topics.length > 0 ? joinSpoken(topics.map(spokenTopic)) : 'your life'
+  const title = (grammar.length > 0 ? `${lesson}: ${grammar.join(', ')}` : lesson).slice(0, 80)
   const prompt = (
     input.pictures
       ? point
-        ? `Look at each picture and say the sentence. Use this language: ${point}.`
-        : 'Look at each picture and say what you see.'
+        ? `Look at each picture. Say a sentence for each one. Use ${point}.`
+        : 'Look at each picture. Say what you see.'
       : point
-        ? `Talk about your own life in at least three sentences. Use this language: ${point}.`
-        : `Talk about ${lesson} in at least three sentences.`
+        ? `Make three or four sentences about ${about}. Use ${point}.`
+        : `Make three or four sentences about ${about}.`
   ).slice(0, 400)
   return { title, prompt }
 }
