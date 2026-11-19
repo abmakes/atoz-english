@@ -169,6 +169,7 @@ exports.Prisma.LessonKitScalarFieldEnum = {
   title: 'title',
   worksheetItems: 'worksheetItems',
   sentences: 'sentences',
+  thoughtChallengeId: 'thoughtChallengeId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };

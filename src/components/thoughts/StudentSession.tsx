@@ -35,9 +35,16 @@ type Tab = 'mine' | 'gallery'
 export default function StudentSession({
   token,
   session,
+  lessonStep = false,
+  notice = null,
+  onContinue,
 }: {
   token: string
   session: ThoughtSessionDto
+  /** Lesson step 1: the same character maker, tightened for a phone. */
+  lessonStep?: boolean
+  notice?: string | null
+  onContinue?: (character: Character) => void
 }) {
   const recorder = useVoiceRecorder()
   const player = useClipPlayer()
@@ -252,6 +259,252 @@ export default function StudentSession({
   }
 
   const getLevel = () => (recorder.isRecording ? liveRef.current : player.levelRef.current)
+
+  if (lessonStep && onContinue) {
+    return (
+      <div className="mx-auto flex min-h-[calc(100dvh-3.5rem)] max-w-lg flex-col bg-white text-[--text-color] grandstander">
+        <p className="px-3 pt-2 text-center text-base font-bold">Step 1. Create your character.</p>
+        <div className="relative mx-auto mt-1 aspect-square h-[min(34dvh,20rem)] w-auto max-w-full">
+          <FaceStage
+            character={character}
+            getLevel={() => 0}
+            interactive
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            onMove={(instanceId, x, y) =>
+              setCharacter((current) => (current ? updatePart(current, instanceId, { x, y }) : current))
+            }
+            className="!h-full !w-full"
+          />
+          {selected && selectedDef && selectedDef.category !== 'head' ? (
+            <>
+              <label className="absolute bottom-2 left-1 z-20 flex h-1/3 w-7 flex-col items-center gap-1 rounded-full border-2 border-[--border-dark] bg-white px-0.5 py-1">
+                <span className="text-[10px] font-semibold leading-none">Size</span>
+                <input
+                  type="range"
+                  aria-label="Size"
+                  min={0.08}
+                  max={1.2}
+                  step={0.01}
+                  value={selected.scale}
+                  onChange={(event) =>
+                    setCharacter((current) =>
+                      current
+                        ? updatePart(current, selected.instanceId, { scale: Number(event.target.value) })
+                        : current
+                    )
+                  }
+                  className="w-5 min-h-0 flex-1 cursor-pointer accent-[--primary-accent] [direction:rtl] [writing-mode:vertical-lr]"
+                />
+              </label>
+              <label className="absolute bottom-2 right-1 z-20 flex h-1/3 w-7 flex-col items-center gap-1 rounded-full border-2 border-[--border-dark] bg-white px-0.5 py-1">
+                <span className="text-[10px] font-semibold leading-none">Turn</span>
+                <input
+                  type="range"
+                  aria-label="Turn"
+                  min={-180}
+                  max={180}
+                  step={1}
+                  value={selected.rotation}
+                  onChange={(event) =>
+                    setCharacter((current) =>
+                      current
+                        ? updatePart(current, selected.instanceId, { rotation: Number(event.target.value) })
+                        : current
+                    )
+                  }
+                  className="w-5 min-h-0 flex-1 cursor-pointer accent-[--primary-accent] [direction:rtl] [writing-mode:vertical-lr]"
+                />
+              </label>
+              <div className="absolute inset-x-8 bottom-2 z-20 flex justify-center gap-1">
+                {selectedDef.mirrorable ? (
+                  <button
+                    type="button"
+                    className="rounded-lg border-2 border-[--border-dark] bg-white px-2 py-0.5 text-xs font-bold shadow-[2px_2px_0_0_var(--border-dark)]"
+                    onClick={() =>
+                      setCharacter((current) =>
+                        current ? updatePart(current, selected.instanceId, { mirror: !selected.mirror }) : current
+                      )
+                    }
+                  >
+                    Flip
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="rounded-lg border-2 border-[--border-dark] bg-white px-2 py-0.5 text-xs font-bold shadow-[2px_2px_0_0_var(--border-dark)]"
+                  onClick={() =>
+                    setCharacter((current) =>
+                      current ? bringPartIntoView(current, selected.instanceId) : current
+                    )
+                  }
+                >
+                  Center
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border-2 border-[--border-dark] bg-white px-2 py-0.5 text-xs font-bold shadow-[2px_2px_0_0_var(--border-dark)]"
+                  onClick={() => {
+                    setCharacter((current) => (current ? deletePart(current, selected.instanceId) : current))
+                    setSelectedId(null)
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            </>
+          ) : null}
+        </div>
+        <div className="px-2 pt-1">
+          <PartsTray
+            backdrop={character.backdrop ?? 'white'}
+            onBackdrop={(backdrop) => setCharacter((current) => (current ? { ...current, backdrop } : current))}
+            photoIsFace={character.photoMode === 'face' && Boolean(character.background)}
+            faceMask={character.faceMask ?? 'circle'}
+            onFaceMask={(faceMask) => setCharacter((current) => (current ? { ...current, faceMask } : current))}
+            onPick={(partId) => {
+              const result = addCatalogPart(character, partId)
+              if ('error' in result) {
+                setMessage(result.error)
+                return
+              }
+              commit(result.character)
+              setMessage(null)
+            }}
+          />
+        </div>
+        <div className="flex items-center justify-center gap-2 px-3 py-2">
+          <button
+            type="button"
+            className="neo-button bg-white px-3 py-2 text-sm text-[--text-color]"
+            onClick={() => {
+              const next = {
+                ...assembleRandomFace(),
+                background: character.background,
+                photoMode: character.photoMode,
+                backdrop: character.backdrop,
+                faceMask: character.faceMask,
+              }
+              commit(next)
+              baselineRef.current = next
+              setSelectedId(null)
+            }}
+          >
+            Remix
+          </button>
+          {undo.length > 0 ? (
+            <button
+              type="button"
+              className="neo-button bg-white px-3 py-2 text-sm text-[--text-color]"
+              onClick={() => {
+                const previous = undo[undo.length - 1]
+                if (!previous) return
+                setUndo((stack) => stack.slice(0, -1))
+                setCharacter(previous)
+              }}
+            >
+              Undo
+            </button>
+          ) : null}
+          <button
+            type="button"
+            aria-label="Take a picture"
+            className="neo-button flex h-11 w-11 items-center justify-center bg-white p-0 text-[--text-color]"
+            onClick={() => cameraInputRef.current?.click()}
+          >
+            <Camera className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            aria-label="Upload a picture"
+            className="neo-button flex h-11 w-11 items-center justify-center bg-white p-0 text-[--text-color]"
+            onClick={() => uploadInputRef.current?.click()}
+          >
+            <ImageUp className="h-5 w-5" />
+          </button>
+        </div>
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="user"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            event.target.value = ''
+            void applyPhoto(file)
+          }}
+        />
+        <input
+          ref={uploadInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            event.target.value = ''
+            void applyPhoto(file)
+          }}
+        />
+        {character.background ? (
+          <div className="grid grid-cols-3 gap-2 px-3 pb-2">
+            <button
+              type="button"
+              className={`rounded-full border-2 border-[--border-dark] px-2 py-1 text-xs font-bold ${
+                character.photoMode === 'face' ? 'bg-white' : 'bg-[--primary-accent]'
+              }`}
+              onClick={() =>
+                setCharacter((current) => {
+                  if (!current) return current
+                  const next = { ...current }
+                  delete next.photoMode
+                  return next
+                })
+              }
+            >
+              Behind
+            </button>
+            <button
+              type="button"
+              className={`rounded-full border-2 border-[--border-dark] px-2 py-1 text-xs font-bold ${
+                character.photoMode === 'face' ? 'bg-[--primary-accent]' : 'bg-white'
+              }`}
+              onClick={() => setCharacter((current) => (current ? { ...current, photoMode: 'face' } : current))}
+            >
+              As face
+            </button>
+            <button
+              type="button"
+              className="rounded-full border-2 border-[--border-dark] bg-white px-2 py-1 text-xs font-bold"
+              onClick={() =>
+                setCharacter((current) => {
+                  if (!current) return current
+                  const next = { ...current }
+                  delete next.background
+                  delete next.photoMode
+                  return next
+                })
+              }
+            >
+              Remove
+            </button>
+          </div>
+        ) : null}
+        {message || notice ? (
+          <p className="px-3 text-center text-sm font-semibold text-amber-800">{message || notice}</p>
+        ) : null}
+        <div className="sticky bottom-0 mt-auto bg-white px-3 py-3">
+          <button
+            type="button"
+            className="neo-button w-full bg-[--primary-accent] text-[--text-color]"
+            onClick={() => onContinue(character)}
+          >
+            Record
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-[calc(100dvh-4rem)] bg-[#fbf6ef] py-2 text-[#1e1b4b] lg:px-4 lg:py-6">

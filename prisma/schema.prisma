@@ -75,11 +75,13 @@ model LessonKit {
   authorId       String   @default("admin")
   quizId         String   @unique
   title          String
-  worksheetItems Json
-  sentences      Json
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  quiz           Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  worksheetItems    Json
+  sentences         Json
+  thoughtChallengeId String?  @unique
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  quiz              Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  thoughtChallenge  ThoughtChallenge? @relation(fields: [thoughtChallengeId], references: [id], onDelete: SetNull)
 
   @@index([authorId])
 }
@@ -243,6 +245,7 @@ model ThoughtChallenge {
   createdAt          DateTime               @default(now())
   updatedAt          DateTime               @updatedAt
   submissions        ThoughtSubmission[]
+  lessonKit          LessonKit?
 
   @@index([authorId])
 }

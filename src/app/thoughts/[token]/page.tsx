@@ -1,6 +1,7 @@
 'use client'
 
 import { use, useEffect, useState } from 'react'
+import LessonSpeak from '@/components/thoughts/LessonSpeak'
 import StudentSession from '@/components/thoughts/StudentSession'
 import { fetchThoughtSession } from '@/components/thoughts/api'
 import type { ThoughtSessionDto } from '@/lib/thoughts/service'
@@ -33,5 +34,6 @@ export default function StudentThoughtsPage({
       </div>
     )
   }
+  if (session.lesson) return <LessonSpeak token={token} session={session} />
   return <StudentSession token={token} session={session} />
 }
