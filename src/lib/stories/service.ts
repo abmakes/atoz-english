@@ -20,6 +20,7 @@ export interface StoryDto {
   showExampleToStudents: boolean;
   status: string;
   shareToken: string;
+  dueAt: string | null;
   createdAt: string;
   updatedAt: string;
   panels: StoryPanelDto[];
@@ -61,6 +62,7 @@ type StoryRecord = {
   showExampleToStudents: boolean;
   status: string;
   shareToken: string;
+  dueAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   panels: PanelRecord[];
@@ -80,6 +82,7 @@ export function toStoryDto(
     showExampleToStudents: story.showExampleToStudents,
     status: story.status,
     shareToken: story.shareToken,
+    dueAt: story.dueAt?.toISOString() ?? null,
     createdAt: story.createdAt.toISOString(),
     updatedAt: story.updatedAt.toISOString(),
     panels: [...story.panels].sort((a, b) => a.order - b.order).map(toPanelDto),

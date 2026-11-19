@@ -13,6 +13,8 @@ Teacher-centric quiz platform: create quizzes (form, CSV, AI), then play them as
 
 **Practice** (`/practice`, public): games that do not need a teacher quiz. **Sentence Builder** (`/practice/sentence-builder`) is single-player: pick one grammar structure, then build picture sentences for that structure only. From an owned quiz, **Profile → Lesson** (`/quizzes/[id]/lesson`) can print a worksheet or play those same sentences after a teacher check. The practice pack stays the default when no quiz prompts are passed. **Word Bite** and **Sentence Swim** (`/practice/word-bite`, `/practice/sentence-swim`, both beta) are same-screen games for 2–4 players. They reuse those grammar sentences. Word Bite is a fill-in-the-blank race for a verb form or a pronoun. Sentence Swim is a minute of eating words in order to build the matching sentences.
 
+**Profile** (`/quizzes`): published, liked, and favorited quizzes are loaded on the server as title cards (cover, type, and question count). Question text is not sent with the list, the same idea as the games catalog. **Assignments** (Profile → Assignments): one table for quiz homework, Thoughts, and Story Creator. A multiple-choice quiz can be assigned as open-book homework (`/homework/{shareToken}`). Students answer every question, see a percentage, and may retry before the due date. After one finished try they can play a timed challenge on the same questions. The teacher report is `/quizzes/assignments/{id}`.
+
 **Teacher Tools** (`/tools`, signed-in only): small classroom helpers. **Story Creator** — AI-generated 4-picture stories (Gemini text + image), a printable 2×2 worksheet, a public student link for per-picture voice recording, and a live lip-synced "movie" player (canvas virtual camera; no video files are generated). Plan/architecture: [TEACHER_TOOLS_STORY_CREATOR_PLAN.md](TEACHER_TOOLS_STORY_CREATOR_PLAN.md). **Thoughts** — a class speaking wall: students open a share link, decorate a sticker face from `public/images/thoughts/`, and record a short answer. The face talks from the amplitude envelope. Teachers approve which clips the class can watch. Student audio is stored in the public Vercel Blob store (unguessable path) and streamed through an access check. The file URL is never sent to the browser. Also includes a **temporary Image curator** (`/tools/image-curator`) that saves Pixabay photos into the quiz image library by CEFR word until a full collection exists.
 
 ## Stack snapshot (working)
@@ -69,6 +71,8 @@ src/lib/stories/         Story Creator: schemas, prompts, Gemini image gen, time
 src/components/story_creator/  Story Creator UI (brief form, editor, recorder, movie player)
 src/lib/thoughts/        Thoughts: sticker catalog, lip-sync, private audio, class access
 src/components/thoughts/ Thoughts UI (face builder, recorder, teacher review)
+src/lib/homework/        Homework grading, challenge rules, and the assignment report
+src/lib/pixi-games/homework-quiz/  Single-player homework and challenge canvas
 src/stores/             Zustand stores
 src/styles/             globals.css + stylingGuide.md
 src/types/              Shared TS types
@@ -96,6 +100,7 @@ CONTEXT.md              This hub
 | **Ninja Climb integration** | [src/lib/pixi-games/ninja-climb/README.md](src/lib/pixi-games/ninja-climb/README.md) | NC wiring checklist |
 | **Multiple-choice flow** | [src/lib/pixi-games/multiple-choice/MultipleChoiceFlow.md](src/lib/pixi-games/multiple-choice/MultipleChoiceFlow.md) | MC-specific deep dive |
 | **Sentence Builder** | [src/lib/pixi-games/sentence-builder/README.md](src/lib/pixi-games/sentence-builder/README.md) | Built-in picture sentence practice |
+| **Homework quiz** | [src/lib/pixi-games/homework-quiz/README.md](src/lib/pixi-games/homework-quiz/README.md) | Assigned multiple-choice quiz and challenge |
 | **Word Bite / Sentence Swim** | [src/lib/pixi-games/word-chompers/README.md](src/lib/pixi-games/word-chompers/README.md) | Beta same-screen grammar practice |
 | **API / Zod conventions** | [src/lib/README.md](src/lib/README.md) | API routes, schemas, responses |
 | **Assets contract** | [public/ASSETS.md](public/ASSETS.md) | public/ files, CI verify |

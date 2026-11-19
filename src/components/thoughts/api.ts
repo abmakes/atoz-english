@@ -53,6 +53,7 @@ export async function patchThought(
     acceptingResponses: boolean
     showGallery: boolean
     allowFunnyVoices: boolean
+    dueAt: string | null
   }>
 ): Promise<ThoughtChallengeDetail> {
   return unwrap(

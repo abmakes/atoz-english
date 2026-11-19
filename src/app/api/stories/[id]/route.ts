@@ -38,9 +38,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return errorResponse('Invalid story update', parsed.error.flatten(), 400);
     }
 
+    const { dueAt, ...rest } = parsed.data
     const updated = await prisma.story.update({
       where: { id: story.id },
-      data: parsed.data,
+      data: {
+        ...rest,
+        ...(dueAt !== undefined ? { dueAt: dueAt === null ? null : new Date(dueAt) } : {}),
+      },
       include: { panels: true },
     });
 

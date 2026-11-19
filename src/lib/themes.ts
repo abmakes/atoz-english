@@ -146,3 +146,16 @@ export function getThemeConfig(themeId: string | null | undefined): PixiThemeCon
 export function getPixiThemeConfig(themeId: string | null | undefined): PixiSpecificConfig {
     return getThemeConfig(themeId).pixiConfig;
 }
+
+/** Quiz setting ids that share the normal-quiz Clouds, Forest, or Dark Sea scene. */
+export type SceneThemeId = 'default' | 'forest' | 'dark'
+
+export function sceneThemeId(theme: string | null | undefined): SceneThemeId {
+  if (theme === 'forest') return 'forest'
+  if (theme === 'dark') return 'dark'
+  return 'default'
+}
+
+export function sceneBackgroundUrl(theme: string | null | undefined): string {
+  return `${getThemeConfig(sceneThemeId(theme)).imagesBasePath}bg_image.webp`
+}

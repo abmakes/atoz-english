@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse, handleApiError } from '@/lib/api-utils';
+import { isBeforeDue } from '@/lib/assignments/due';
 import { isStoryPlayable, parseMouth } from '@/lib/stories/service';
 
 export const runtime = 'nodejs';
@@ -30,6 +31,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
     return successResponse({
       title: story.title,
+      acceptingResponses: story.status === 'READY' && isBeforeDue(story.dueAt),
       showExample: story.showExampleToStudents,
       exampleStory: story.showExampleToStudents ? story.exampleStory : null,
       panels: [...story.panels]

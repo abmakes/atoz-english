@@ -79,6 +79,21 @@ export type ThoughtChallenge = $Result.DefaultSelection<Prisma.$ThoughtChallenge
  * 
  */
 export type ThoughtSubmission = $Result.DefaultSelection<Prisma.$ThoughtSubmissionPayload>
+/**
+ * Model HomeworkAssignment
+ * A multiple-choice quiz assigned as open-book homework, with an optional challenge.
+ */
+export type HomeworkAssignment = $Result.DefaultSelection<Prisma.$HomeworkAssignmentPayload>
+/**
+ * Model HomeworkAttempt
+ * 
+ */
+export type HomeworkAttempt = $Result.DefaultSelection<Prisma.$HomeworkAttemptPayload>
+/**
+ * Model HomeworkAnswer
+ * 
+ */
+export type HomeworkAnswer = $Result.DefaultSelection<Prisma.$HomeworkAnswerPayload>
 
 /**
  * Enums
@@ -132,6 +147,32 @@ export const ThoughtSubmissionStatus: {
 
 export type ThoughtSubmissionStatus = (typeof ThoughtSubmissionStatus)[keyof typeof ThoughtSubmissionStatus]
 
+
+export const HomeworkAttemptMode: {
+  HOMEWORK: 'HOMEWORK',
+  CHALLENGE: 'CHALLENGE'
+};
+
+export type HomeworkAttemptMode = (typeof HomeworkAttemptMode)[keyof typeof HomeworkAttemptMode]
+
+
+export const HomeworkAttemptStatus: {
+  IN_PROGRESS: 'IN_PROGRESS',
+  FINISHED: 'FINISHED'
+};
+
+export type HomeworkAttemptStatus = (typeof HomeworkAttemptStatus)[keyof typeof HomeworkAttemptStatus]
+
+
+export const HomeworkEndReason: {
+  COMPLETE: 'COMPLETE',
+  WRONG: 'WRONG',
+  TIMEOUT: 'TIMEOUT',
+  HUNDRED: 'HUNDRED'
+};
+
+export type HomeworkEndReason = (typeof HomeworkEndReason)[keyof typeof HomeworkEndReason]
+
 }
 
 export type QuestionType = $Enums.QuestionType
@@ -153,6 +194,18 @@ export const ThoughtChallengeStatus: typeof $Enums.ThoughtChallengeStatus
 export type ThoughtSubmissionStatus = $Enums.ThoughtSubmissionStatus
 
 export const ThoughtSubmissionStatus: typeof $Enums.ThoughtSubmissionStatus
+
+export type HomeworkAttemptMode = $Enums.HomeworkAttemptMode
+
+export const HomeworkAttemptMode: typeof $Enums.HomeworkAttemptMode
+
+export type HomeworkAttemptStatus = $Enums.HomeworkAttemptStatus
+
+export const HomeworkAttemptStatus: typeof $Enums.HomeworkAttemptStatus
+
+export type HomeworkEndReason = $Enums.HomeworkEndReason
+
+export const HomeworkEndReason: typeof $Enums.HomeworkEndReason
 
 /**
  * ##  Prisma Client ʲˢ
@@ -406,6 +459,36 @@ export class PrismaClient<
     * ```
     */
   get thoughtSubmission(): Prisma.ThoughtSubmissionDelegate<ExtArgs>;
+
+  /**
+   * `prisma.homeworkAssignment`: Exposes CRUD operations for the **HomeworkAssignment** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more HomeworkAssignments
+    * const homeworkAssignments = await prisma.homeworkAssignment.findMany()
+    * ```
+    */
+  get homeworkAssignment(): Prisma.HomeworkAssignmentDelegate<ExtArgs>;
+
+  /**
+   * `prisma.homeworkAttempt`: Exposes CRUD operations for the **HomeworkAttempt** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more HomeworkAttempts
+    * const homeworkAttempts = await prisma.homeworkAttempt.findMany()
+    * ```
+    */
+  get homeworkAttempt(): Prisma.HomeworkAttemptDelegate<ExtArgs>;
+
+  /**
+   * `prisma.homeworkAnswer`: Exposes CRUD operations for the **HomeworkAnswer** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more HomeworkAnswers
+    * const homeworkAnswers = await prisma.homeworkAnswer.findMany()
+    * ```
+    */
+  get homeworkAnswer(): Prisma.HomeworkAnswerDelegate<ExtArgs>;
 }
 
 export namespace Prisma {
@@ -859,7 +942,10 @@ export namespace Prisma {
     StorySubmission: 'StorySubmission',
     StoryRecording: 'StoryRecording',
     ThoughtChallenge: 'ThoughtChallenge',
-    ThoughtSubmission: 'ThoughtSubmission'
+    ThoughtSubmission: 'ThoughtSubmission',
+    HomeworkAssignment: 'HomeworkAssignment',
+    HomeworkAttempt: 'HomeworkAttempt',
+    HomeworkAnswer: 'HomeworkAnswer'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -875,7 +961,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "quiz" | "quizLike" | "quizFavorite" | "question" | "lessonKit" | "storedImage" | "tag" | "story" | "storyPanel" | "storySubmission" | "storyRecording" | "thoughtChallenge" | "thoughtSubmission"
+      modelProps: "quiz" | "quizLike" | "quizFavorite" | "question" | "lessonKit" | "storedImage" | "tag" | "story" | "storyPanel" | "storySubmission" | "storyRecording" | "thoughtChallenge" | "thoughtSubmission" | "homeworkAssignment" | "homeworkAttempt" | "homeworkAnswer"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1789,6 +1875,216 @@ export namespace Prisma {
           }
         }
       }
+      HomeworkAssignment: {
+        payload: Prisma.$HomeworkAssignmentPayload<ExtArgs>
+        fields: Prisma.HomeworkAssignmentFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.HomeworkAssignmentFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAssignmentPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.HomeworkAssignmentFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAssignmentPayload>
+          }
+          findFirst: {
+            args: Prisma.HomeworkAssignmentFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAssignmentPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.HomeworkAssignmentFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAssignmentPayload>
+          }
+          findMany: {
+            args: Prisma.HomeworkAssignmentFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAssignmentPayload>[]
+          }
+          create: {
+            args: Prisma.HomeworkAssignmentCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAssignmentPayload>
+          }
+          createMany: {
+            args: Prisma.HomeworkAssignmentCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.HomeworkAssignmentCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAssignmentPayload>[]
+          }
+          delete: {
+            args: Prisma.HomeworkAssignmentDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAssignmentPayload>
+          }
+          update: {
+            args: Prisma.HomeworkAssignmentUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAssignmentPayload>
+          }
+          deleteMany: {
+            args: Prisma.HomeworkAssignmentDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.HomeworkAssignmentUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.HomeworkAssignmentUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAssignmentPayload>
+          }
+          aggregate: {
+            args: Prisma.HomeworkAssignmentAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateHomeworkAssignment>
+          }
+          groupBy: {
+            args: Prisma.HomeworkAssignmentGroupByArgs<ExtArgs>
+            result: $Utils.Optional<HomeworkAssignmentGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.HomeworkAssignmentCountArgs<ExtArgs>
+            result: $Utils.Optional<HomeworkAssignmentCountAggregateOutputType> | number
+          }
+        }
+      }
+      HomeworkAttempt: {
+        payload: Prisma.$HomeworkAttemptPayload<ExtArgs>
+        fields: Prisma.HomeworkAttemptFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.HomeworkAttemptFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAttemptPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.HomeworkAttemptFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAttemptPayload>
+          }
+          findFirst: {
+            args: Prisma.HomeworkAttemptFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAttemptPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.HomeworkAttemptFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAttemptPayload>
+          }
+          findMany: {
+            args: Prisma.HomeworkAttemptFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAttemptPayload>[]
+          }
+          create: {
+            args: Prisma.HomeworkAttemptCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAttemptPayload>
+          }
+          createMany: {
+            args: Prisma.HomeworkAttemptCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.HomeworkAttemptCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAttemptPayload>[]
+          }
+          delete: {
+            args: Prisma.HomeworkAttemptDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAttemptPayload>
+          }
+          update: {
+            args: Prisma.HomeworkAttemptUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAttemptPayload>
+          }
+          deleteMany: {
+            args: Prisma.HomeworkAttemptDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.HomeworkAttemptUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.HomeworkAttemptUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAttemptPayload>
+          }
+          aggregate: {
+            args: Prisma.HomeworkAttemptAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateHomeworkAttempt>
+          }
+          groupBy: {
+            args: Prisma.HomeworkAttemptGroupByArgs<ExtArgs>
+            result: $Utils.Optional<HomeworkAttemptGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.HomeworkAttemptCountArgs<ExtArgs>
+            result: $Utils.Optional<HomeworkAttemptCountAggregateOutputType> | number
+          }
+        }
+      }
+      HomeworkAnswer: {
+        payload: Prisma.$HomeworkAnswerPayload<ExtArgs>
+        fields: Prisma.HomeworkAnswerFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.HomeworkAnswerFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAnswerPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.HomeworkAnswerFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAnswerPayload>
+          }
+          findFirst: {
+            args: Prisma.HomeworkAnswerFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAnswerPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.HomeworkAnswerFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAnswerPayload>
+          }
+          findMany: {
+            args: Prisma.HomeworkAnswerFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAnswerPayload>[]
+          }
+          create: {
+            args: Prisma.HomeworkAnswerCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAnswerPayload>
+          }
+          createMany: {
+            args: Prisma.HomeworkAnswerCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.HomeworkAnswerCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAnswerPayload>[]
+          }
+          delete: {
+            args: Prisma.HomeworkAnswerDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAnswerPayload>
+          }
+          update: {
+            args: Prisma.HomeworkAnswerUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAnswerPayload>
+          }
+          deleteMany: {
+            args: Prisma.HomeworkAnswerDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.HomeworkAnswerUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.HomeworkAnswerUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$HomeworkAnswerPayload>
+          }
+          aggregate: {
+            args: Prisma.HomeworkAnswerAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateHomeworkAnswer>
+          }
+          groupBy: {
+            args: Prisma.HomeworkAnswerGroupByArgs<ExtArgs>
+            result: $Utils.Optional<HomeworkAnswerGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.HomeworkAnswerCountArgs<ExtArgs>
+            result: $Utils.Optional<HomeworkAnswerCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -1953,12 +2249,14 @@ export namespace Prisma {
     questions: number
     likes: number
     favorites: number
+    homeworkAssignments: number
   }
 
   export type QuizCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     questions?: boolean | QuizCountOutputTypeCountQuestionsArgs
     likes?: boolean | QuizCountOutputTypeCountLikesArgs
     favorites?: boolean | QuizCountOutputTypeCountFavoritesArgs
+    homeworkAssignments?: boolean | QuizCountOutputTypeCountHomeworkAssignmentsArgs
   }
 
   // Custom InputTypes
@@ -1991,6 +2289,13 @@ export namespace Prisma {
    */
   export type QuizCountOutputTypeCountFavoritesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: QuizFavoriteWhereInput
+  }
+
+  /**
+   * QuizCountOutputType without action
+   */
+  export type QuizCountOutputTypeCountHomeworkAssignmentsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: HomeworkAssignmentWhereInput
   }
 
 
@@ -2093,6 +2398,68 @@ export namespace Prisma {
    */
   export type ThoughtChallengeCountOutputTypeCountSubmissionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: ThoughtSubmissionWhereInput
+  }
+
+
+  /**
+   * Count Type HomeworkAssignmentCountOutputType
+   */
+
+  export type HomeworkAssignmentCountOutputType = {
+    attempts: number
+  }
+
+  export type HomeworkAssignmentCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    attempts?: boolean | HomeworkAssignmentCountOutputTypeCountAttemptsArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * HomeworkAssignmentCountOutputType without action
+   */
+  export type HomeworkAssignmentCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAssignmentCountOutputType
+     */
+    select?: HomeworkAssignmentCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * HomeworkAssignmentCountOutputType without action
+   */
+  export type HomeworkAssignmentCountOutputTypeCountAttemptsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: HomeworkAttemptWhereInput
+  }
+
+
+  /**
+   * Count Type HomeworkAttemptCountOutputType
+   */
+
+  export type HomeworkAttemptCountOutputType = {
+    answers: number
+  }
+
+  export type HomeworkAttemptCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    answers?: boolean | HomeworkAttemptCountOutputTypeCountAnswersArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * HomeworkAttemptCountOutputType without action
+   */
+  export type HomeworkAttemptCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAttemptCountOutputType
+     */
+    select?: HomeworkAttemptCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * HomeworkAttemptCountOutputType without action
+   */
+  export type HomeworkAttemptCountOutputTypeCountAnswersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: HomeworkAnswerWhereInput
   }
 
 
@@ -2350,6 +2717,7 @@ export namespace Prisma {
     likes?: boolean | Quiz$likesArgs<ExtArgs>
     favorites?: boolean | Quiz$favoritesArgs<ExtArgs>
     lessonKit?: boolean | Quiz$lessonKitArgs<ExtArgs>
+    homeworkAssignments?: boolean | Quiz$homeworkAssignmentsArgs<ExtArgs>
     _count?: boolean | QuizCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["quiz"]>
 
@@ -2390,6 +2758,7 @@ export namespace Prisma {
     likes?: boolean | Quiz$likesArgs<ExtArgs>
     favorites?: boolean | Quiz$favoritesArgs<ExtArgs>
     lessonKit?: boolean | Quiz$lessonKitArgs<ExtArgs>
+    homeworkAssignments?: boolean | Quiz$homeworkAssignmentsArgs<ExtArgs>
     _count?: boolean | QuizCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type QuizIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -2401,6 +2770,7 @@ export namespace Prisma {
       likes: Prisma.$QuizLikePayload<ExtArgs>[]
       favorites: Prisma.$QuizFavoritePayload<ExtArgs>[]
       lessonKit: Prisma.$LessonKitPayload<ExtArgs> | null
+      homeworkAssignments: Prisma.$HomeworkAssignmentPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -2784,6 +3154,7 @@ export namespace Prisma {
     likes<T extends Quiz$likesArgs<ExtArgs> = {}>(args?: Subset<T, Quiz$likesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$QuizLikePayload<ExtArgs>, T, "findMany"> | Null>
     favorites<T extends Quiz$favoritesArgs<ExtArgs> = {}>(args?: Subset<T, Quiz$favoritesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$QuizFavoritePayload<ExtArgs>, T, "findMany"> | Null>
     lessonKit<T extends Quiz$lessonKitArgs<ExtArgs> = {}>(args?: Subset<T, Quiz$lessonKitArgs<ExtArgs>>): Prisma__LessonKitClient<$Result.GetResult<Prisma.$LessonKitPayload<ExtArgs>, T, "findUniqueOrThrow"> | null, null, ExtArgs>
+    homeworkAssignments<T extends Quiz$homeworkAssignmentsArgs<ExtArgs> = {}>(args?: Subset<T, Quiz$homeworkAssignmentsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$HomeworkAssignmentPayload<ExtArgs>, T, "findMany"> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3212,6 +3583,26 @@ export namespace Prisma {
      */
     include?: LessonKitInclude<ExtArgs> | null
     where?: LessonKitWhereInput
+  }
+
+  /**
+   * Quiz.homeworkAssignments
+   */
+  export type Quiz$homeworkAssignmentsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAssignment
+     */
+    select?: HomeworkAssignmentSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAssignmentInclude<ExtArgs> | null
+    where?: HomeworkAssignmentWhereInput
+    orderBy?: HomeworkAssignmentOrderByWithRelationInput | HomeworkAssignmentOrderByWithRelationInput[]
+    cursor?: HomeworkAssignmentWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: HomeworkAssignmentScalarFieldEnum | HomeworkAssignmentScalarFieldEnum[]
   }
 
   /**
@@ -8944,6 +9335,7 @@ export namespace Prisma {
     showExampleToStudents: boolean | null
     status: $Enums.StoryStatus | null
     shareToken: string | null
+    dueAt: Date | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -8960,6 +9352,7 @@ export namespace Prisma {
     showExampleToStudents: boolean | null
     status: $Enums.StoryStatus | null
     shareToken: string | null
+    dueAt: Date | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -8977,6 +9370,7 @@ export namespace Prisma {
     showExampleToStudents: number
     status: number
     shareToken: number
+    dueAt: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -8995,6 +9389,7 @@ export namespace Prisma {
     showExampleToStudents?: true
     status?: true
     shareToken?: true
+    dueAt?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -9011,6 +9406,7 @@ export namespace Prisma {
     showExampleToStudents?: true
     status?: true
     shareToken?: true
+    dueAt?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -9028,6 +9424,7 @@ export namespace Prisma {
     showExampleToStudents?: true
     status?: true
     shareToken?: true
+    dueAt?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -9118,6 +9515,7 @@ export namespace Prisma {
     showExampleToStudents: boolean
     status: $Enums.StoryStatus
     shareToken: string
+    dueAt: Date | null
     createdAt: Date
     updatedAt: Date
     _count: StoryCountAggregateOutputType | null
@@ -9152,6 +9550,7 @@ export namespace Prisma {
     showExampleToStudents?: boolean
     status?: boolean
     shareToken?: boolean
+    dueAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     panels?: boolean | Story$panelsArgs<ExtArgs>
@@ -9172,6 +9571,7 @@ export namespace Prisma {
     showExampleToStudents?: boolean
     status?: boolean
     shareToken?: boolean
+    dueAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["story"]>
@@ -9189,6 +9589,7 @@ export namespace Prisma {
     showExampleToStudents?: boolean
     status?: boolean
     shareToken?: boolean
+    dueAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
@@ -9219,6 +9620,7 @@ export namespace Prisma {
       showExampleToStudents: boolean
       status: $Enums.StoryStatus
       shareToken: string
+      dueAt: Date | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["story"]>
@@ -9628,6 +10030,7 @@ export namespace Prisma {
     readonly showExampleToStudents: FieldRef<"Story", 'Boolean'>
     readonly status: FieldRef<"Story", 'StoryStatus'>
     readonly shareToken: FieldRef<"Story", 'String'>
+    readonly dueAt: FieldRef<"Story", 'DateTime'>
     readonly createdAt: FieldRef<"Story", 'DateTime'>
     readonly updatedAt: FieldRef<"Story", 'DateTime'>
   }
@@ -12967,6 +13370,7 @@ export namespace Prisma {
     showGallery: boolean | null
     allowFunnyVoices: boolean | null
     shareToken: string | null
+    dueAt: Date | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -12981,6 +13385,7 @@ export namespace Prisma {
     showGallery: boolean | null
     allowFunnyVoices: boolean | null
     shareToken: string | null
+    dueAt: Date | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -12995,6 +13400,7 @@ export namespace Prisma {
     showGallery: number
     allowFunnyVoices: number
     shareToken: number
+    dueAt: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -13011,6 +13417,7 @@ export namespace Prisma {
     showGallery?: true
     allowFunnyVoices?: true
     shareToken?: true
+    dueAt?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -13025,6 +13432,7 @@ export namespace Prisma {
     showGallery?: true
     allowFunnyVoices?: true
     shareToken?: true
+    dueAt?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -13039,6 +13447,7 @@ export namespace Prisma {
     showGallery?: true
     allowFunnyVoices?: true
     shareToken?: true
+    dueAt?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -13126,6 +13535,7 @@ export namespace Prisma {
     showGallery: boolean
     allowFunnyVoices: boolean
     shareToken: string
+    dueAt: Date | null
     createdAt: Date
     updatedAt: Date
     _count: ThoughtChallengeCountAggregateOutputType | null
@@ -13157,6 +13567,7 @@ export namespace Prisma {
     showGallery?: boolean
     allowFunnyVoices?: boolean
     shareToken?: boolean
+    dueAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     submissions?: boolean | ThoughtChallenge$submissionsArgs<ExtArgs>
@@ -13173,6 +13584,7 @@ export namespace Prisma {
     showGallery?: boolean
     allowFunnyVoices?: boolean
     shareToken?: boolean
+    dueAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["thoughtChallenge"]>
@@ -13187,6 +13599,7 @@ export namespace Prisma {
     showGallery?: boolean
     allowFunnyVoices?: boolean
     shareToken?: boolean
+    dueAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
@@ -13212,6 +13625,7 @@ export namespace Prisma {
       showGallery: boolean
       allowFunnyVoices: boolean
       shareToken: string
+      dueAt: Date | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["thoughtChallenge"]>
@@ -13617,6 +14031,7 @@ export namespace Prisma {
     readonly showGallery: FieldRef<"ThoughtChallenge", 'Boolean'>
     readonly allowFunnyVoices: FieldRef<"ThoughtChallenge", 'Boolean'>
     readonly shareToken: FieldRef<"ThoughtChallenge", 'String'>
+    readonly dueAt: FieldRef<"ThoughtChallenge", 'DateTime'>
     readonly createdAt: FieldRef<"ThoughtChallenge", 'DateTime'>
     readonly updatedAt: FieldRef<"ThoughtChallenge", 'DateTime'>
   }
@@ -15014,6 +15429,3267 @@ export namespace Prisma {
 
 
   /**
+   * Model HomeworkAssignment
+   */
+
+  export type AggregateHomeworkAssignment = {
+    _count: HomeworkAssignmentCountAggregateOutputType | null
+    _min: HomeworkAssignmentMinAggregateOutputType | null
+    _max: HomeworkAssignmentMaxAggregateOutputType | null
+  }
+
+  export type HomeworkAssignmentMinAggregateOutputType = {
+    id: string | null
+    authorId: string | null
+    quizId: string | null
+    title: string | null
+    shareToken: string | null
+    dueAt: Date | null
+    acceptingResponses: boolean | null
+    showLeaderboard: boolean | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type HomeworkAssignmentMaxAggregateOutputType = {
+    id: string | null
+    authorId: string | null
+    quizId: string | null
+    title: string | null
+    shareToken: string | null
+    dueAt: Date | null
+    acceptingResponses: boolean | null
+    showLeaderboard: boolean | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type HomeworkAssignmentCountAggregateOutputType = {
+    id: number
+    authorId: number
+    quizId: number
+    title: number
+    shareToken: number
+    dueAt: number
+    acceptingResponses: number
+    showLeaderboard: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type HomeworkAssignmentMinAggregateInputType = {
+    id?: true
+    authorId?: true
+    quizId?: true
+    title?: true
+    shareToken?: true
+    dueAt?: true
+    acceptingResponses?: true
+    showLeaderboard?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type HomeworkAssignmentMaxAggregateInputType = {
+    id?: true
+    authorId?: true
+    quizId?: true
+    title?: true
+    shareToken?: true
+    dueAt?: true
+    acceptingResponses?: true
+    showLeaderboard?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type HomeworkAssignmentCountAggregateInputType = {
+    id?: true
+    authorId?: true
+    quizId?: true
+    title?: true
+    shareToken?: true
+    dueAt?: true
+    acceptingResponses?: true
+    showLeaderboard?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type HomeworkAssignmentAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which HomeworkAssignment to aggregate.
+     */
+    where?: HomeworkAssignmentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of HomeworkAssignments to fetch.
+     */
+    orderBy?: HomeworkAssignmentOrderByWithRelationInput | HomeworkAssignmentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: HomeworkAssignmentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` HomeworkAssignments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` HomeworkAssignments.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned HomeworkAssignments
+    **/
+    _count?: true | HomeworkAssignmentCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: HomeworkAssignmentMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: HomeworkAssignmentMaxAggregateInputType
+  }
+
+  export type GetHomeworkAssignmentAggregateType<T extends HomeworkAssignmentAggregateArgs> = {
+        [P in keyof T & keyof AggregateHomeworkAssignment]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateHomeworkAssignment[P]>
+      : GetScalarType<T[P], AggregateHomeworkAssignment[P]>
+  }
+
+
+
+
+  export type HomeworkAssignmentGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: HomeworkAssignmentWhereInput
+    orderBy?: HomeworkAssignmentOrderByWithAggregationInput | HomeworkAssignmentOrderByWithAggregationInput[]
+    by: HomeworkAssignmentScalarFieldEnum[] | HomeworkAssignmentScalarFieldEnum
+    having?: HomeworkAssignmentScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: HomeworkAssignmentCountAggregateInputType | true
+    _min?: HomeworkAssignmentMinAggregateInputType
+    _max?: HomeworkAssignmentMaxAggregateInputType
+  }
+
+  export type HomeworkAssignmentGroupByOutputType = {
+    id: string
+    authorId: string
+    quizId: string
+    title: string
+    shareToken: string
+    dueAt: Date
+    acceptingResponses: boolean
+    showLeaderboard: boolean
+    createdAt: Date
+    updatedAt: Date
+    _count: HomeworkAssignmentCountAggregateOutputType | null
+    _min: HomeworkAssignmentMinAggregateOutputType | null
+    _max: HomeworkAssignmentMaxAggregateOutputType | null
+  }
+
+  type GetHomeworkAssignmentGroupByPayload<T extends HomeworkAssignmentGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<HomeworkAssignmentGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof HomeworkAssignmentGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], HomeworkAssignmentGroupByOutputType[P]>
+            : GetScalarType<T[P], HomeworkAssignmentGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type HomeworkAssignmentSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    authorId?: boolean
+    quizId?: boolean
+    title?: boolean
+    shareToken?: boolean
+    dueAt?: boolean
+    acceptingResponses?: boolean
+    showLeaderboard?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    quiz?: boolean | QuizDefaultArgs<ExtArgs>
+    attempts?: boolean | HomeworkAssignment$attemptsArgs<ExtArgs>
+    _count?: boolean | HomeworkAssignmentCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["homeworkAssignment"]>
+
+  export type HomeworkAssignmentSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    authorId?: boolean
+    quizId?: boolean
+    title?: boolean
+    shareToken?: boolean
+    dueAt?: boolean
+    acceptingResponses?: boolean
+    showLeaderboard?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    quiz?: boolean | QuizDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["homeworkAssignment"]>
+
+  export type HomeworkAssignmentSelectScalar = {
+    id?: boolean
+    authorId?: boolean
+    quizId?: boolean
+    title?: boolean
+    shareToken?: boolean
+    dueAt?: boolean
+    acceptingResponses?: boolean
+    showLeaderboard?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type HomeworkAssignmentInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    quiz?: boolean | QuizDefaultArgs<ExtArgs>
+    attempts?: boolean | HomeworkAssignment$attemptsArgs<ExtArgs>
+    _count?: boolean | HomeworkAssignmentCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type HomeworkAssignmentIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    quiz?: boolean | QuizDefaultArgs<ExtArgs>
+  }
+
+  export type $HomeworkAssignmentPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "HomeworkAssignment"
+    objects: {
+      quiz: Prisma.$QuizPayload<ExtArgs>
+      attempts: Prisma.$HomeworkAttemptPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      authorId: string
+      quizId: string
+      title: string
+      shareToken: string
+      dueAt: Date
+      acceptingResponses: boolean
+      showLeaderboard: boolean
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["homeworkAssignment"]>
+    composites: {}
+  }
+
+  type HomeworkAssignmentGetPayload<S extends boolean | null | undefined | HomeworkAssignmentDefaultArgs> = $Result.GetResult<Prisma.$HomeworkAssignmentPayload, S>
+
+  type HomeworkAssignmentCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<HomeworkAssignmentFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: HomeworkAssignmentCountAggregateInputType | true
+    }
+
+  export interface HomeworkAssignmentDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['HomeworkAssignment'], meta: { name: 'HomeworkAssignment' } }
+    /**
+     * Find zero or one HomeworkAssignment that matches the filter.
+     * @param {HomeworkAssignmentFindUniqueArgs} args - Arguments to find a HomeworkAssignment
+     * @example
+     * // Get one HomeworkAssignment
+     * const homeworkAssignment = await prisma.homeworkAssignment.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends HomeworkAssignmentFindUniqueArgs>(args: SelectSubset<T, HomeworkAssignmentFindUniqueArgs<ExtArgs>>): Prisma__HomeworkAssignmentClient<$Result.GetResult<Prisma.$HomeworkAssignmentPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one HomeworkAssignment that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {HomeworkAssignmentFindUniqueOrThrowArgs} args - Arguments to find a HomeworkAssignment
+     * @example
+     * // Get one HomeworkAssignment
+     * const homeworkAssignment = await prisma.homeworkAssignment.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends HomeworkAssignmentFindUniqueOrThrowArgs>(args: SelectSubset<T, HomeworkAssignmentFindUniqueOrThrowArgs<ExtArgs>>): Prisma__HomeworkAssignmentClient<$Result.GetResult<Prisma.$HomeworkAssignmentPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first HomeworkAssignment that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAssignmentFindFirstArgs} args - Arguments to find a HomeworkAssignment
+     * @example
+     * // Get one HomeworkAssignment
+     * const homeworkAssignment = await prisma.homeworkAssignment.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends HomeworkAssignmentFindFirstArgs>(args?: SelectSubset<T, HomeworkAssignmentFindFirstArgs<ExtArgs>>): Prisma__HomeworkAssignmentClient<$Result.GetResult<Prisma.$HomeworkAssignmentPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first HomeworkAssignment that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAssignmentFindFirstOrThrowArgs} args - Arguments to find a HomeworkAssignment
+     * @example
+     * // Get one HomeworkAssignment
+     * const homeworkAssignment = await prisma.homeworkAssignment.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends HomeworkAssignmentFindFirstOrThrowArgs>(args?: SelectSubset<T, HomeworkAssignmentFindFirstOrThrowArgs<ExtArgs>>): Prisma__HomeworkAssignmentClient<$Result.GetResult<Prisma.$HomeworkAssignmentPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more HomeworkAssignments that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAssignmentFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all HomeworkAssignments
+     * const homeworkAssignments = await prisma.homeworkAssignment.findMany()
+     * 
+     * // Get first 10 HomeworkAssignments
+     * const homeworkAssignments = await prisma.homeworkAssignment.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const homeworkAssignmentWithIdOnly = await prisma.homeworkAssignment.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends HomeworkAssignmentFindManyArgs>(args?: SelectSubset<T, HomeworkAssignmentFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$HomeworkAssignmentPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a HomeworkAssignment.
+     * @param {HomeworkAssignmentCreateArgs} args - Arguments to create a HomeworkAssignment.
+     * @example
+     * // Create one HomeworkAssignment
+     * const HomeworkAssignment = await prisma.homeworkAssignment.create({
+     *   data: {
+     *     // ... data to create a HomeworkAssignment
+     *   }
+     * })
+     * 
+     */
+    create<T extends HomeworkAssignmentCreateArgs>(args: SelectSubset<T, HomeworkAssignmentCreateArgs<ExtArgs>>): Prisma__HomeworkAssignmentClient<$Result.GetResult<Prisma.$HomeworkAssignmentPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many HomeworkAssignments.
+     * @param {HomeworkAssignmentCreateManyArgs} args - Arguments to create many HomeworkAssignments.
+     * @example
+     * // Create many HomeworkAssignments
+     * const homeworkAssignment = await prisma.homeworkAssignment.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends HomeworkAssignmentCreateManyArgs>(args?: SelectSubset<T, HomeworkAssignmentCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many HomeworkAssignments and returns the data saved in the database.
+     * @param {HomeworkAssignmentCreateManyAndReturnArgs} args - Arguments to create many HomeworkAssignments.
+     * @example
+     * // Create many HomeworkAssignments
+     * const homeworkAssignment = await prisma.homeworkAssignment.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many HomeworkAssignments and only return the `id`
+     * const homeworkAssignmentWithIdOnly = await prisma.homeworkAssignment.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends HomeworkAssignmentCreateManyAndReturnArgs>(args?: SelectSubset<T, HomeworkAssignmentCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$HomeworkAssignmentPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a HomeworkAssignment.
+     * @param {HomeworkAssignmentDeleteArgs} args - Arguments to delete one HomeworkAssignment.
+     * @example
+     * // Delete one HomeworkAssignment
+     * const HomeworkAssignment = await prisma.homeworkAssignment.delete({
+     *   where: {
+     *     // ... filter to delete one HomeworkAssignment
+     *   }
+     * })
+     * 
+     */
+    delete<T extends HomeworkAssignmentDeleteArgs>(args: SelectSubset<T, HomeworkAssignmentDeleteArgs<ExtArgs>>): Prisma__HomeworkAssignmentClient<$Result.GetResult<Prisma.$HomeworkAssignmentPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one HomeworkAssignment.
+     * @param {HomeworkAssignmentUpdateArgs} args - Arguments to update one HomeworkAssignment.
+     * @example
+     * // Update one HomeworkAssignment
+     * const homeworkAssignment = await prisma.homeworkAssignment.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends HomeworkAssignmentUpdateArgs>(args: SelectSubset<T, HomeworkAssignmentUpdateArgs<ExtArgs>>): Prisma__HomeworkAssignmentClient<$Result.GetResult<Prisma.$HomeworkAssignmentPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more HomeworkAssignments.
+     * @param {HomeworkAssignmentDeleteManyArgs} args - Arguments to filter HomeworkAssignments to delete.
+     * @example
+     * // Delete a few HomeworkAssignments
+     * const { count } = await prisma.homeworkAssignment.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends HomeworkAssignmentDeleteManyArgs>(args?: SelectSubset<T, HomeworkAssignmentDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more HomeworkAssignments.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAssignmentUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many HomeworkAssignments
+     * const homeworkAssignment = await prisma.homeworkAssignment.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends HomeworkAssignmentUpdateManyArgs>(args: SelectSubset<T, HomeworkAssignmentUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one HomeworkAssignment.
+     * @param {HomeworkAssignmentUpsertArgs} args - Arguments to update or create a HomeworkAssignment.
+     * @example
+     * // Update or create a HomeworkAssignment
+     * const homeworkAssignment = await prisma.homeworkAssignment.upsert({
+     *   create: {
+     *     // ... data to create a HomeworkAssignment
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the HomeworkAssignment we want to update
+     *   }
+     * })
+     */
+    upsert<T extends HomeworkAssignmentUpsertArgs>(args: SelectSubset<T, HomeworkAssignmentUpsertArgs<ExtArgs>>): Prisma__HomeworkAssignmentClient<$Result.GetResult<Prisma.$HomeworkAssignmentPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of HomeworkAssignments.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAssignmentCountArgs} args - Arguments to filter HomeworkAssignments to count.
+     * @example
+     * // Count the number of HomeworkAssignments
+     * const count = await prisma.homeworkAssignment.count({
+     *   where: {
+     *     // ... the filter for the HomeworkAssignments we want to count
+     *   }
+     * })
+    **/
+    count<T extends HomeworkAssignmentCountArgs>(
+      args?: Subset<T, HomeworkAssignmentCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], HomeworkAssignmentCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a HomeworkAssignment.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAssignmentAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends HomeworkAssignmentAggregateArgs>(args: Subset<T, HomeworkAssignmentAggregateArgs>): Prisma.PrismaPromise<GetHomeworkAssignmentAggregateType<T>>
+
+    /**
+     * Group by HomeworkAssignment.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAssignmentGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends HomeworkAssignmentGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: HomeworkAssignmentGroupByArgs['orderBy'] }
+        : { orderBy?: HomeworkAssignmentGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, HomeworkAssignmentGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetHomeworkAssignmentGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the HomeworkAssignment model
+   */
+  readonly fields: HomeworkAssignmentFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for HomeworkAssignment.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__HomeworkAssignmentClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    quiz<T extends QuizDefaultArgs<ExtArgs> = {}>(args?: Subset<T, QuizDefaultArgs<ExtArgs>>): Prisma__QuizClient<$Result.GetResult<Prisma.$QuizPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    attempts<T extends HomeworkAssignment$attemptsArgs<ExtArgs> = {}>(args?: Subset<T, HomeworkAssignment$attemptsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$HomeworkAttemptPayload<ExtArgs>, T, "findMany"> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the HomeworkAssignment model
+   */ 
+  interface HomeworkAssignmentFieldRefs {
+    readonly id: FieldRef<"HomeworkAssignment", 'String'>
+    readonly authorId: FieldRef<"HomeworkAssignment", 'String'>
+    readonly quizId: FieldRef<"HomeworkAssignment", 'String'>
+    readonly title: FieldRef<"HomeworkAssignment", 'String'>
+    readonly shareToken: FieldRef<"HomeworkAssignment", 'String'>
+    readonly dueAt: FieldRef<"HomeworkAssignment", 'DateTime'>
+    readonly acceptingResponses: FieldRef<"HomeworkAssignment", 'Boolean'>
+    readonly showLeaderboard: FieldRef<"HomeworkAssignment", 'Boolean'>
+    readonly createdAt: FieldRef<"HomeworkAssignment", 'DateTime'>
+    readonly updatedAt: FieldRef<"HomeworkAssignment", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * HomeworkAssignment findUnique
+   */
+  export type HomeworkAssignmentFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAssignment
+     */
+    select?: HomeworkAssignmentSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAssignmentInclude<ExtArgs> | null
+    /**
+     * Filter, which HomeworkAssignment to fetch.
+     */
+    where: HomeworkAssignmentWhereUniqueInput
+  }
+
+  /**
+   * HomeworkAssignment findUniqueOrThrow
+   */
+  export type HomeworkAssignmentFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAssignment
+     */
+    select?: HomeworkAssignmentSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAssignmentInclude<ExtArgs> | null
+    /**
+     * Filter, which HomeworkAssignment to fetch.
+     */
+    where: HomeworkAssignmentWhereUniqueInput
+  }
+
+  /**
+   * HomeworkAssignment findFirst
+   */
+  export type HomeworkAssignmentFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAssignment
+     */
+    select?: HomeworkAssignmentSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAssignmentInclude<ExtArgs> | null
+    /**
+     * Filter, which HomeworkAssignment to fetch.
+     */
+    where?: HomeworkAssignmentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of HomeworkAssignments to fetch.
+     */
+    orderBy?: HomeworkAssignmentOrderByWithRelationInput | HomeworkAssignmentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for HomeworkAssignments.
+     */
+    cursor?: HomeworkAssignmentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` HomeworkAssignments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` HomeworkAssignments.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of HomeworkAssignments.
+     */
+    distinct?: HomeworkAssignmentScalarFieldEnum | HomeworkAssignmentScalarFieldEnum[]
+  }
+
+  /**
+   * HomeworkAssignment findFirstOrThrow
+   */
+  export type HomeworkAssignmentFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAssignment
+     */
+    select?: HomeworkAssignmentSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAssignmentInclude<ExtArgs> | null
+    /**
+     * Filter, which HomeworkAssignment to fetch.
+     */
+    where?: HomeworkAssignmentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of HomeworkAssignments to fetch.
+     */
+    orderBy?: HomeworkAssignmentOrderByWithRelationInput | HomeworkAssignmentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for HomeworkAssignments.
+     */
+    cursor?: HomeworkAssignmentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` HomeworkAssignments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` HomeworkAssignments.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of HomeworkAssignments.
+     */
+    distinct?: HomeworkAssignmentScalarFieldEnum | HomeworkAssignmentScalarFieldEnum[]
+  }
+
+  /**
+   * HomeworkAssignment findMany
+   */
+  export type HomeworkAssignmentFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAssignment
+     */
+    select?: HomeworkAssignmentSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAssignmentInclude<ExtArgs> | null
+    /**
+     * Filter, which HomeworkAssignments to fetch.
+     */
+    where?: HomeworkAssignmentWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of HomeworkAssignments to fetch.
+     */
+    orderBy?: HomeworkAssignmentOrderByWithRelationInput | HomeworkAssignmentOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing HomeworkAssignments.
+     */
+    cursor?: HomeworkAssignmentWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` HomeworkAssignments from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` HomeworkAssignments.
+     */
+    skip?: number
+    distinct?: HomeworkAssignmentScalarFieldEnum | HomeworkAssignmentScalarFieldEnum[]
+  }
+
+  /**
+   * HomeworkAssignment create
+   */
+  export type HomeworkAssignmentCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAssignment
+     */
+    select?: HomeworkAssignmentSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAssignmentInclude<ExtArgs> | null
+    /**
+     * The data needed to create a HomeworkAssignment.
+     */
+    data: XOR<HomeworkAssignmentCreateInput, HomeworkAssignmentUncheckedCreateInput>
+  }
+
+  /**
+   * HomeworkAssignment createMany
+   */
+  export type HomeworkAssignmentCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many HomeworkAssignments.
+     */
+    data: HomeworkAssignmentCreateManyInput | HomeworkAssignmentCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * HomeworkAssignment createManyAndReturn
+   */
+  export type HomeworkAssignmentCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAssignment
+     */
+    select?: HomeworkAssignmentSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many HomeworkAssignments.
+     */
+    data: HomeworkAssignmentCreateManyInput | HomeworkAssignmentCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAssignmentIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * HomeworkAssignment update
+   */
+  export type HomeworkAssignmentUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAssignment
+     */
+    select?: HomeworkAssignmentSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAssignmentInclude<ExtArgs> | null
+    /**
+     * The data needed to update a HomeworkAssignment.
+     */
+    data: XOR<HomeworkAssignmentUpdateInput, HomeworkAssignmentUncheckedUpdateInput>
+    /**
+     * Choose, which HomeworkAssignment to update.
+     */
+    where: HomeworkAssignmentWhereUniqueInput
+  }
+
+  /**
+   * HomeworkAssignment updateMany
+   */
+  export type HomeworkAssignmentUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update HomeworkAssignments.
+     */
+    data: XOR<HomeworkAssignmentUpdateManyMutationInput, HomeworkAssignmentUncheckedUpdateManyInput>
+    /**
+     * Filter which HomeworkAssignments to update
+     */
+    where?: HomeworkAssignmentWhereInput
+  }
+
+  /**
+   * HomeworkAssignment upsert
+   */
+  export type HomeworkAssignmentUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAssignment
+     */
+    select?: HomeworkAssignmentSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAssignmentInclude<ExtArgs> | null
+    /**
+     * The filter to search for the HomeworkAssignment to update in case it exists.
+     */
+    where: HomeworkAssignmentWhereUniqueInput
+    /**
+     * In case the HomeworkAssignment found by the `where` argument doesn't exist, create a new HomeworkAssignment with this data.
+     */
+    create: XOR<HomeworkAssignmentCreateInput, HomeworkAssignmentUncheckedCreateInput>
+    /**
+     * In case the HomeworkAssignment was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<HomeworkAssignmentUpdateInput, HomeworkAssignmentUncheckedUpdateInput>
+  }
+
+  /**
+   * HomeworkAssignment delete
+   */
+  export type HomeworkAssignmentDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAssignment
+     */
+    select?: HomeworkAssignmentSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAssignmentInclude<ExtArgs> | null
+    /**
+     * Filter which HomeworkAssignment to delete.
+     */
+    where: HomeworkAssignmentWhereUniqueInput
+  }
+
+  /**
+   * HomeworkAssignment deleteMany
+   */
+  export type HomeworkAssignmentDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which HomeworkAssignments to delete
+     */
+    where?: HomeworkAssignmentWhereInput
+  }
+
+  /**
+   * HomeworkAssignment.attempts
+   */
+  export type HomeworkAssignment$attemptsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAttempt
+     */
+    select?: HomeworkAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAttemptInclude<ExtArgs> | null
+    where?: HomeworkAttemptWhereInput
+    orderBy?: HomeworkAttemptOrderByWithRelationInput | HomeworkAttemptOrderByWithRelationInput[]
+    cursor?: HomeworkAttemptWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: HomeworkAttemptScalarFieldEnum | HomeworkAttemptScalarFieldEnum[]
+  }
+
+  /**
+   * HomeworkAssignment without action
+   */
+  export type HomeworkAssignmentDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAssignment
+     */
+    select?: HomeworkAssignmentSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAssignmentInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model HomeworkAttempt
+   */
+
+  export type AggregateHomeworkAttempt = {
+    _count: HomeworkAttemptCountAggregateOutputType | null
+    _avg: HomeworkAttemptAvgAggregateOutputType | null
+    _sum: HomeworkAttemptSumAggregateOutputType | null
+    _min: HomeworkAttemptMinAggregateOutputType | null
+    _max: HomeworkAttemptMaxAggregateOutputType | null
+  }
+
+  export type HomeworkAttemptAvgAggregateOutputType = {
+    correctCount: number | null
+    answeredCount: number | null
+    percentage: number | null
+    durationMs: number | null
+    livesLeft: number | null
+    timeLimitMs: number | null
+    timeToHundredMs: number | null
+  }
+
+  export type HomeworkAttemptSumAggregateOutputType = {
+    correctCount: number | null
+    answeredCount: number | null
+    percentage: number | null
+    durationMs: number | null
+    livesLeft: number | null
+    timeLimitMs: number | null
+    timeToHundredMs: number | null
+  }
+
+  export type HomeworkAttemptMinAggregateOutputType = {
+    id: string | null
+    assignmentId: string | null
+    studentName: string | null
+    clientKey: string | null
+    mode: $Enums.HomeworkAttemptMode | null
+    status: $Enums.HomeworkAttemptStatus | null
+    correctCount: number | null
+    answeredCount: number | null
+    percentage: number | null
+    durationMs: number | null
+    livesLeft: number | null
+    timeLimitMs: number | null
+    questionStartedAt: Date | null
+    extraLifeGranted: boolean | null
+    endReason: $Enums.HomeworkEndReason | null
+    reachedHundred: boolean | null
+    timeToHundredMs: number | null
+    startedAt: Date | null
+    finishedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type HomeworkAttemptMaxAggregateOutputType = {
+    id: string | null
+    assignmentId: string | null
+    studentName: string | null
+    clientKey: string | null
+    mode: $Enums.HomeworkAttemptMode | null
+    status: $Enums.HomeworkAttemptStatus | null
+    correctCount: number | null
+    answeredCount: number | null
+    percentage: number | null
+    durationMs: number | null
+    livesLeft: number | null
+    timeLimitMs: number | null
+    questionStartedAt: Date | null
+    extraLifeGranted: boolean | null
+    endReason: $Enums.HomeworkEndReason | null
+    reachedHundred: boolean | null
+    timeToHundredMs: number | null
+    startedAt: Date | null
+    finishedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type HomeworkAttemptCountAggregateOutputType = {
+    id: number
+    assignmentId: number
+    studentName: number
+    clientKey: number
+    mode: number
+    status: number
+    queue: number
+    correctCount: number
+    answeredCount: number
+    percentage: number
+    durationMs: number
+    livesLeft: number
+    timeLimitMs: number
+    questionStartedAt: number
+    extraLifeGranted: number
+    endReason: number
+    reachedHundred: number
+    timeToHundredMs: number
+    startedAt: number
+    finishedAt: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type HomeworkAttemptAvgAggregateInputType = {
+    correctCount?: true
+    answeredCount?: true
+    percentage?: true
+    durationMs?: true
+    livesLeft?: true
+    timeLimitMs?: true
+    timeToHundredMs?: true
+  }
+
+  export type HomeworkAttemptSumAggregateInputType = {
+    correctCount?: true
+    answeredCount?: true
+    percentage?: true
+    durationMs?: true
+    livesLeft?: true
+    timeLimitMs?: true
+    timeToHundredMs?: true
+  }
+
+  export type HomeworkAttemptMinAggregateInputType = {
+    id?: true
+    assignmentId?: true
+    studentName?: true
+    clientKey?: true
+    mode?: true
+    status?: true
+    correctCount?: true
+    answeredCount?: true
+    percentage?: true
+    durationMs?: true
+    livesLeft?: true
+    timeLimitMs?: true
+    questionStartedAt?: true
+    extraLifeGranted?: true
+    endReason?: true
+    reachedHundred?: true
+    timeToHundredMs?: true
+    startedAt?: true
+    finishedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type HomeworkAttemptMaxAggregateInputType = {
+    id?: true
+    assignmentId?: true
+    studentName?: true
+    clientKey?: true
+    mode?: true
+    status?: true
+    correctCount?: true
+    answeredCount?: true
+    percentage?: true
+    durationMs?: true
+    livesLeft?: true
+    timeLimitMs?: true
+    questionStartedAt?: true
+    extraLifeGranted?: true
+    endReason?: true
+    reachedHundred?: true
+    timeToHundredMs?: true
+    startedAt?: true
+    finishedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type HomeworkAttemptCountAggregateInputType = {
+    id?: true
+    assignmentId?: true
+    studentName?: true
+    clientKey?: true
+    mode?: true
+    status?: true
+    queue?: true
+    correctCount?: true
+    answeredCount?: true
+    percentage?: true
+    durationMs?: true
+    livesLeft?: true
+    timeLimitMs?: true
+    questionStartedAt?: true
+    extraLifeGranted?: true
+    endReason?: true
+    reachedHundred?: true
+    timeToHundredMs?: true
+    startedAt?: true
+    finishedAt?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type HomeworkAttemptAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which HomeworkAttempt to aggregate.
+     */
+    where?: HomeworkAttemptWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of HomeworkAttempts to fetch.
+     */
+    orderBy?: HomeworkAttemptOrderByWithRelationInput | HomeworkAttemptOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: HomeworkAttemptWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` HomeworkAttempts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` HomeworkAttempts.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned HomeworkAttempts
+    **/
+    _count?: true | HomeworkAttemptCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: HomeworkAttemptAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: HomeworkAttemptSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: HomeworkAttemptMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: HomeworkAttemptMaxAggregateInputType
+  }
+
+  export type GetHomeworkAttemptAggregateType<T extends HomeworkAttemptAggregateArgs> = {
+        [P in keyof T & keyof AggregateHomeworkAttempt]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateHomeworkAttempt[P]>
+      : GetScalarType<T[P], AggregateHomeworkAttempt[P]>
+  }
+
+
+
+
+  export type HomeworkAttemptGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: HomeworkAttemptWhereInput
+    orderBy?: HomeworkAttemptOrderByWithAggregationInput | HomeworkAttemptOrderByWithAggregationInput[]
+    by: HomeworkAttemptScalarFieldEnum[] | HomeworkAttemptScalarFieldEnum
+    having?: HomeworkAttemptScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: HomeworkAttemptCountAggregateInputType | true
+    _avg?: HomeworkAttemptAvgAggregateInputType
+    _sum?: HomeworkAttemptSumAggregateInputType
+    _min?: HomeworkAttemptMinAggregateInputType
+    _max?: HomeworkAttemptMaxAggregateInputType
+  }
+
+  export type HomeworkAttemptGroupByOutputType = {
+    id: string
+    assignmentId: string
+    studentName: string
+    clientKey: string
+    mode: $Enums.HomeworkAttemptMode
+    status: $Enums.HomeworkAttemptStatus
+    queue: JsonValue
+    correctCount: number
+    answeredCount: number
+    percentage: number | null
+    durationMs: number
+    livesLeft: number | null
+    timeLimitMs: number | null
+    questionStartedAt: Date | null
+    extraLifeGranted: boolean
+    endReason: $Enums.HomeworkEndReason | null
+    reachedHundred: boolean
+    timeToHundredMs: number | null
+    startedAt: Date
+    finishedAt: Date | null
+    createdAt: Date
+    updatedAt: Date
+    _count: HomeworkAttemptCountAggregateOutputType | null
+    _avg: HomeworkAttemptAvgAggregateOutputType | null
+    _sum: HomeworkAttemptSumAggregateOutputType | null
+    _min: HomeworkAttemptMinAggregateOutputType | null
+    _max: HomeworkAttemptMaxAggregateOutputType | null
+  }
+
+  type GetHomeworkAttemptGroupByPayload<T extends HomeworkAttemptGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<HomeworkAttemptGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof HomeworkAttemptGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], HomeworkAttemptGroupByOutputType[P]>
+            : GetScalarType<T[P], HomeworkAttemptGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type HomeworkAttemptSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    assignmentId?: boolean
+    studentName?: boolean
+    clientKey?: boolean
+    mode?: boolean
+    status?: boolean
+    queue?: boolean
+    correctCount?: boolean
+    answeredCount?: boolean
+    percentage?: boolean
+    durationMs?: boolean
+    livesLeft?: boolean
+    timeLimitMs?: boolean
+    questionStartedAt?: boolean
+    extraLifeGranted?: boolean
+    endReason?: boolean
+    reachedHundred?: boolean
+    timeToHundredMs?: boolean
+    startedAt?: boolean
+    finishedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    assignment?: boolean | HomeworkAssignmentDefaultArgs<ExtArgs>
+    answers?: boolean | HomeworkAttempt$answersArgs<ExtArgs>
+    _count?: boolean | HomeworkAttemptCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["homeworkAttempt"]>
+
+  export type HomeworkAttemptSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    assignmentId?: boolean
+    studentName?: boolean
+    clientKey?: boolean
+    mode?: boolean
+    status?: boolean
+    queue?: boolean
+    correctCount?: boolean
+    answeredCount?: boolean
+    percentage?: boolean
+    durationMs?: boolean
+    livesLeft?: boolean
+    timeLimitMs?: boolean
+    questionStartedAt?: boolean
+    extraLifeGranted?: boolean
+    endReason?: boolean
+    reachedHundred?: boolean
+    timeToHundredMs?: boolean
+    startedAt?: boolean
+    finishedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    assignment?: boolean | HomeworkAssignmentDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["homeworkAttempt"]>
+
+  export type HomeworkAttemptSelectScalar = {
+    id?: boolean
+    assignmentId?: boolean
+    studentName?: boolean
+    clientKey?: boolean
+    mode?: boolean
+    status?: boolean
+    queue?: boolean
+    correctCount?: boolean
+    answeredCount?: boolean
+    percentage?: boolean
+    durationMs?: boolean
+    livesLeft?: boolean
+    timeLimitMs?: boolean
+    questionStartedAt?: boolean
+    extraLifeGranted?: boolean
+    endReason?: boolean
+    reachedHundred?: boolean
+    timeToHundredMs?: boolean
+    startedAt?: boolean
+    finishedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type HomeworkAttemptInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    assignment?: boolean | HomeworkAssignmentDefaultArgs<ExtArgs>
+    answers?: boolean | HomeworkAttempt$answersArgs<ExtArgs>
+    _count?: boolean | HomeworkAttemptCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type HomeworkAttemptIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    assignment?: boolean | HomeworkAssignmentDefaultArgs<ExtArgs>
+  }
+
+  export type $HomeworkAttemptPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "HomeworkAttempt"
+    objects: {
+      assignment: Prisma.$HomeworkAssignmentPayload<ExtArgs>
+      answers: Prisma.$HomeworkAnswerPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      assignmentId: string
+      studentName: string
+      clientKey: string
+      mode: $Enums.HomeworkAttemptMode
+      status: $Enums.HomeworkAttemptStatus
+      /**
+       * Question ids. For homework this is the full order. For a challenge, index 0 is the live question.
+       */
+      queue: Prisma.JsonValue
+      correctCount: number
+      answeredCount: number
+      percentage: number | null
+      durationMs: number
+      livesLeft: number | null
+      timeLimitMs: number | null
+      questionStartedAt: Date | null
+      extraLifeGranted: boolean
+      endReason: $Enums.HomeworkEndReason | null
+      reachedHundred: boolean
+      timeToHundredMs: number | null
+      startedAt: Date
+      finishedAt: Date | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["homeworkAttempt"]>
+    composites: {}
+  }
+
+  type HomeworkAttemptGetPayload<S extends boolean | null | undefined | HomeworkAttemptDefaultArgs> = $Result.GetResult<Prisma.$HomeworkAttemptPayload, S>
+
+  type HomeworkAttemptCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<HomeworkAttemptFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: HomeworkAttemptCountAggregateInputType | true
+    }
+
+  export interface HomeworkAttemptDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['HomeworkAttempt'], meta: { name: 'HomeworkAttempt' } }
+    /**
+     * Find zero or one HomeworkAttempt that matches the filter.
+     * @param {HomeworkAttemptFindUniqueArgs} args - Arguments to find a HomeworkAttempt
+     * @example
+     * // Get one HomeworkAttempt
+     * const homeworkAttempt = await prisma.homeworkAttempt.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends HomeworkAttemptFindUniqueArgs>(args: SelectSubset<T, HomeworkAttemptFindUniqueArgs<ExtArgs>>): Prisma__HomeworkAttemptClient<$Result.GetResult<Prisma.$HomeworkAttemptPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one HomeworkAttempt that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {HomeworkAttemptFindUniqueOrThrowArgs} args - Arguments to find a HomeworkAttempt
+     * @example
+     * // Get one HomeworkAttempt
+     * const homeworkAttempt = await prisma.homeworkAttempt.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends HomeworkAttemptFindUniqueOrThrowArgs>(args: SelectSubset<T, HomeworkAttemptFindUniqueOrThrowArgs<ExtArgs>>): Prisma__HomeworkAttemptClient<$Result.GetResult<Prisma.$HomeworkAttemptPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first HomeworkAttempt that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAttemptFindFirstArgs} args - Arguments to find a HomeworkAttempt
+     * @example
+     * // Get one HomeworkAttempt
+     * const homeworkAttempt = await prisma.homeworkAttempt.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends HomeworkAttemptFindFirstArgs>(args?: SelectSubset<T, HomeworkAttemptFindFirstArgs<ExtArgs>>): Prisma__HomeworkAttemptClient<$Result.GetResult<Prisma.$HomeworkAttemptPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first HomeworkAttempt that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAttemptFindFirstOrThrowArgs} args - Arguments to find a HomeworkAttempt
+     * @example
+     * // Get one HomeworkAttempt
+     * const homeworkAttempt = await prisma.homeworkAttempt.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends HomeworkAttemptFindFirstOrThrowArgs>(args?: SelectSubset<T, HomeworkAttemptFindFirstOrThrowArgs<ExtArgs>>): Prisma__HomeworkAttemptClient<$Result.GetResult<Prisma.$HomeworkAttemptPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more HomeworkAttempts that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAttemptFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all HomeworkAttempts
+     * const homeworkAttempts = await prisma.homeworkAttempt.findMany()
+     * 
+     * // Get first 10 HomeworkAttempts
+     * const homeworkAttempts = await prisma.homeworkAttempt.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const homeworkAttemptWithIdOnly = await prisma.homeworkAttempt.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends HomeworkAttemptFindManyArgs>(args?: SelectSubset<T, HomeworkAttemptFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$HomeworkAttemptPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a HomeworkAttempt.
+     * @param {HomeworkAttemptCreateArgs} args - Arguments to create a HomeworkAttempt.
+     * @example
+     * // Create one HomeworkAttempt
+     * const HomeworkAttempt = await prisma.homeworkAttempt.create({
+     *   data: {
+     *     // ... data to create a HomeworkAttempt
+     *   }
+     * })
+     * 
+     */
+    create<T extends HomeworkAttemptCreateArgs>(args: SelectSubset<T, HomeworkAttemptCreateArgs<ExtArgs>>): Prisma__HomeworkAttemptClient<$Result.GetResult<Prisma.$HomeworkAttemptPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many HomeworkAttempts.
+     * @param {HomeworkAttemptCreateManyArgs} args - Arguments to create many HomeworkAttempts.
+     * @example
+     * // Create many HomeworkAttempts
+     * const homeworkAttempt = await prisma.homeworkAttempt.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends HomeworkAttemptCreateManyArgs>(args?: SelectSubset<T, HomeworkAttemptCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many HomeworkAttempts and returns the data saved in the database.
+     * @param {HomeworkAttemptCreateManyAndReturnArgs} args - Arguments to create many HomeworkAttempts.
+     * @example
+     * // Create many HomeworkAttempts
+     * const homeworkAttempt = await prisma.homeworkAttempt.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many HomeworkAttempts and only return the `id`
+     * const homeworkAttemptWithIdOnly = await prisma.homeworkAttempt.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends HomeworkAttemptCreateManyAndReturnArgs>(args?: SelectSubset<T, HomeworkAttemptCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$HomeworkAttemptPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a HomeworkAttempt.
+     * @param {HomeworkAttemptDeleteArgs} args - Arguments to delete one HomeworkAttempt.
+     * @example
+     * // Delete one HomeworkAttempt
+     * const HomeworkAttempt = await prisma.homeworkAttempt.delete({
+     *   where: {
+     *     // ... filter to delete one HomeworkAttempt
+     *   }
+     * })
+     * 
+     */
+    delete<T extends HomeworkAttemptDeleteArgs>(args: SelectSubset<T, HomeworkAttemptDeleteArgs<ExtArgs>>): Prisma__HomeworkAttemptClient<$Result.GetResult<Prisma.$HomeworkAttemptPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one HomeworkAttempt.
+     * @param {HomeworkAttemptUpdateArgs} args - Arguments to update one HomeworkAttempt.
+     * @example
+     * // Update one HomeworkAttempt
+     * const homeworkAttempt = await prisma.homeworkAttempt.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends HomeworkAttemptUpdateArgs>(args: SelectSubset<T, HomeworkAttemptUpdateArgs<ExtArgs>>): Prisma__HomeworkAttemptClient<$Result.GetResult<Prisma.$HomeworkAttemptPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more HomeworkAttempts.
+     * @param {HomeworkAttemptDeleteManyArgs} args - Arguments to filter HomeworkAttempts to delete.
+     * @example
+     * // Delete a few HomeworkAttempts
+     * const { count } = await prisma.homeworkAttempt.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends HomeworkAttemptDeleteManyArgs>(args?: SelectSubset<T, HomeworkAttemptDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more HomeworkAttempts.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAttemptUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many HomeworkAttempts
+     * const homeworkAttempt = await prisma.homeworkAttempt.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends HomeworkAttemptUpdateManyArgs>(args: SelectSubset<T, HomeworkAttemptUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one HomeworkAttempt.
+     * @param {HomeworkAttemptUpsertArgs} args - Arguments to update or create a HomeworkAttempt.
+     * @example
+     * // Update or create a HomeworkAttempt
+     * const homeworkAttempt = await prisma.homeworkAttempt.upsert({
+     *   create: {
+     *     // ... data to create a HomeworkAttempt
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the HomeworkAttempt we want to update
+     *   }
+     * })
+     */
+    upsert<T extends HomeworkAttemptUpsertArgs>(args: SelectSubset<T, HomeworkAttemptUpsertArgs<ExtArgs>>): Prisma__HomeworkAttemptClient<$Result.GetResult<Prisma.$HomeworkAttemptPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of HomeworkAttempts.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAttemptCountArgs} args - Arguments to filter HomeworkAttempts to count.
+     * @example
+     * // Count the number of HomeworkAttempts
+     * const count = await prisma.homeworkAttempt.count({
+     *   where: {
+     *     // ... the filter for the HomeworkAttempts we want to count
+     *   }
+     * })
+    **/
+    count<T extends HomeworkAttemptCountArgs>(
+      args?: Subset<T, HomeworkAttemptCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], HomeworkAttemptCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a HomeworkAttempt.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAttemptAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends HomeworkAttemptAggregateArgs>(args: Subset<T, HomeworkAttemptAggregateArgs>): Prisma.PrismaPromise<GetHomeworkAttemptAggregateType<T>>
+
+    /**
+     * Group by HomeworkAttempt.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAttemptGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends HomeworkAttemptGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: HomeworkAttemptGroupByArgs['orderBy'] }
+        : { orderBy?: HomeworkAttemptGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, HomeworkAttemptGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetHomeworkAttemptGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the HomeworkAttempt model
+   */
+  readonly fields: HomeworkAttemptFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for HomeworkAttempt.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__HomeworkAttemptClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    assignment<T extends HomeworkAssignmentDefaultArgs<ExtArgs> = {}>(args?: Subset<T, HomeworkAssignmentDefaultArgs<ExtArgs>>): Prisma__HomeworkAssignmentClient<$Result.GetResult<Prisma.$HomeworkAssignmentPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    answers<T extends HomeworkAttempt$answersArgs<ExtArgs> = {}>(args?: Subset<T, HomeworkAttempt$answersArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$HomeworkAnswerPayload<ExtArgs>, T, "findMany"> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the HomeworkAttempt model
+   */ 
+  interface HomeworkAttemptFieldRefs {
+    readonly id: FieldRef<"HomeworkAttempt", 'String'>
+    readonly assignmentId: FieldRef<"HomeworkAttempt", 'String'>
+    readonly studentName: FieldRef<"HomeworkAttempt", 'String'>
+    readonly clientKey: FieldRef<"HomeworkAttempt", 'String'>
+    readonly mode: FieldRef<"HomeworkAttempt", 'HomeworkAttemptMode'>
+    readonly status: FieldRef<"HomeworkAttempt", 'HomeworkAttemptStatus'>
+    readonly queue: FieldRef<"HomeworkAttempt", 'Json'>
+    readonly correctCount: FieldRef<"HomeworkAttempt", 'Int'>
+    readonly answeredCount: FieldRef<"HomeworkAttempt", 'Int'>
+    readonly percentage: FieldRef<"HomeworkAttempt", 'Float'>
+    readonly durationMs: FieldRef<"HomeworkAttempt", 'Int'>
+    readonly livesLeft: FieldRef<"HomeworkAttempt", 'Int'>
+    readonly timeLimitMs: FieldRef<"HomeworkAttempt", 'Int'>
+    readonly questionStartedAt: FieldRef<"HomeworkAttempt", 'DateTime'>
+    readonly extraLifeGranted: FieldRef<"HomeworkAttempt", 'Boolean'>
+    readonly endReason: FieldRef<"HomeworkAttempt", 'HomeworkEndReason'>
+    readonly reachedHundred: FieldRef<"HomeworkAttempt", 'Boolean'>
+    readonly timeToHundredMs: FieldRef<"HomeworkAttempt", 'Int'>
+    readonly startedAt: FieldRef<"HomeworkAttempt", 'DateTime'>
+    readonly finishedAt: FieldRef<"HomeworkAttempt", 'DateTime'>
+    readonly createdAt: FieldRef<"HomeworkAttempt", 'DateTime'>
+    readonly updatedAt: FieldRef<"HomeworkAttempt", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * HomeworkAttempt findUnique
+   */
+  export type HomeworkAttemptFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAttempt
+     */
+    select?: HomeworkAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAttemptInclude<ExtArgs> | null
+    /**
+     * Filter, which HomeworkAttempt to fetch.
+     */
+    where: HomeworkAttemptWhereUniqueInput
+  }
+
+  /**
+   * HomeworkAttempt findUniqueOrThrow
+   */
+  export type HomeworkAttemptFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAttempt
+     */
+    select?: HomeworkAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAttemptInclude<ExtArgs> | null
+    /**
+     * Filter, which HomeworkAttempt to fetch.
+     */
+    where: HomeworkAttemptWhereUniqueInput
+  }
+
+  /**
+   * HomeworkAttempt findFirst
+   */
+  export type HomeworkAttemptFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAttempt
+     */
+    select?: HomeworkAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAttemptInclude<ExtArgs> | null
+    /**
+     * Filter, which HomeworkAttempt to fetch.
+     */
+    where?: HomeworkAttemptWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of HomeworkAttempts to fetch.
+     */
+    orderBy?: HomeworkAttemptOrderByWithRelationInput | HomeworkAttemptOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for HomeworkAttempts.
+     */
+    cursor?: HomeworkAttemptWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` HomeworkAttempts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` HomeworkAttempts.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of HomeworkAttempts.
+     */
+    distinct?: HomeworkAttemptScalarFieldEnum | HomeworkAttemptScalarFieldEnum[]
+  }
+
+  /**
+   * HomeworkAttempt findFirstOrThrow
+   */
+  export type HomeworkAttemptFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAttempt
+     */
+    select?: HomeworkAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAttemptInclude<ExtArgs> | null
+    /**
+     * Filter, which HomeworkAttempt to fetch.
+     */
+    where?: HomeworkAttemptWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of HomeworkAttempts to fetch.
+     */
+    orderBy?: HomeworkAttemptOrderByWithRelationInput | HomeworkAttemptOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for HomeworkAttempts.
+     */
+    cursor?: HomeworkAttemptWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` HomeworkAttempts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` HomeworkAttempts.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of HomeworkAttempts.
+     */
+    distinct?: HomeworkAttemptScalarFieldEnum | HomeworkAttemptScalarFieldEnum[]
+  }
+
+  /**
+   * HomeworkAttempt findMany
+   */
+  export type HomeworkAttemptFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAttempt
+     */
+    select?: HomeworkAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAttemptInclude<ExtArgs> | null
+    /**
+     * Filter, which HomeworkAttempts to fetch.
+     */
+    where?: HomeworkAttemptWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of HomeworkAttempts to fetch.
+     */
+    orderBy?: HomeworkAttemptOrderByWithRelationInput | HomeworkAttemptOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing HomeworkAttempts.
+     */
+    cursor?: HomeworkAttemptWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` HomeworkAttempts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` HomeworkAttempts.
+     */
+    skip?: number
+    distinct?: HomeworkAttemptScalarFieldEnum | HomeworkAttemptScalarFieldEnum[]
+  }
+
+  /**
+   * HomeworkAttempt create
+   */
+  export type HomeworkAttemptCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAttempt
+     */
+    select?: HomeworkAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAttemptInclude<ExtArgs> | null
+    /**
+     * The data needed to create a HomeworkAttempt.
+     */
+    data: XOR<HomeworkAttemptCreateInput, HomeworkAttemptUncheckedCreateInput>
+  }
+
+  /**
+   * HomeworkAttempt createMany
+   */
+  export type HomeworkAttemptCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many HomeworkAttempts.
+     */
+    data: HomeworkAttemptCreateManyInput | HomeworkAttemptCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * HomeworkAttempt createManyAndReturn
+   */
+  export type HomeworkAttemptCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAttempt
+     */
+    select?: HomeworkAttemptSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many HomeworkAttempts.
+     */
+    data: HomeworkAttemptCreateManyInput | HomeworkAttemptCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAttemptIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * HomeworkAttempt update
+   */
+  export type HomeworkAttemptUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAttempt
+     */
+    select?: HomeworkAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAttemptInclude<ExtArgs> | null
+    /**
+     * The data needed to update a HomeworkAttempt.
+     */
+    data: XOR<HomeworkAttemptUpdateInput, HomeworkAttemptUncheckedUpdateInput>
+    /**
+     * Choose, which HomeworkAttempt to update.
+     */
+    where: HomeworkAttemptWhereUniqueInput
+  }
+
+  /**
+   * HomeworkAttempt updateMany
+   */
+  export type HomeworkAttemptUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update HomeworkAttempts.
+     */
+    data: XOR<HomeworkAttemptUpdateManyMutationInput, HomeworkAttemptUncheckedUpdateManyInput>
+    /**
+     * Filter which HomeworkAttempts to update
+     */
+    where?: HomeworkAttemptWhereInput
+  }
+
+  /**
+   * HomeworkAttempt upsert
+   */
+  export type HomeworkAttemptUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAttempt
+     */
+    select?: HomeworkAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAttemptInclude<ExtArgs> | null
+    /**
+     * The filter to search for the HomeworkAttempt to update in case it exists.
+     */
+    where: HomeworkAttemptWhereUniqueInput
+    /**
+     * In case the HomeworkAttempt found by the `where` argument doesn't exist, create a new HomeworkAttempt with this data.
+     */
+    create: XOR<HomeworkAttemptCreateInput, HomeworkAttemptUncheckedCreateInput>
+    /**
+     * In case the HomeworkAttempt was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<HomeworkAttemptUpdateInput, HomeworkAttemptUncheckedUpdateInput>
+  }
+
+  /**
+   * HomeworkAttempt delete
+   */
+  export type HomeworkAttemptDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAttempt
+     */
+    select?: HomeworkAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAttemptInclude<ExtArgs> | null
+    /**
+     * Filter which HomeworkAttempt to delete.
+     */
+    where: HomeworkAttemptWhereUniqueInput
+  }
+
+  /**
+   * HomeworkAttempt deleteMany
+   */
+  export type HomeworkAttemptDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which HomeworkAttempts to delete
+     */
+    where?: HomeworkAttemptWhereInput
+  }
+
+  /**
+   * HomeworkAttempt.answers
+   */
+  export type HomeworkAttempt$answersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAnswer
+     */
+    select?: HomeworkAnswerSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAnswerInclude<ExtArgs> | null
+    where?: HomeworkAnswerWhereInput
+    orderBy?: HomeworkAnswerOrderByWithRelationInput | HomeworkAnswerOrderByWithRelationInput[]
+    cursor?: HomeworkAnswerWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: HomeworkAnswerScalarFieldEnum | HomeworkAnswerScalarFieldEnum[]
+  }
+
+  /**
+   * HomeworkAttempt without action
+   */
+  export type HomeworkAttemptDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAttempt
+     */
+    select?: HomeworkAttemptSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAttemptInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model HomeworkAnswer
+   */
+
+  export type AggregateHomeworkAnswer = {
+    _count: HomeworkAnswerCountAggregateOutputType | null
+    _avg: HomeworkAnswerAvgAggregateOutputType | null
+    _sum: HomeworkAnswerSumAggregateOutputType | null
+    _min: HomeworkAnswerMinAggregateOutputType | null
+    _max: HomeworkAnswerMaxAggregateOutputType | null
+  }
+
+  export type HomeworkAnswerAvgAggregateOutputType = {
+    timeUsedMs: number | null
+    order: number | null
+  }
+
+  export type HomeworkAnswerSumAggregateOutputType = {
+    timeUsedMs: number | null
+    order: number | null
+  }
+
+  export type HomeworkAnswerMinAggregateOutputType = {
+    id: string | null
+    attemptId: string | null
+    questionId: string | null
+    questionText: string | null
+    selectedAnswer: string | null
+    correctAnswer: string | null
+    correct: boolean | null
+    timeUsedMs: number | null
+    order: number | null
+  }
+
+  export type HomeworkAnswerMaxAggregateOutputType = {
+    id: string | null
+    attemptId: string | null
+    questionId: string | null
+    questionText: string | null
+    selectedAnswer: string | null
+    correctAnswer: string | null
+    correct: boolean | null
+    timeUsedMs: number | null
+    order: number | null
+  }
+
+  export type HomeworkAnswerCountAggregateOutputType = {
+    id: number
+    attemptId: number
+    questionId: number
+    questionText: number
+    selectedAnswer: number
+    correctAnswer: number
+    correct: number
+    timeUsedMs: number
+    order: number
+    _all: number
+  }
+
+
+  export type HomeworkAnswerAvgAggregateInputType = {
+    timeUsedMs?: true
+    order?: true
+  }
+
+  export type HomeworkAnswerSumAggregateInputType = {
+    timeUsedMs?: true
+    order?: true
+  }
+
+  export type HomeworkAnswerMinAggregateInputType = {
+    id?: true
+    attemptId?: true
+    questionId?: true
+    questionText?: true
+    selectedAnswer?: true
+    correctAnswer?: true
+    correct?: true
+    timeUsedMs?: true
+    order?: true
+  }
+
+  export type HomeworkAnswerMaxAggregateInputType = {
+    id?: true
+    attemptId?: true
+    questionId?: true
+    questionText?: true
+    selectedAnswer?: true
+    correctAnswer?: true
+    correct?: true
+    timeUsedMs?: true
+    order?: true
+  }
+
+  export type HomeworkAnswerCountAggregateInputType = {
+    id?: true
+    attemptId?: true
+    questionId?: true
+    questionText?: true
+    selectedAnswer?: true
+    correctAnswer?: true
+    correct?: true
+    timeUsedMs?: true
+    order?: true
+    _all?: true
+  }
+
+  export type HomeworkAnswerAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which HomeworkAnswer to aggregate.
+     */
+    where?: HomeworkAnswerWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of HomeworkAnswers to fetch.
+     */
+    orderBy?: HomeworkAnswerOrderByWithRelationInput | HomeworkAnswerOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: HomeworkAnswerWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` HomeworkAnswers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` HomeworkAnswers.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned HomeworkAnswers
+    **/
+    _count?: true | HomeworkAnswerCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: HomeworkAnswerAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: HomeworkAnswerSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: HomeworkAnswerMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: HomeworkAnswerMaxAggregateInputType
+  }
+
+  export type GetHomeworkAnswerAggregateType<T extends HomeworkAnswerAggregateArgs> = {
+        [P in keyof T & keyof AggregateHomeworkAnswer]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateHomeworkAnswer[P]>
+      : GetScalarType<T[P], AggregateHomeworkAnswer[P]>
+  }
+
+
+
+
+  export type HomeworkAnswerGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: HomeworkAnswerWhereInput
+    orderBy?: HomeworkAnswerOrderByWithAggregationInput | HomeworkAnswerOrderByWithAggregationInput[]
+    by: HomeworkAnswerScalarFieldEnum[] | HomeworkAnswerScalarFieldEnum
+    having?: HomeworkAnswerScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: HomeworkAnswerCountAggregateInputType | true
+    _avg?: HomeworkAnswerAvgAggregateInputType
+    _sum?: HomeworkAnswerSumAggregateInputType
+    _min?: HomeworkAnswerMinAggregateInputType
+    _max?: HomeworkAnswerMaxAggregateInputType
+  }
+
+  export type HomeworkAnswerGroupByOutputType = {
+    id: string
+    attemptId: string
+    questionId: string
+    questionText: string
+    selectedAnswer: string
+    correctAnswer: string
+    correct: boolean
+    timeUsedMs: number
+    order: number
+    _count: HomeworkAnswerCountAggregateOutputType | null
+    _avg: HomeworkAnswerAvgAggregateOutputType | null
+    _sum: HomeworkAnswerSumAggregateOutputType | null
+    _min: HomeworkAnswerMinAggregateOutputType | null
+    _max: HomeworkAnswerMaxAggregateOutputType | null
+  }
+
+  type GetHomeworkAnswerGroupByPayload<T extends HomeworkAnswerGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<HomeworkAnswerGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof HomeworkAnswerGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], HomeworkAnswerGroupByOutputType[P]>
+            : GetScalarType<T[P], HomeworkAnswerGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type HomeworkAnswerSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    attemptId?: boolean
+    questionId?: boolean
+    questionText?: boolean
+    selectedAnswer?: boolean
+    correctAnswer?: boolean
+    correct?: boolean
+    timeUsedMs?: boolean
+    order?: boolean
+    attempt?: boolean | HomeworkAttemptDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["homeworkAnswer"]>
+
+  export type HomeworkAnswerSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    attemptId?: boolean
+    questionId?: boolean
+    questionText?: boolean
+    selectedAnswer?: boolean
+    correctAnswer?: boolean
+    correct?: boolean
+    timeUsedMs?: boolean
+    order?: boolean
+    attempt?: boolean | HomeworkAttemptDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["homeworkAnswer"]>
+
+  export type HomeworkAnswerSelectScalar = {
+    id?: boolean
+    attemptId?: boolean
+    questionId?: boolean
+    questionText?: boolean
+    selectedAnswer?: boolean
+    correctAnswer?: boolean
+    correct?: boolean
+    timeUsedMs?: boolean
+    order?: boolean
+  }
+
+  export type HomeworkAnswerInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    attempt?: boolean | HomeworkAttemptDefaultArgs<ExtArgs>
+  }
+  export type HomeworkAnswerIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    attempt?: boolean | HomeworkAttemptDefaultArgs<ExtArgs>
+  }
+
+  export type $HomeworkAnswerPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "HomeworkAnswer"
+    objects: {
+      attempt: Prisma.$HomeworkAttemptPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      attemptId: string
+      questionId: string
+      questionText: string
+      selectedAnswer: string
+      /**
+       * Filled when the try is graded. Empty while a homework try is still open.
+       */
+      correctAnswer: string
+      correct: boolean
+      timeUsedMs: number
+      order: number
+    }, ExtArgs["result"]["homeworkAnswer"]>
+    composites: {}
+  }
+
+  type HomeworkAnswerGetPayload<S extends boolean | null | undefined | HomeworkAnswerDefaultArgs> = $Result.GetResult<Prisma.$HomeworkAnswerPayload, S>
+
+  type HomeworkAnswerCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<HomeworkAnswerFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: HomeworkAnswerCountAggregateInputType | true
+    }
+
+  export interface HomeworkAnswerDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['HomeworkAnswer'], meta: { name: 'HomeworkAnswer' } }
+    /**
+     * Find zero or one HomeworkAnswer that matches the filter.
+     * @param {HomeworkAnswerFindUniqueArgs} args - Arguments to find a HomeworkAnswer
+     * @example
+     * // Get one HomeworkAnswer
+     * const homeworkAnswer = await prisma.homeworkAnswer.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends HomeworkAnswerFindUniqueArgs>(args: SelectSubset<T, HomeworkAnswerFindUniqueArgs<ExtArgs>>): Prisma__HomeworkAnswerClient<$Result.GetResult<Prisma.$HomeworkAnswerPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one HomeworkAnswer that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {HomeworkAnswerFindUniqueOrThrowArgs} args - Arguments to find a HomeworkAnswer
+     * @example
+     * // Get one HomeworkAnswer
+     * const homeworkAnswer = await prisma.homeworkAnswer.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends HomeworkAnswerFindUniqueOrThrowArgs>(args: SelectSubset<T, HomeworkAnswerFindUniqueOrThrowArgs<ExtArgs>>): Prisma__HomeworkAnswerClient<$Result.GetResult<Prisma.$HomeworkAnswerPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first HomeworkAnswer that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAnswerFindFirstArgs} args - Arguments to find a HomeworkAnswer
+     * @example
+     * // Get one HomeworkAnswer
+     * const homeworkAnswer = await prisma.homeworkAnswer.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends HomeworkAnswerFindFirstArgs>(args?: SelectSubset<T, HomeworkAnswerFindFirstArgs<ExtArgs>>): Prisma__HomeworkAnswerClient<$Result.GetResult<Prisma.$HomeworkAnswerPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first HomeworkAnswer that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAnswerFindFirstOrThrowArgs} args - Arguments to find a HomeworkAnswer
+     * @example
+     * // Get one HomeworkAnswer
+     * const homeworkAnswer = await prisma.homeworkAnswer.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends HomeworkAnswerFindFirstOrThrowArgs>(args?: SelectSubset<T, HomeworkAnswerFindFirstOrThrowArgs<ExtArgs>>): Prisma__HomeworkAnswerClient<$Result.GetResult<Prisma.$HomeworkAnswerPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more HomeworkAnswers that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAnswerFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all HomeworkAnswers
+     * const homeworkAnswers = await prisma.homeworkAnswer.findMany()
+     * 
+     * // Get first 10 HomeworkAnswers
+     * const homeworkAnswers = await prisma.homeworkAnswer.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const homeworkAnswerWithIdOnly = await prisma.homeworkAnswer.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends HomeworkAnswerFindManyArgs>(args?: SelectSubset<T, HomeworkAnswerFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$HomeworkAnswerPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a HomeworkAnswer.
+     * @param {HomeworkAnswerCreateArgs} args - Arguments to create a HomeworkAnswer.
+     * @example
+     * // Create one HomeworkAnswer
+     * const HomeworkAnswer = await prisma.homeworkAnswer.create({
+     *   data: {
+     *     // ... data to create a HomeworkAnswer
+     *   }
+     * })
+     * 
+     */
+    create<T extends HomeworkAnswerCreateArgs>(args: SelectSubset<T, HomeworkAnswerCreateArgs<ExtArgs>>): Prisma__HomeworkAnswerClient<$Result.GetResult<Prisma.$HomeworkAnswerPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many HomeworkAnswers.
+     * @param {HomeworkAnswerCreateManyArgs} args - Arguments to create many HomeworkAnswers.
+     * @example
+     * // Create many HomeworkAnswers
+     * const homeworkAnswer = await prisma.homeworkAnswer.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends HomeworkAnswerCreateManyArgs>(args?: SelectSubset<T, HomeworkAnswerCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many HomeworkAnswers and returns the data saved in the database.
+     * @param {HomeworkAnswerCreateManyAndReturnArgs} args - Arguments to create many HomeworkAnswers.
+     * @example
+     * // Create many HomeworkAnswers
+     * const homeworkAnswer = await prisma.homeworkAnswer.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many HomeworkAnswers and only return the `id`
+     * const homeworkAnswerWithIdOnly = await prisma.homeworkAnswer.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends HomeworkAnswerCreateManyAndReturnArgs>(args?: SelectSubset<T, HomeworkAnswerCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$HomeworkAnswerPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a HomeworkAnswer.
+     * @param {HomeworkAnswerDeleteArgs} args - Arguments to delete one HomeworkAnswer.
+     * @example
+     * // Delete one HomeworkAnswer
+     * const HomeworkAnswer = await prisma.homeworkAnswer.delete({
+     *   where: {
+     *     // ... filter to delete one HomeworkAnswer
+     *   }
+     * })
+     * 
+     */
+    delete<T extends HomeworkAnswerDeleteArgs>(args: SelectSubset<T, HomeworkAnswerDeleteArgs<ExtArgs>>): Prisma__HomeworkAnswerClient<$Result.GetResult<Prisma.$HomeworkAnswerPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one HomeworkAnswer.
+     * @param {HomeworkAnswerUpdateArgs} args - Arguments to update one HomeworkAnswer.
+     * @example
+     * // Update one HomeworkAnswer
+     * const homeworkAnswer = await prisma.homeworkAnswer.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends HomeworkAnswerUpdateArgs>(args: SelectSubset<T, HomeworkAnswerUpdateArgs<ExtArgs>>): Prisma__HomeworkAnswerClient<$Result.GetResult<Prisma.$HomeworkAnswerPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more HomeworkAnswers.
+     * @param {HomeworkAnswerDeleteManyArgs} args - Arguments to filter HomeworkAnswers to delete.
+     * @example
+     * // Delete a few HomeworkAnswers
+     * const { count } = await prisma.homeworkAnswer.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends HomeworkAnswerDeleteManyArgs>(args?: SelectSubset<T, HomeworkAnswerDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more HomeworkAnswers.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAnswerUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many HomeworkAnswers
+     * const homeworkAnswer = await prisma.homeworkAnswer.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends HomeworkAnswerUpdateManyArgs>(args: SelectSubset<T, HomeworkAnswerUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one HomeworkAnswer.
+     * @param {HomeworkAnswerUpsertArgs} args - Arguments to update or create a HomeworkAnswer.
+     * @example
+     * // Update or create a HomeworkAnswer
+     * const homeworkAnswer = await prisma.homeworkAnswer.upsert({
+     *   create: {
+     *     // ... data to create a HomeworkAnswer
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the HomeworkAnswer we want to update
+     *   }
+     * })
+     */
+    upsert<T extends HomeworkAnswerUpsertArgs>(args: SelectSubset<T, HomeworkAnswerUpsertArgs<ExtArgs>>): Prisma__HomeworkAnswerClient<$Result.GetResult<Prisma.$HomeworkAnswerPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of HomeworkAnswers.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAnswerCountArgs} args - Arguments to filter HomeworkAnswers to count.
+     * @example
+     * // Count the number of HomeworkAnswers
+     * const count = await prisma.homeworkAnswer.count({
+     *   where: {
+     *     // ... the filter for the HomeworkAnswers we want to count
+     *   }
+     * })
+    **/
+    count<T extends HomeworkAnswerCountArgs>(
+      args?: Subset<T, HomeworkAnswerCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], HomeworkAnswerCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a HomeworkAnswer.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAnswerAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends HomeworkAnswerAggregateArgs>(args: Subset<T, HomeworkAnswerAggregateArgs>): Prisma.PrismaPromise<GetHomeworkAnswerAggregateType<T>>
+
+    /**
+     * Group by HomeworkAnswer.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {HomeworkAnswerGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends HomeworkAnswerGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: HomeworkAnswerGroupByArgs['orderBy'] }
+        : { orderBy?: HomeworkAnswerGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, HomeworkAnswerGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetHomeworkAnswerGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the HomeworkAnswer model
+   */
+  readonly fields: HomeworkAnswerFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for HomeworkAnswer.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__HomeworkAnswerClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    attempt<T extends HomeworkAttemptDefaultArgs<ExtArgs> = {}>(args?: Subset<T, HomeworkAttemptDefaultArgs<ExtArgs>>): Prisma__HomeworkAttemptClient<$Result.GetResult<Prisma.$HomeworkAttemptPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the HomeworkAnswer model
+   */ 
+  interface HomeworkAnswerFieldRefs {
+    readonly id: FieldRef<"HomeworkAnswer", 'String'>
+    readonly attemptId: FieldRef<"HomeworkAnswer", 'String'>
+    readonly questionId: FieldRef<"HomeworkAnswer", 'String'>
+    readonly questionText: FieldRef<"HomeworkAnswer", 'String'>
+    readonly selectedAnswer: FieldRef<"HomeworkAnswer", 'String'>
+    readonly correctAnswer: FieldRef<"HomeworkAnswer", 'String'>
+    readonly correct: FieldRef<"HomeworkAnswer", 'Boolean'>
+    readonly timeUsedMs: FieldRef<"HomeworkAnswer", 'Int'>
+    readonly order: FieldRef<"HomeworkAnswer", 'Int'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * HomeworkAnswer findUnique
+   */
+  export type HomeworkAnswerFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAnswer
+     */
+    select?: HomeworkAnswerSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAnswerInclude<ExtArgs> | null
+    /**
+     * Filter, which HomeworkAnswer to fetch.
+     */
+    where: HomeworkAnswerWhereUniqueInput
+  }
+
+  /**
+   * HomeworkAnswer findUniqueOrThrow
+   */
+  export type HomeworkAnswerFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAnswer
+     */
+    select?: HomeworkAnswerSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAnswerInclude<ExtArgs> | null
+    /**
+     * Filter, which HomeworkAnswer to fetch.
+     */
+    where: HomeworkAnswerWhereUniqueInput
+  }
+
+  /**
+   * HomeworkAnswer findFirst
+   */
+  export type HomeworkAnswerFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAnswer
+     */
+    select?: HomeworkAnswerSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAnswerInclude<ExtArgs> | null
+    /**
+     * Filter, which HomeworkAnswer to fetch.
+     */
+    where?: HomeworkAnswerWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of HomeworkAnswers to fetch.
+     */
+    orderBy?: HomeworkAnswerOrderByWithRelationInput | HomeworkAnswerOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for HomeworkAnswers.
+     */
+    cursor?: HomeworkAnswerWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` HomeworkAnswers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` HomeworkAnswers.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of HomeworkAnswers.
+     */
+    distinct?: HomeworkAnswerScalarFieldEnum | HomeworkAnswerScalarFieldEnum[]
+  }
+
+  /**
+   * HomeworkAnswer findFirstOrThrow
+   */
+  export type HomeworkAnswerFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAnswer
+     */
+    select?: HomeworkAnswerSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAnswerInclude<ExtArgs> | null
+    /**
+     * Filter, which HomeworkAnswer to fetch.
+     */
+    where?: HomeworkAnswerWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of HomeworkAnswers to fetch.
+     */
+    orderBy?: HomeworkAnswerOrderByWithRelationInput | HomeworkAnswerOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for HomeworkAnswers.
+     */
+    cursor?: HomeworkAnswerWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` HomeworkAnswers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` HomeworkAnswers.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of HomeworkAnswers.
+     */
+    distinct?: HomeworkAnswerScalarFieldEnum | HomeworkAnswerScalarFieldEnum[]
+  }
+
+  /**
+   * HomeworkAnswer findMany
+   */
+  export type HomeworkAnswerFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAnswer
+     */
+    select?: HomeworkAnswerSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAnswerInclude<ExtArgs> | null
+    /**
+     * Filter, which HomeworkAnswers to fetch.
+     */
+    where?: HomeworkAnswerWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of HomeworkAnswers to fetch.
+     */
+    orderBy?: HomeworkAnswerOrderByWithRelationInput | HomeworkAnswerOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing HomeworkAnswers.
+     */
+    cursor?: HomeworkAnswerWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` HomeworkAnswers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` HomeworkAnswers.
+     */
+    skip?: number
+    distinct?: HomeworkAnswerScalarFieldEnum | HomeworkAnswerScalarFieldEnum[]
+  }
+
+  /**
+   * HomeworkAnswer create
+   */
+  export type HomeworkAnswerCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAnswer
+     */
+    select?: HomeworkAnswerSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAnswerInclude<ExtArgs> | null
+    /**
+     * The data needed to create a HomeworkAnswer.
+     */
+    data: XOR<HomeworkAnswerCreateInput, HomeworkAnswerUncheckedCreateInput>
+  }
+
+  /**
+   * HomeworkAnswer createMany
+   */
+  export type HomeworkAnswerCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many HomeworkAnswers.
+     */
+    data: HomeworkAnswerCreateManyInput | HomeworkAnswerCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * HomeworkAnswer createManyAndReturn
+   */
+  export type HomeworkAnswerCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAnswer
+     */
+    select?: HomeworkAnswerSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many HomeworkAnswers.
+     */
+    data: HomeworkAnswerCreateManyInput | HomeworkAnswerCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAnswerIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * HomeworkAnswer update
+   */
+  export type HomeworkAnswerUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAnswer
+     */
+    select?: HomeworkAnswerSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAnswerInclude<ExtArgs> | null
+    /**
+     * The data needed to update a HomeworkAnswer.
+     */
+    data: XOR<HomeworkAnswerUpdateInput, HomeworkAnswerUncheckedUpdateInput>
+    /**
+     * Choose, which HomeworkAnswer to update.
+     */
+    where: HomeworkAnswerWhereUniqueInput
+  }
+
+  /**
+   * HomeworkAnswer updateMany
+   */
+  export type HomeworkAnswerUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update HomeworkAnswers.
+     */
+    data: XOR<HomeworkAnswerUpdateManyMutationInput, HomeworkAnswerUncheckedUpdateManyInput>
+    /**
+     * Filter which HomeworkAnswers to update
+     */
+    where?: HomeworkAnswerWhereInput
+  }
+
+  /**
+   * HomeworkAnswer upsert
+   */
+  export type HomeworkAnswerUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAnswer
+     */
+    select?: HomeworkAnswerSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAnswerInclude<ExtArgs> | null
+    /**
+     * The filter to search for the HomeworkAnswer to update in case it exists.
+     */
+    where: HomeworkAnswerWhereUniqueInput
+    /**
+     * In case the HomeworkAnswer found by the `where` argument doesn't exist, create a new HomeworkAnswer with this data.
+     */
+    create: XOR<HomeworkAnswerCreateInput, HomeworkAnswerUncheckedCreateInput>
+    /**
+     * In case the HomeworkAnswer was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<HomeworkAnswerUpdateInput, HomeworkAnswerUncheckedUpdateInput>
+  }
+
+  /**
+   * HomeworkAnswer delete
+   */
+  export type HomeworkAnswerDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAnswer
+     */
+    select?: HomeworkAnswerSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAnswerInclude<ExtArgs> | null
+    /**
+     * Filter which HomeworkAnswer to delete.
+     */
+    where: HomeworkAnswerWhereUniqueInput
+  }
+
+  /**
+   * HomeworkAnswer deleteMany
+   */
+  export type HomeworkAnswerDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which HomeworkAnswers to delete
+     */
+    where?: HomeworkAnswerWhereInput
+  }
+
+  /**
+   * HomeworkAnswer without action
+   */
+  export type HomeworkAnswerDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the HomeworkAnswer
+     */
+    select?: HomeworkAnswerSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: HomeworkAnswerInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -15138,6 +18814,7 @@ export namespace Prisma {
     showExampleToStudents: 'showExampleToStudents',
     status: 'status',
     shareToken: 'shareToken',
+    dueAt: 'dueAt',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -15193,6 +18870,7 @@ export namespace Prisma {
     showGallery: 'showGallery',
     allowFunnyVoices: 'allowFunnyVoices',
     shareToken: 'shareToken',
+    dueAt: 'dueAt',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -15216,6 +18894,65 @@ export namespace Prisma {
   };
 
   export type ThoughtSubmissionScalarFieldEnum = (typeof ThoughtSubmissionScalarFieldEnum)[keyof typeof ThoughtSubmissionScalarFieldEnum]
+
+
+  export const HomeworkAssignmentScalarFieldEnum: {
+    id: 'id',
+    authorId: 'authorId',
+    quizId: 'quizId',
+    title: 'title',
+    shareToken: 'shareToken',
+    dueAt: 'dueAt',
+    acceptingResponses: 'acceptingResponses',
+    showLeaderboard: 'showLeaderboard',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type HomeworkAssignmentScalarFieldEnum = (typeof HomeworkAssignmentScalarFieldEnum)[keyof typeof HomeworkAssignmentScalarFieldEnum]
+
+
+  export const HomeworkAttemptScalarFieldEnum: {
+    id: 'id',
+    assignmentId: 'assignmentId',
+    studentName: 'studentName',
+    clientKey: 'clientKey',
+    mode: 'mode',
+    status: 'status',
+    queue: 'queue',
+    correctCount: 'correctCount',
+    answeredCount: 'answeredCount',
+    percentage: 'percentage',
+    durationMs: 'durationMs',
+    livesLeft: 'livesLeft',
+    timeLimitMs: 'timeLimitMs',
+    questionStartedAt: 'questionStartedAt',
+    extraLifeGranted: 'extraLifeGranted',
+    endReason: 'endReason',
+    reachedHundred: 'reachedHundred',
+    timeToHundredMs: 'timeToHundredMs',
+    startedAt: 'startedAt',
+    finishedAt: 'finishedAt',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type HomeworkAttemptScalarFieldEnum = (typeof HomeworkAttemptScalarFieldEnum)[keyof typeof HomeworkAttemptScalarFieldEnum]
+
+
+  export const HomeworkAnswerScalarFieldEnum: {
+    id: 'id',
+    attemptId: 'attemptId',
+    questionId: 'questionId',
+    questionText: 'questionText',
+    selectedAnswer: 'selectedAnswer',
+    correctAnswer: 'correctAnswer',
+    correct: 'correct',
+    timeUsedMs: 'timeUsedMs',
+    order: 'order'
+  };
+
+  export type HomeworkAnswerScalarFieldEnum = (typeof HomeworkAnswerScalarFieldEnum)[keyof typeof HomeworkAnswerScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -15398,6 +19135,34 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'HomeworkAttemptMode'
+   */
+  export type EnumHomeworkAttemptModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'HomeworkAttemptMode'>
+    
+
+
+  /**
+   * Reference to a field of type 'HomeworkAttemptMode[]'
+   */
+  export type ListEnumHomeworkAttemptModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'HomeworkAttemptMode[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'HomeworkAttemptStatus'
+   */
+  export type EnumHomeworkAttemptStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'HomeworkAttemptStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'HomeworkAttemptStatus[]'
+   */
+  export type ListEnumHomeworkAttemptStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'HomeworkAttemptStatus[]'>
+    
+
+
+  /**
    * Reference to a field of type 'Float'
    */
   export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -15408,6 +19173,20 @@ export namespace Prisma {
    * Reference to a field of type 'Float[]'
    */
   export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'HomeworkEndReason'
+   */
+  export type EnumHomeworkEndReasonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'HomeworkEndReason'>
+    
+
+
+  /**
+   * Reference to a field of type 'HomeworkEndReason[]'
+   */
+  export type ListEnumHomeworkEndReasonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'HomeworkEndReason[]'>
     
   /**
    * Deep Input Types
@@ -15435,6 +19214,7 @@ export namespace Prisma {
     likes?: QuizLikeListRelationFilter
     favorites?: QuizFavoriteListRelationFilter
     lessonKit?: XOR<LessonKitNullableRelationFilter, LessonKitWhereInput> | null
+    homeworkAssignments?: HomeworkAssignmentListRelationFilter
   }
 
   export type QuizOrderByWithRelationInput = {
@@ -15455,6 +19235,7 @@ export namespace Prisma {
     likes?: QuizLikeOrderByRelationAggregateInput
     favorites?: QuizFavoriteOrderByRelationAggregateInput
     lessonKit?: LessonKitOrderByWithRelationInput
+    homeworkAssignments?: HomeworkAssignmentOrderByRelationAggregateInput
   }
 
   export type QuizWhereUniqueInput = Prisma.AtLeast<{
@@ -15478,6 +19259,7 @@ export namespace Prisma {
     likes?: QuizLikeListRelationFilter
     favorites?: QuizFavoriteListRelationFilter
     lessonKit?: XOR<LessonKitNullableRelationFilter, LessonKitWhereInput> | null
+    homeworkAssignments?: HomeworkAssignmentListRelationFilter
   }, "id">
 
   export type QuizOrderByWithAggregationInput = {
@@ -15929,6 +19711,7 @@ export namespace Prisma {
     showExampleToStudents?: BoolFilter<"Story"> | boolean
     status?: EnumStoryStatusFilter<"Story"> | $Enums.StoryStatus
     shareToken?: StringFilter<"Story"> | string
+    dueAt?: DateTimeNullableFilter<"Story"> | Date | string | null
     createdAt?: DateTimeFilter<"Story"> | Date | string
     updatedAt?: DateTimeFilter<"Story"> | Date | string
     panels?: StoryPanelListRelationFilter
@@ -15948,6 +19731,7 @@ export namespace Prisma {
     showExampleToStudents?: SortOrder
     status?: SortOrder
     shareToken?: SortOrder
+    dueAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     panels?: StoryPanelOrderByRelationAggregateInput
@@ -15970,6 +19754,7 @@ export namespace Prisma {
     exampleStory?: StringNullableFilter<"Story"> | string | null
     showExampleToStudents?: BoolFilter<"Story"> | boolean
     status?: EnumStoryStatusFilter<"Story"> | $Enums.StoryStatus
+    dueAt?: DateTimeNullableFilter<"Story"> | Date | string | null
     createdAt?: DateTimeFilter<"Story"> | Date | string
     updatedAt?: DateTimeFilter<"Story"> | Date | string
     panels?: StoryPanelListRelationFilter
@@ -15989,6 +19774,7 @@ export namespace Prisma {
     showExampleToStudents?: SortOrder
     status?: SortOrder
     shareToken?: SortOrder
+    dueAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: StoryCountOrderByAggregateInput
@@ -16012,6 +19798,7 @@ export namespace Prisma {
     showExampleToStudents?: BoolWithAggregatesFilter<"Story"> | boolean
     status?: EnumStoryStatusWithAggregatesFilter<"Story"> | $Enums.StoryStatus
     shareToken?: StringWithAggregatesFilter<"Story"> | string
+    dueAt?: DateTimeNullableWithAggregatesFilter<"Story"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Story"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Story"> | Date | string
   }
@@ -16228,6 +20015,7 @@ export namespace Prisma {
     showGallery?: BoolFilter<"ThoughtChallenge"> | boolean
     allowFunnyVoices?: BoolFilter<"ThoughtChallenge"> | boolean
     shareToken?: StringFilter<"ThoughtChallenge"> | string
+    dueAt?: DateTimeNullableFilter<"ThoughtChallenge"> | Date | string | null
     createdAt?: DateTimeFilter<"ThoughtChallenge"> | Date | string
     updatedAt?: DateTimeFilter<"ThoughtChallenge"> | Date | string
     submissions?: ThoughtSubmissionListRelationFilter
@@ -16243,6 +20031,7 @@ export namespace Prisma {
     showGallery?: SortOrder
     allowFunnyVoices?: SortOrder
     shareToken?: SortOrder
+    dueAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     submissions?: ThoughtSubmissionOrderByRelationAggregateInput
@@ -16261,6 +20050,7 @@ export namespace Prisma {
     acceptingResponses?: BoolFilter<"ThoughtChallenge"> | boolean
     showGallery?: BoolFilter<"ThoughtChallenge"> | boolean
     allowFunnyVoices?: BoolFilter<"ThoughtChallenge"> | boolean
+    dueAt?: DateTimeNullableFilter<"ThoughtChallenge"> | Date | string | null
     createdAt?: DateTimeFilter<"ThoughtChallenge"> | Date | string
     updatedAt?: DateTimeFilter<"ThoughtChallenge"> | Date | string
     submissions?: ThoughtSubmissionListRelationFilter
@@ -16276,6 +20066,7 @@ export namespace Prisma {
     showGallery?: SortOrder
     allowFunnyVoices?: SortOrder
     shareToken?: SortOrder
+    dueAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: ThoughtChallengeCountOrderByAggregateInput
@@ -16296,6 +20087,7 @@ export namespace Prisma {
     showGallery?: BoolWithAggregatesFilter<"ThoughtChallenge"> | boolean
     allowFunnyVoices?: BoolWithAggregatesFilter<"ThoughtChallenge"> | boolean
     shareToken?: StringWithAggregatesFilter<"ThoughtChallenge"> | string
+    dueAt?: DateTimeNullableWithAggregatesFilter<"ThoughtChallenge"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"ThoughtChallenge"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"ThoughtChallenge"> | Date | string
   }
@@ -16393,6 +20185,311 @@ export namespace Prisma {
     createdAt?: DateTimeWithAggregatesFilter<"ThoughtSubmission"> | Date | string
   }
 
+  export type HomeworkAssignmentWhereInput = {
+    AND?: HomeworkAssignmentWhereInput | HomeworkAssignmentWhereInput[]
+    OR?: HomeworkAssignmentWhereInput[]
+    NOT?: HomeworkAssignmentWhereInput | HomeworkAssignmentWhereInput[]
+    id?: StringFilter<"HomeworkAssignment"> | string
+    authorId?: StringFilter<"HomeworkAssignment"> | string
+    quizId?: StringFilter<"HomeworkAssignment"> | string
+    title?: StringFilter<"HomeworkAssignment"> | string
+    shareToken?: StringFilter<"HomeworkAssignment"> | string
+    dueAt?: DateTimeFilter<"HomeworkAssignment"> | Date | string
+    acceptingResponses?: BoolFilter<"HomeworkAssignment"> | boolean
+    showLeaderboard?: BoolFilter<"HomeworkAssignment"> | boolean
+    createdAt?: DateTimeFilter<"HomeworkAssignment"> | Date | string
+    updatedAt?: DateTimeFilter<"HomeworkAssignment"> | Date | string
+    quiz?: XOR<QuizRelationFilter, QuizWhereInput>
+    attempts?: HomeworkAttemptListRelationFilter
+  }
+
+  export type HomeworkAssignmentOrderByWithRelationInput = {
+    id?: SortOrder
+    authorId?: SortOrder
+    quizId?: SortOrder
+    title?: SortOrder
+    shareToken?: SortOrder
+    dueAt?: SortOrder
+    acceptingResponses?: SortOrder
+    showLeaderboard?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    quiz?: QuizOrderByWithRelationInput
+    attempts?: HomeworkAttemptOrderByRelationAggregateInput
+  }
+
+  export type HomeworkAssignmentWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    shareToken?: string
+    AND?: HomeworkAssignmentWhereInput | HomeworkAssignmentWhereInput[]
+    OR?: HomeworkAssignmentWhereInput[]
+    NOT?: HomeworkAssignmentWhereInput | HomeworkAssignmentWhereInput[]
+    authorId?: StringFilter<"HomeworkAssignment"> | string
+    quizId?: StringFilter<"HomeworkAssignment"> | string
+    title?: StringFilter<"HomeworkAssignment"> | string
+    dueAt?: DateTimeFilter<"HomeworkAssignment"> | Date | string
+    acceptingResponses?: BoolFilter<"HomeworkAssignment"> | boolean
+    showLeaderboard?: BoolFilter<"HomeworkAssignment"> | boolean
+    createdAt?: DateTimeFilter<"HomeworkAssignment"> | Date | string
+    updatedAt?: DateTimeFilter<"HomeworkAssignment"> | Date | string
+    quiz?: XOR<QuizRelationFilter, QuizWhereInput>
+    attempts?: HomeworkAttemptListRelationFilter
+  }, "id" | "shareToken">
+
+  export type HomeworkAssignmentOrderByWithAggregationInput = {
+    id?: SortOrder
+    authorId?: SortOrder
+    quizId?: SortOrder
+    title?: SortOrder
+    shareToken?: SortOrder
+    dueAt?: SortOrder
+    acceptingResponses?: SortOrder
+    showLeaderboard?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: HomeworkAssignmentCountOrderByAggregateInput
+    _max?: HomeworkAssignmentMaxOrderByAggregateInput
+    _min?: HomeworkAssignmentMinOrderByAggregateInput
+  }
+
+  export type HomeworkAssignmentScalarWhereWithAggregatesInput = {
+    AND?: HomeworkAssignmentScalarWhereWithAggregatesInput | HomeworkAssignmentScalarWhereWithAggregatesInput[]
+    OR?: HomeworkAssignmentScalarWhereWithAggregatesInput[]
+    NOT?: HomeworkAssignmentScalarWhereWithAggregatesInput | HomeworkAssignmentScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"HomeworkAssignment"> | string
+    authorId?: StringWithAggregatesFilter<"HomeworkAssignment"> | string
+    quizId?: StringWithAggregatesFilter<"HomeworkAssignment"> | string
+    title?: StringWithAggregatesFilter<"HomeworkAssignment"> | string
+    shareToken?: StringWithAggregatesFilter<"HomeworkAssignment"> | string
+    dueAt?: DateTimeWithAggregatesFilter<"HomeworkAssignment"> | Date | string
+    acceptingResponses?: BoolWithAggregatesFilter<"HomeworkAssignment"> | boolean
+    showLeaderboard?: BoolWithAggregatesFilter<"HomeworkAssignment"> | boolean
+    createdAt?: DateTimeWithAggregatesFilter<"HomeworkAssignment"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"HomeworkAssignment"> | Date | string
+  }
+
+  export type HomeworkAttemptWhereInput = {
+    AND?: HomeworkAttemptWhereInput | HomeworkAttemptWhereInput[]
+    OR?: HomeworkAttemptWhereInput[]
+    NOT?: HomeworkAttemptWhereInput | HomeworkAttemptWhereInput[]
+    id?: StringFilter<"HomeworkAttempt"> | string
+    assignmentId?: StringFilter<"HomeworkAttempt"> | string
+    studentName?: StringFilter<"HomeworkAttempt"> | string
+    clientKey?: StringFilter<"HomeworkAttempt"> | string
+    mode?: EnumHomeworkAttemptModeFilter<"HomeworkAttempt"> | $Enums.HomeworkAttemptMode
+    status?: EnumHomeworkAttemptStatusFilter<"HomeworkAttempt"> | $Enums.HomeworkAttemptStatus
+    queue?: JsonFilter<"HomeworkAttempt">
+    correctCount?: IntFilter<"HomeworkAttempt"> | number
+    answeredCount?: IntFilter<"HomeworkAttempt"> | number
+    percentage?: FloatNullableFilter<"HomeworkAttempt"> | number | null
+    durationMs?: IntFilter<"HomeworkAttempt"> | number
+    livesLeft?: IntNullableFilter<"HomeworkAttempt"> | number | null
+    timeLimitMs?: IntNullableFilter<"HomeworkAttempt"> | number | null
+    questionStartedAt?: DateTimeNullableFilter<"HomeworkAttempt"> | Date | string | null
+    extraLifeGranted?: BoolFilter<"HomeworkAttempt"> | boolean
+    endReason?: EnumHomeworkEndReasonNullableFilter<"HomeworkAttempt"> | $Enums.HomeworkEndReason | null
+    reachedHundred?: BoolFilter<"HomeworkAttempt"> | boolean
+    timeToHundredMs?: IntNullableFilter<"HomeworkAttempt"> | number | null
+    startedAt?: DateTimeFilter<"HomeworkAttempt"> | Date | string
+    finishedAt?: DateTimeNullableFilter<"HomeworkAttempt"> | Date | string | null
+    createdAt?: DateTimeFilter<"HomeworkAttempt"> | Date | string
+    updatedAt?: DateTimeFilter<"HomeworkAttempt"> | Date | string
+    assignment?: XOR<HomeworkAssignmentRelationFilter, HomeworkAssignmentWhereInput>
+    answers?: HomeworkAnswerListRelationFilter
+  }
+
+  export type HomeworkAttemptOrderByWithRelationInput = {
+    id?: SortOrder
+    assignmentId?: SortOrder
+    studentName?: SortOrder
+    clientKey?: SortOrder
+    mode?: SortOrder
+    status?: SortOrder
+    queue?: SortOrder
+    correctCount?: SortOrder
+    answeredCount?: SortOrder
+    percentage?: SortOrderInput | SortOrder
+    durationMs?: SortOrder
+    livesLeft?: SortOrderInput | SortOrder
+    timeLimitMs?: SortOrderInput | SortOrder
+    questionStartedAt?: SortOrderInput | SortOrder
+    extraLifeGranted?: SortOrder
+    endReason?: SortOrderInput | SortOrder
+    reachedHundred?: SortOrder
+    timeToHundredMs?: SortOrderInput | SortOrder
+    startedAt?: SortOrder
+    finishedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    assignment?: HomeworkAssignmentOrderByWithRelationInput
+    answers?: HomeworkAnswerOrderByRelationAggregateInput
+  }
+
+  export type HomeworkAttemptWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: HomeworkAttemptWhereInput | HomeworkAttemptWhereInput[]
+    OR?: HomeworkAttemptWhereInput[]
+    NOT?: HomeworkAttemptWhereInput | HomeworkAttemptWhereInput[]
+    assignmentId?: StringFilter<"HomeworkAttempt"> | string
+    studentName?: StringFilter<"HomeworkAttempt"> | string
+    clientKey?: StringFilter<"HomeworkAttempt"> | string
+    mode?: EnumHomeworkAttemptModeFilter<"HomeworkAttempt"> | $Enums.HomeworkAttemptMode
+    status?: EnumHomeworkAttemptStatusFilter<"HomeworkAttempt"> | $Enums.HomeworkAttemptStatus
+    queue?: JsonFilter<"HomeworkAttempt">
+    correctCount?: IntFilter<"HomeworkAttempt"> | number
+    answeredCount?: IntFilter<"HomeworkAttempt"> | number
+    percentage?: FloatNullableFilter<"HomeworkAttempt"> | number | null
+    durationMs?: IntFilter<"HomeworkAttempt"> | number
+    livesLeft?: IntNullableFilter<"HomeworkAttempt"> | number | null
+    timeLimitMs?: IntNullableFilter<"HomeworkAttempt"> | number | null
+    questionStartedAt?: DateTimeNullableFilter<"HomeworkAttempt"> | Date | string | null
+    extraLifeGranted?: BoolFilter<"HomeworkAttempt"> | boolean
+    endReason?: EnumHomeworkEndReasonNullableFilter<"HomeworkAttempt"> | $Enums.HomeworkEndReason | null
+    reachedHundred?: BoolFilter<"HomeworkAttempt"> | boolean
+    timeToHundredMs?: IntNullableFilter<"HomeworkAttempt"> | number | null
+    startedAt?: DateTimeFilter<"HomeworkAttempt"> | Date | string
+    finishedAt?: DateTimeNullableFilter<"HomeworkAttempt"> | Date | string | null
+    createdAt?: DateTimeFilter<"HomeworkAttempt"> | Date | string
+    updatedAt?: DateTimeFilter<"HomeworkAttempt"> | Date | string
+    assignment?: XOR<HomeworkAssignmentRelationFilter, HomeworkAssignmentWhereInput>
+    answers?: HomeworkAnswerListRelationFilter
+  }, "id">
+
+  export type HomeworkAttemptOrderByWithAggregationInput = {
+    id?: SortOrder
+    assignmentId?: SortOrder
+    studentName?: SortOrder
+    clientKey?: SortOrder
+    mode?: SortOrder
+    status?: SortOrder
+    queue?: SortOrder
+    correctCount?: SortOrder
+    answeredCount?: SortOrder
+    percentage?: SortOrderInput | SortOrder
+    durationMs?: SortOrder
+    livesLeft?: SortOrderInput | SortOrder
+    timeLimitMs?: SortOrderInput | SortOrder
+    questionStartedAt?: SortOrderInput | SortOrder
+    extraLifeGranted?: SortOrder
+    endReason?: SortOrderInput | SortOrder
+    reachedHundred?: SortOrder
+    timeToHundredMs?: SortOrderInput | SortOrder
+    startedAt?: SortOrder
+    finishedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: HomeworkAttemptCountOrderByAggregateInput
+    _avg?: HomeworkAttemptAvgOrderByAggregateInput
+    _max?: HomeworkAttemptMaxOrderByAggregateInput
+    _min?: HomeworkAttemptMinOrderByAggregateInput
+    _sum?: HomeworkAttemptSumOrderByAggregateInput
+  }
+
+  export type HomeworkAttemptScalarWhereWithAggregatesInput = {
+    AND?: HomeworkAttemptScalarWhereWithAggregatesInput | HomeworkAttemptScalarWhereWithAggregatesInput[]
+    OR?: HomeworkAttemptScalarWhereWithAggregatesInput[]
+    NOT?: HomeworkAttemptScalarWhereWithAggregatesInput | HomeworkAttemptScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"HomeworkAttempt"> | string
+    assignmentId?: StringWithAggregatesFilter<"HomeworkAttempt"> | string
+    studentName?: StringWithAggregatesFilter<"HomeworkAttempt"> | string
+    clientKey?: StringWithAggregatesFilter<"HomeworkAttempt"> | string
+    mode?: EnumHomeworkAttemptModeWithAggregatesFilter<"HomeworkAttempt"> | $Enums.HomeworkAttemptMode
+    status?: EnumHomeworkAttemptStatusWithAggregatesFilter<"HomeworkAttempt"> | $Enums.HomeworkAttemptStatus
+    queue?: JsonWithAggregatesFilter<"HomeworkAttempt">
+    correctCount?: IntWithAggregatesFilter<"HomeworkAttempt"> | number
+    answeredCount?: IntWithAggregatesFilter<"HomeworkAttempt"> | number
+    percentage?: FloatNullableWithAggregatesFilter<"HomeworkAttempt"> | number | null
+    durationMs?: IntWithAggregatesFilter<"HomeworkAttempt"> | number
+    livesLeft?: IntNullableWithAggregatesFilter<"HomeworkAttempt"> | number | null
+    timeLimitMs?: IntNullableWithAggregatesFilter<"HomeworkAttempt"> | number | null
+    questionStartedAt?: DateTimeNullableWithAggregatesFilter<"HomeworkAttempt"> | Date | string | null
+    extraLifeGranted?: BoolWithAggregatesFilter<"HomeworkAttempt"> | boolean
+    endReason?: EnumHomeworkEndReasonNullableWithAggregatesFilter<"HomeworkAttempt"> | $Enums.HomeworkEndReason | null
+    reachedHundred?: BoolWithAggregatesFilter<"HomeworkAttempt"> | boolean
+    timeToHundredMs?: IntNullableWithAggregatesFilter<"HomeworkAttempt"> | number | null
+    startedAt?: DateTimeWithAggregatesFilter<"HomeworkAttempt"> | Date | string
+    finishedAt?: DateTimeNullableWithAggregatesFilter<"HomeworkAttempt"> | Date | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"HomeworkAttempt"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"HomeworkAttempt"> | Date | string
+  }
+
+  export type HomeworkAnswerWhereInput = {
+    AND?: HomeworkAnswerWhereInput | HomeworkAnswerWhereInput[]
+    OR?: HomeworkAnswerWhereInput[]
+    NOT?: HomeworkAnswerWhereInput | HomeworkAnswerWhereInput[]
+    id?: StringFilter<"HomeworkAnswer"> | string
+    attemptId?: StringFilter<"HomeworkAnswer"> | string
+    questionId?: StringFilter<"HomeworkAnswer"> | string
+    questionText?: StringFilter<"HomeworkAnswer"> | string
+    selectedAnswer?: StringFilter<"HomeworkAnswer"> | string
+    correctAnswer?: StringFilter<"HomeworkAnswer"> | string
+    correct?: BoolFilter<"HomeworkAnswer"> | boolean
+    timeUsedMs?: IntFilter<"HomeworkAnswer"> | number
+    order?: IntFilter<"HomeworkAnswer"> | number
+    attempt?: XOR<HomeworkAttemptRelationFilter, HomeworkAttemptWhereInput>
+  }
+
+  export type HomeworkAnswerOrderByWithRelationInput = {
+    id?: SortOrder
+    attemptId?: SortOrder
+    questionId?: SortOrder
+    questionText?: SortOrder
+    selectedAnswer?: SortOrder
+    correctAnswer?: SortOrder
+    correct?: SortOrder
+    timeUsedMs?: SortOrder
+    order?: SortOrder
+    attempt?: HomeworkAttemptOrderByWithRelationInput
+  }
+
+  export type HomeworkAnswerWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: HomeworkAnswerWhereInput | HomeworkAnswerWhereInput[]
+    OR?: HomeworkAnswerWhereInput[]
+    NOT?: HomeworkAnswerWhereInput | HomeworkAnswerWhereInput[]
+    attemptId?: StringFilter<"HomeworkAnswer"> | string
+    questionId?: StringFilter<"HomeworkAnswer"> | string
+    questionText?: StringFilter<"HomeworkAnswer"> | string
+    selectedAnswer?: StringFilter<"HomeworkAnswer"> | string
+    correctAnswer?: StringFilter<"HomeworkAnswer"> | string
+    correct?: BoolFilter<"HomeworkAnswer"> | boolean
+    timeUsedMs?: IntFilter<"HomeworkAnswer"> | number
+    order?: IntFilter<"HomeworkAnswer"> | number
+    attempt?: XOR<HomeworkAttemptRelationFilter, HomeworkAttemptWhereInput>
+  }, "id">
+
+  export type HomeworkAnswerOrderByWithAggregationInput = {
+    id?: SortOrder
+    attemptId?: SortOrder
+    questionId?: SortOrder
+    questionText?: SortOrder
+    selectedAnswer?: SortOrder
+    correctAnswer?: SortOrder
+    correct?: SortOrder
+    timeUsedMs?: SortOrder
+    order?: SortOrder
+    _count?: HomeworkAnswerCountOrderByAggregateInput
+    _avg?: HomeworkAnswerAvgOrderByAggregateInput
+    _max?: HomeworkAnswerMaxOrderByAggregateInput
+    _min?: HomeworkAnswerMinOrderByAggregateInput
+    _sum?: HomeworkAnswerSumOrderByAggregateInput
+  }
+
+  export type HomeworkAnswerScalarWhereWithAggregatesInput = {
+    AND?: HomeworkAnswerScalarWhereWithAggregatesInput | HomeworkAnswerScalarWhereWithAggregatesInput[]
+    OR?: HomeworkAnswerScalarWhereWithAggregatesInput[]
+    NOT?: HomeworkAnswerScalarWhereWithAggregatesInput | HomeworkAnswerScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"HomeworkAnswer"> | string
+    attemptId?: StringWithAggregatesFilter<"HomeworkAnswer"> | string
+    questionId?: StringWithAggregatesFilter<"HomeworkAnswer"> | string
+    questionText?: StringWithAggregatesFilter<"HomeworkAnswer"> | string
+    selectedAnswer?: StringWithAggregatesFilter<"HomeworkAnswer"> | string
+    correctAnswer?: StringWithAggregatesFilter<"HomeworkAnswer"> | string
+    correct?: BoolWithAggregatesFilter<"HomeworkAnswer"> | boolean
+    timeUsedMs?: IntWithAggregatesFilter<"HomeworkAnswer"> | number
+    order?: IntWithAggregatesFilter<"HomeworkAnswer"> | number
+  }
+
   export type QuizCreateInput = {
     id?: string
     title: string
@@ -16411,6 +20508,7 @@ export namespace Prisma {
     likes?: QuizLikeCreateNestedManyWithoutQuizInput
     favorites?: QuizFavoriteCreateNestedManyWithoutQuizInput
     lessonKit?: LessonKitCreateNestedOneWithoutQuizInput
+    homeworkAssignments?: HomeworkAssignmentCreateNestedManyWithoutQuizInput
   }
 
   export type QuizUncheckedCreateInput = {
@@ -16431,6 +20529,7 @@ export namespace Prisma {
     likes?: QuizLikeUncheckedCreateNestedManyWithoutQuizInput
     favorites?: QuizFavoriteUncheckedCreateNestedManyWithoutQuizInput
     lessonKit?: LessonKitUncheckedCreateNestedOneWithoutQuizInput
+    homeworkAssignments?: HomeworkAssignmentUncheckedCreateNestedManyWithoutQuizInput
   }
 
   export type QuizUpdateInput = {
@@ -16451,6 +20550,7 @@ export namespace Prisma {
     likes?: QuizLikeUpdateManyWithoutQuizNestedInput
     favorites?: QuizFavoriteUpdateManyWithoutQuizNestedInput
     lessonKit?: LessonKitUpdateOneWithoutQuizNestedInput
+    homeworkAssignments?: HomeworkAssignmentUpdateManyWithoutQuizNestedInput
   }
 
   export type QuizUncheckedUpdateInput = {
@@ -16471,6 +20571,7 @@ export namespace Prisma {
     likes?: QuizLikeUncheckedUpdateManyWithoutQuizNestedInput
     favorites?: QuizFavoriteUncheckedUpdateManyWithoutQuizNestedInput
     lessonKit?: LessonKitUncheckedUpdateOneWithoutQuizNestedInput
+    homeworkAssignments?: HomeworkAssignmentUncheckedUpdateManyWithoutQuizNestedInput
   }
 
   export type QuizCreateManyInput = {
@@ -16957,6 +21058,7 @@ export namespace Prisma {
     showExampleToStudents?: boolean
     status?: $Enums.StoryStatus
     shareToken: string
+    dueAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     panels?: StoryPanelCreateNestedManyWithoutStoryInput
@@ -16976,6 +21078,7 @@ export namespace Prisma {
     showExampleToStudents?: boolean
     status?: $Enums.StoryStatus
     shareToken: string
+    dueAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     panels?: StoryPanelUncheckedCreateNestedManyWithoutStoryInput
@@ -16995,6 +21098,7 @@ export namespace Prisma {
     showExampleToStudents?: BoolFieldUpdateOperationsInput | boolean
     status?: EnumStoryStatusFieldUpdateOperationsInput | $Enums.StoryStatus
     shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     panels?: StoryPanelUpdateManyWithoutStoryNestedInput
@@ -17014,6 +21118,7 @@ export namespace Prisma {
     showExampleToStudents?: BoolFieldUpdateOperationsInput | boolean
     status?: EnumStoryStatusFieldUpdateOperationsInput | $Enums.StoryStatus
     shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     panels?: StoryPanelUncheckedUpdateManyWithoutStoryNestedInput
@@ -17033,6 +21138,7 @@ export namespace Prisma {
     showExampleToStudents?: boolean
     status?: $Enums.StoryStatus
     shareToken: string
+    dueAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -17050,6 +21156,7 @@ export namespace Prisma {
     showExampleToStudents?: BoolFieldUpdateOperationsInput | boolean
     status?: EnumStoryStatusFieldUpdateOperationsInput | $Enums.StoryStatus
     shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -17067,6 +21174,7 @@ export namespace Prisma {
     showExampleToStudents?: BoolFieldUpdateOperationsInput | boolean
     status?: EnumStoryStatusFieldUpdateOperationsInput | $Enums.StoryStatus
     shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -17285,6 +21393,7 @@ export namespace Prisma {
     showGallery?: boolean
     allowFunnyVoices?: boolean
     shareToken: string
+    dueAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     submissions?: ThoughtSubmissionCreateNestedManyWithoutChallengeInput
@@ -17300,6 +21409,7 @@ export namespace Prisma {
     showGallery?: boolean
     allowFunnyVoices?: boolean
     shareToken: string
+    dueAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     submissions?: ThoughtSubmissionUncheckedCreateNestedManyWithoutChallengeInput
@@ -17315,6 +21425,7 @@ export namespace Prisma {
     showGallery?: BoolFieldUpdateOperationsInput | boolean
     allowFunnyVoices?: BoolFieldUpdateOperationsInput | boolean
     shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     submissions?: ThoughtSubmissionUpdateManyWithoutChallengeNestedInput
@@ -17330,6 +21441,7 @@ export namespace Prisma {
     showGallery?: BoolFieldUpdateOperationsInput | boolean
     allowFunnyVoices?: BoolFieldUpdateOperationsInput | boolean
     shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     submissions?: ThoughtSubmissionUncheckedUpdateManyWithoutChallengeNestedInput
@@ -17345,6 +21457,7 @@ export namespace Prisma {
     showGallery?: boolean
     allowFunnyVoices?: boolean
     shareToken: string
+    dueAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -17359,6 +21472,7 @@ export namespace Prisma {
     showGallery?: BoolFieldUpdateOperationsInput | boolean
     allowFunnyVoices?: BoolFieldUpdateOperationsInput | boolean
     shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -17373,6 +21487,7 @@ export namespace Prisma {
     showGallery?: BoolFieldUpdateOperationsInput | boolean
     allowFunnyVoices?: BoolFieldUpdateOperationsInput | boolean
     shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -17479,6 +21594,361 @@ export namespace Prisma {
     clientKey?: StringFieldUpdateOperationsInput | string
     status?: EnumThoughtSubmissionStatusFieldUpdateOperationsInput | $Enums.ThoughtSubmissionStatus
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type HomeworkAssignmentCreateInput = {
+    id?: string
+    authorId?: string
+    title: string
+    shareToken: string
+    dueAt: Date | string
+    acceptingResponses?: boolean
+    showLeaderboard?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    quiz: QuizCreateNestedOneWithoutHomeworkAssignmentsInput
+    attempts?: HomeworkAttemptCreateNestedManyWithoutAssignmentInput
+  }
+
+  export type HomeworkAssignmentUncheckedCreateInput = {
+    id?: string
+    authorId?: string
+    quizId: string
+    title: string
+    shareToken: string
+    dueAt: Date | string
+    acceptingResponses?: boolean
+    showLeaderboard?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    attempts?: HomeworkAttemptUncheckedCreateNestedManyWithoutAssignmentInput
+  }
+
+  export type HomeworkAssignmentUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    acceptingResponses?: BoolFieldUpdateOperationsInput | boolean
+    showLeaderboard?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    quiz?: QuizUpdateOneRequiredWithoutHomeworkAssignmentsNestedInput
+    attempts?: HomeworkAttemptUpdateManyWithoutAssignmentNestedInput
+  }
+
+  export type HomeworkAssignmentUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    quizId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    acceptingResponses?: BoolFieldUpdateOperationsInput | boolean
+    showLeaderboard?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    attempts?: HomeworkAttemptUncheckedUpdateManyWithoutAssignmentNestedInput
+  }
+
+  export type HomeworkAssignmentCreateManyInput = {
+    id?: string
+    authorId?: string
+    quizId: string
+    title: string
+    shareToken: string
+    dueAt: Date | string
+    acceptingResponses?: boolean
+    showLeaderboard?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type HomeworkAssignmentUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    acceptingResponses?: BoolFieldUpdateOperationsInput | boolean
+    showLeaderboard?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type HomeworkAssignmentUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    quizId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    acceptingResponses?: BoolFieldUpdateOperationsInput | boolean
+    showLeaderboard?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type HomeworkAttemptCreateInput = {
+    id?: string
+    studentName: string
+    clientKey: string
+    mode: $Enums.HomeworkAttemptMode
+    status?: $Enums.HomeworkAttemptStatus
+    queue: JsonNullValueInput | InputJsonValue
+    correctCount?: number
+    answeredCount?: number
+    percentage?: number | null
+    durationMs?: number
+    livesLeft?: number | null
+    timeLimitMs?: number | null
+    questionStartedAt?: Date | string | null
+    extraLifeGranted?: boolean
+    endReason?: $Enums.HomeworkEndReason | null
+    reachedHundred?: boolean
+    timeToHundredMs?: number | null
+    startedAt?: Date | string
+    finishedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    assignment: HomeworkAssignmentCreateNestedOneWithoutAttemptsInput
+    answers?: HomeworkAnswerCreateNestedManyWithoutAttemptInput
+  }
+
+  export type HomeworkAttemptUncheckedCreateInput = {
+    id?: string
+    assignmentId: string
+    studentName: string
+    clientKey: string
+    mode: $Enums.HomeworkAttemptMode
+    status?: $Enums.HomeworkAttemptStatus
+    queue: JsonNullValueInput | InputJsonValue
+    correctCount?: number
+    answeredCount?: number
+    percentage?: number | null
+    durationMs?: number
+    livesLeft?: number | null
+    timeLimitMs?: number | null
+    questionStartedAt?: Date | string | null
+    extraLifeGranted?: boolean
+    endReason?: $Enums.HomeworkEndReason | null
+    reachedHundred?: boolean
+    timeToHundredMs?: number | null
+    startedAt?: Date | string
+    finishedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    answers?: HomeworkAnswerUncheckedCreateNestedManyWithoutAttemptInput
+  }
+
+  export type HomeworkAttemptUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    studentName?: StringFieldUpdateOperationsInput | string
+    clientKey?: StringFieldUpdateOperationsInput | string
+    mode?: EnumHomeworkAttemptModeFieldUpdateOperationsInput | $Enums.HomeworkAttemptMode
+    status?: EnumHomeworkAttemptStatusFieldUpdateOperationsInput | $Enums.HomeworkAttemptStatus
+    queue?: JsonNullValueInput | InputJsonValue
+    correctCount?: IntFieldUpdateOperationsInput | number
+    answeredCount?: IntFieldUpdateOperationsInput | number
+    percentage?: NullableFloatFieldUpdateOperationsInput | number | null
+    durationMs?: IntFieldUpdateOperationsInput | number
+    livesLeft?: NullableIntFieldUpdateOperationsInput | number | null
+    timeLimitMs?: NullableIntFieldUpdateOperationsInput | number | null
+    questionStartedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    extraLifeGranted?: BoolFieldUpdateOperationsInput | boolean
+    endReason?: NullableEnumHomeworkEndReasonFieldUpdateOperationsInput | $Enums.HomeworkEndReason | null
+    reachedHundred?: BoolFieldUpdateOperationsInput | boolean
+    timeToHundredMs?: NullableIntFieldUpdateOperationsInput | number | null
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    finishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignment?: HomeworkAssignmentUpdateOneRequiredWithoutAttemptsNestedInput
+    answers?: HomeworkAnswerUpdateManyWithoutAttemptNestedInput
+  }
+
+  export type HomeworkAttemptUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    assignmentId?: StringFieldUpdateOperationsInput | string
+    studentName?: StringFieldUpdateOperationsInput | string
+    clientKey?: StringFieldUpdateOperationsInput | string
+    mode?: EnumHomeworkAttemptModeFieldUpdateOperationsInput | $Enums.HomeworkAttemptMode
+    status?: EnumHomeworkAttemptStatusFieldUpdateOperationsInput | $Enums.HomeworkAttemptStatus
+    queue?: JsonNullValueInput | InputJsonValue
+    correctCount?: IntFieldUpdateOperationsInput | number
+    answeredCount?: IntFieldUpdateOperationsInput | number
+    percentage?: NullableFloatFieldUpdateOperationsInput | number | null
+    durationMs?: IntFieldUpdateOperationsInput | number
+    livesLeft?: NullableIntFieldUpdateOperationsInput | number | null
+    timeLimitMs?: NullableIntFieldUpdateOperationsInput | number | null
+    questionStartedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    extraLifeGranted?: BoolFieldUpdateOperationsInput | boolean
+    endReason?: NullableEnumHomeworkEndReasonFieldUpdateOperationsInput | $Enums.HomeworkEndReason | null
+    reachedHundred?: BoolFieldUpdateOperationsInput | boolean
+    timeToHundredMs?: NullableIntFieldUpdateOperationsInput | number | null
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    finishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    answers?: HomeworkAnswerUncheckedUpdateManyWithoutAttemptNestedInput
+  }
+
+  export type HomeworkAttemptCreateManyInput = {
+    id?: string
+    assignmentId: string
+    studentName: string
+    clientKey: string
+    mode: $Enums.HomeworkAttemptMode
+    status?: $Enums.HomeworkAttemptStatus
+    queue: JsonNullValueInput | InputJsonValue
+    correctCount?: number
+    answeredCount?: number
+    percentage?: number | null
+    durationMs?: number
+    livesLeft?: number | null
+    timeLimitMs?: number | null
+    questionStartedAt?: Date | string | null
+    extraLifeGranted?: boolean
+    endReason?: $Enums.HomeworkEndReason | null
+    reachedHundred?: boolean
+    timeToHundredMs?: number | null
+    startedAt?: Date | string
+    finishedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type HomeworkAttemptUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    studentName?: StringFieldUpdateOperationsInput | string
+    clientKey?: StringFieldUpdateOperationsInput | string
+    mode?: EnumHomeworkAttemptModeFieldUpdateOperationsInput | $Enums.HomeworkAttemptMode
+    status?: EnumHomeworkAttemptStatusFieldUpdateOperationsInput | $Enums.HomeworkAttemptStatus
+    queue?: JsonNullValueInput | InputJsonValue
+    correctCount?: IntFieldUpdateOperationsInput | number
+    answeredCount?: IntFieldUpdateOperationsInput | number
+    percentage?: NullableFloatFieldUpdateOperationsInput | number | null
+    durationMs?: IntFieldUpdateOperationsInput | number
+    livesLeft?: NullableIntFieldUpdateOperationsInput | number | null
+    timeLimitMs?: NullableIntFieldUpdateOperationsInput | number | null
+    questionStartedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    extraLifeGranted?: BoolFieldUpdateOperationsInput | boolean
+    endReason?: NullableEnumHomeworkEndReasonFieldUpdateOperationsInput | $Enums.HomeworkEndReason | null
+    reachedHundred?: BoolFieldUpdateOperationsInput | boolean
+    timeToHundredMs?: NullableIntFieldUpdateOperationsInput | number | null
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    finishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type HomeworkAttemptUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    assignmentId?: StringFieldUpdateOperationsInput | string
+    studentName?: StringFieldUpdateOperationsInput | string
+    clientKey?: StringFieldUpdateOperationsInput | string
+    mode?: EnumHomeworkAttemptModeFieldUpdateOperationsInput | $Enums.HomeworkAttemptMode
+    status?: EnumHomeworkAttemptStatusFieldUpdateOperationsInput | $Enums.HomeworkAttemptStatus
+    queue?: JsonNullValueInput | InputJsonValue
+    correctCount?: IntFieldUpdateOperationsInput | number
+    answeredCount?: IntFieldUpdateOperationsInput | number
+    percentage?: NullableFloatFieldUpdateOperationsInput | number | null
+    durationMs?: IntFieldUpdateOperationsInput | number
+    livesLeft?: NullableIntFieldUpdateOperationsInput | number | null
+    timeLimitMs?: NullableIntFieldUpdateOperationsInput | number | null
+    questionStartedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    extraLifeGranted?: BoolFieldUpdateOperationsInput | boolean
+    endReason?: NullableEnumHomeworkEndReasonFieldUpdateOperationsInput | $Enums.HomeworkEndReason | null
+    reachedHundred?: BoolFieldUpdateOperationsInput | boolean
+    timeToHundredMs?: NullableIntFieldUpdateOperationsInput | number | null
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    finishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type HomeworkAnswerCreateInput = {
+    id?: string
+    questionId: string
+    questionText: string
+    selectedAnswer: string
+    correctAnswer?: string
+    correct?: boolean
+    timeUsedMs?: number
+    order: number
+    attempt: HomeworkAttemptCreateNestedOneWithoutAnswersInput
+  }
+
+  export type HomeworkAnswerUncheckedCreateInput = {
+    id?: string
+    attemptId: string
+    questionId: string
+    questionText: string
+    selectedAnswer: string
+    correctAnswer?: string
+    correct?: boolean
+    timeUsedMs?: number
+    order: number
+  }
+
+  export type HomeworkAnswerUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    questionId?: StringFieldUpdateOperationsInput | string
+    questionText?: StringFieldUpdateOperationsInput | string
+    selectedAnswer?: StringFieldUpdateOperationsInput | string
+    correctAnswer?: StringFieldUpdateOperationsInput | string
+    correct?: BoolFieldUpdateOperationsInput | boolean
+    timeUsedMs?: IntFieldUpdateOperationsInput | number
+    order?: IntFieldUpdateOperationsInput | number
+    attempt?: HomeworkAttemptUpdateOneRequiredWithoutAnswersNestedInput
+  }
+
+  export type HomeworkAnswerUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    attemptId?: StringFieldUpdateOperationsInput | string
+    questionId?: StringFieldUpdateOperationsInput | string
+    questionText?: StringFieldUpdateOperationsInput | string
+    selectedAnswer?: StringFieldUpdateOperationsInput | string
+    correctAnswer?: StringFieldUpdateOperationsInput | string
+    correct?: BoolFieldUpdateOperationsInput | boolean
+    timeUsedMs?: IntFieldUpdateOperationsInput | number
+    order?: IntFieldUpdateOperationsInput | number
+  }
+
+  export type HomeworkAnswerCreateManyInput = {
+    id?: string
+    attemptId: string
+    questionId: string
+    questionText: string
+    selectedAnswer: string
+    correctAnswer?: string
+    correct?: boolean
+    timeUsedMs?: number
+    order: number
+  }
+
+  export type HomeworkAnswerUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    questionId?: StringFieldUpdateOperationsInput | string
+    questionText?: StringFieldUpdateOperationsInput | string
+    selectedAnswer?: StringFieldUpdateOperationsInput | string
+    correctAnswer?: StringFieldUpdateOperationsInput | string
+    correct?: BoolFieldUpdateOperationsInput | boolean
+    timeUsedMs?: IntFieldUpdateOperationsInput | number
+    order?: IntFieldUpdateOperationsInput | number
+  }
+
+  export type HomeworkAnswerUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    attemptId?: StringFieldUpdateOperationsInput | string
+    questionId?: StringFieldUpdateOperationsInput | string
+    questionText?: StringFieldUpdateOperationsInput | string
+    selectedAnswer?: StringFieldUpdateOperationsInput | string
+    correctAnswer?: StringFieldUpdateOperationsInput | string
+    correct?: BoolFieldUpdateOperationsInput | boolean
+    timeUsedMs?: IntFieldUpdateOperationsInput | number
+    order?: IntFieldUpdateOperationsInput | number
   }
 
   export type StringFilter<$PrismaModel = never> = {
@@ -17593,6 +22063,12 @@ export namespace Prisma {
     isNot?: LessonKitWhereInput | null
   }
 
+  export type HomeworkAssignmentListRelationFilter = {
+    every?: HomeworkAssignmentWhereInput
+    some?: HomeworkAssignmentWhereInput
+    none?: HomeworkAssignmentWhereInput
+  }
+
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
@@ -17607,6 +22083,10 @@ export namespace Prisma {
   }
 
   export type QuizFavoriteOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type HomeworkAssignmentOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -18114,6 +22594,7 @@ export namespace Prisma {
     showExampleToStudents?: SortOrder
     status?: SortOrder
     shareToken?: SortOrder
+    dueAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -18130,6 +22611,7 @@ export namespace Prisma {
     showExampleToStudents?: SortOrder
     status?: SortOrder
     shareToken?: SortOrder
+    dueAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -18146,6 +22628,7 @@ export namespace Prisma {
     showExampleToStudents?: SortOrder
     status?: SortOrder
     shareToken?: SortOrder
+    dueAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -18343,6 +22826,7 @@ export namespace Prisma {
     showGallery?: SortOrder
     allowFunnyVoices?: SortOrder
     shareToken?: SortOrder
+    dueAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -18357,6 +22841,7 @@ export namespace Prisma {
     showGallery?: SortOrder
     allowFunnyVoices?: SortOrder
     shareToken?: SortOrder
+    dueAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -18371,6 +22856,7 @@ export namespace Prisma {
     showGallery?: SortOrder
     allowFunnyVoices?: SortOrder
     shareToken?: SortOrder
+    dueAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -18461,6 +22947,292 @@ export namespace Prisma {
     _max?: NestedEnumThoughtSubmissionStatusFilter<$PrismaModel>
   }
 
+  export type HomeworkAttemptListRelationFilter = {
+    every?: HomeworkAttemptWhereInput
+    some?: HomeworkAttemptWhereInput
+    none?: HomeworkAttemptWhereInput
+  }
+
+  export type HomeworkAttemptOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type HomeworkAssignmentCountOrderByAggregateInput = {
+    id?: SortOrder
+    authorId?: SortOrder
+    quizId?: SortOrder
+    title?: SortOrder
+    shareToken?: SortOrder
+    dueAt?: SortOrder
+    acceptingResponses?: SortOrder
+    showLeaderboard?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type HomeworkAssignmentMaxOrderByAggregateInput = {
+    id?: SortOrder
+    authorId?: SortOrder
+    quizId?: SortOrder
+    title?: SortOrder
+    shareToken?: SortOrder
+    dueAt?: SortOrder
+    acceptingResponses?: SortOrder
+    showLeaderboard?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type HomeworkAssignmentMinOrderByAggregateInput = {
+    id?: SortOrder
+    authorId?: SortOrder
+    quizId?: SortOrder
+    title?: SortOrder
+    shareToken?: SortOrder
+    dueAt?: SortOrder
+    acceptingResponses?: SortOrder
+    showLeaderboard?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type EnumHomeworkAttemptModeFilter<$PrismaModel = never> = {
+    equals?: $Enums.HomeworkAttemptMode | EnumHomeworkAttemptModeFieldRefInput<$PrismaModel>
+    in?: $Enums.HomeworkAttemptMode[] | ListEnumHomeworkAttemptModeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.HomeworkAttemptMode[] | ListEnumHomeworkAttemptModeFieldRefInput<$PrismaModel>
+    not?: NestedEnumHomeworkAttemptModeFilter<$PrismaModel> | $Enums.HomeworkAttemptMode
+  }
+
+  export type EnumHomeworkAttemptStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.HomeworkAttemptStatus | EnumHomeworkAttemptStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.HomeworkAttemptStatus[] | ListEnumHomeworkAttemptStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.HomeworkAttemptStatus[] | ListEnumHomeworkAttemptStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumHomeworkAttemptStatusFilter<$PrismaModel> | $Enums.HomeworkAttemptStatus
+  }
+
+  export type FloatNullableFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
+  }
+
+  export type EnumHomeworkEndReasonNullableFilter<$PrismaModel = never> = {
+    equals?: $Enums.HomeworkEndReason | EnumHomeworkEndReasonFieldRefInput<$PrismaModel> | null
+    in?: $Enums.HomeworkEndReason[] | ListEnumHomeworkEndReasonFieldRefInput<$PrismaModel> | null
+    notIn?: $Enums.HomeworkEndReason[] | ListEnumHomeworkEndReasonFieldRefInput<$PrismaModel> | null
+    not?: NestedEnumHomeworkEndReasonNullableFilter<$PrismaModel> | $Enums.HomeworkEndReason | null
+  }
+
+  export type HomeworkAssignmentRelationFilter = {
+    is?: HomeworkAssignmentWhereInput
+    isNot?: HomeworkAssignmentWhereInput
+  }
+
+  export type HomeworkAnswerListRelationFilter = {
+    every?: HomeworkAnswerWhereInput
+    some?: HomeworkAnswerWhereInput
+    none?: HomeworkAnswerWhereInput
+  }
+
+  export type HomeworkAnswerOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type HomeworkAttemptCountOrderByAggregateInput = {
+    id?: SortOrder
+    assignmentId?: SortOrder
+    studentName?: SortOrder
+    clientKey?: SortOrder
+    mode?: SortOrder
+    status?: SortOrder
+    queue?: SortOrder
+    correctCount?: SortOrder
+    answeredCount?: SortOrder
+    percentage?: SortOrder
+    durationMs?: SortOrder
+    livesLeft?: SortOrder
+    timeLimitMs?: SortOrder
+    questionStartedAt?: SortOrder
+    extraLifeGranted?: SortOrder
+    endReason?: SortOrder
+    reachedHundred?: SortOrder
+    timeToHundredMs?: SortOrder
+    startedAt?: SortOrder
+    finishedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type HomeworkAttemptAvgOrderByAggregateInput = {
+    correctCount?: SortOrder
+    answeredCount?: SortOrder
+    percentage?: SortOrder
+    durationMs?: SortOrder
+    livesLeft?: SortOrder
+    timeLimitMs?: SortOrder
+    timeToHundredMs?: SortOrder
+  }
+
+  export type HomeworkAttemptMaxOrderByAggregateInput = {
+    id?: SortOrder
+    assignmentId?: SortOrder
+    studentName?: SortOrder
+    clientKey?: SortOrder
+    mode?: SortOrder
+    status?: SortOrder
+    correctCount?: SortOrder
+    answeredCount?: SortOrder
+    percentage?: SortOrder
+    durationMs?: SortOrder
+    livesLeft?: SortOrder
+    timeLimitMs?: SortOrder
+    questionStartedAt?: SortOrder
+    extraLifeGranted?: SortOrder
+    endReason?: SortOrder
+    reachedHundred?: SortOrder
+    timeToHundredMs?: SortOrder
+    startedAt?: SortOrder
+    finishedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type HomeworkAttemptMinOrderByAggregateInput = {
+    id?: SortOrder
+    assignmentId?: SortOrder
+    studentName?: SortOrder
+    clientKey?: SortOrder
+    mode?: SortOrder
+    status?: SortOrder
+    correctCount?: SortOrder
+    answeredCount?: SortOrder
+    percentage?: SortOrder
+    durationMs?: SortOrder
+    livesLeft?: SortOrder
+    timeLimitMs?: SortOrder
+    questionStartedAt?: SortOrder
+    extraLifeGranted?: SortOrder
+    endReason?: SortOrder
+    reachedHundred?: SortOrder
+    timeToHundredMs?: SortOrder
+    startedAt?: SortOrder
+    finishedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type HomeworkAttemptSumOrderByAggregateInput = {
+    correctCount?: SortOrder
+    answeredCount?: SortOrder
+    percentage?: SortOrder
+    durationMs?: SortOrder
+    livesLeft?: SortOrder
+    timeLimitMs?: SortOrder
+    timeToHundredMs?: SortOrder
+  }
+
+  export type EnumHomeworkAttemptModeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.HomeworkAttemptMode | EnumHomeworkAttemptModeFieldRefInput<$PrismaModel>
+    in?: $Enums.HomeworkAttemptMode[] | ListEnumHomeworkAttemptModeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.HomeworkAttemptMode[] | ListEnumHomeworkAttemptModeFieldRefInput<$PrismaModel>
+    not?: NestedEnumHomeworkAttemptModeWithAggregatesFilter<$PrismaModel> | $Enums.HomeworkAttemptMode
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumHomeworkAttemptModeFilter<$PrismaModel>
+    _max?: NestedEnumHomeworkAttemptModeFilter<$PrismaModel>
+  }
+
+  export type EnumHomeworkAttemptStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.HomeworkAttemptStatus | EnumHomeworkAttemptStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.HomeworkAttemptStatus[] | ListEnumHomeworkAttemptStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.HomeworkAttemptStatus[] | ListEnumHomeworkAttemptStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumHomeworkAttemptStatusWithAggregatesFilter<$PrismaModel> | $Enums.HomeworkAttemptStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumHomeworkAttemptStatusFilter<$PrismaModel>
+    _max?: NestedEnumHomeworkAttemptStatusFilter<$PrismaModel>
+  }
+
+  export type FloatNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedFloatNullableFilter<$PrismaModel>
+    _min?: NestedFloatNullableFilter<$PrismaModel>
+    _max?: NestedFloatNullableFilter<$PrismaModel>
+  }
+
+  export type EnumHomeworkEndReasonNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.HomeworkEndReason | EnumHomeworkEndReasonFieldRefInput<$PrismaModel> | null
+    in?: $Enums.HomeworkEndReason[] | ListEnumHomeworkEndReasonFieldRefInput<$PrismaModel> | null
+    notIn?: $Enums.HomeworkEndReason[] | ListEnumHomeworkEndReasonFieldRefInput<$PrismaModel> | null
+    not?: NestedEnumHomeworkEndReasonNullableWithAggregatesFilter<$PrismaModel> | $Enums.HomeworkEndReason | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedEnumHomeworkEndReasonNullableFilter<$PrismaModel>
+    _max?: NestedEnumHomeworkEndReasonNullableFilter<$PrismaModel>
+  }
+
+  export type HomeworkAttemptRelationFilter = {
+    is?: HomeworkAttemptWhereInput
+    isNot?: HomeworkAttemptWhereInput
+  }
+
+  export type HomeworkAnswerCountOrderByAggregateInput = {
+    id?: SortOrder
+    attemptId?: SortOrder
+    questionId?: SortOrder
+    questionText?: SortOrder
+    selectedAnswer?: SortOrder
+    correctAnswer?: SortOrder
+    correct?: SortOrder
+    timeUsedMs?: SortOrder
+    order?: SortOrder
+  }
+
+  export type HomeworkAnswerAvgOrderByAggregateInput = {
+    timeUsedMs?: SortOrder
+    order?: SortOrder
+  }
+
+  export type HomeworkAnswerMaxOrderByAggregateInput = {
+    id?: SortOrder
+    attemptId?: SortOrder
+    questionId?: SortOrder
+    questionText?: SortOrder
+    selectedAnswer?: SortOrder
+    correctAnswer?: SortOrder
+    correct?: SortOrder
+    timeUsedMs?: SortOrder
+    order?: SortOrder
+  }
+
+  export type HomeworkAnswerMinOrderByAggregateInput = {
+    id?: SortOrder
+    attemptId?: SortOrder
+    questionId?: SortOrder
+    questionText?: SortOrder
+    selectedAnswer?: SortOrder
+    correctAnswer?: SortOrder
+    correct?: SortOrder
+    timeUsedMs?: SortOrder
+    order?: SortOrder
+  }
+
+  export type HomeworkAnswerSumOrderByAggregateInput = {
+    timeUsedMs?: SortOrder
+    order?: SortOrder
+  }
+
   export type QuizCreatetagsInput = {
     set: string[]
   }
@@ -18492,6 +23264,13 @@ export namespace Prisma {
     connect?: LessonKitWhereUniqueInput
   }
 
+  export type HomeworkAssignmentCreateNestedManyWithoutQuizInput = {
+    create?: XOR<HomeworkAssignmentCreateWithoutQuizInput, HomeworkAssignmentUncheckedCreateWithoutQuizInput> | HomeworkAssignmentCreateWithoutQuizInput[] | HomeworkAssignmentUncheckedCreateWithoutQuizInput[]
+    connectOrCreate?: HomeworkAssignmentCreateOrConnectWithoutQuizInput | HomeworkAssignmentCreateOrConnectWithoutQuizInput[]
+    createMany?: HomeworkAssignmentCreateManyQuizInputEnvelope
+    connect?: HomeworkAssignmentWhereUniqueInput | HomeworkAssignmentWhereUniqueInput[]
+  }
+
   export type QuestionUncheckedCreateNestedManyWithoutQuizInput = {
     create?: XOR<QuestionCreateWithoutQuizInput, QuestionUncheckedCreateWithoutQuizInput> | QuestionCreateWithoutQuizInput[] | QuestionUncheckedCreateWithoutQuizInput[]
     connectOrCreate?: QuestionCreateOrConnectWithoutQuizInput | QuestionCreateOrConnectWithoutQuizInput[]
@@ -18517,6 +23296,13 @@ export namespace Prisma {
     create?: XOR<LessonKitCreateWithoutQuizInput, LessonKitUncheckedCreateWithoutQuizInput>
     connectOrCreate?: LessonKitCreateOrConnectWithoutQuizInput
     connect?: LessonKitWhereUniqueInput
+  }
+
+  export type HomeworkAssignmentUncheckedCreateNestedManyWithoutQuizInput = {
+    create?: XOR<HomeworkAssignmentCreateWithoutQuizInput, HomeworkAssignmentUncheckedCreateWithoutQuizInput> | HomeworkAssignmentCreateWithoutQuizInput[] | HomeworkAssignmentUncheckedCreateWithoutQuizInput[]
+    connectOrCreate?: HomeworkAssignmentCreateOrConnectWithoutQuizInput | HomeworkAssignmentCreateOrConnectWithoutQuizInput[]
+    createMany?: HomeworkAssignmentCreateManyQuizInputEnvelope
+    connect?: HomeworkAssignmentWhereUniqueInput | HomeworkAssignmentWhereUniqueInput[]
   }
 
   export type StringFieldUpdateOperationsInput = {
@@ -18600,6 +23386,20 @@ export namespace Prisma {
     update?: XOR<XOR<LessonKitUpdateToOneWithWhereWithoutQuizInput, LessonKitUpdateWithoutQuizInput>, LessonKitUncheckedUpdateWithoutQuizInput>
   }
 
+  export type HomeworkAssignmentUpdateManyWithoutQuizNestedInput = {
+    create?: XOR<HomeworkAssignmentCreateWithoutQuizInput, HomeworkAssignmentUncheckedCreateWithoutQuizInput> | HomeworkAssignmentCreateWithoutQuizInput[] | HomeworkAssignmentUncheckedCreateWithoutQuizInput[]
+    connectOrCreate?: HomeworkAssignmentCreateOrConnectWithoutQuizInput | HomeworkAssignmentCreateOrConnectWithoutQuizInput[]
+    upsert?: HomeworkAssignmentUpsertWithWhereUniqueWithoutQuizInput | HomeworkAssignmentUpsertWithWhereUniqueWithoutQuizInput[]
+    createMany?: HomeworkAssignmentCreateManyQuizInputEnvelope
+    set?: HomeworkAssignmentWhereUniqueInput | HomeworkAssignmentWhereUniqueInput[]
+    disconnect?: HomeworkAssignmentWhereUniqueInput | HomeworkAssignmentWhereUniqueInput[]
+    delete?: HomeworkAssignmentWhereUniqueInput | HomeworkAssignmentWhereUniqueInput[]
+    connect?: HomeworkAssignmentWhereUniqueInput | HomeworkAssignmentWhereUniqueInput[]
+    update?: HomeworkAssignmentUpdateWithWhereUniqueWithoutQuizInput | HomeworkAssignmentUpdateWithWhereUniqueWithoutQuizInput[]
+    updateMany?: HomeworkAssignmentUpdateManyWithWhereWithoutQuizInput | HomeworkAssignmentUpdateManyWithWhereWithoutQuizInput[]
+    deleteMany?: HomeworkAssignmentScalarWhereInput | HomeworkAssignmentScalarWhereInput[]
+  }
+
   export type QuestionUncheckedUpdateManyWithoutQuizNestedInput = {
     create?: XOR<QuestionCreateWithoutQuizInput, QuestionUncheckedCreateWithoutQuizInput> | QuestionCreateWithoutQuizInput[] | QuestionUncheckedCreateWithoutQuizInput[]
     connectOrCreate?: QuestionCreateOrConnectWithoutQuizInput | QuestionCreateOrConnectWithoutQuizInput[]
@@ -18650,6 +23450,20 @@ export namespace Prisma {
     delete?: LessonKitWhereInput | boolean
     connect?: LessonKitWhereUniqueInput
     update?: XOR<XOR<LessonKitUpdateToOneWithWhereWithoutQuizInput, LessonKitUpdateWithoutQuizInput>, LessonKitUncheckedUpdateWithoutQuizInput>
+  }
+
+  export type HomeworkAssignmentUncheckedUpdateManyWithoutQuizNestedInput = {
+    create?: XOR<HomeworkAssignmentCreateWithoutQuizInput, HomeworkAssignmentUncheckedCreateWithoutQuizInput> | HomeworkAssignmentCreateWithoutQuizInput[] | HomeworkAssignmentUncheckedCreateWithoutQuizInput[]
+    connectOrCreate?: HomeworkAssignmentCreateOrConnectWithoutQuizInput | HomeworkAssignmentCreateOrConnectWithoutQuizInput[]
+    upsert?: HomeworkAssignmentUpsertWithWhereUniqueWithoutQuizInput | HomeworkAssignmentUpsertWithWhereUniqueWithoutQuizInput[]
+    createMany?: HomeworkAssignmentCreateManyQuizInputEnvelope
+    set?: HomeworkAssignmentWhereUniqueInput | HomeworkAssignmentWhereUniqueInput[]
+    disconnect?: HomeworkAssignmentWhereUniqueInput | HomeworkAssignmentWhereUniqueInput[]
+    delete?: HomeworkAssignmentWhereUniqueInput | HomeworkAssignmentWhereUniqueInput[]
+    connect?: HomeworkAssignmentWhereUniqueInput | HomeworkAssignmentWhereUniqueInput[]
+    update?: HomeworkAssignmentUpdateWithWhereUniqueWithoutQuizInput | HomeworkAssignmentUpdateWithWhereUniqueWithoutQuizInput[]
+    updateMany?: HomeworkAssignmentUpdateManyWithWhereWithoutQuizInput | HomeworkAssignmentUpdateManyWithWhereWithoutQuizInput[]
+    deleteMany?: HomeworkAssignmentScalarWhereInput | HomeworkAssignmentScalarWhereInput[]
   }
 
   export type QuizCreateNestedOneWithoutLikesInput = {
@@ -18993,6 +23807,152 @@ export namespace Prisma {
     update?: XOR<XOR<ThoughtChallengeUpdateToOneWithWhereWithoutSubmissionsInput, ThoughtChallengeUpdateWithoutSubmissionsInput>, ThoughtChallengeUncheckedUpdateWithoutSubmissionsInput>
   }
 
+  export type QuizCreateNestedOneWithoutHomeworkAssignmentsInput = {
+    create?: XOR<QuizCreateWithoutHomeworkAssignmentsInput, QuizUncheckedCreateWithoutHomeworkAssignmentsInput>
+    connectOrCreate?: QuizCreateOrConnectWithoutHomeworkAssignmentsInput
+    connect?: QuizWhereUniqueInput
+  }
+
+  export type HomeworkAttemptCreateNestedManyWithoutAssignmentInput = {
+    create?: XOR<HomeworkAttemptCreateWithoutAssignmentInput, HomeworkAttemptUncheckedCreateWithoutAssignmentInput> | HomeworkAttemptCreateWithoutAssignmentInput[] | HomeworkAttemptUncheckedCreateWithoutAssignmentInput[]
+    connectOrCreate?: HomeworkAttemptCreateOrConnectWithoutAssignmentInput | HomeworkAttemptCreateOrConnectWithoutAssignmentInput[]
+    createMany?: HomeworkAttemptCreateManyAssignmentInputEnvelope
+    connect?: HomeworkAttemptWhereUniqueInput | HomeworkAttemptWhereUniqueInput[]
+  }
+
+  export type HomeworkAttemptUncheckedCreateNestedManyWithoutAssignmentInput = {
+    create?: XOR<HomeworkAttemptCreateWithoutAssignmentInput, HomeworkAttemptUncheckedCreateWithoutAssignmentInput> | HomeworkAttemptCreateWithoutAssignmentInput[] | HomeworkAttemptUncheckedCreateWithoutAssignmentInput[]
+    connectOrCreate?: HomeworkAttemptCreateOrConnectWithoutAssignmentInput | HomeworkAttemptCreateOrConnectWithoutAssignmentInput[]
+    createMany?: HomeworkAttemptCreateManyAssignmentInputEnvelope
+    connect?: HomeworkAttemptWhereUniqueInput | HomeworkAttemptWhereUniqueInput[]
+  }
+
+  export type QuizUpdateOneRequiredWithoutHomeworkAssignmentsNestedInput = {
+    create?: XOR<QuizCreateWithoutHomeworkAssignmentsInput, QuizUncheckedCreateWithoutHomeworkAssignmentsInput>
+    connectOrCreate?: QuizCreateOrConnectWithoutHomeworkAssignmentsInput
+    upsert?: QuizUpsertWithoutHomeworkAssignmentsInput
+    connect?: QuizWhereUniqueInput
+    update?: XOR<XOR<QuizUpdateToOneWithWhereWithoutHomeworkAssignmentsInput, QuizUpdateWithoutHomeworkAssignmentsInput>, QuizUncheckedUpdateWithoutHomeworkAssignmentsInput>
+  }
+
+  export type HomeworkAttemptUpdateManyWithoutAssignmentNestedInput = {
+    create?: XOR<HomeworkAttemptCreateWithoutAssignmentInput, HomeworkAttemptUncheckedCreateWithoutAssignmentInput> | HomeworkAttemptCreateWithoutAssignmentInput[] | HomeworkAttemptUncheckedCreateWithoutAssignmentInput[]
+    connectOrCreate?: HomeworkAttemptCreateOrConnectWithoutAssignmentInput | HomeworkAttemptCreateOrConnectWithoutAssignmentInput[]
+    upsert?: HomeworkAttemptUpsertWithWhereUniqueWithoutAssignmentInput | HomeworkAttemptUpsertWithWhereUniqueWithoutAssignmentInput[]
+    createMany?: HomeworkAttemptCreateManyAssignmentInputEnvelope
+    set?: HomeworkAttemptWhereUniqueInput | HomeworkAttemptWhereUniqueInput[]
+    disconnect?: HomeworkAttemptWhereUniqueInput | HomeworkAttemptWhereUniqueInput[]
+    delete?: HomeworkAttemptWhereUniqueInput | HomeworkAttemptWhereUniqueInput[]
+    connect?: HomeworkAttemptWhereUniqueInput | HomeworkAttemptWhereUniqueInput[]
+    update?: HomeworkAttemptUpdateWithWhereUniqueWithoutAssignmentInput | HomeworkAttemptUpdateWithWhereUniqueWithoutAssignmentInput[]
+    updateMany?: HomeworkAttemptUpdateManyWithWhereWithoutAssignmentInput | HomeworkAttemptUpdateManyWithWhereWithoutAssignmentInput[]
+    deleteMany?: HomeworkAttemptScalarWhereInput | HomeworkAttemptScalarWhereInput[]
+  }
+
+  export type HomeworkAttemptUncheckedUpdateManyWithoutAssignmentNestedInput = {
+    create?: XOR<HomeworkAttemptCreateWithoutAssignmentInput, HomeworkAttemptUncheckedCreateWithoutAssignmentInput> | HomeworkAttemptCreateWithoutAssignmentInput[] | HomeworkAttemptUncheckedCreateWithoutAssignmentInput[]
+    connectOrCreate?: HomeworkAttemptCreateOrConnectWithoutAssignmentInput | HomeworkAttemptCreateOrConnectWithoutAssignmentInput[]
+    upsert?: HomeworkAttemptUpsertWithWhereUniqueWithoutAssignmentInput | HomeworkAttemptUpsertWithWhereUniqueWithoutAssignmentInput[]
+    createMany?: HomeworkAttemptCreateManyAssignmentInputEnvelope
+    set?: HomeworkAttemptWhereUniqueInput | HomeworkAttemptWhereUniqueInput[]
+    disconnect?: HomeworkAttemptWhereUniqueInput | HomeworkAttemptWhereUniqueInput[]
+    delete?: HomeworkAttemptWhereUniqueInput | HomeworkAttemptWhereUniqueInput[]
+    connect?: HomeworkAttemptWhereUniqueInput | HomeworkAttemptWhereUniqueInput[]
+    update?: HomeworkAttemptUpdateWithWhereUniqueWithoutAssignmentInput | HomeworkAttemptUpdateWithWhereUniqueWithoutAssignmentInput[]
+    updateMany?: HomeworkAttemptUpdateManyWithWhereWithoutAssignmentInput | HomeworkAttemptUpdateManyWithWhereWithoutAssignmentInput[]
+    deleteMany?: HomeworkAttemptScalarWhereInput | HomeworkAttemptScalarWhereInput[]
+  }
+
+  export type HomeworkAssignmentCreateNestedOneWithoutAttemptsInput = {
+    create?: XOR<HomeworkAssignmentCreateWithoutAttemptsInput, HomeworkAssignmentUncheckedCreateWithoutAttemptsInput>
+    connectOrCreate?: HomeworkAssignmentCreateOrConnectWithoutAttemptsInput
+    connect?: HomeworkAssignmentWhereUniqueInput
+  }
+
+  export type HomeworkAnswerCreateNestedManyWithoutAttemptInput = {
+    create?: XOR<HomeworkAnswerCreateWithoutAttemptInput, HomeworkAnswerUncheckedCreateWithoutAttemptInput> | HomeworkAnswerCreateWithoutAttemptInput[] | HomeworkAnswerUncheckedCreateWithoutAttemptInput[]
+    connectOrCreate?: HomeworkAnswerCreateOrConnectWithoutAttemptInput | HomeworkAnswerCreateOrConnectWithoutAttemptInput[]
+    createMany?: HomeworkAnswerCreateManyAttemptInputEnvelope
+    connect?: HomeworkAnswerWhereUniqueInput | HomeworkAnswerWhereUniqueInput[]
+  }
+
+  export type HomeworkAnswerUncheckedCreateNestedManyWithoutAttemptInput = {
+    create?: XOR<HomeworkAnswerCreateWithoutAttemptInput, HomeworkAnswerUncheckedCreateWithoutAttemptInput> | HomeworkAnswerCreateWithoutAttemptInput[] | HomeworkAnswerUncheckedCreateWithoutAttemptInput[]
+    connectOrCreate?: HomeworkAnswerCreateOrConnectWithoutAttemptInput | HomeworkAnswerCreateOrConnectWithoutAttemptInput[]
+    createMany?: HomeworkAnswerCreateManyAttemptInputEnvelope
+    connect?: HomeworkAnswerWhereUniqueInput | HomeworkAnswerWhereUniqueInput[]
+  }
+
+  export type EnumHomeworkAttemptModeFieldUpdateOperationsInput = {
+    set?: $Enums.HomeworkAttemptMode
+  }
+
+  export type EnumHomeworkAttemptStatusFieldUpdateOperationsInput = {
+    set?: $Enums.HomeworkAttemptStatus
+  }
+
+  export type NullableFloatFieldUpdateOperationsInput = {
+    set?: number | null
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
+  export type NullableEnumHomeworkEndReasonFieldUpdateOperationsInput = {
+    set?: $Enums.HomeworkEndReason | null
+  }
+
+  export type HomeworkAssignmentUpdateOneRequiredWithoutAttemptsNestedInput = {
+    create?: XOR<HomeworkAssignmentCreateWithoutAttemptsInput, HomeworkAssignmentUncheckedCreateWithoutAttemptsInput>
+    connectOrCreate?: HomeworkAssignmentCreateOrConnectWithoutAttemptsInput
+    upsert?: HomeworkAssignmentUpsertWithoutAttemptsInput
+    connect?: HomeworkAssignmentWhereUniqueInput
+    update?: XOR<XOR<HomeworkAssignmentUpdateToOneWithWhereWithoutAttemptsInput, HomeworkAssignmentUpdateWithoutAttemptsInput>, HomeworkAssignmentUncheckedUpdateWithoutAttemptsInput>
+  }
+
+  export type HomeworkAnswerUpdateManyWithoutAttemptNestedInput = {
+    create?: XOR<HomeworkAnswerCreateWithoutAttemptInput, HomeworkAnswerUncheckedCreateWithoutAttemptInput> | HomeworkAnswerCreateWithoutAttemptInput[] | HomeworkAnswerUncheckedCreateWithoutAttemptInput[]
+    connectOrCreate?: HomeworkAnswerCreateOrConnectWithoutAttemptInput | HomeworkAnswerCreateOrConnectWithoutAttemptInput[]
+    upsert?: HomeworkAnswerUpsertWithWhereUniqueWithoutAttemptInput | HomeworkAnswerUpsertWithWhereUniqueWithoutAttemptInput[]
+    createMany?: HomeworkAnswerCreateManyAttemptInputEnvelope
+    set?: HomeworkAnswerWhereUniqueInput | HomeworkAnswerWhereUniqueInput[]
+    disconnect?: HomeworkAnswerWhereUniqueInput | HomeworkAnswerWhereUniqueInput[]
+    delete?: HomeworkAnswerWhereUniqueInput | HomeworkAnswerWhereUniqueInput[]
+    connect?: HomeworkAnswerWhereUniqueInput | HomeworkAnswerWhereUniqueInput[]
+    update?: HomeworkAnswerUpdateWithWhereUniqueWithoutAttemptInput | HomeworkAnswerUpdateWithWhereUniqueWithoutAttemptInput[]
+    updateMany?: HomeworkAnswerUpdateManyWithWhereWithoutAttemptInput | HomeworkAnswerUpdateManyWithWhereWithoutAttemptInput[]
+    deleteMany?: HomeworkAnswerScalarWhereInput | HomeworkAnswerScalarWhereInput[]
+  }
+
+  export type HomeworkAnswerUncheckedUpdateManyWithoutAttemptNestedInput = {
+    create?: XOR<HomeworkAnswerCreateWithoutAttemptInput, HomeworkAnswerUncheckedCreateWithoutAttemptInput> | HomeworkAnswerCreateWithoutAttemptInput[] | HomeworkAnswerUncheckedCreateWithoutAttemptInput[]
+    connectOrCreate?: HomeworkAnswerCreateOrConnectWithoutAttemptInput | HomeworkAnswerCreateOrConnectWithoutAttemptInput[]
+    upsert?: HomeworkAnswerUpsertWithWhereUniqueWithoutAttemptInput | HomeworkAnswerUpsertWithWhereUniqueWithoutAttemptInput[]
+    createMany?: HomeworkAnswerCreateManyAttemptInputEnvelope
+    set?: HomeworkAnswerWhereUniqueInput | HomeworkAnswerWhereUniqueInput[]
+    disconnect?: HomeworkAnswerWhereUniqueInput | HomeworkAnswerWhereUniqueInput[]
+    delete?: HomeworkAnswerWhereUniqueInput | HomeworkAnswerWhereUniqueInput[]
+    connect?: HomeworkAnswerWhereUniqueInput | HomeworkAnswerWhereUniqueInput[]
+    update?: HomeworkAnswerUpdateWithWhereUniqueWithoutAttemptInput | HomeworkAnswerUpdateWithWhereUniqueWithoutAttemptInput[]
+    updateMany?: HomeworkAnswerUpdateManyWithWhereWithoutAttemptInput | HomeworkAnswerUpdateManyWithWhereWithoutAttemptInput[]
+    deleteMany?: HomeworkAnswerScalarWhereInput | HomeworkAnswerScalarWhereInput[]
+  }
+
+  export type HomeworkAttemptCreateNestedOneWithoutAnswersInput = {
+    create?: XOR<HomeworkAttemptCreateWithoutAnswersInput, HomeworkAttemptUncheckedCreateWithoutAnswersInput>
+    connectOrCreate?: HomeworkAttemptCreateOrConnectWithoutAnswersInput
+    connect?: HomeworkAttemptWhereUniqueInput
+  }
+
+  export type HomeworkAttemptUpdateOneRequiredWithoutAnswersNestedInput = {
+    create?: XOR<HomeworkAttemptCreateWithoutAnswersInput, HomeworkAttemptUncheckedCreateWithoutAnswersInput>
+    connectOrCreate?: HomeworkAttemptCreateOrConnectWithoutAnswersInput
+    upsert?: HomeworkAttemptUpsertWithoutAnswersInput
+    connect?: HomeworkAttemptWhereUniqueInput
+    update?: XOR<XOR<HomeworkAttemptUpdateToOneWithWhereWithoutAnswersInput, HomeworkAttemptUpdateWithoutAnswersInput>, HomeworkAttemptUncheckedUpdateWithoutAnswersInput>
+  }
+
   export type NestedStringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -19323,6 +24283,73 @@ export namespace Prisma {
     _max?: NestedEnumThoughtSubmissionStatusFilter<$PrismaModel>
   }
 
+  export type NestedEnumHomeworkAttemptModeFilter<$PrismaModel = never> = {
+    equals?: $Enums.HomeworkAttemptMode | EnumHomeworkAttemptModeFieldRefInput<$PrismaModel>
+    in?: $Enums.HomeworkAttemptMode[] | ListEnumHomeworkAttemptModeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.HomeworkAttemptMode[] | ListEnumHomeworkAttemptModeFieldRefInput<$PrismaModel>
+    not?: NestedEnumHomeworkAttemptModeFilter<$PrismaModel> | $Enums.HomeworkAttemptMode
+  }
+
+  export type NestedEnumHomeworkAttemptStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.HomeworkAttemptStatus | EnumHomeworkAttemptStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.HomeworkAttemptStatus[] | ListEnumHomeworkAttemptStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.HomeworkAttemptStatus[] | ListEnumHomeworkAttemptStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumHomeworkAttemptStatusFilter<$PrismaModel> | $Enums.HomeworkAttemptStatus
+  }
+
+  export type NestedEnumHomeworkEndReasonNullableFilter<$PrismaModel = never> = {
+    equals?: $Enums.HomeworkEndReason | EnumHomeworkEndReasonFieldRefInput<$PrismaModel> | null
+    in?: $Enums.HomeworkEndReason[] | ListEnumHomeworkEndReasonFieldRefInput<$PrismaModel> | null
+    notIn?: $Enums.HomeworkEndReason[] | ListEnumHomeworkEndReasonFieldRefInput<$PrismaModel> | null
+    not?: NestedEnumHomeworkEndReasonNullableFilter<$PrismaModel> | $Enums.HomeworkEndReason | null
+  }
+
+  export type NestedEnumHomeworkAttemptModeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.HomeworkAttemptMode | EnumHomeworkAttemptModeFieldRefInput<$PrismaModel>
+    in?: $Enums.HomeworkAttemptMode[] | ListEnumHomeworkAttemptModeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.HomeworkAttemptMode[] | ListEnumHomeworkAttemptModeFieldRefInput<$PrismaModel>
+    not?: NestedEnumHomeworkAttemptModeWithAggregatesFilter<$PrismaModel> | $Enums.HomeworkAttemptMode
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumHomeworkAttemptModeFilter<$PrismaModel>
+    _max?: NestedEnumHomeworkAttemptModeFilter<$PrismaModel>
+  }
+
+  export type NestedEnumHomeworkAttemptStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.HomeworkAttemptStatus | EnumHomeworkAttemptStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.HomeworkAttemptStatus[] | ListEnumHomeworkAttemptStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.HomeworkAttemptStatus[] | ListEnumHomeworkAttemptStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumHomeworkAttemptStatusWithAggregatesFilter<$PrismaModel> | $Enums.HomeworkAttemptStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumHomeworkAttemptStatusFilter<$PrismaModel>
+    _max?: NestedEnumHomeworkAttemptStatusFilter<$PrismaModel>
+  }
+
+  export type NestedFloatNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedFloatNullableFilter<$PrismaModel>
+    _min?: NestedFloatNullableFilter<$PrismaModel>
+    _max?: NestedFloatNullableFilter<$PrismaModel>
+  }
+
+  export type NestedEnumHomeworkEndReasonNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.HomeworkEndReason | EnumHomeworkEndReasonFieldRefInput<$PrismaModel> | null
+    in?: $Enums.HomeworkEndReason[] | ListEnumHomeworkEndReasonFieldRefInput<$PrismaModel> | null
+    notIn?: $Enums.HomeworkEndReason[] | ListEnumHomeworkEndReasonFieldRefInput<$PrismaModel> | null
+    not?: NestedEnumHomeworkEndReasonNullableWithAggregatesFilter<$PrismaModel> | $Enums.HomeworkEndReason | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedEnumHomeworkEndReasonNullableFilter<$PrismaModel>
+    _max?: NestedEnumHomeworkEndReasonNullableFilter<$PrismaModel>
+  }
+
   export type QuestionCreateWithoutQuizInput = {
     id?: string
     question: string
@@ -19418,6 +24445,42 @@ export namespace Prisma {
   export type LessonKitCreateOrConnectWithoutQuizInput = {
     where: LessonKitWhereUniqueInput
     create: XOR<LessonKitCreateWithoutQuizInput, LessonKitUncheckedCreateWithoutQuizInput>
+  }
+
+  export type HomeworkAssignmentCreateWithoutQuizInput = {
+    id?: string
+    authorId?: string
+    title: string
+    shareToken: string
+    dueAt: Date | string
+    acceptingResponses?: boolean
+    showLeaderboard?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    attempts?: HomeworkAttemptCreateNestedManyWithoutAssignmentInput
+  }
+
+  export type HomeworkAssignmentUncheckedCreateWithoutQuizInput = {
+    id?: string
+    authorId?: string
+    title: string
+    shareToken: string
+    dueAt: Date | string
+    acceptingResponses?: boolean
+    showLeaderboard?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    attempts?: HomeworkAttemptUncheckedCreateNestedManyWithoutAssignmentInput
+  }
+
+  export type HomeworkAssignmentCreateOrConnectWithoutQuizInput = {
+    where: HomeworkAssignmentWhereUniqueInput
+    create: XOR<HomeworkAssignmentCreateWithoutQuizInput, HomeworkAssignmentUncheckedCreateWithoutQuizInput>
+  }
+
+  export type HomeworkAssignmentCreateManyQuizInputEnvelope = {
+    data: HomeworkAssignmentCreateManyQuizInput | HomeworkAssignmentCreateManyQuizInput[]
+    skipDuplicates?: boolean
   }
 
   export type QuestionUpsertWithWhereUniqueWithoutQuizInput = {
@@ -19532,6 +24595,38 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type HomeworkAssignmentUpsertWithWhereUniqueWithoutQuizInput = {
+    where: HomeworkAssignmentWhereUniqueInput
+    update: XOR<HomeworkAssignmentUpdateWithoutQuizInput, HomeworkAssignmentUncheckedUpdateWithoutQuizInput>
+    create: XOR<HomeworkAssignmentCreateWithoutQuizInput, HomeworkAssignmentUncheckedCreateWithoutQuizInput>
+  }
+
+  export type HomeworkAssignmentUpdateWithWhereUniqueWithoutQuizInput = {
+    where: HomeworkAssignmentWhereUniqueInput
+    data: XOR<HomeworkAssignmentUpdateWithoutQuizInput, HomeworkAssignmentUncheckedUpdateWithoutQuizInput>
+  }
+
+  export type HomeworkAssignmentUpdateManyWithWhereWithoutQuizInput = {
+    where: HomeworkAssignmentScalarWhereInput
+    data: XOR<HomeworkAssignmentUpdateManyMutationInput, HomeworkAssignmentUncheckedUpdateManyWithoutQuizInput>
+  }
+
+  export type HomeworkAssignmentScalarWhereInput = {
+    AND?: HomeworkAssignmentScalarWhereInput | HomeworkAssignmentScalarWhereInput[]
+    OR?: HomeworkAssignmentScalarWhereInput[]
+    NOT?: HomeworkAssignmentScalarWhereInput | HomeworkAssignmentScalarWhereInput[]
+    id?: StringFilter<"HomeworkAssignment"> | string
+    authorId?: StringFilter<"HomeworkAssignment"> | string
+    quizId?: StringFilter<"HomeworkAssignment"> | string
+    title?: StringFilter<"HomeworkAssignment"> | string
+    shareToken?: StringFilter<"HomeworkAssignment"> | string
+    dueAt?: DateTimeFilter<"HomeworkAssignment"> | Date | string
+    acceptingResponses?: BoolFilter<"HomeworkAssignment"> | boolean
+    showLeaderboard?: BoolFilter<"HomeworkAssignment"> | boolean
+    createdAt?: DateTimeFilter<"HomeworkAssignment"> | Date | string
+    updatedAt?: DateTimeFilter<"HomeworkAssignment"> | Date | string
+  }
+
   export type QuizCreateWithoutLikesInput = {
     id?: string
     title: string
@@ -19549,6 +24644,7 @@ export namespace Prisma {
     questions?: QuestionCreateNestedManyWithoutQuizInput
     favorites?: QuizFavoriteCreateNestedManyWithoutQuizInput
     lessonKit?: LessonKitCreateNestedOneWithoutQuizInput
+    homeworkAssignments?: HomeworkAssignmentCreateNestedManyWithoutQuizInput
   }
 
   export type QuizUncheckedCreateWithoutLikesInput = {
@@ -19568,6 +24664,7 @@ export namespace Prisma {
     questions?: QuestionUncheckedCreateNestedManyWithoutQuizInput
     favorites?: QuizFavoriteUncheckedCreateNestedManyWithoutQuizInput
     lessonKit?: LessonKitUncheckedCreateNestedOneWithoutQuizInput
+    homeworkAssignments?: HomeworkAssignmentUncheckedCreateNestedManyWithoutQuizInput
   }
 
   export type QuizCreateOrConnectWithoutLikesInput = {
@@ -19603,6 +24700,7 @@ export namespace Prisma {
     questions?: QuestionUpdateManyWithoutQuizNestedInput
     favorites?: QuizFavoriteUpdateManyWithoutQuizNestedInput
     lessonKit?: LessonKitUpdateOneWithoutQuizNestedInput
+    homeworkAssignments?: HomeworkAssignmentUpdateManyWithoutQuizNestedInput
   }
 
   export type QuizUncheckedUpdateWithoutLikesInput = {
@@ -19622,6 +24720,7 @@ export namespace Prisma {
     questions?: QuestionUncheckedUpdateManyWithoutQuizNestedInput
     favorites?: QuizFavoriteUncheckedUpdateManyWithoutQuizNestedInput
     lessonKit?: LessonKitUncheckedUpdateOneWithoutQuizNestedInput
+    homeworkAssignments?: HomeworkAssignmentUncheckedUpdateManyWithoutQuizNestedInput
   }
 
   export type QuizCreateWithoutFavoritesInput = {
@@ -19641,6 +24740,7 @@ export namespace Prisma {
     questions?: QuestionCreateNestedManyWithoutQuizInput
     likes?: QuizLikeCreateNestedManyWithoutQuizInput
     lessonKit?: LessonKitCreateNestedOneWithoutQuizInput
+    homeworkAssignments?: HomeworkAssignmentCreateNestedManyWithoutQuizInput
   }
 
   export type QuizUncheckedCreateWithoutFavoritesInput = {
@@ -19660,6 +24760,7 @@ export namespace Prisma {
     questions?: QuestionUncheckedCreateNestedManyWithoutQuizInput
     likes?: QuizLikeUncheckedCreateNestedManyWithoutQuizInput
     lessonKit?: LessonKitUncheckedCreateNestedOneWithoutQuizInput
+    homeworkAssignments?: HomeworkAssignmentUncheckedCreateNestedManyWithoutQuizInput
   }
 
   export type QuizCreateOrConnectWithoutFavoritesInput = {
@@ -19695,6 +24796,7 @@ export namespace Prisma {
     questions?: QuestionUpdateManyWithoutQuizNestedInput
     likes?: QuizLikeUpdateManyWithoutQuizNestedInput
     lessonKit?: LessonKitUpdateOneWithoutQuizNestedInput
+    homeworkAssignments?: HomeworkAssignmentUpdateManyWithoutQuizNestedInput
   }
 
   export type QuizUncheckedUpdateWithoutFavoritesInput = {
@@ -19714,6 +24816,7 @@ export namespace Prisma {
     questions?: QuestionUncheckedUpdateManyWithoutQuizNestedInput
     likes?: QuizLikeUncheckedUpdateManyWithoutQuizNestedInput
     lessonKit?: LessonKitUncheckedUpdateOneWithoutQuizNestedInput
+    homeworkAssignments?: HomeworkAssignmentUncheckedUpdateManyWithoutQuizNestedInput
   }
 
   export type QuizCreateWithoutQuestionsInput = {
@@ -19733,6 +24836,7 @@ export namespace Prisma {
     likes?: QuizLikeCreateNestedManyWithoutQuizInput
     favorites?: QuizFavoriteCreateNestedManyWithoutQuizInput
     lessonKit?: LessonKitCreateNestedOneWithoutQuizInput
+    homeworkAssignments?: HomeworkAssignmentCreateNestedManyWithoutQuizInput
   }
 
   export type QuizUncheckedCreateWithoutQuestionsInput = {
@@ -19752,6 +24856,7 @@ export namespace Prisma {
     likes?: QuizLikeUncheckedCreateNestedManyWithoutQuizInput
     favorites?: QuizFavoriteUncheckedCreateNestedManyWithoutQuizInput
     lessonKit?: LessonKitUncheckedCreateNestedOneWithoutQuizInput
+    homeworkAssignments?: HomeworkAssignmentUncheckedCreateNestedManyWithoutQuizInput
   }
 
   export type QuizCreateOrConnectWithoutQuestionsInput = {
@@ -19787,6 +24892,7 @@ export namespace Prisma {
     likes?: QuizLikeUpdateManyWithoutQuizNestedInput
     favorites?: QuizFavoriteUpdateManyWithoutQuizNestedInput
     lessonKit?: LessonKitUpdateOneWithoutQuizNestedInput
+    homeworkAssignments?: HomeworkAssignmentUpdateManyWithoutQuizNestedInput
   }
 
   export type QuizUncheckedUpdateWithoutQuestionsInput = {
@@ -19806,6 +24912,7 @@ export namespace Prisma {
     likes?: QuizLikeUncheckedUpdateManyWithoutQuizNestedInput
     favorites?: QuizFavoriteUncheckedUpdateManyWithoutQuizNestedInput
     lessonKit?: LessonKitUncheckedUpdateOneWithoutQuizNestedInput
+    homeworkAssignments?: HomeworkAssignmentUncheckedUpdateManyWithoutQuizNestedInput
   }
 
   export type QuizCreateWithoutLessonKitInput = {
@@ -19825,6 +24932,7 @@ export namespace Prisma {
     questions?: QuestionCreateNestedManyWithoutQuizInput
     likes?: QuizLikeCreateNestedManyWithoutQuizInput
     favorites?: QuizFavoriteCreateNestedManyWithoutQuizInput
+    homeworkAssignments?: HomeworkAssignmentCreateNestedManyWithoutQuizInput
   }
 
   export type QuizUncheckedCreateWithoutLessonKitInput = {
@@ -19844,6 +24952,7 @@ export namespace Prisma {
     questions?: QuestionUncheckedCreateNestedManyWithoutQuizInput
     likes?: QuizLikeUncheckedCreateNestedManyWithoutQuizInput
     favorites?: QuizFavoriteUncheckedCreateNestedManyWithoutQuizInput
+    homeworkAssignments?: HomeworkAssignmentUncheckedCreateNestedManyWithoutQuizInput
   }
 
   export type QuizCreateOrConnectWithoutLessonKitInput = {
@@ -19879,6 +24988,7 @@ export namespace Prisma {
     questions?: QuestionUpdateManyWithoutQuizNestedInput
     likes?: QuizLikeUpdateManyWithoutQuizNestedInput
     favorites?: QuizFavoriteUpdateManyWithoutQuizNestedInput
+    homeworkAssignments?: HomeworkAssignmentUpdateManyWithoutQuizNestedInput
   }
 
   export type QuizUncheckedUpdateWithoutLessonKitInput = {
@@ -19898,6 +25008,7 @@ export namespace Prisma {
     questions?: QuestionUncheckedUpdateManyWithoutQuizNestedInput
     likes?: QuizLikeUncheckedUpdateManyWithoutQuizNestedInput
     favorites?: QuizFavoriteUncheckedUpdateManyWithoutQuizNestedInput
+    homeworkAssignments?: HomeworkAssignmentUncheckedUpdateManyWithoutQuizNestedInput
   }
 
   export type StoryPanelCreateWithoutStoryInput = {
@@ -20026,6 +25137,7 @@ export namespace Prisma {
     showExampleToStudents?: boolean
     status?: $Enums.StoryStatus
     shareToken: string
+    dueAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     submissions?: StorySubmissionCreateNestedManyWithoutStoryInput
@@ -20044,6 +25156,7 @@ export namespace Prisma {
     showExampleToStudents?: boolean
     status?: $Enums.StoryStatus
     shareToken: string
+    dueAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     submissions?: StorySubmissionUncheckedCreateNestedManyWithoutStoryInput
@@ -20078,6 +25191,7 @@ export namespace Prisma {
     showExampleToStudents?: BoolFieldUpdateOperationsInput | boolean
     status?: EnumStoryStatusFieldUpdateOperationsInput | $Enums.StoryStatus
     shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     submissions?: StorySubmissionUpdateManyWithoutStoryNestedInput
@@ -20096,6 +25210,7 @@ export namespace Prisma {
     showExampleToStudents?: BoolFieldUpdateOperationsInput | boolean
     status?: EnumStoryStatusFieldUpdateOperationsInput | $Enums.StoryStatus
     shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     submissions?: StorySubmissionUncheckedUpdateManyWithoutStoryNestedInput
@@ -20142,6 +25257,7 @@ export namespace Prisma {
     showExampleToStudents?: boolean
     status?: $Enums.StoryStatus
     shareToken: string
+    dueAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     panels?: StoryPanelCreateNestedManyWithoutStoryInput
@@ -20160,6 +25276,7 @@ export namespace Prisma {
     showExampleToStudents?: boolean
     status?: $Enums.StoryStatus
     shareToken: string
+    dueAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     panels?: StoryPanelUncheckedCreateNestedManyWithoutStoryInput
@@ -20223,6 +25340,7 @@ export namespace Prisma {
     showExampleToStudents?: BoolFieldUpdateOperationsInput | boolean
     status?: EnumStoryStatusFieldUpdateOperationsInput | $Enums.StoryStatus
     shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     panels?: StoryPanelUpdateManyWithoutStoryNestedInput
@@ -20241,6 +25359,7 @@ export namespace Prisma {
     showExampleToStudents?: BoolFieldUpdateOperationsInput | boolean
     status?: EnumStoryStatusFieldUpdateOperationsInput | $Enums.StoryStatus
     shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     panels?: StoryPanelUncheckedUpdateManyWithoutStoryNestedInput
@@ -20376,6 +25495,7 @@ export namespace Prisma {
     showGallery?: boolean
     allowFunnyVoices?: boolean
     shareToken: string
+    dueAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -20390,6 +25510,7 @@ export namespace Prisma {
     showGallery?: boolean
     allowFunnyVoices?: boolean
     shareToken: string
+    dueAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -20420,6 +25541,7 @@ export namespace Prisma {
     showGallery?: BoolFieldUpdateOperationsInput | boolean
     allowFunnyVoices?: BoolFieldUpdateOperationsInput | boolean
     shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -20434,6 +25556,454 @@ export namespace Prisma {
     showGallery?: BoolFieldUpdateOperationsInput | boolean
     allowFunnyVoices?: BoolFieldUpdateOperationsInput | boolean
     shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type QuizCreateWithoutHomeworkAssignmentsInput = {
+    id?: string
+    title: string
+    description?: string | null
+    imageUrl?: string | null
+    quizType?: $Enums.QuestionType
+    tags?: QuizCreatetagsInput | string[]
+    statistics?: NullableJsonNullValueInput | InputJsonValue
+    defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: number
+    playability?: NullableJsonNullValueInput | InputJsonValue
+    authorId?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    questions?: QuestionCreateNestedManyWithoutQuizInput
+    likes?: QuizLikeCreateNestedManyWithoutQuizInput
+    favorites?: QuizFavoriteCreateNestedManyWithoutQuizInput
+    lessonKit?: LessonKitCreateNestedOneWithoutQuizInput
+  }
+
+  export type QuizUncheckedCreateWithoutHomeworkAssignmentsInput = {
+    id?: string
+    title: string
+    description?: string | null
+    imageUrl?: string | null
+    quizType?: $Enums.QuestionType
+    tags?: QuizCreatetagsInput | string[]
+    statistics?: NullableJsonNullValueInput | InputJsonValue
+    defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: number
+    playability?: NullableJsonNullValueInput | InputJsonValue
+    authorId?: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    questions?: QuestionUncheckedCreateNestedManyWithoutQuizInput
+    likes?: QuizLikeUncheckedCreateNestedManyWithoutQuizInput
+    favorites?: QuizFavoriteUncheckedCreateNestedManyWithoutQuizInput
+    lessonKit?: LessonKitUncheckedCreateNestedOneWithoutQuizInput
+  }
+
+  export type QuizCreateOrConnectWithoutHomeworkAssignmentsInput = {
+    where: QuizWhereUniqueInput
+    create: XOR<QuizCreateWithoutHomeworkAssignmentsInput, QuizUncheckedCreateWithoutHomeworkAssignmentsInput>
+  }
+
+  export type HomeworkAttemptCreateWithoutAssignmentInput = {
+    id?: string
+    studentName: string
+    clientKey: string
+    mode: $Enums.HomeworkAttemptMode
+    status?: $Enums.HomeworkAttemptStatus
+    queue: JsonNullValueInput | InputJsonValue
+    correctCount?: number
+    answeredCount?: number
+    percentage?: number | null
+    durationMs?: number
+    livesLeft?: number | null
+    timeLimitMs?: number | null
+    questionStartedAt?: Date | string | null
+    extraLifeGranted?: boolean
+    endReason?: $Enums.HomeworkEndReason | null
+    reachedHundred?: boolean
+    timeToHundredMs?: number | null
+    startedAt?: Date | string
+    finishedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    answers?: HomeworkAnswerCreateNestedManyWithoutAttemptInput
+  }
+
+  export type HomeworkAttemptUncheckedCreateWithoutAssignmentInput = {
+    id?: string
+    studentName: string
+    clientKey: string
+    mode: $Enums.HomeworkAttemptMode
+    status?: $Enums.HomeworkAttemptStatus
+    queue: JsonNullValueInput | InputJsonValue
+    correctCount?: number
+    answeredCount?: number
+    percentage?: number | null
+    durationMs?: number
+    livesLeft?: number | null
+    timeLimitMs?: number | null
+    questionStartedAt?: Date | string | null
+    extraLifeGranted?: boolean
+    endReason?: $Enums.HomeworkEndReason | null
+    reachedHundred?: boolean
+    timeToHundredMs?: number | null
+    startedAt?: Date | string
+    finishedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    answers?: HomeworkAnswerUncheckedCreateNestedManyWithoutAttemptInput
+  }
+
+  export type HomeworkAttemptCreateOrConnectWithoutAssignmentInput = {
+    where: HomeworkAttemptWhereUniqueInput
+    create: XOR<HomeworkAttemptCreateWithoutAssignmentInput, HomeworkAttemptUncheckedCreateWithoutAssignmentInput>
+  }
+
+  export type HomeworkAttemptCreateManyAssignmentInputEnvelope = {
+    data: HomeworkAttemptCreateManyAssignmentInput | HomeworkAttemptCreateManyAssignmentInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type QuizUpsertWithoutHomeworkAssignmentsInput = {
+    update: XOR<QuizUpdateWithoutHomeworkAssignmentsInput, QuizUncheckedUpdateWithoutHomeworkAssignmentsInput>
+    create: XOR<QuizCreateWithoutHomeworkAssignmentsInput, QuizUncheckedCreateWithoutHomeworkAssignmentsInput>
+    where?: QuizWhereInput
+  }
+
+  export type QuizUpdateToOneWithWhereWithoutHomeworkAssignmentsInput = {
+    where?: QuizWhereInput
+    data: XOR<QuizUpdateWithoutHomeworkAssignmentsInput, QuizUncheckedUpdateWithoutHomeworkAssignmentsInput>
+  }
+
+  export type QuizUpdateWithoutHomeworkAssignmentsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    quizType?: EnumQuestionTypeFieldUpdateOperationsInput | $Enums.QuestionType
+    tags?: QuizUpdatetagsInput | string[]
+    statistics?: NullableJsonNullValueInput | InputJsonValue
+    defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: IntFieldUpdateOperationsInput | number
+    playability?: NullableJsonNullValueInput | InputJsonValue
+    authorId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    questions?: QuestionUpdateManyWithoutQuizNestedInput
+    likes?: QuizLikeUpdateManyWithoutQuizNestedInput
+    favorites?: QuizFavoriteUpdateManyWithoutQuizNestedInput
+    lessonKit?: LessonKitUpdateOneWithoutQuizNestedInput
+  }
+
+  export type QuizUncheckedUpdateWithoutHomeworkAssignmentsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    quizType?: EnumQuestionTypeFieldUpdateOperationsInput | $Enums.QuestionType
+    tags?: QuizUpdatetagsInput | string[]
+    statistics?: NullableJsonNullValueInput | InputJsonValue
+    defaultSettings?: NullableJsonNullValueInput | InputJsonValue
+    questionCount?: IntFieldUpdateOperationsInput | number
+    playability?: NullableJsonNullValueInput | InputJsonValue
+    authorId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    questions?: QuestionUncheckedUpdateManyWithoutQuizNestedInput
+    likes?: QuizLikeUncheckedUpdateManyWithoutQuizNestedInput
+    favorites?: QuizFavoriteUncheckedUpdateManyWithoutQuizNestedInput
+    lessonKit?: LessonKitUncheckedUpdateOneWithoutQuizNestedInput
+  }
+
+  export type HomeworkAttemptUpsertWithWhereUniqueWithoutAssignmentInput = {
+    where: HomeworkAttemptWhereUniqueInput
+    update: XOR<HomeworkAttemptUpdateWithoutAssignmentInput, HomeworkAttemptUncheckedUpdateWithoutAssignmentInput>
+    create: XOR<HomeworkAttemptCreateWithoutAssignmentInput, HomeworkAttemptUncheckedCreateWithoutAssignmentInput>
+  }
+
+  export type HomeworkAttemptUpdateWithWhereUniqueWithoutAssignmentInput = {
+    where: HomeworkAttemptWhereUniqueInput
+    data: XOR<HomeworkAttemptUpdateWithoutAssignmentInput, HomeworkAttemptUncheckedUpdateWithoutAssignmentInput>
+  }
+
+  export type HomeworkAttemptUpdateManyWithWhereWithoutAssignmentInput = {
+    where: HomeworkAttemptScalarWhereInput
+    data: XOR<HomeworkAttemptUpdateManyMutationInput, HomeworkAttemptUncheckedUpdateManyWithoutAssignmentInput>
+  }
+
+  export type HomeworkAttemptScalarWhereInput = {
+    AND?: HomeworkAttemptScalarWhereInput | HomeworkAttemptScalarWhereInput[]
+    OR?: HomeworkAttemptScalarWhereInput[]
+    NOT?: HomeworkAttemptScalarWhereInput | HomeworkAttemptScalarWhereInput[]
+    id?: StringFilter<"HomeworkAttempt"> | string
+    assignmentId?: StringFilter<"HomeworkAttempt"> | string
+    studentName?: StringFilter<"HomeworkAttempt"> | string
+    clientKey?: StringFilter<"HomeworkAttempt"> | string
+    mode?: EnumHomeworkAttemptModeFilter<"HomeworkAttempt"> | $Enums.HomeworkAttemptMode
+    status?: EnumHomeworkAttemptStatusFilter<"HomeworkAttempt"> | $Enums.HomeworkAttemptStatus
+    queue?: JsonFilter<"HomeworkAttempt">
+    correctCount?: IntFilter<"HomeworkAttempt"> | number
+    answeredCount?: IntFilter<"HomeworkAttempt"> | number
+    percentage?: FloatNullableFilter<"HomeworkAttempt"> | number | null
+    durationMs?: IntFilter<"HomeworkAttempt"> | number
+    livesLeft?: IntNullableFilter<"HomeworkAttempt"> | number | null
+    timeLimitMs?: IntNullableFilter<"HomeworkAttempt"> | number | null
+    questionStartedAt?: DateTimeNullableFilter<"HomeworkAttempt"> | Date | string | null
+    extraLifeGranted?: BoolFilter<"HomeworkAttempt"> | boolean
+    endReason?: EnumHomeworkEndReasonNullableFilter<"HomeworkAttempt"> | $Enums.HomeworkEndReason | null
+    reachedHundred?: BoolFilter<"HomeworkAttempt"> | boolean
+    timeToHundredMs?: IntNullableFilter<"HomeworkAttempt"> | number | null
+    startedAt?: DateTimeFilter<"HomeworkAttempt"> | Date | string
+    finishedAt?: DateTimeNullableFilter<"HomeworkAttempt"> | Date | string | null
+    createdAt?: DateTimeFilter<"HomeworkAttempt"> | Date | string
+    updatedAt?: DateTimeFilter<"HomeworkAttempt"> | Date | string
+  }
+
+  export type HomeworkAssignmentCreateWithoutAttemptsInput = {
+    id?: string
+    authorId?: string
+    title: string
+    shareToken: string
+    dueAt: Date | string
+    acceptingResponses?: boolean
+    showLeaderboard?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    quiz: QuizCreateNestedOneWithoutHomeworkAssignmentsInput
+  }
+
+  export type HomeworkAssignmentUncheckedCreateWithoutAttemptsInput = {
+    id?: string
+    authorId?: string
+    quizId: string
+    title: string
+    shareToken: string
+    dueAt: Date | string
+    acceptingResponses?: boolean
+    showLeaderboard?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type HomeworkAssignmentCreateOrConnectWithoutAttemptsInput = {
+    where: HomeworkAssignmentWhereUniqueInput
+    create: XOR<HomeworkAssignmentCreateWithoutAttemptsInput, HomeworkAssignmentUncheckedCreateWithoutAttemptsInput>
+  }
+
+  export type HomeworkAnswerCreateWithoutAttemptInput = {
+    id?: string
+    questionId: string
+    questionText: string
+    selectedAnswer: string
+    correctAnswer?: string
+    correct?: boolean
+    timeUsedMs?: number
+    order: number
+  }
+
+  export type HomeworkAnswerUncheckedCreateWithoutAttemptInput = {
+    id?: string
+    questionId: string
+    questionText: string
+    selectedAnswer: string
+    correctAnswer?: string
+    correct?: boolean
+    timeUsedMs?: number
+    order: number
+  }
+
+  export type HomeworkAnswerCreateOrConnectWithoutAttemptInput = {
+    where: HomeworkAnswerWhereUniqueInput
+    create: XOR<HomeworkAnswerCreateWithoutAttemptInput, HomeworkAnswerUncheckedCreateWithoutAttemptInput>
+  }
+
+  export type HomeworkAnswerCreateManyAttemptInputEnvelope = {
+    data: HomeworkAnswerCreateManyAttemptInput | HomeworkAnswerCreateManyAttemptInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type HomeworkAssignmentUpsertWithoutAttemptsInput = {
+    update: XOR<HomeworkAssignmentUpdateWithoutAttemptsInput, HomeworkAssignmentUncheckedUpdateWithoutAttemptsInput>
+    create: XOR<HomeworkAssignmentCreateWithoutAttemptsInput, HomeworkAssignmentUncheckedCreateWithoutAttemptsInput>
+    where?: HomeworkAssignmentWhereInput
+  }
+
+  export type HomeworkAssignmentUpdateToOneWithWhereWithoutAttemptsInput = {
+    where?: HomeworkAssignmentWhereInput
+    data: XOR<HomeworkAssignmentUpdateWithoutAttemptsInput, HomeworkAssignmentUncheckedUpdateWithoutAttemptsInput>
+  }
+
+  export type HomeworkAssignmentUpdateWithoutAttemptsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    acceptingResponses?: BoolFieldUpdateOperationsInput | boolean
+    showLeaderboard?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    quiz?: QuizUpdateOneRequiredWithoutHomeworkAssignmentsNestedInput
+  }
+
+  export type HomeworkAssignmentUncheckedUpdateWithoutAttemptsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    quizId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    acceptingResponses?: BoolFieldUpdateOperationsInput | boolean
+    showLeaderboard?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type HomeworkAnswerUpsertWithWhereUniqueWithoutAttemptInput = {
+    where: HomeworkAnswerWhereUniqueInput
+    update: XOR<HomeworkAnswerUpdateWithoutAttemptInput, HomeworkAnswerUncheckedUpdateWithoutAttemptInput>
+    create: XOR<HomeworkAnswerCreateWithoutAttemptInput, HomeworkAnswerUncheckedCreateWithoutAttemptInput>
+  }
+
+  export type HomeworkAnswerUpdateWithWhereUniqueWithoutAttemptInput = {
+    where: HomeworkAnswerWhereUniqueInput
+    data: XOR<HomeworkAnswerUpdateWithoutAttemptInput, HomeworkAnswerUncheckedUpdateWithoutAttemptInput>
+  }
+
+  export type HomeworkAnswerUpdateManyWithWhereWithoutAttemptInput = {
+    where: HomeworkAnswerScalarWhereInput
+    data: XOR<HomeworkAnswerUpdateManyMutationInput, HomeworkAnswerUncheckedUpdateManyWithoutAttemptInput>
+  }
+
+  export type HomeworkAnswerScalarWhereInput = {
+    AND?: HomeworkAnswerScalarWhereInput | HomeworkAnswerScalarWhereInput[]
+    OR?: HomeworkAnswerScalarWhereInput[]
+    NOT?: HomeworkAnswerScalarWhereInput | HomeworkAnswerScalarWhereInput[]
+    id?: StringFilter<"HomeworkAnswer"> | string
+    attemptId?: StringFilter<"HomeworkAnswer"> | string
+    questionId?: StringFilter<"HomeworkAnswer"> | string
+    questionText?: StringFilter<"HomeworkAnswer"> | string
+    selectedAnswer?: StringFilter<"HomeworkAnswer"> | string
+    correctAnswer?: StringFilter<"HomeworkAnswer"> | string
+    correct?: BoolFilter<"HomeworkAnswer"> | boolean
+    timeUsedMs?: IntFilter<"HomeworkAnswer"> | number
+    order?: IntFilter<"HomeworkAnswer"> | number
+  }
+
+  export type HomeworkAttemptCreateWithoutAnswersInput = {
+    id?: string
+    studentName: string
+    clientKey: string
+    mode: $Enums.HomeworkAttemptMode
+    status?: $Enums.HomeworkAttemptStatus
+    queue: JsonNullValueInput | InputJsonValue
+    correctCount?: number
+    answeredCount?: number
+    percentage?: number | null
+    durationMs?: number
+    livesLeft?: number | null
+    timeLimitMs?: number | null
+    questionStartedAt?: Date | string | null
+    extraLifeGranted?: boolean
+    endReason?: $Enums.HomeworkEndReason | null
+    reachedHundred?: boolean
+    timeToHundredMs?: number | null
+    startedAt?: Date | string
+    finishedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    assignment: HomeworkAssignmentCreateNestedOneWithoutAttemptsInput
+  }
+
+  export type HomeworkAttemptUncheckedCreateWithoutAnswersInput = {
+    id?: string
+    assignmentId: string
+    studentName: string
+    clientKey: string
+    mode: $Enums.HomeworkAttemptMode
+    status?: $Enums.HomeworkAttemptStatus
+    queue: JsonNullValueInput | InputJsonValue
+    correctCount?: number
+    answeredCount?: number
+    percentage?: number | null
+    durationMs?: number
+    livesLeft?: number | null
+    timeLimitMs?: number | null
+    questionStartedAt?: Date | string | null
+    extraLifeGranted?: boolean
+    endReason?: $Enums.HomeworkEndReason | null
+    reachedHundred?: boolean
+    timeToHundredMs?: number | null
+    startedAt?: Date | string
+    finishedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type HomeworkAttemptCreateOrConnectWithoutAnswersInput = {
+    where: HomeworkAttemptWhereUniqueInput
+    create: XOR<HomeworkAttemptCreateWithoutAnswersInput, HomeworkAttemptUncheckedCreateWithoutAnswersInput>
+  }
+
+  export type HomeworkAttemptUpsertWithoutAnswersInput = {
+    update: XOR<HomeworkAttemptUpdateWithoutAnswersInput, HomeworkAttemptUncheckedUpdateWithoutAnswersInput>
+    create: XOR<HomeworkAttemptCreateWithoutAnswersInput, HomeworkAttemptUncheckedCreateWithoutAnswersInput>
+    where?: HomeworkAttemptWhereInput
+  }
+
+  export type HomeworkAttemptUpdateToOneWithWhereWithoutAnswersInput = {
+    where?: HomeworkAttemptWhereInput
+    data: XOR<HomeworkAttemptUpdateWithoutAnswersInput, HomeworkAttemptUncheckedUpdateWithoutAnswersInput>
+  }
+
+  export type HomeworkAttemptUpdateWithoutAnswersInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    studentName?: StringFieldUpdateOperationsInput | string
+    clientKey?: StringFieldUpdateOperationsInput | string
+    mode?: EnumHomeworkAttemptModeFieldUpdateOperationsInput | $Enums.HomeworkAttemptMode
+    status?: EnumHomeworkAttemptStatusFieldUpdateOperationsInput | $Enums.HomeworkAttemptStatus
+    queue?: JsonNullValueInput | InputJsonValue
+    correctCount?: IntFieldUpdateOperationsInput | number
+    answeredCount?: IntFieldUpdateOperationsInput | number
+    percentage?: NullableFloatFieldUpdateOperationsInput | number | null
+    durationMs?: IntFieldUpdateOperationsInput | number
+    livesLeft?: NullableIntFieldUpdateOperationsInput | number | null
+    timeLimitMs?: NullableIntFieldUpdateOperationsInput | number | null
+    questionStartedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    extraLifeGranted?: BoolFieldUpdateOperationsInput | boolean
+    endReason?: NullableEnumHomeworkEndReasonFieldUpdateOperationsInput | $Enums.HomeworkEndReason | null
+    reachedHundred?: BoolFieldUpdateOperationsInput | boolean
+    timeToHundredMs?: NullableIntFieldUpdateOperationsInput | number | null
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    finishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignment?: HomeworkAssignmentUpdateOneRequiredWithoutAttemptsNestedInput
+  }
+
+  export type HomeworkAttemptUncheckedUpdateWithoutAnswersInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    assignmentId?: StringFieldUpdateOperationsInput | string
+    studentName?: StringFieldUpdateOperationsInput | string
+    clientKey?: StringFieldUpdateOperationsInput | string
+    mode?: EnumHomeworkAttemptModeFieldUpdateOperationsInput | $Enums.HomeworkAttemptMode
+    status?: EnumHomeworkAttemptStatusFieldUpdateOperationsInput | $Enums.HomeworkAttemptStatus
+    queue?: JsonNullValueInput | InputJsonValue
+    correctCount?: IntFieldUpdateOperationsInput | number
+    answeredCount?: IntFieldUpdateOperationsInput | number
+    percentage?: NullableFloatFieldUpdateOperationsInput | number | null
+    durationMs?: IntFieldUpdateOperationsInput | number
+    livesLeft?: NullableIntFieldUpdateOperationsInput | number | null
+    timeLimitMs?: NullableIntFieldUpdateOperationsInput | number | null
+    questionStartedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    extraLifeGranted?: BoolFieldUpdateOperationsInput | boolean
+    endReason?: NullableEnumHomeworkEndReasonFieldUpdateOperationsInput | $Enums.HomeworkEndReason | null
+    reachedHundred?: BoolFieldUpdateOperationsInput | boolean
+    timeToHundredMs?: NullableIntFieldUpdateOperationsInput | number | null
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    finishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -20457,6 +26027,18 @@ export namespace Prisma {
     id?: string
     userId: string
     createdAt?: Date | string
+  }
+
+  export type HomeworkAssignmentCreateManyQuizInput = {
+    id?: string
+    authorId?: string
+    title: string
+    shareToken: string
+    dueAt: Date | string
+    acceptingResponses?: boolean
+    showLeaderboard?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type QuestionUpdateWithoutQuizInput = {
@@ -20520,6 +26102,44 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type HomeworkAssignmentUpdateWithoutQuizInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    acceptingResponses?: BoolFieldUpdateOperationsInput | boolean
+    showLeaderboard?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    attempts?: HomeworkAttemptUpdateManyWithoutAssignmentNestedInput
+  }
+
+  export type HomeworkAssignmentUncheckedUpdateWithoutQuizInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    acceptingResponses?: BoolFieldUpdateOperationsInput | boolean
+    showLeaderboard?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    attempts?: HomeworkAttemptUncheckedUpdateManyWithoutAssignmentNestedInput
+  }
+
+  export type HomeworkAssignmentUncheckedUpdateManyWithoutQuizInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    authorId?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    shareToken?: StringFieldUpdateOperationsInput | string
+    dueAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    acceptingResponses?: BoolFieldUpdateOperationsInput | boolean
+    showLeaderboard?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type StoryPanelCreateManyStoryInput = {
@@ -20684,6 +26304,148 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type HomeworkAttemptCreateManyAssignmentInput = {
+    id?: string
+    studentName: string
+    clientKey: string
+    mode: $Enums.HomeworkAttemptMode
+    status?: $Enums.HomeworkAttemptStatus
+    queue: JsonNullValueInput | InputJsonValue
+    correctCount?: number
+    answeredCount?: number
+    percentage?: number | null
+    durationMs?: number
+    livesLeft?: number | null
+    timeLimitMs?: number | null
+    questionStartedAt?: Date | string | null
+    extraLifeGranted?: boolean
+    endReason?: $Enums.HomeworkEndReason | null
+    reachedHundred?: boolean
+    timeToHundredMs?: number | null
+    startedAt?: Date | string
+    finishedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type HomeworkAttemptUpdateWithoutAssignmentInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    studentName?: StringFieldUpdateOperationsInput | string
+    clientKey?: StringFieldUpdateOperationsInput | string
+    mode?: EnumHomeworkAttemptModeFieldUpdateOperationsInput | $Enums.HomeworkAttemptMode
+    status?: EnumHomeworkAttemptStatusFieldUpdateOperationsInput | $Enums.HomeworkAttemptStatus
+    queue?: JsonNullValueInput | InputJsonValue
+    correctCount?: IntFieldUpdateOperationsInput | number
+    answeredCount?: IntFieldUpdateOperationsInput | number
+    percentage?: NullableFloatFieldUpdateOperationsInput | number | null
+    durationMs?: IntFieldUpdateOperationsInput | number
+    livesLeft?: NullableIntFieldUpdateOperationsInput | number | null
+    timeLimitMs?: NullableIntFieldUpdateOperationsInput | number | null
+    questionStartedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    extraLifeGranted?: BoolFieldUpdateOperationsInput | boolean
+    endReason?: NullableEnumHomeworkEndReasonFieldUpdateOperationsInput | $Enums.HomeworkEndReason | null
+    reachedHundred?: BoolFieldUpdateOperationsInput | boolean
+    timeToHundredMs?: NullableIntFieldUpdateOperationsInput | number | null
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    finishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    answers?: HomeworkAnswerUpdateManyWithoutAttemptNestedInput
+  }
+
+  export type HomeworkAttemptUncheckedUpdateWithoutAssignmentInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    studentName?: StringFieldUpdateOperationsInput | string
+    clientKey?: StringFieldUpdateOperationsInput | string
+    mode?: EnumHomeworkAttemptModeFieldUpdateOperationsInput | $Enums.HomeworkAttemptMode
+    status?: EnumHomeworkAttemptStatusFieldUpdateOperationsInput | $Enums.HomeworkAttemptStatus
+    queue?: JsonNullValueInput | InputJsonValue
+    correctCount?: IntFieldUpdateOperationsInput | number
+    answeredCount?: IntFieldUpdateOperationsInput | number
+    percentage?: NullableFloatFieldUpdateOperationsInput | number | null
+    durationMs?: IntFieldUpdateOperationsInput | number
+    livesLeft?: NullableIntFieldUpdateOperationsInput | number | null
+    timeLimitMs?: NullableIntFieldUpdateOperationsInput | number | null
+    questionStartedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    extraLifeGranted?: BoolFieldUpdateOperationsInput | boolean
+    endReason?: NullableEnumHomeworkEndReasonFieldUpdateOperationsInput | $Enums.HomeworkEndReason | null
+    reachedHundred?: BoolFieldUpdateOperationsInput | boolean
+    timeToHundredMs?: NullableIntFieldUpdateOperationsInput | number | null
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    finishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    answers?: HomeworkAnswerUncheckedUpdateManyWithoutAttemptNestedInput
+  }
+
+  export type HomeworkAttemptUncheckedUpdateManyWithoutAssignmentInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    studentName?: StringFieldUpdateOperationsInput | string
+    clientKey?: StringFieldUpdateOperationsInput | string
+    mode?: EnumHomeworkAttemptModeFieldUpdateOperationsInput | $Enums.HomeworkAttemptMode
+    status?: EnumHomeworkAttemptStatusFieldUpdateOperationsInput | $Enums.HomeworkAttemptStatus
+    queue?: JsonNullValueInput | InputJsonValue
+    correctCount?: IntFieldUpdateOperationsInput | number
+    answeredCount?: IntFieldUpdateOperationsInput | number
+    percentage?: NullableFloatFieldUpdateOperationsInput | number | null
+    durationMs?: IntFieldUpdateOperationsInput | number
+    livesLeft?: NullableIntFieldUpdateOperationsInput | number | null
+    timeLimitMs?: NullableIntFieldUpdateOperationsInput | number | null
+    questionStartedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    extraLifeGranted?: BoolFieldUpdateOperationsInput | boolean
+    endReason?: NullableEnumHomeworkEndReasonFieldUpdateOperationsInput | $Enums.HomeworkEndReason | null
+    reachedHundred?: BoolFieldUpdateOperationsInput | boolean
+    timeToHundredMs?: NullableIntFieldUpdateOperationsInput | number | null
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    finishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type HomeworkAnswerCreateManyAttemptInput = {
+    id?: string
+    questionId: string
+    questionText: string
+    selectedAnswer: string
+    correctAnswer?: string
+    correct?: boolean
+    timeUsedMs?: number
+    order: number
+  }
+
+  export type HomeworkAnswerUpdateWithoutAttemptInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    questionId?: StringFieldUpdateOperationsInput | string
+    questionText?: StringFieldUpdateOperationsInput | string
+    selectedAnswer?: StringFieldUpdateOperationsInput | string
+    correctAnswer?: StringFieldUpdateOperationsInput | string
+    correct?: BoolFieldUpdateOperationsInput | boolean
+    timeUsedMs?: IntFieldUpdateOperationsInput | number
+    order?: IntFieldUpdateOperationsInput | number
+  }
+
+  export type HomeworkAnswerUncheckedUpdateWithoutAttemptInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    questionId?: StringFieldUpdateOperationsInput | string
+    questionText?: StringFieldUpdateOperationsInput | string
+    selectedAnswer?: StringFieldUpdateOperationsInput | string
+    correctAnswer?: StringFieldUpdateOperationsInput | string
+    correct?: BoolFieldUpdateOperationsInput | boolean
+    timeUsedMs?: IntFieldUpdateOperationsInput | number
+    order?: IntFieldUpdateOperationsInput | number
+  }
+
+  export type HomeworkAnswerUncheckedUpdateManyWithoutAttemptInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    questionId?: StringFieldUpdateOperationsInput | string
+    questionText?: StringFieldUpdateOperationsInput | string
+    selectedAnswer?: StringFieldUpdateOperationsInput | string
+    correctAnswer?: StringFieldUpdateOperationsInput | string
+    correct?: BoolFieldUpdateOperationsInput | boolean
+    timeUsedMs?: IntFieldUpdateOperationsInput | number
+    order?: IntFieldUpdateOperationsInput | number
+  }
+
 
 
   /**
@@ -20705,6 +26467,14 @@ export namespace Prisma {
      * @deprecated Use ThoughtChallengeCountOutputTypeDefaultArgs instead
      */
     export type ThoughtChallengeCountOutputTypeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = ThoughtChallengeCountOutputTypeDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use HomeworkAssignmentCountOutputTypeDefaultArgs instead
+     */
+    export type HomeworkAssignmentCountOutputTypeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = HomeworkAssignmentCountOutputTypeDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use HomeworkAttemptCountOutputTypeDefaultArgs instead
+     */
+    export type HomeworkAttemptCountOutputTypeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = HomeworkAttemptCountOutputTypeDefaultArgs<ExtArgs>
     /**
      * @deprecated Use QuizDefaultArgs instead
      */
@@ -20757,6 +26527,18 @@ export namespace Prisma {
      * @deprecated Use ThoughtSubmissionDefaultArgs instead
      */
     export type ThoughtSubmissionArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = ThoughtSubmissionDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use HomeworkAssignmentDefaultArgs instead
+     */
+    export type HomeworkAssignmentArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = HomeworkAssignmentDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use HomeworkAttemptDefaultArgs instead
+     */
+    export type HomeworkAttemptArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = HomeworkAttemptDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use HomeworkAnswerDefaultArgs instead
+     */
+    export type HomeworkAnswerArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = HomeworkAnswerDefaultArgs<ExtArgs>
 
   /**
    * Batch Payload for updateMany & deleteMany & createMany

@@ -125,6 +125,7 @@ export const challengePatchSchema = z
     acceptingResponses: z.boolean(),
     showGallery: z.boolean(),
     allowFunnyVoices: z.boolean(),
+    dueAt: z.string().datetime({ offset: true }).nullable(),
   })
   .partial()
   .refine((patch) => Object.keys(patch).length > 0, {

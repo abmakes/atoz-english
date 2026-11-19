@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { createShareToken } from '@/lib/stories/tokens'
+import { isBeforeDue } from '@/lib/assignments/due'
 import { classCanWatch, type ChallengeStatus, type SubmissionStatus } from '@/lib/thoughts/access'
 import type { Character } from '@/lib/thoughts/character'
 import { removePrivateAudio } from '@/lib/thoughts/audio-store'
@@ -15,6 +16,7 @@ export interface ThoughtChallengeDto {
   showGallery: boolean
   allowFunnyVoices: boolean
   shareToken: string
+  dueAt: string | null
   createdAt: string
   submissionCount: number
   pendingCount: number
@@ -59,6 +61,7 @@ type ChallengeRow = {
   showGallery: boolean
   allowFunnyVoices: boolean
   shareToken: string
+  dueAt: Date | null
   createdAt: Date
   _count?: { submissions: number }
 }
@@ -77,6 +80,7 @@ function toChallengeDto(
     showGallery: challenge.showGallery,
     allowFunnyVoices: challenge.allowFunnyVoices,
     shareToken: challenge.shareToken,
+    dueAt: challenge.dueAt?.toISOString() ?? null,
     createdAt: challenge.createdAt.toISOString(),
     submissionCount,
     pendingCount,
@@ -213,7 +217,7 @@ export async function getSessionByToken(token: string): Promise<ThoughtSessionDt
   return {
     title: challenge.title,
     prompt: challenge.prompt,
-    acceptingResponses: challenge.acceptingResponses,
+    acceptingResponses: challenge.acceptingResponses && isBeforeDue(challenge.dueAt),
     showGallery: challenge.showGallery,
     allowFunnyVoices: challenge.allowFunnyVoices,
     gallery,
